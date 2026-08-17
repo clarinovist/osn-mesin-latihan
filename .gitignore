@@ -7,6 +7,7 @@
 
 # Setelan lokal per-mesin
 .claude/settings.local.json
+.commandcode/
 
 # ── Data anak: JANGAN PERNAH masuk repo ──────────────────────────────
 # PRD §7.1 menetapkan privacy-by-default: tidak ada data anak yang keluar
