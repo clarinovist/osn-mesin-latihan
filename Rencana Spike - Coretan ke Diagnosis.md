@@ -479,3 +479,256 @@ Kalau gagal, yang gugur cuma satu kanal masukan, bukan produknya. Foto kertas
 buram, penilaian dari jawaban akhir saja, dan wawancara terpandu yang
 naskahnya disusun AI semuanya masih di meja — semuanya lebih lemah, tapi
 tidak satu pun nol.
+
+---
+
+## Lampiran A — Rencana harian operasional
+
+Daftar periksa per hari dengan langkah konkret. Setiap hari punya: apa yang
+dikerjakan, urutan langkah, kapan disebut selesai, dan kapan harus berhenti.
+
+### Hari 1 — Kanvas tinta + tes 10 menit ke anak
+
+**Pagi: kanvas tinta di Android Studio**
+
+1. Buat project Kotlin + Jetpack Compose baru, minSdk 26, satu Activity
+2. Tambahkan satu Canvas yang menangkap `MotionEvent` lewat
+   `Modifier.pointerInput` — bukan menggambar statis, tapi merekam titik
+3. Tulis fungsi `MotionEvent.toSamples(t0)` yang mengambil titik historis
+   (lihat kode di Bagian 1)
+4. Rakit test fixture: rekam satu urutan `MotionEvent` nyata (dengan
+   `historySize > 1`), simpan sebagai berkas, lalu tulis test yang
+   memastikan `toSamples()` mengembalikan jumlah, urutan, dan selisih
+   waktu yang sama persis. **Tesnya harus hijau sebelum lanjut.**
+5. Goresan ditulis ke list in-memory; tombol "Selesai" menutup sesi
+
+**Sore: tes 10 menit ke anak**
+
+6. Serahkan HP ke anak, minta coret-coret bebas di kanvas — tidak ada soal,
+   tidak ada target
+7. Observasi: apakah jari dipakai atau stylus? Apakah tulisannya terbaca?
+   Apakah anak mengeluh setelah 5 menit?
+
+**Selesai kalau:** menggambar di layar terasa mulus, JSON berisi ribuan titik
+dengan timestamp, dan test `toSamples()` hijau.
+
+**Berhenti kalau:** anak menolak menulis dengan jari, atau tulisannya jauh
+lebih buruk daripada di kertas. Jangan lanjut ke Hari 2 — ini asumsi paling
+murah untuk digugurkan, dan sengaja diuji sebelum ada satu baris kode
+diagnosis ditulis.
+
+### Hari 2 — Kanvas berlangkah + alur ekspor
+
+**Pagi: UI sesi lengkap**
+
+1. Rakit tiga layar: daftar 10 soal → kanvas berlangkah + kotak jawaban →
+   layar "terima kasih" dengan tombol ekspor
+2. Implementasikan tombol "Langkah Baru" (PRD §6.1): menekan menyegel
+   kanvas aktif dan membuka kanvas kosong berikutnya. Catat timestamp
+   penyegelan dan pembukaan
+3. Jawaban akhir di field ketik terpisah (keyboard numerik), bukan hasil
+   OCR kanvas
+4. Saat "Selesai Sesi" ditekan: app menulis satu file JSON ke
+   `files/sesi-<timestamp>.json` di internal storage
+
+**Sore: verifikasi jalur ekspor di HP nyata**
+
+5. Colok kabel USB ke Mac, jalankan:
+   ```bash
+   adb exec-out run-as <pkg> cat files/sesi-<id>.json > sesi-<id>.json
+   ```
+6. Buka file di Mac — verifikasi isinya utuh dan bisa di-parse
+7. Kalau `run-as` gagal (vendor membatasi), coba fallback:
+   - `ACTION_SEND` dari dalam app → AirDrop ke Mac
+   - Atau `adb backup` lalu ekstrak
+   - Pilih satu, catat yang jalan
+
+**Selesai kalau:** satu sesi lengkap (10 soal, goresan + jawaban) keluar
+sebagai satu berkas JSON di Mac, dan jalur ekspornya terverifikasi.
+
+**Berhenti kalau:** tidak ada cara yang bisa membawa JSON dari HP ke Mac
+tanpa internet. Kalau ini terjadi, spike tertunda sampai mekanisme transfer
+diselesaikan — tidak ada gunanya merekam data yang tidak bisa dipindah.
+
+### Hari 3 — Render PNG + malrule
+
+**Pagi: render dan turunan waktu**
+
+1. Tulis skrip Python `render.py` yang membaca `sesi-<id>.json`, merender
+   goresan tiap langkah jadi satu PNG per langkah
+2. Hitung empat turunan waktu per soal (PRD §2.2):
+   - Jeda sebelum goresan pertama
+   - Durasi per langkah
+   - Jumlah hapus per langkah
+   - Apakah jawaban ditulis sebelum langkah selesai
+3. Output: satu folder per sesi berisi PNG per langkah + `turunan.yaml`
+
+**Sore: tulis malrule untuk 10 soal uji**
+
+4. Buka Panduan Orang Tua, identifikasi pola kesalahan yang sudah tercatat
+   untuk 10 soal uji
+5. Untuk tiap pola, tulis sebagai:
+   ```yaml
+   template_id: pecahan_operasi_campuran
+   parameter:
+     suku: [ {n: 2, d: 3, tanda: +}, {n: 3, d: 4, tanda: +}, {n: 1, d: 2, tanda: -} ]
+   malrule:
+     id: pecahan.operasi_pembilang_penyebut_terpisah
+     prediksi(suku): Σ(tanda·n) / Σ(tanda·d)
+     kode: K
+   ```
+6. Tulis `tahap_a.py` yang menjalankan tiap malrule atas parameter soal,
+   lalu mencocokkan prediksi ke jawaban anak
+7. Tes dengan jawaban salah buatan: misal input `"4/5"` untuk soal pecahan,
+   `tahap_a.py` harus mengembalikan `kode: K` tanpa LLM
+
+**Selesai kalau:** Bapak bisa melihat tulisan anak per langkah sebagai PNG,
+dan Tahap A menghasilkan kode yang benar untuk jawaban salah yang sudah diketahui
+pola salahnya — tanpa panggilan API apa pun.
+
+### Hari 4 — tinta_heuristik (pagi) + tinta_llm (sore)
+
+**Pagi: tinta_heuristik — baseline deterministik**
+
+1. Tulis `tinta_heuristik.py` — aturan if-then atas turunan waktu:
+   - Lancar (jeda awal pendek, sedikit hapus) tapi jawaban salah → condong K
+   - Langkah benar, koreksi terkonsentrasi di titik hitung → condong H
+   - Jawaban ditulis sebelum langkah selesai → curiga menejak/B
+   - Sinyal campur atau lemah → `tidak_pasti`
+2. Jalankan atas data sesi uji (kalau Hari 5 sudah jalan) atau atas data
+   buatan
+3. Catat hasil: berapa dari 10 soal dapat kode, berapa `tidak_pasti`
+
+**Sore: tinta_llm — prompt + structured output**
+
+4. Tulis `tinta_llm.py`:
+   - Render PNG per langkah (sudah ada dari Hari 3)
+   - Ringkasan waktu dari `turunan.yaml`
+   - Kirim ke `claude-opus-5` dengan adaptive thinking + structured output
+   - Response diparsing ke skema §2.5
+5. Implementasikan cache berkunci `hash(data + prompt_versi + model)`:
+   jalankan sekali, catat biaya; jalankan ulang, harus membaca cache
+6. Jalankan atas data yang sama dengan heuristik
+
+**Selesai kalau:** kedua implementasi mengembalikan JSON diagnosis untuk 10
+soal, dan `tinta_llm` bisa dijalankan ulang tanpa memanggil API (cache
+hijau).
+
+**Urutan sengaja:** heuristik didahulukan. Menulis baseline setelah melihat
+hasil LLM adalah cara paling mudah untuk tanpa sadar membuatnya kalah.
+
+### Hari 5 — Sesi uji sungguhan dengan anak
+
+**Pagi: persiapan**
+
+1. Cek HP: app terpasang, storage cukup, baterai penuh
+2. Siapkan ruangan: tenang, tidak ada gangguan, anak tidak lapar/ngantuk
+3. Buka 10 soal di app, pastikan semua tampil dengan benar
+
+**Sore: sesi uji**
+
+4. Serahkan HP ke anak. Katakan: "Ini bukan ujian, tidak ada nilainya.
+   Kerjakan saja sebisanya."
+5. Anak mengerjakan ~30 menit, tanpa didampingi
+6. Setelah selesai: ekspor JSON, pindah ke Mac
+
+**Malam: Bapak menilai sendiri**
+
+7. Buka PNG per langkah + turunan waktu
+8. Untuk tiap soal yang salah, tentukan kode B/K/H sendiri
+9. **Tulis di kertas, bukan di komputer** — kalau input ke sistem dulu,
+   penilaian akan terpengaruh oleh `kode_awal` yang sudah ada
+
+**Selesai kalau:** data sesi tersimpan di Mac, dan Bapak punya penilaian
+independen tertulis di kertas.
+
+### Hari 6–7 — Wawancara, bandingkan, putuskan
+
+**Hari 6: wawancara NEA**
+
+1. Pilih 3–4 soal yang salah dari sesi uji — fokus yang Bapak dan sistem
+   berbeda pendapat, atau yang Bapak ragu
+2. Jalankan protokol 5-prompt NEA untuk tiap soal:
+   - "Baca soal ini."
+   - "Ceritakan apa yang diminta."
+   - "Tunjukkan bagaimana kamu dapat jawabannya, ceritakan pikiranmu."
+   - "Kerjakan sambil dijelaskan."
+   - "Tulis jawabannya."
+3. Catat kode final berdasarkan wawancara
+
+**Sore: bandingkan dua angka**
+
+4. Buat tabel perbandingan:
+   ```
+   soal | jawaban | heuristik | llm | bapak | wawancara | cocok?
+   ```
+5. Hitung: berapa dari 10 cocok untuk heuristik? Berapa untuk LLM?
+6. Catat: ada kasus false-K (sistem bilang K, sebenarnya H)?
+
+**Hari 7: putuskan**
+
+7. Kalau 5–6 cocok (zona abu-abat): perbaiki prompt, jalankan ulang atas
+   data yang sama (baca cache kalau prompt_versi tidak berubah). **Maksimal
+   3 putaran** — dihitung dari `prompt_versi` yang tercatat
+8. Setelah 3 putaran atau kalau sudah jelas lulus/gagal: tulis keputusan
+   final
+
+**Keputusan final:**
+
+| Hasil | Tindakan |
+|---|---|
+| Heuristik ≥7/10, nol false-K | LLM keluar dari v1. Tahap B jalan tanpa biaya. Lanjut bangun v1. |
+| Hanya LLM ≥7/10 | LLM masuk v1 dengan biaya. Heuristik tetap sebagai pembanding regresi. Lanjut bangun v1. |
+| Keduanya <5/10 | Kanal tinta gugur. Produk mundur ke jalur foto kertas / jawaban akhir saja / wawancara terpandu. |
+| 5–6 cocok setelah 3 putaran | Tesis tidak gugur, tapi butuh data tambahan (lebih banyak soal, anak lain) sebelum keputusan final. |
+
+**Selesai kalau:** dua angka kecocokan final ada di tangan, dan keputusan
+lingkup LLM untuk v1 sudah diambil.
+
+---
+
+## Lampiran B — Prasyarat sebelum Hari 1
+
+Hal-hal yang harus siap sebelum mulai, supaya Hari 1 tidak habis untuk setup.
+
+**Lingkungan Android**
+- Android Studio terpasang, SDK dengan minSdk 26
+- HP target terhubung via ADB (`adb devices` menampilkan device)
+- Opsi Developer → USB Debugging aktif di HP
+
+**Lingkungan Mac**
+- Python 3.11+ terinstal
+- Library: `anthropic` (untuk Hari 4), `pyyaml`, `pillow` (render PNG)
+- Kunci API Anthropic tersedia di environment variable `ANTHROPIC_API_KEY`
+  (tidak pernah masuk ke APK, hanya di Mac)
+- Folder kerja: `~/Documents/osn/spike/`
+
+**Konten soal**
+- 10 soal dari Tes Kalibrasi Minggu 0 sudah dipilih dan diketik sebagai
+  template + parameter (bukan teks mati)
+- Kunci jawaban untuk 10 soal sudah ada (tidak masuk HP, hanya di Mac)
+
+**Anak**
+- Tahu bahwa Ayah akan meminta mengerjakan sesuatu di HP, tapi tidak tahu
+  kapan — jangan jadwalkan, biarkan spontaneous saat Bapak siap
+- Tidak sedang ujian sekolah, tidak sakit, tidak terlalu lelah
+
+---
+
+## Lampiran C — Yang TIDAK dikerjakan di spike
+
+Setiap item di bawah ini sudah dibicarakan di PRD dan masuk v1 — tapi tidak
+perlu ada untuk menjawab pertanyaan spike. Kalau tergoda menambahkannya,
+ingat: spike ini menguji SATU asumsi. Bukan membangun produk.
+
+| Tidak dikerjakan | Kenapa |
+|---|---|
+| Graf topik berprasyarat | 10 soal hardcoded sudah cukup |
+| Antrean pengulangan & buku kesalahan | Butuh graf topik dulu |
+| Orkestrator `osn sync` | 10 soal sekali jalan, langkah manual masih wajar |
+| Penyimpanan append-only (kejadian/, derive) | Spike tidak punya status topik |
+| Mode Anak / Screen Pinning | Bukan target spike |
+| Kanvas geometri & daftar berbaris | 10 soal pilih yang cocok kanvas berlangkah |
+| Foto kertas buram | Kanal tinta lebih kaya; foto menyusul Fase 2 |
+| Pra-fondasi kelas 4 | Baru relevan setelah diagnosis terbukti |
+| AI di dalam aplikasi | Sengaja dihindari |
