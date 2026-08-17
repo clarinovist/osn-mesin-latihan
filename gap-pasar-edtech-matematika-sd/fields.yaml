@@ -1,0 +1,97 @@
+field_categories:
+  - category: "Basic Info"
+    fields:
+      - name: name
+        description: "Nama produk/kerangka/item."
+        detail_level: brief
+        required: true
+      - name: category
+        description: "competitor_product / diagnostic_benchmark / academic_framework / market_signal."
+        detail_level: brief
+        required: true
+      - name: origin_region
+        description: "Negara/wilayah asal (Indonesia, global, dsb)."
+        detail_level: brief
+        required: false
+      - name: target_age
+        description: "Rentang usia/kelas target, jika relevan."
+        detail_level: brief
+        required: false
+      - name: delivery_mode
+        description: "online-app / offline-tutoring / hybrid — relevan karena Kumon & Sparks Math offline sementara sebagian besar kompetitor digital."
+        detail_level: brief
+        required: false
+      - name: language_localization
+        description: "Level dukungan Bahasa Indonesia (UI, penjelasan, laporan orang tua)."
+        detail_level: brief
+        required: false
+      - name: pricing_model
+        description: "free / freemium / subscription / per-sesi."
+        detail_level: brief
+        required: false
+      - name: local_curriculum_alignment
+        description: "Keselarasan dengan Kurikulum Merdeka / K13, jika ada bukti."
+        detail_level: brief
+        required: false
+
+  - category: "Diagnosis Capability"
+    fields:
+      - name: does_error_type_diagnosis
+        description: "yes / no / partial — apakah item ini mendiagnosis JENIS kesalahan (bukan cuma skor benar-salah)."
+        detail_level: moderate
+        required: true
+      - name: diagnosis_granularity
+        description: "score-only / trouble-spot-quantity / topic-mastery-map / mcq-distractor-mapped-misconception / full-error-type-taxonomy."
+        detail_level: moderate
+        required: false
+      - name: diagnosis_input_modality
+        description: "mcq-distractor / free-response-ocr / handwriting-stroke / video-explained / self-report."
+        detail_level: moderate
+        required: false
+      - name: ai_tutor_diagnosis_reliability
+        description: "Apakah diagnosisnya sudah divalidasi ke ground truth / dikenal punya failure mode (mis. 'correct answer trap')."
+        detail_level: detailed
+        required: false
+      - name: evidence_quote
+        description: "Kutipan langsung dari sumber yang mendukung klaim does_error_type_diagnosis."
+        detail_level: detailed
+        required: false
+
+  - category: "Parent Role"
+    fields:
+      - name: how_parent_involved
+        description: "gatekeeper / dashboard-only / passive / none."
+        detail_level: moderate
+        required: false
+      - name: ai_tutor_directly_to_child
+        description: "yes/no — apakah AI ngobrol/menjelaskan langsung ke anak (bukan lewat orang tua)."
+        detail_level: moderate
+        required: false
+
+  - category: "Evidence & Market Signal"
+    fields:
+      - name: key_finding
+        description: "Temuan kunci yang relevan untuk menjawab pertanyaan gap-pasar."
+        detail_level: detailed
+        required: true
+      - name: study_scale_or_sample
+        description: "Skala studi/data (jumlah siswa, soal, sumber) jika item ini bersifat riset/akademik."
+        detail_level: moderate
+        required: false
+      - name: evidence_strength
+        description: "strong / moderate / weak / anecdotal."
+        detail_level: brief
+        required: false
+      - name: remediation_efficacy_evidence
+        description: "Apakah ada bukti RCT/kuasi-eksperimen bahwa diagnosis-nya benar-benar memperbaiki hasil belajar (bukan cuma mendeteksi error)."
+        detail_level: detailed
+        required: false
+
+  - category: "Sources"
+    fields:
+      - name: source_urls
+        description: "Daftar URL sumber untuk semua klaim di atas."
+        detail_level: brief
+        required: true
+
+uncertain: []

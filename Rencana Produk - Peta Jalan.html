@@ -1,0 +1,753 @@
+<title>Rencana Produk — Peta Jalan</title>
+<style>
+  :root {
+    --paper: #F6F7F5;
+    --surface: #FFFFFF;
+    --ink: #14202E;
+    --muted: #61707E;
+    --rule: #C6D2DC;
+    --rule-soft: #E2E8ED;
+    --accent: #1D4E89;
+    --accent-soft: #DCE6F1;
+    --flag: #B0453C;
+    --flag-soft: #F5E1DF;
+    --ok: #2F6B4F;
+    --ok-soft: #DEEAE3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #111820;
+      --surface: #171F28;
+      --ink: #E2E8ED;
+      --muted: #8A9AA8;
+      --rule: #2C3945;
+      --rule-soft: #222D38;
+      --accent: #7FB2E8;
+      --accent-soft: #20303F;
+      --flag: #E08D84;
+      --flag-soft: #362323;
+      --ok: #7FBF9C;
+      --ok-soft: #1D2E27;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #111820;
+    --surface: #171F28;
+    --ink: #E2E8ED;
+    --muted: #8A9AA8;
+    --rule: #2C3945;
+    --rule-soft: #222D38;
+    --accent: #7FB2E8;
+    --accent-soft: #20303F;
+    --flag: #E08D84;
+    --flag-soft: #362323;
+    --ok: #7FBF9C;
+    --ok-soft: #1D2E27;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; }
+
+  /* nav */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .topnav-inner {
+    max-width: 78ch;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    gap: 1.4rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .topnav-inner::-webkit-scrollbar { display: none; }
+  .topnav a {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 0.9rem 0 0.7rem;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .topnav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .topnav a:hover { color: var(--ink); }
+
+  .sheet { max-width: 78ch; margin: 0 auto; padding: 3.5rem 1.5rem 6rem; }
+  .body-col {
+    border-left: 1px solid var(--rule);
+    padding-left: 2.25rem;
+    margin-left: 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+  }
+  @media (max-width: 680px) {
+    .body-col { margin-left: 0; padding-left: 1.1rem; }
+    .sheet { padding: 2rem 1.1rem 4rem; }
+  }
+
+  .masthead { margin-left: 3.5rem; padding-left: 2.25rem; margin-bottom: 3rem; }
+  @media (max-width: 680px) { .masthead { margin-left: 0; padding-left: 1.1rem; } }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.7rem);
+    line-height: 1.1;
+    letter-spacing: -0.026em;
+    font-weight: 680;
+    margin: 0 0 0.9rem;
+    text-wrap: balance;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--muted); margin: 0 0 1.6rem; max-width: 58ch; }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 0.75rem 1.1rem;
+    font-size: 0.9rem;
+    max-width: fit-content;
+  }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .status b { font-weight: 650; }
+
+  section { display: flex; flex-direction: column; gap: 1.1rem; scroll-margin-top: 4rem; }
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 650;
+    letter-spacing: -0.014em;
+    margin: 0;
+    position: relative;
+    text-wrap: balance;
+  }
+  h2 .marker {
+    position: absolute;
+    left: -5.75rem;
+    top: 0.32em;
+    width: 3.5rem;
+    text-align: right;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  @media (max-width: 680px) {
+    h2 .marker { position: static; display: block; width: auto; text-align: left; margin-bottom: 0.3rem; }
+  }
+  h3 { font-size: 0.95rem; font-weight: 650; margin: 0.4rem 0 -0.3rem; }
+  p { margin: 0; max-width: 66ch; }
+  p + p { margin-top: -0.3rem; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  strong { font-weight: 650; }
+  code {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.86em;
+    background: var(--rule-soft);
+    padding: 0.12em 0.34em;
+    border-radius: 2px;
+  }
+  ul, ol { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; max-width: 66ch; }
+  li::marker { color: var(--muted); }
+
+  .note { border-left: 2px solid var(--rule); padding: 0.15rem 0 0.15rem 1.1rem; color: var(--muted); font-size: 0.95rem; max-width: 64ch; }
+  .note.flagged { border-left-color: var(--flag); }
+  .note.okd { border-left-color: var(--ok); }
+  .note strong { color: var(--ink); }
+
+  .kv { display: grid; grid-template-columns: 9.5rem 1fr; gap: 0.5rem 1.25rem; font-size: 0.95rem; }
+  .kv dt {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 0.28em;
+  }
+  .kv dd { margin: 0; }
+  @media (max-width: 520px) {
+    .kv { grid-template-columns: 1fr; gap: 0.1rem 0; }
+    .kv dd { margin-bottom: 0.7rem; }
+  }
+
+  /* accordion */
+  details {
+    border: 1px solid var(--rule-soft);
+    background: var(--surface);
+  }
+  details + details { margin-top: -1px; }
+  summary {
+    cursor: pointer;
+    padding: 0.9rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "+";
+    font-family: ui-monospace, monospace;
+    color: var(--accent);
+    width: 1rem;
+    flex-shrink: 0;
+  }
+  details[open] summary::before { content: "–"; }
+  details[open] summary { border-bottom: 1px solid var(--rule-soft); }
+  .details-body { padding: 0.2rem 1.1rem 1.1rem 2.7rem; color: var(--muted); font-size: 0.92rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  .details-body b { color: var(--ink); }
+  .details-body .src { font-size: 0.8rem; }
+  .details-body .src a { color: var(--muted); }
+
+  /* gate */
+  .gate {
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    padding: 1.3rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .gate h3 { margin: 0; display: flex; align-items: center; gap: 0.6rem; }
+  .verdict {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 0.2em 0.55em;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .verdict.pass { color: var(--ok); }
+  .verdict.fail { color: var(--flag); }
+
+  /* checklist */
+  .checklist { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--rule-soft); background: var(--surface); }
+  .check-item {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--rule-soft);
+    cursor: pointer;
+    font-size: 0.92rem;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item input { margin-top: 0.28em; accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+  .check-item .day {
+    font-family: ui-monospace, monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+  .check-item .done-label { color: var(--muted); }
+  .check-item input:checked ~ .check-text .done-label { text-decoration: line-through; color: var(--rule); }
+  .progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1.1rem;
+    background: var(--rule-soft);
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .progress-bar { flex: 1; height: 4px; background: var(--rule); margin: 0 1rem; position: relative; overflow: hidden; }
+  .progress-bar span { position: absolute; inset: 0; width: 0%; background: var(--accent); transition: width 0.25s; }
+
+  /* roadmap */
+  .phase-list { display: flex; flex-direction: column; gap: 0; }
+  .phase {
+    display: grid;
+    grid-template-columns: 3.5rem 1fr;
+    gap: 1rem;
+    padding: 1.1rem 0;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .phase:first-child { border-top: none; padding-top: 0; }
+  .phase-num {
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding-top: 0.15rem;
+  }
+  .phase-num.now { color: var(--accent); font-weight: 700; }
+  .phase-title { font-weight: 650; margin: 0 0 0.3rem; }
+  .phase-body { color: var(--muted); font-size: 0.92rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .phase-body ul { padding-left: 1.1rem; }
+  .phase-tag {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.12em 0.5em;
+    border-radius: 2px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 0.6rem 0.9rem 0.6rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 0.64rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+
+  .persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  @media (max-width: 620px) { .persona-grid { grid-template-columns: 1fr; } }
+  .persona {
+    border: 1px solid var(--rule-soft);
+    background: var(--surface);
+    padding: 1.2rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .persona-tag { font-family: ui-monospace, monospace; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .persona p { font-size: 0.92rem; color: var(--muted); max-width: 100%; }
+  .persona p strong { color: var(--ink); }
+
+  .not-here {
+    border: 1px dashed var(--rule);
+    padding: 1rem 1.2rem;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  .not-here b { color: var(--flag); }
+
+  hr { border: none; border-top: 1px solid var(--rule-soft); margin: 0; }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule-soft);
+    font-size: 0.84rem;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  @media print {
+    :root {
+      --paper: #ffffff;
+      --surface: #ffffff;
+      --ink: #14202E;
+      --muted: #4B5A6B;
+      --rule: #C6D2DC;
+      --rule-soft: #E2E8ED;
+      --accent: #1D4E89;
+      --accent-soft: #EAF0F7;
+      --flag: #B0453C;
+      --flag-soft: #F5E1DF;
+      --ok: #2F6B4F;
+      --ok-soft: #DEEAE3;
+    }
+    body { font-size: 12.5px; }
+    .topnav { display: none; }
+    .sheet { max-width: 100%; padding: 0.2in 0.3in; }
+    .masthead, .body-col { margin-left: 2.5rem; }
+    h2 .marker { left: -3.9rem; }
+    section { break-inside: avoid-page; scroll-margin-top: 0; }
+    .checklist, .gate, .persona, details, .phase, table, .status { break-inside: avoid; }
+    details { border-color: var(--rule-soft); }
+    summary::before { display: none; }
+    summary { cursor: default; }
+    details .details-body { display: flex !important; }
+    .progress-row { display: none; }
+    a { color: var(--accent) !important; text-decoration: none; }
+    .status { break-after: avoid; }
+  }
+</style>
+
+<script>
+  (function () {
+    var isExport = location.search.indexOf('pdf') !== -1;
+    if (isExport) {
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.querySelectorAll('details').forEach(function (d) { d.open = true; });
+    }
+  })();
+  window.addEventListener('beforeprint', function () {
+    document.querySelectorAll('details').forEach(function (d) { d.open = true; });
+  });
+</script>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="#arah" data-nav>Arah Produk</a>
+    <a href="#taksonomi" data-nav>B/K/H</a>
+    <a href="#riset" data-nav>Riset</a>
+    <a href="#spike" data-nav>Spike</a>
+    <a href="#roadmap" data-nav>Roadmap</a>
+    <a href="#risiko" data-nav>Risiko</a>
+    <a href="#bentuk" data-nav>Bentuk Aplikasi</a>
+  </div>
+</nav>
+
+<div class="sheet">
+  <div class="masthead">
+    <p class="eyebrow">Rencana produk · konsolidasi · 14 Agustus 2026</p>
+    <h1>Peta Jalan: Aplikasi Diagnosis Matematika Anak</h1>
+    <p class="standfirst">Satu dokumen yang menggabungkan arah produk, taksonomi B/K/H, hasil riset dua-putaran, rencana spike, dan roadmap setelahnya — supaya tidak perlu buka lima percakapan berbeda untuk tahu di mana kita berdiri.</p>
+    <div class="status">
+      <span class="dot"></span>
+      <span>Status sekarang: <b>siap eksekusi Fase 0 — spike 5–7 hari</b>, belum ada satu baris kode pun ditulis.</span>
+    </div>
+  </div>
+
+  <div class="body-col">
+
+    <section id="arah">
+      <h2><span class="marker">01</span>Arah produk</h2>
+      <p>Keputusan yang sudah disepakati 14 Agustus 2026, jadi dasar semua yang lain di dokumen ini.</p>
+      <dl class="kv">
+        <dt>Lingkup v1</dt>
+        <dd>Satu keluarga saja (anak sendiri), tanpa akun, tanpa multi-tenant.</dd>
+        <dt>Target anak</dt>
+        <dd>Kelas 4, TA 2026/2027. PDF sumber ditulis untuk kelas 5 menuju OSN 2027 — tidak langsung berlaku. Target OSN realistis 2028, perlu lapisan pra-fondasi yang belum ada di PDF manapun.</dd>
+        <dt>Bukan kalender</dt>
+        <dd>Peta 20 minggu didekompilasi jadi graf topik berprasyarat. Penggeraknya kondisi anak, bukan tanggal — bolong seminggu tidak menimbulkan "utang sesi".</dd>
+        <dt>OSN = kesimpulan</dt>
+        <dd>Bukan mode yang dipilih saat daftar. Tiap soal punya <code>tingkat: 1|2|3</code>. Kata "OSN" tidak boleh hardcode di kode atau struktur data.</dd>
+        <dt>AI di belakang</dt>
+        <dd>Tidak pernah jadi tutor chat untuk anak. AI duduk di belakang orang tua, bukan di depan anak.</dd>
+        <dt>Input anak</dt>
+        <dd>Tulisan tangan berlangkah di kanvas HP. Jawaban akhir diketik, bukan hasil OCR — OCR tidak pernah menentukan benar/salah.</dd>
+        <dt>Ritme</dt>
+        <dd>Realistis 3 sesi/minggu, 30–40 menit — bukan 4 hari + Jumat + Sabtu seperti di modul sumber.</dd>
+      </dl>
+      <p class="note flagged"><strong>Kenapa ini penting:</strong> orang tua di Indonesia kebanyakan tidak mengejar OSN — cukup nilai matematika membaik. Nilai jual sebenarnya bukan OSN, melainkan diagnosis: rapor bilang "Matematika 78", aplikasi ini bilang penyebabnya topik apa saja.</p>
+    </section>
+
+    <section id="taksonomi">
+      <h2><span class="marker">02</span>Taksonomi B/K/H</h2>
+      <p>Inti mesin diagnosis — aset paling bernilai dari PDF <em>Tes Kalibrasi - Panduan Orang Tua</em>, bukan soal-soalnya.</p>
+      <ul>
+        <li><strong>B</strong> — salah baca soal. <strong>K</strong> — salah konsep. <strong>H</strong> — salah hitung.</li>
+        <li>Metrik utama aplikasi = jumlah <strong>K aktif per topik</strong> dan trennya, <strong>bukan skor</strong>. "Anak dengan sembilan H dan skor 11 sebenarnya jauh lebih siap daripada anak dengan tiga K dan skor 15."</li>
+        <li><strong>Tabel sidik jari jawaban salah:</strong> jawaban tertentu memetakan ke diagnosis spesifik. Contoh: <code>2/3 + 3/4 − 1/2</code> dijawab <code>4/5</code> → pembilang &amp; penyebut dijumlahkan sendiri-sendiri, konsep pecahan belum terbentuk.</li>
+        <li><strong>Uji Ulang Lisan</strong> (PDF terpisah) memisahkan "tidak bisa" dari "tidak dikerjakan".</li>
+      </ul>
+      <p class="note">Tinta digital bertimestamp bisa memetakan otomatis ke B/K/H: lancar-tanpa-ragu-tapi-salah → K; langkah benar dengan koreksi di titik aritmetika → H; jawaban ditulis duluan lalu langkah menyusul → menebak.</p>
+    </section>
+
+    <section id="riset">
+      <h2><span class="marker">03</span>Ringkasan riset</h2>
+      <p>Dua putaran riset multi-sumber (10 sudut, 47 sumber, 38 klaim lolos verifikasi adversarial 3-vote). Laporan lengkap dengan sitasi ada di <code>osn-riset-bkh.html</code> — bagian ini ringkasannya, klik tiap baris untuk detail.</p>
+
+      <details open>
+        <summary>Knowledge tracing memvalidasi "jangan pakai skor"</summary>
+        <div class="details-body">
+          <p>BKT/DKT secara struktural cuma bisa mengestimasi mastery agregat, bukan mendiagnosis akar kesalahan — keterbatasan bentuk data (benar/salah biner), bukan soal implementasi. <b>Option tracing</b> dan <b>Graph-based Knowledge Tracing</b> jadi presedan akademik untuk pendekatan tagging-K dan graf topik berprasyarat.</p>
+          <p><b>Peringatan:</b> MalruleLib menunjukkan AI kesulitan generalisasi satu contoh kesalahan anak ke soal baru berbeda template (akurasi 66%→40%) — jangan andalkan AI menebak miskonsepsi baru secara bebas.</p>
+          <p class="src">arxiv.org/2104.09043 · arxiv.org/2105.15106 · arxiv.org/2601.03217</p>
+        </div>
+      </details>
+      <details>
+        <summary>Newman's Error Analysis — saudara akademik B/K/H</summary>
+        <div class="details-body">
+          <p>Kerangka 1977, masih dikutip 2019–2025. 5 tahap: Reading, Comprehension, Transformation, Process Skills, <b>Encoding</b>. B≈Reading+Comprehension, K≈Transformation, H≈Process Skills. Kategori kelima (Encoding — paham &amp; hitung benar tapi salah tulis jawaban akhir) tidak ada di B/K/H.</p>
+          <p>Historis dioperasikan lewat <b>protokol wawancara 5-prompt tetap</b>, bukan interpretasi bebas — bahkan dipasang sebagai poster kelas di NSW.</p>
+          <p class="src">mav.vic.edu.au (White 2009) · researchgate.net · files.eric.ed.gov</p>
+        </div>
+      </details>
+      <details>
+        <summary>OCR/HME untuk coretan fisik — risiko terdokumentasi</summary>
+        <div class="details-body">
+          <p>Model SOTA (VEHME, EMNLP 2025) gagal 11–70% pada kanvas berstruktur. VLM punya kebiasaan berbahaya <b>"memperbaiki" kesalahan anak</b> alih-alih mentranskrip apa adanya. Confidence measure grading cuma ~73% andal (false-positive rate 0,27).</p>
+          <p><b>Rekomendasi:</b> SOP ambang ganda (auto-terima/auto-tolak/rute-ke-orang tua), selalu tampilkan transkripsi verbatim ke orang tua, kanvas bebas + OCR halaman-penuh lebih baik dari kotak jawaban kaku.</p>
+          <p class="src">arxiv.org/2510.22798 · arxiv.org/2404.10690 · arxiv.org/2408.11728 · arxiv.org/2604.22774</p>
+        </div>
+      </details>
+      <details>
+        <summary>PP 17/2025 — berlaku meski satu keluarga</summary>
+        <div class="details-body">
+          <p>"Penyelenggara Sistem Elektronik" eksplisit mencakup perorangan, bukan cuma institusi. Wajib persetujuan orang tua, wajib DPIA (bisa catatan ringkas), wajib hapus data kalau consent ditarik.</p>
+          <p>Arsitektur "tanpa izin INTERNET, diagnosis di Mac" yang sudah dipilih di rencana spike justru sejalan dengan arah minimalisasi data ini — belum ada preseden penegakan untuk operator individu skala kecil.</p>
+          <p class="src">peraturan.go.id/pp-no-17-tahun-2025 · peraturan.bpk.go.id</p>
+        </div>
+      </details>
+      <details>
+        <summary>Dashboard orang tua — celah riset, bukan kesimpulan</summary>
+        <div class="details-body">
+          <p>Hampir semua klaim spesifik tentang pola anti-data-overload untuk orang tua awam gagal verifikasi di kedua putaran. Satu-satunya yang lolos (IXL Trouble Spots) adalah produk institusional untuk guru, bukan orang tua individu.</p>
+          <p>Jangan bangun dashboard berdasarkan pola dari produk institusional — kalau dikerjakan, perlu riset+piloting terpisah.</p>
+          <p class="src">blog.ixl.com</p>
+        </div>
+      </details>
+      <details>
+        <summary>Klaim yang gagal verifikasi — jangan diasumsikan benar</summary>
+        <div class="details-body">
+          <p>Dynamic BKT sudah mengenkode graf prasyarat secara otomatis — <b>ditolak</b>. DKT bisa menemukan struktur konsep laten tanpa tagging manusia — <b>ditolak</b>. Ambang ganda terbukti mencapai F1&gt;0,985 dengan &lt;3% masuk review — <b>ditolak</b> (pola metodologinya valid, angka performanya dari domain lain).</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="spike">
+      <h2><span class="marker">04</span>Rencana spike (5–7 hari)</h2>
+      <p>Detail teknis lengkap sudah ditulis di <code>Rencana Spike - Coretan ke Diagnosis.html</code>. Bagian ini ringkasan yang bisa dicentang, plus tiga penyesuaian yang direkomendasikan riset sebelum eksekusi.</p>
+
+      <h3>Asumsi yang dipertaruhkan</h3>
+      <p class="note">Apakah tinta bertimestamp + jawaban yang diketik cukup untuk mendiagnosis kesalahan anak sebagai B, K, atau H. Kalau tidak terbukti, produk ini turun jadi aplikasi latihan soal biasa.</p>
+
+      <h3>Keputusan arsitektur inti</h3>
+      <p>Aplikasi Android hanya merekam goresan → ekspor JSON. Diagnosis dijalankan terpisah oleh skrip Python di Mac (<code>claude-opus-5</code>). <strong>Tidak ada izin <code>android.permission.INTERNET</code> sama sekali</strong> — tidak ada API key di APK, iterasi prompt dalam hitungan detik tanpa build ulang, risiko gagal terisolasi ke skrip saja.</p>
+
+      <div class="gate">
+        <h3>Lulus <span class="verdict pass">lanjut bangun v1</span></h3>
+        <ul>
+          <li>Minimal 7 dari 10 kode B/K/H cocok dengan penilaian Bapak (setelah wawancara jadi penengah)</li>
+          <li>Nol kasus AI menyebut "K" untuk kesalahan yang sebenarnya "H"</li>
+          <li>Anak mau menulis di layar sampai soal ke-10 tanpa mengeluh soal alat tulisnya</li>
+        </ul>
+      </div>
+      <div class="gate">
+        <h3>Gagal <span class="verdict fail">hentikan, ganti pendekatan</span></h3>
+        <ul>
+          <li>Anak menolak menulis dengan jari, atau tulisannya jauh lebih buruk daripada di kertas — hentikan di hari pertama</li>
+          <li><code>terbaca: false</code> muncul di lebih dari 4 dari 10 soal</li>
+          <li>Kecocokan di bawah 5 dari 10, atau AI berulang kali meyakinkan di atas pembacaan yang keliru</li>
+        </ul>
+      </div>
+      <p class="note">Di antara keduanya — 5 atau 6 cocok — artinya prompt yang perlu diperbaiki, bukan tesis yang gugur. Data goresan sudah tersimpan, jadi putaran perbaikan tidak perlu melibatkan anak lagi.</p>
+
+      <h3>Rencana harian</h3>
+      <div class="checklist" id="spike-checklist">
+        <label class="check-item">
+          <input type="checkbox" data-key="d1a">
+          <span class="check-text"><span class="day">Hari 1</span><span class="done-label">Kanvas tinta + perekaman titik historis — selesai kalau menggambar terasa mulus &amp; JSON berisi ribuan titik berwaktu</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" data-key="d1b">
+          <span class="check-text"><span class="day">Hari 1</span><span class="done-label">Tes 10 menit ke anak, coret-coret bebas — selesai kalau anak nyaman menulis dengan jari (kalau tidak, berhenti di sini)</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" data-key="d2">
+          <span class="check-text"><span class="day">Hari 2</span><span class="done-label">Kanvas berlangkah, kotak jawaban, 10 soal, alur ekspor — selesai kalau satu sesi lengkap keluar sebagai satu berkas JSON</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" data-key="d3">
+          <span class="check-text"><span class="day">Hari 3</span><span class="done-label">Skrip render goresan jadi PNG + hitung turunan waktu — selesai kalau Bapak bisa melihat kembali tulisan anak per langkah</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" data-key="d4">
+          <span class="check-text"><span class="day">Hari 4</span><span class="done-label">Prompt diagnosis + structured output — selesai kalau skrip mengembalikan JSON diagnosis untuk 10 soal</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" data-key="d5">
+          <span class="check-text"><span class="day">Hari 5</span><span class="done-label">Sesi uji sungguhan dengan anak — selesai kalau data terkumpul &amp; Bapak sudah menilai sendiri lebih dulu</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" data-key="d67">
+          <span class="check-text"><span class="day">Hari 6–7</span><span class="done-label">Wawancara, bandingkan, perbaiki prompt di atas data yang sama — selesai kalau angka kecocokan final ada</span></span>
+        </label>
+        <div class="progress-row">
+          <span id="progress-text">0/7 selesai</span>
+          <div class="progress-bar"><span id="progress-fill"></span></div>
+          <span class="mono">tersimpan lokal</span>
+        </div>
+      </div>
+
+      <h3>Tiga penyesuaian sebelum eksekusi</h3>
+      <p>Lingkup dan gerbang di atas <strong>tidak berubah</strong> — ini murni memperkuat pelaksanaannya, dari riset yang baru selesai.</p>
+      <ol>
+        <li><strong>Strukturkan wawancara pakai protokol 5-prompt NEA:</strong> "Baca soal ini" → "Ceritakan apa yang diminta" → "Tunjukkan bagaimana kamu dapat jawabannya, ceritakan pikiranmu" → "Kerjakan sambil dijelaskan" → "Tulis jawabannya". Menggantikan "coba jelaskan caramu" yang bebas.</li>
+        <li><strong>Jangan tambah kategori "Encoding" ke skema output.</strong> Jawaban akhir diketik (bukan OCR) jadi kesalahan tulis-akhir nyaris tidak mungkin di jalur ini. Kalau muncul, catat manual saat wawancara, jangan ubah skema <code>kode</code>.</li>
+        <li><strong>Batas maksimal 3 putaran perbaikan prompt</strong> untuk zona abu-abu (5–6 cocok) di atas data yang sama, sebelum memutuskan lulus/gagal final — supaya tidak diam-diam overfitting ke 10 soal satu anak ini.</li>
+      </ol>
+    </section>
+
+    <section id="roadmap">
+      <h2><span class="marker">05</span>Roadmap setelah spike</h2>
+      <p>Melebar hanya kalau lapisan sebelumnya terbukti jalan — bukan bangun semua fitur dulu baru diuji.</p>
+      <div class="phase-list">
+        <div class="phase">
+          <div class="phase-num now">FASE 0<br>sekarang</div>
+          <div class="phase-body">
+            <span class="phase-tag">5–7 hari</span>
+            <p class="phase-title">Spike — coretan ke diagnosis</p>
+            <p>10 soal hardcoded, satu anak, satu sesi uji. Membuktikan atau menggugurkan tesis inti sebelum satu baris kode "produk" ditulis.</p>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">FASE 1</div>
+          <div class="phase-body">
+            <span class="phase-tag">setelah spike lulus</span>
+            <p class="phase-title">v1 harian, satu keluarga</p>
+            <ul>
+              <li>Lapisan pra-fondasi kelas 4 diputuskan lebih dulu (atau bersamaan) — PDF sumber tidak langsung cocok</li>
+              <li>Graf topik berprasyarat menggantikan 10-soal-hardcoded</li>
+              <li>Antrean pengulangan &amp; buku kesalahan, menyusul graf topik</li>
+              <li>Pipeline diagnosis tetap di Mac — jangan buru-buru pindahkan AI ke dalam aplikasi</li>
+              <li>Tulis catatan DPIA ringkas di awal fase ini, sebelum data anak terkumpul rutin</li>
+            </ul>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">FASE 2</div>
+          <div class="phase-body">
+            <span class="phase-tag">setelah v1 stabil</span>
+            <p class="phase-title">Foto kertas fisik</p>
+            <ul>
+              <li>SOP ambang ganda (auto-terima/auto-tolak/rute-ke-Bapak), bukan satu ambang tunggal</li>
+              <li>Transkripsi verbatim selalu ditampilkan ke Bapak sebelum diagnosis jalan</li>
+              <li>Kanvas bebas + OCR halaman-penuh dengan guard, bukan kotak jawaban kaku</li>
+              <li>Pustaka pola kesalahan terkurasi (perluasan tabel sidik jari), bukan AI menebak bebas</li>
+            </ul>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">FASE 3</div>
+          <div class="phase-body">
+            <span class="phase-tag">opsional — belum tentu perlu</span>
+            <p class="phase-title">Dashboard orang tua</p>
+            <p>Riset gagal menemukan pola tervalidasi untuk konteks non-institusi. Bapak sendiri yang jadi pengguna utama — laporan teks sederhana mungkin cukup lama sebelum ada alasan nyata membangun UI. Kalau dikerjakan, perlakukan sebagai riset+piloting kecil sendiri.</p>
+          </div>
+        </div>
+      </div>
+      <div class="not-here">
+        <p><b>Tetap "Ditunda", tidak berubah:</b> mode anak terkunci, kanvas geometri &amp; daftar berbaris, AI di dalam aplikasi. Sudah diputuskan di rencana spike, riset ini tidak memberi alasan untuk mengubahnya.</p>
+      </div>
+    </section>
+
+    <section id="risiko">
+      <h2><span class="marker">06</span>Risiko &amp; pertanyaan terbuka</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Risiko</th><th>Kenapa penting</th><th>Kapan diputuskan</th></tr></thead>
+          <tbody>
+            <tr><td>Distribusi B/K/H pada anak SD kelas 4 belum tervalidasi</td><td>Studi NEA yang ditemukan semua pada anak SMP+; kalau "K" tidak dominan di usia ini, metrik utama perlu ditinjau</td><td>Setelah beberapa minggu data v1 riil</td></tr>
+            <tr><td>Overfitting prompt ke 10 soal satu anak</td><td>Bisa lolos gerbang teknis tanpa generalisasi</td><td>Sebelum mulai iterasi — pakai batas 3 putaran</td></tr>
+            <tr><td>PP 17/2025 belum ada preseden penegakan individu skala kecil</td><td>Kepatuhan sekarang preventif, bukan teruji hukum</td><td>Makin penting begitu Fase 2 simpan foto di cloud, bukan lokal</td></tr>
+            <tr><td>Ambang OCR dari literatur berasal dari ujian universitas</td><td>Angka spesifik kemungkinan tidak langsung berlaku ke anak SD</td><td>Piloting internal begitu Fase 2 dimulai</td></tr>
+            <tr><td>Dashboard orang tua mungkin tidak dibutuhkan sama sekali</td><td>Menghindari kerja yang tidak perlu</td><td>Ditinjau ulang setelah Fase 1 jalan beberapa bulan</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="bentuk">
+      <h2><span class="marker">07</span>Bentuk aplikasinya</h2>
+      <p>Bukan aplikasi belajar yang bertambah fitur seiring waktu — alat diagnosis yang mulai sangat sempit dan baru melebar kalau tiap lapisan terbukti jalan.</p>
+      <div class="persona-grid">
+        <div class="persona">
+          <span class="persona-tag">Untuk anak</span>
+          <p>Buka HP, lihat daftar soal — bukan level, bukan XP, bukan lencana. Kanvas kosong berlangkah untuk coret-coret, jawaban akhir diketik terpisah. <strong>Tidak ada skor yang ditampilkan.</strong> Tidak ada AI yang mengobrol dengannya. Selesai ~10 soal atau 30–40 menit, 3x seminggu.</p>
+        </div>
+        <div class="persona">
+          <span class="persona-tag">Untuk Bapak</span>
+          <p>Bukan rapor angka — peta topik mana yang punya <strong>K aktif</strong> dan trennya. "Salah konsep di pengurangan pecahan berpenyebut beda, sudah 3x dalam 2 minggu" — lengkap bukti dari coretan anak. Bapak yang memutuskan mau diapakan.</p>
+        </div>
+      </div>
+      <h3>Peran AI</h3>
+      <p>Selalu di belakang layar, tidak pernah bicara ke anak. Membaca coretan + waktu pengerjaan, menerjemahkan jadi kode B/K/H dengan bukti — dan boleh mengaku tidak tahu kalau tulisannya memang tidak terbaca.</p>
+      <h3>Bentuk teknis sekarang</h3>
+      <p>Android tiga layar (daftar soal → kanvas menulis → ekspor), tanpa izin internet, tanpa akun, tanpa server. Diagnosis dijalankan terpisah lewat skrip di Mac. Pilihan sengaja, bukan keterbatasan sementara.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Kapan</th><th>Bentuknya</th><th>Yang dibuktikan</th></tr></thead>
+          <tbody>
+            <tr><td>Minggu ini</td><td>Spike — 10 soal, satu anak, satu sesi</td><td>Apakah AI beneran bisa baca cara berpikir anak dari coretannya</td></tr>
+            <tr><td>Setelah spike lulus</td><td>v1 harian — graf topik + antrean pengulangan</td><td>Dipakai beneran 3x/minggu, bukan cuma uji coba</td></tr>
+            <tr><td>Bulan-bulan berikutnya</td><td>+ Jalur foto kertas fisik, SOP ketat</td><td>Diagnosis tidak lagi terbatas ke layar HP</td></tr>
+            <tr><td>Kalau perlu</td><td>Dashboard/laporan lebih rapi</td><td>Baru kalau laporan teks ternyata kurang</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <span>Sumber: memori keputusan produk (14 Agustus 2026) · <code>Rencana Spike - Coretan ke Diagnosis.html</code> · laporan riset dua-putaran (47 sumber, 38 klaim terverifikasi).</span>
+      <span>Dokumen kerja — perbarui setiap kali keputusan baru diambil, jangan biarkan basi.</span>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+    var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+    if ('IntersectionObserver' in window) {
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var id = '#' + entry.target.id;
+          var link = links.find(function (a) { return a.getAttribute('href') === id; });
+          if (!link) return;
+          if (entry.isIntersecting) {
+            links.forEach(function (a) { a.classList.remove('active'); });
+            link.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-20% 0px -70% 0px' });
+      sections.forEach(function (s) { if (s) obs.observe(s); });
+    }
+
+    var KEY = 'osn-spike-checklist';
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('#spike-checklist input[type=checkbox]'));
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+    boxes.forEach(function (b) { b.checked = !!saved[b.dataset.key]; });
+
+    function updateProgress() {
+      var done = boxes.filter(function (b) { return b.checked; }).length;
+      document.getElementById('progress-text').textContent = done + '/' + boxes.length + ' selesai';
+      document.getElementById('progress-fill').style.width = (done / boxes.length * 100) + '%';
+    }
+    boxes.forEach(function (b) {
+      b.addEventListener('change', function () {
+        var state = {};
+        boxes.forEach(function (x) { state[x.dataset.key] = x.checked; });
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+        updateProgress();
+      });
+    });
+    updateProgress();
+  })();
+</script>

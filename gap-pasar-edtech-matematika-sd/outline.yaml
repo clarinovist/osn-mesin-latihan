@@ -1,0 +1,82 @@
+topic: "Gap pasar edtech matematika SD Indonesia untuk diagnosis jenis kesalahan (B/K/H)"
+research_question: >
+  Apakah kebutuhan pasar yang lebih luas (bukan cuma kebutuhan personal founder) untuk
+  diagnosis jenis kesalahan matematika (B=salah Baca, K=salah Konsep, H=salah Hitung) pada
+  anak SD memang belum tercover oleh solusi yang ada, di Indonesia maupun global sebagai
+  pembanding.
+
+items:
+  # --- Kompetitor produk (Indonesia + global, aplikasi/online) ---
+  - name: "Ruangguru"
+    category: competitor_product
+    description: "Edtech Indonesia terbesar, video pembelajaran + kuis + bimbel online."
+  - name: "Zenius"
+    category: competitor_product
+    description: "Edtech Indonesia, video pembelajaran + latihan adaptif."
+  - name: "Quipper"
+    category: competitor_product
+    description: "Platform adaptive learning Indonesia/global."
+  - name: "CoLearn"
+    category: competitor_product
+    description: "Aplikasi bantu-PR terbesar di Indonesia (1M+ pengguna) — foto soal, dapat jawaban + video langkah."
+  - name: "QANDA (Mathpresso)"
+    category: competitor_product
+    description: "AI tutor OCR asal Korea, dilaporkan ~2.5 juta pengguna Indonesia."
+  - name: "Kumon Indonesia"
+    category: competitor_product
+    description: "Jaringan les matematika offline terbesar di Indonesia, pakai tes penempatan level."
+  - name: "Khan Academy Kids"
+    category: competitor_product
+    description: "Platform global gratis, berbasis mastery learning."
+  - name: "IXL"
+    category: competitor_product
+    description: "Platform adaptive practice K-12 global untuk matematika, sudah ada diagnostic feature."
+  - name: "Photomath"
+    category: competitor_product
+    description: "AI step-by-step solver — bukan diagnosis, cuma tunjukkan cara jawab."
+
+  # --- Benchmark diagnostik/adaptif global (pembanding paling relevan) ---
+  - name: "Eedi"
+    category: diagnostic_benchmark
+    description: "Platform UK, 60rb+ soal MCQ dengan tiap distraktor termap ke miskonsepsi spesifik. Ada RCT EEF yang klaim 'menggandakan laju belajar'. Benchmark paling dekat dengan tujuan B/K/H."
+  - name: "Matific"
+    category: diagnostic_benchmark
+    description: "Adaptive math engine K-9, ada review eksplisit menyebut 'tidak mendiagnosis kenapa anak kesulitan'."
+  - name: "DreamBox / Discovery Education Math"
+    category: diagnostic_benchmark
+    description: "Adaptive math untuk anak SD, klaim 'intelligent adaptive learning'."
+  - name: "ALEKS"
+    category: diagnostic_benchmark
+    description: "Pakai Knowledge Space Theory — memetakan skill mana yang sudah/belum dikuasai per topik, tapi bukan jenis kesalahan dalam satu topik."
+
+  # --- Kerangka & riset akademik ---
+  - name: "Newman's Error Analysis (1977) & VanLehn slip/bug/misconception taxonomy (1983)"
+    category: academic_framework
+    description: "Dua kerangka teori klasik yang mendekomposisi kesalahan matematika jadi tahap/tipe yang bisa didiagnosis — landasan teori langsung untuk B/K/H."
+  - name: "Cognitive Tutor / ASSISTments (buggy-rules ITS research)"
+    category: academic_framework
+    description: "Sistem tutor cerdas berbasis ACT-R yang mendeteksi miskonsepsi prosedural spesifik. Ada RCT skala besar yang menunjukkan pesan diagnosis-error saja TIDAK cukup memperbaiki hasil belajar tanpa remediasi yang baik — caution penting untuk tesis produk B/K/H."
+  - name: "Riset frontier AI misconception-detection 2025-2026 (EDGE framework, 'Correct Answer Trap')"
+    category: academic_framework
+    description: "Paper arXiv terbaru: bahkan LLM frontier hanya menangkap 57-84% miskonsepsi ketika alur pikir siswa salah tapi jawaban akhir kebetulan benar — bukti bahwa diagnosis berbasis jawaban-akhir-saja tidak reliabel, dan gap ini belum terpecahkan bahkan di riset terdepan."
+  - name: "Riset stroke/handwriting analytics untuk diagnosis matematika"
+    category: academic_framework
+    description: "Preseden akademik AIED/HCI soal digital ink (kecepatan, jeda, koreksi) untuk diagnosis kognitif — relevan langsung untuk pendekatan input tulisan tangan B/K/H."
+
+  # --- Sinyal pasar & konteks makro Indonesia ---
+  - name: "Sinyal pasar & konteks makro Indonesia"
+    category: market_signal
+    description: >
+      Konsolidasi: review app store & forum orang tua soal keluhan "rapor jelek tapi tidak
+      tahu akar masalah" / "anak les tapi progres tidak jelas per topik"; Sparks Math
+      (les offline metode Singapore Math dengan tes penempatan berbasis kemampuan) sebagai
+      bukti willingness-to-pay untuk diagnosis yang lebih presisi; skor PISA/AKM Indonesia
+      sebagai konteks skala masalah; ukuran pasar edtech online Indonesia (TAM/SAM).
+
+execution:
+  batch_size: 4
+  items_per_agent: 2
+  output_dir: "./results"
+
+time_range: unlimited
+generated_at: "2026-08-15"

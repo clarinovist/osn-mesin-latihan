@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Ekstraksi teks dari PDF/HTML — turunan, bisa dibangkitkan ulang dari sumbernya.
+# Dipakai sebagai bahan baca kerja, bukan sumber kebenaran.
+.tmp_txt/
+
+# Setelan lokal per-mesin
+.claude/settings.local.json
+
+# ── Data anak: JANGAN PERNAH masuk repo ──────────────────────────────
+# PRD §7.1 menetapkan privacy-by-default: tidak ada data anak yang keluar
+# dari Mac+HP keluarga. Repo git bisa di-push/di-clone, jadi seluruh lapisan
+# kejadian & turunan (PRD §8.4) diblokir di sini sejak sebelum ada datanya —
+# supaya tidak ada momen di mana ia "kebetulan" ter-commit lalu permanen di
+# riwayat git. Yang boleh masuk repo hanya lapisan konten/.
+kejadian/
+turunan/
+
+# Artefak build/runtime app & skrip (belum ada, disiapkan lebih awal)
+__pycache__/
+*.pyc
+.venv/
+build/
+*.apk
+local.properties
+.gradle/
