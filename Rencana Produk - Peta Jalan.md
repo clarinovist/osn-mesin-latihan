@@ -5,7 +5,8 @@
 yang **sudah tertinggal** dari dokumen ini — biarkan sebagai artefak
 historis, jangan dipakai sebagai acuan.
 
-Rencana produk · konsolidasi · 14 Agustus 2026 · direvisi 17 Agustus 2026
+Rencana produk · konsolidasi · 14 Agustus 2026 · direvisi 17 Agustus 2026 ·
+direvisi 18 Agustus 2026
 
 Satu dokumen yang menggabungkan arah produk, taksonomi B/K/H, hasil riset
 dua-putaran, rencana spike, dan roadmap setelahnya — supaya tidak perlu buka
@@ -169,11 +170,22 @@ Bagian ini ringkasannya.
 diketik cukup untuk mendiagnosis kesalahan anak sebagai B, K, atau H. Kalau
 tidak terbukti, produk ini turun jadi aplikasi latihan soal biasa.
 
-**Keputusan arsitektur inti.** Aplikasi Android hanya merekam goresan →
+**Keputusan arsitektur inti.** Perekam goresan hanya merekam goresan →
 ekspor JSON. Diagnosis dijalankan terpisah oleh skrip Python di Mac. Tidak
-ada izin `android.permission.INTERNET` sama sekali — tidak ada API key di
-APK, iterasi prompt dalam hitungan detik tanpa build ulang, risiko gagal
+menyentuh internet sama sekali — tidak ada API key yang bisa dibongkar,
+iterasi prompt dalam hitungan detik tanpa build ulang, risiko gagal
 terisolasi ke skrip saja.
+
+**Perekamnya web, bukan app native — perubahan 18 Agustus.** Untuk spike,
+perekam goresan dibangun sebagai satu halaman HTML statis (`PointerEvent.
+getCoalescedEvents()` sebagai padanan `MotionEvent` historis di Android),
+bukan app Kotlin. Alasan: iterasi jauh lebih cepat (refresh browser vs
+build Gradle), dan tidak lagi butuh kepastian device Android tertentu
+sebelum mulai — bisa divalidasi di trackpad Mac dulu, device sentuh apa pun
+dicoba begitu tersedia. Ini keputusan level spike, bukan keputusan produk:
+platform native (Android vs iOS) ditunda sampai jelas apakah presisi
+capture web sudah cukup untuk v1. Detail teknis lengkap di
+`Rencana Spike - Coretan ke Diagnosis.md`.
 
 ### Keluarannya dua angka, bukan satu — perubahan 17 Agustus
 
@@ -215,9 +227,9 @@ tidak perlu melibatkan anak lagi. **Batas 3 putaran**, dihitung dari
 
 | Hari | Pekerjaan |
 |---|---|
-| 1 | Kanvas tinta + perekaman titik historis + **golden test `toSamples()`** |
-| 1 | **Tes 10 menit ke anak** — coret-coret bebas. Kalau anak tidak nyaman, berhenti di sini. |
-| 2 | Kanvas berlangkah, kotak jawaban, 10 soal, alur ekspor + **verifikasi `adb exec-out run-as` di HP nyata** |
+| 1 | Kanvas tinta web + perekaman titik historis + **golden test `toSamples()`** — dicek dulu di trackpad Mac |
+| 1 | **Tes 10 menit ke anak** — coret-coret bebas, di device sentuh apa pun yang tersedia (boleh geser hari kalau belum ada). Kalau anak tidak nyaman, berhenti di sini. |
+| 2 | Kanvas berlangkah, kotak jawaban, 10 soal, tombol unduh JSON + **pindahkan berkas ke Mac (USB/AirDrop/manual)** |
 | 3 | Render goresan jadi PNG + turunan waktu; tulis malrule untuk 10 soal uji |
 | 4 | `tinta_heuristik` (didahulukan), lalu `tinta_llm` + cache berkunci versi |
 | 5 | Sesi uji sungguhan dengan anak — Bapak menilai sendiri lebih dulu |
@@ -370,6 +382,13 @@ dari jalur diagnosis rutin.
 Semuanya dibungkus satu perintah `osn sync`. Pilihan sengaja, bukan
 keterbatasan sementara: pada skala satu anak, satu orang tua yang juga
 developer, satu Mac, satu HP, ini ukuran yang tepat — bukan utang teknis.
+
+> **Catatan 18 Agustus.** Komponen 1 ("App Android") di atas masih deskripsi
+> v1 pasca-spike, belum diputuskan ulang. Untuk spike Fase 0, perekam
+> goresannya web (lihat §04) — kalau presisi capture web ternyata cukup,
+> komponen 1 di v1 bisa jadi tetap web (dibungkus jadi app lewat WebView atau
+> serupa) alih-alih native Kotlin. Keputusan ini menunggu hasil spike, tidak
+> perlu diambil sekarang.
 
 | Kapan | Bentuknya | Yang dibuktikan |
 |---|---|---|

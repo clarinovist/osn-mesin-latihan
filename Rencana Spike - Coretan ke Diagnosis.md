@@ -5,7 +5,8 @@
 yang **sudah tertinggal** dari dokumen ini — biarkan sebagai artefak
 historis, jangan dipakai sebagai panduan kerja.
 
-Rencana teknis · spike · v1 · disusun 14 Agustus 2026 · direvisi 17 Agustus 2026
+Rencana teknis · spike · v1 · disusun 14 Agustus 2026 · direvisi 17 Agustus 2026 ·
+direvisi 18 Agustus 2026
 
 Menguji satu asumsi sebelum membangun apa pun: apakah AI benar-benar bisa
 membaca cara berpikir anak 9 tahun dari goresan tangannya di layar HP.
@@ -36,17 +37,26 @@ terkecil yang bisa membuktikan atau menggugurkan klaim itu.
 > "Dua implementasi" di bawah — ini perubahan terbesar di revisi ini dan ia
 > menambah pekerjaan Hari 4.
 
+> **Perubahan dari versi 17 Agustus.** Bagian 1 (perekaman goresan) pindah
+> dari app Android native ke halaman web statis. Alasannya di bagian
+> "Keputusan — aplikasinya tidak menyentuh internet sama sekali" dan
+> "Bagian 1" di bawah. Ini cuma ganti alat untuk membuktikan tesis yang
+> sama — tidak mengubah satu pun keputusan di Bagian 2 (diagnosis), gerbang,
+> atau protokol pengujian.
+
 ---
 
 ## Keputusan — aplikasinya tidak menyentuh internet sama sekali
 
 Ini keputusan arsitektur terpenting di spike, dan bukan sekadar
-penyederhanaan. Aplikasi Android hanya merekam goresan lalu mengekspor satu
-berkas JSON. Diagnosisnya dijalankan terpisah oleh skrip di Mac.
+penyederhanaan. Perekam goresan hanya merekam goresan lalu mengekspor satu
+berkas JSON. Diagnosisnya dijalankan terpisah oleh skrip di Mac. Ini berlaku
+sama untuk versi web spike (lihat Bagian 1) maupun versi native yang mungkin
+menyusul di v1 — keputusan ini soal alur data, bukan soal platform.
 
-- **Tidak ada API key di dalam APK.** Kunci Anthropic tidak pernah masuk ke
-  perangkat. Persoalan yang biasanya makan waktu berhari-hari (proxy,
-  penyimpanan kunci, rotasi) hilang seluruhnya dari spike.
+- **Tidak ada API key di dalam perekam goresan.** Kunci Anthropic tidak
+  pernah masuk ke perangkat. Persoalan yang biasanya makan waktu berhari-hari
+  (proxy, penyimpanan kunci, rotasi) hilang seluruhnya dari spike.
 - **Iterasi prompt dalam hitungan detik, bukan build.** Data goresan anak
   direkam sekali, lalu prompt diagnosis bisa diputar ulang puluhan kali
   terhadap data yang sama. Kalau AI-nya ada di dalam aplikasi, tiap perbaikan
@@ -54,56 +64,77 @@ berkas JSON. Diagnosisnya dijalankan terpisah oleh skrip di Mac.
 - **Risikonya terisolasi.** Kalau diagnosisnya gagal, yang terbuang hanya
   skrip — kanvas tulisnya tetap terpakai.
 
-Jaminannya ditegakkan secara struktural, bukan lewat niat baik: izin
-`android.permission.INTERNET` tidak dicantumkan di manifest. Aplikasinya
-secara teknis tidak bisa mengirim apa pun ke mana pun, dan itu bisa diperiksa
-siapa saja dalam sepuluh detik.
+Jaminannya ditegakkan secara struktural, bukan lewat niat baik. Untuk versi
+web spike: satu file HTML statis, dibuka langsung lewat `file://` (tanpa
+server, tanpa dev-server lewat WiFi), nol `<script src>` ke domain luar, nol
+`fetch`/`XMLHttpRequest`/`WebSocket` di kodenya — bisa diperiksa siapa saja
+dengan baca satu file itu dalam sepuluh detik. Untuk versi native yang
+mungkin menyusul di v1: izin `android.permission.INTERNET` tidak dicantumkan
+di manifest, jaminan yang setara di level OS.
 
 ---
 
-## Bagian 1 — Aplikasi Android, perekam goresan
+## Bagian 1 — Perekam goresan (web, untuk spike)
+
+**Perubahan 18 Agustus.** Untuk spike ini, perekam goresan dibangun sebagai
+satu halaman web statis, bukan app Android native. Alasannya murni
+kecepatan iterasi dan menghilangkan blocker "harus punya HP Android
+tertentu" — bukan perubahan pada apa yang direkam atau bagaimana datanya
+dipakai. Keputusan platform native (Android vs iOS, PRD §8) ditunda sampai
+setelah spike lulus dan jelas apakah presisi capture web sudah cukup.
 
 ### Tumpukan teknologi
 
-Kotlin + Jetpack Compose, minSdk 26, tanpa dependensi jaringan, tanpa
-database. Satu Activity. Data sesi ditulis sebagai JSON ke penyimpanan
-**internal** aplikasi (`files/`, bukan `/sdcard/`) — lihat "Ekspor" soal
-kenapa lokasinya penting.
+HTML + JavaScript murni, satu file statis, tanpa framework, tanpa build
+step, tanpa dependensi jaringan. Dibuka lewat `file://` — langsung di
+browser, tidak butuh server. Data sesi ditulis sebagai JSON dan diunduh
+lewat `Blob` + `<a download>` ke folder Downloads standar device — lihat
+"Ekspor" soal kenapa ini menyederhanakan Hari 2.
 
 ### Inti teknisnya: satu fungsi
 
 Seluruh nilai spike ini ada di ketelitian satu hal — merekam titik goresan
-dengan waktu. Compose `pointerInput` saja tidak cukup: ia melaporkan satu
-posisi per frame, sekitar 60–120 titik per detik. Yang diperlukan adalah titik
-historis di antara frame, yang dibawa `MotionEvent`.
+dengan waktu. `pointermove` polling saja tidak cukup: browser melaporkan
+satu posisi per frame, sekitar 60–120 titik per detik. Yang diperlukan
+adalah titik historis di antara frame — di web, itu `PointerEvent.
+getCoalescedEvents()`, padanan langsung dari `getHistoricalX/Y` di
+`MotionEvent` Android.
 
-```kotlin
+```javascript
 // Ambil titik historis, bukan cuma posisi terakhir per frame.
-// Satu MotionEvent bisa membawa 5–10 sampel yang tertinggal.
-fun MotionEvent.toSamples(t0: Long): List<Sample> = buildList {
-    for (h in 0 until historySize) {
-        add(Sample(
-            x = getHistoricalX(h),
-            y = getHistoricalY(h),
-            t = getHistoricalEventTime(h) - t0,
-        ))
-    }
-    add(Sample(x, y, eventTime - t0))
+// Satu PointerEvent bisa membawa beberapa sampel yang tertinggal
+// lewat getCoalescedEvents().
+function toSamples(event, t0) {
+  const coalesced = event.getCoalescedEvents
+    ? event.getCoalescedEvents()
+    : [event];
+  return coalesced.map((e) => ({
+    x: e.clientX,
+    y: e.clientY,
+    t: e.timeStamp - t0,
+  }));
 }
 ```
+
+Ditulis sebagai fungsi murni yang menerima array titik mentah dan
+mengembalikan `Sample[]` — bukan langsung membaca `event` di dalam handler
+DOM — supaya bisa ditest tanpa mock browser penuh: fixture-nya cukup array
+titik biasa, bukan objek `PointerEvent` sungguhan.
 
 Ini yang membedakan "gambar tulisan tangan" dari "rekaman proses menulis".
 Tanpa presisi waktu ini, seluruh tesis produk hilang.
 
-**Fungsi ini wajib punya golden test sebelum dipakai ke anak** (PRD §8.8).
-Alasannya bukan disiplin umum: kegagalan di lapisan ini **tidak bisa
-diperbaiki belakangan**. Kalau titik historis hilang, salah urut, atau
+**Fungsi ini wajib punya golden test sebelum dipakai ke anak** (PRD §8.8,
+perlu disesuaikan dari `MotionEvent.toSamples()` ke versi web — lihat catatan
+di bawah). Alasannya bukan disiplin umum: kegagalan di lapisan ini **tidak
+bisa diperbaiki belakangan**. Kalau titik historis hilang, salah urut, atau
 timestamp-nya bergeser, satu-satunya perbaikan adalah meminta anak
 mengerjakan ulang soal yang sama — yang justru dilarang oleh alasan
-arsitektur batch. Bentuknya: rekam sekali urutan `MotionEvent` nyata
-(termasuk yang membawa `historySize > 1`), simpan sebagai fixture, lalu
-pastikan `toSamples()` selalu mengembalikan daftar sampel yang sama persis —
-jumlah, urutan, dan selisih waktu relatif terhadap `t0`.
+arsitektur batch. Bentuknya: rekam sekali urutan titik nyata
+(termasuk yang membawa beberapa titik terkoalisi dalam satu event), simpan
+sebagai fixture (array titik biasa, lihat catatan di atas soal fungsi murni),
+lalu pastikan `toSamples()` selalu mengembalikan daftar sampel yang sama
+persis — jumlah, urutan, dan selisih waktu relatif terhadap `t0`.
 
 Ini satu-satunya test yang wajib ada di spike. Sisanya menyusul di v1.
 
@@ -178,23 +209,28 @@ Tidak ada akun, tidak ada pengaturan, tidak ada nilai yang ditampilkan ke
 anak, tidak ada suara, tidak ada animasi perayaan. Anak tidak boleh tahu
 skornya.
 
-### Ekspor: jalur adb yang harus diverifikasi Hari 2
+### Ekspor: unduhan langsung, bukan `adb`
 
-Rencana: tarik file lewat kabel USB dari internal storage app.
+**Perubahan 18 Agustus.** Karena perekamnya sekarang halaman web, bukan app
+Android dengan storage privat, file JSON sesi keluar lewat unduhan browser
+biasa (`Blob` + `<a download>`) — mendarat di folder Downloads publik
+device, bukan di storage internal app yang butuh `run-as` untuk dibaca. Ini
+menghilangkan seluruh risiko "vendor blokir `run-as`" yang jadi kriteria
+berhenti di versi sebelumnya.
 
-```bash
-adb exec-out run-as <pkg> cat files/sesi-<id>.json > sesi-<id>.json
-```
+Jalur ke Mac tinggal pilih salah satu, tergantung device yang dipinjam:
 
-**Ini belum pernah diuji di HP target dan tidak boleh diasumsikan jalan.**
-Sejak Android 11, akses `adb pull` ke `/sdcard/Android/data/<pkg>/`
-diperketat dan bisa gagal tergantung versi OS dan vendor. `run-as` bekerja
-karena APK ini self-signed dan debuggable (tidak pernah masuk Play Store) —
-tapi sebagian vendor tetap membatasinya.
+- Sambung kabel USB, salin manual lewat file transfer standar OS (MTP untuk
+  Android, Finder untuk iOS/iPadOS lewat kabel)
+- AirDrop, kalau device-nya Apple
+- Kirim ke diri sendiri lewat aplikasi apa pun yang sudah ada di device itu
+  (mis. catatan, email pribadi) — selama tidak dipakai buat catatan lain,
+  ini masih tanpa server pihak ketiga yang menyimpan data
 
-Verifikasi ini masuk Hari 2 dengan sengaja: kalau gagal, ketahuan sebelum ada
-data anak yang tersandera di HP. **Fallback:** `ACTION_SEND` ke folder lokal
-Mac (AirDrop/kabel) — tetap tanpa jaringan keluar, cuma lebih manual.
+Tetap tanpa jaringan keluar dari sistem yang kita bangun — mekanisme
+transfer ini pakai fitur bawaan OS device, bukan endpoint yang kita
+operasikan. Kalau nanti port ke app native (v1, pasca-spike), pertanyaan
+`adb exec-out run-as` di atas kembali relevan dan perlu diuji ulang saat itu.
 
 ---
 
@@ -401,9 +437,9 @@ dari ingatan.
 
 | Hari | Pekerjaan | Selesai kalau |
 |---|---|---|
-| 1 | Kanvas tinta + perekaman titik historis + **golden test `toSamples()`** | Menggambar di layar terasa mulus; JSON berisi ribuan titik dengan waktu; test hijau di atas fixture `MotionEvent` nyata |
-| 1 | **Tes 10 menit ke anak — cukup coret-coret bebas** | Anak nyaman menulis dengan jari. **Kalau tidak, berhenti di sini.** |
-| 2 | Kanvas berlangkah, kotak jawaban, 10 soal, alur ekspor + **verifikasi `adb exec-out run-as` di HP nyata** | Satu sesi lengkap keluar sebagai satu berkas JSON, dan berkas itu benar-benar sampai ke Mac lewat jalur yang direncanakan (atau fallback sudah dipilih) |
+| 1 | Kanvas tinta web + perekaman titik historis (`getCoalescedEvents`) + **golden test `toSamples()`** | Menggambar di trackpad Mac terasa mulus; JSON berisi ribuan titik dengan waktu; test hijau di atas fixture titik nyata |
+| 1 | **Tes 10 menit ke anak — cukup coret-coret bebas** (di device sentuh apa pun yang tersedia; boleh geser ke hari lain kalau belum ada) | Anak nyaman menulis dengan jari. **Kalau tidak, berhenti di sini.** |
+| 2 | Kanvas berlangkah, kotak jawaban, 10 soal, tombol unduh JSON + **pindahkan berkas ke Mac (USB/AirDrop/kirim manual)** | Satu sesi lengkap keluar sebagai satu berkas JSON, dan berkas itu sampai ke Mac |
 | 3 | Skrip render goresan jadi PNG + hitung turunan waktu | Bapak bisa melihat kembali tulisan anak per langkah |
 | 3 | Tulis malrule untuk 10 soal uji (Tahap A) | Menjalankan Tahap A atas jawaban salah buatan menghasilkan kode yang benar tanpa LLM |
 | 4 | **`tinta_heuristik`** — aturan if-then atas turunan waktu | Skrip mengembalikan kode untuk 10 soal, tanpa panggilan API sama sekali |
@@ -487,68 +523,76 @@ tidak satu pun nol.
 Daftar periksa per hari dengan langkah konkret. Setiap hari punya: apa yang
 dikerjakan, urutan langkah, kapan disebut selesai, dan kapan harus berhenti.
 
-### Hari 1 — Kanvas tinta + tes 10 menit ke anak
+### Hari 1 — Kanvas tinta (web) + tes 10 menit ke anak
 
-**Pagi: kanvas tinta di Android Studio**
+**Perubahan 18 Agustus:** Hari 1 & 2 dibangun sebagai halaman web statis,
+bukan app Android native. Lihat Bagian 1 untuk alasannya.
 
-1. Buat project Kotlin + Jetpack Compose baru, minSdk 26, satu Activity
-2. Tambahkan satu Canvas yang menangkap `MotionEvent` lewat
-   `Modifier.pointerInput` — bukan menggambar statis, tapi merekam titik
-3. Tulis fungsi `MotionEvent.toSamples(t0)` yang mengambil titik historis
-   (lihat kode di Bagian 1)
-4. Rakit test fixture: rekam satu urutan `MotionEvent` nyata (dengan
-   `historySize > 1`), simpan sebagai berkas, lalu tulis test yang
-   memastikan `toSamples()` mengembalikan jumlah, urutan, dan selisih
-   waktu yang sama persis. **Tesnya harus hijau sebelum lanjut.**
-5. Goresan ditulis ke list in-memory; tombol "Selesai" menutup sesi
+**Pagi: kanvas tinta di browser**
 
-**Sore: tes 10 menit ke anak**
+1. Buat satu file `spike/index.html` — HTML + JS murni, tanpa framework,
+   tanpa build step
+2. Tambahkan satu `<canvas>` yang menangkap `pointerdown`/`pointermove`/
+   `pointerup`, dengan CSS `touch-action: none` supaya scroll browser tidak
+   mengganggu goresan
+3. Tulis fungsi murni `toSamples(points, t0)` yang menerima array titik
+   (dari `event.getCoalescedEvents()`) dan mengembalikan `Sample[]` (lihat
+   kode di Bagian 1)
+4. Rakit test fixture: rekam satu urutan titik nyata (termasuk event dengan
+   beberapa titik terkoalisi), simpan sebagai array biasa di file test,
+   lalu tulis test (Node/vitest, atau skrip assert sederhana) yang
+   memastikan `toSamples()` mengembalikan jumlah, urutan, dan selisih waktu
+   yang sama persis. **Tesnya harus hijau sebelum lanjut.**
+5. Goresan ditulis ke array in-memory; tombol "Selesai" menutup sesi
 
-6. Serahkan HP ke anak, minta coret-coret bebas di kanvas — tidak ada soal,
-   tidak ada target
-7. Observasi: apakah jari dipakai atau stylus? Apakah tulisannya terbaca?
-   Apakah anak mengeluh setelah 5 menit?
+**Sore: cek di trackpad Mac, lalu tes ke anak kalau device sudah ada**
 
-**Selesai kalau:** menggambar di layar terasa mulus, JSON berisi ribuan titik
-dengan timestamp, dan test `toSamples()` hijau.
+6. Buka `index.html` langsung di browser Mac (`file://`), coba gambar pakai
+   trackpad/mouse — ini sudah cukup untuk menilai kualitas datanya hari ini
+   juga, tanpa perlu device sentuh apa pun
+7. Kalau ada HP/tablet sentuh yang bisa dipinjam hari ini: buka file yang
+   sama di browser device itu, serahkan ke anak, minta coret-coret bebas —
+   tidak ada soal, tidak ada target. Observasi: apakah jari dipakai atau
+   stylus? Apakah tulisannya terbaca? Apakah anak mengeluh setelah 5 menit?
+8. Kalau belum ada device sentuh: **tidak masalah, tidak blocking** — tunda
+   langkah 7 sampai ada device, lanjut ke Hari 2 memakai data trackpad Mac
+   untuk sementara
 
-**Berhenti kalau:** anak menolak menulis dengan jari, atau tulisannya jauh
-lebih buruk daripada di kertas. Jangan lanjut ke Hari 2 — ini asumsi paling
-murah untuk digugurkan, dan sengaja diuji sebelum ada satu baris kode
-diagnosis ditulis.
+**Selesai kalau:** menggambar terasa mulus (di trackpad Mac minimal), JSON
+berisi ribuan titik dengan timestamp, dan test `toSamples()` hijau.
+
+**Berhenti kalau (begitu ada tes ke anak):** anak menolak menulis dengan
+jari, atau tulisannya jauh lebih buruk daripada di kertas. Jangan lanjut ke
+Hari 2 dengan asumsi itu — ini asumsi paling murah untuk digugurkan.
 
 ### Hari 2 — Kanvas berlangkah + alur ekspor
 
 **Pagi: UI sesi lengkap**
 
-1. Rakit tiga layar: daftar 10 soal → kanvas berlangkah + kotak jawaban →
-   layar "terima kasih" dengan tombol ekspor
+1. Rakit tiga layar di halaman web yang sama: daftar 10 soal → kanvas
+   berlangkah + kotak jawaban → layar "terima kasih" dengan tombol unduh
 2. Implementasikan tombol "Langkah Baru" (PRD §6.1): menekan menyegel
    kanvas aktif dan membuka kanvas kosong berikutnya. Catat timestamp
    penyegelan dan pembukaan
-3. Jawaban akhir di field ketik terpisah (keyboard numerik), bukan hasil
-   OCR kanvas
-4. Saat "Selesai Sesi" ditekan: app menulis satu file JSON ke
-   `files/sesi-<timestamp>.json` di internal storage
+3. Jawaban akhir di field ketik terpisah (`<input inputmode="numeric">`),
+   bukan hasil OCR kanvas
+4. Saat "Selesai Sesi" ditekan: halaman membuat `Blob` JSON dan memicu
+   unduhan `sesi-<timestamp>.json` lewat `<a download>` — mendarat di folder
+   Downloads standar device
 
-**Sore: verifikasi jalur ekspor di HP nyata**
+**Sore: pindahkan berkas ke Mac**
 
-5. Colok kabel USB ke Mac, jalankan:
-   ```bash
-   adb exec-out run-as <pkg> cat files/sesi-<id>.json > sesi-<id>.json
-   ```
+5. Kalau diuji di device lain (bukan Mac): sambung USB dan salin manual
+   (MTP di Android/Files app; Finder untuk iOS/iPadOS lewat kabel), atau
+   AirDrop kalau device-nya Apple
 6. Buka file di Mac — verifikasi isinya utuh dan bisa di-parse
-7. Kalau `run-as` gagal (vendor membatasi), coba fallback:
-   - `ACTION_SEND` dari dalam app → AirDrop ke Mac
-   - Atau `adb backup` lalu ekstrak
-   - Pilih satu, catat yang jalan
 
 **Selesai kalau:** satu sesi lengkap (10 soal, goresan + jawaban) keluar
-sebagai satu berkas JSON di Mac, dan jalur ekspornya terverifikasi.
+sebagai satu berkas JSON di Mac.
 
-**Berhenti kalau:** tidak ada cara yang bisa membawa JSON dari HP ke Mac
-tanpa internet. Kalau ini terjadi, spike tertunda sampai mekanisme transfer
-diselesaikan — tidak ada gunanya merekam data yang tidak bisa dipindah.
+**Berhenti kalau:** tidak ada cara memindahkan file dari device ke Mac tanpa
+internet — jauh lebih jarang terjadi sekarang karena unduhan mendarat di
+folder publik, bukan storage privat app yang butuh `adb run-as`.
 
 ### Hari 3 — Render PNG + malrule
 
@@ -691,17 +735,24 @@ lingkup LLM untuk v1 sudah diambil.
 
 Hal-hal yang harus siap sebelum mulai, supaya Hari 1 tidak habis untuk setup.
 
-**Lingkungan Android**
-- Android Studio terpasang, SDK dengan minSdk 26
-- HP target terhubung via ADB (`adb devices` menampilkan device)
-- Opsi Developer → USB Debugging aktif di HP
+**Lingkungan perekam goresan (web) — perubahan 18 Agustus**
+- Browser modern (Chrome disarankan — dukungan `getCoalescedEvents()`
+  paling matang lintas platform), tidak perlu instalasi apa pun
+- Tidak butuh Android Studio, SDK, `adb devices`, atau USB Debugging untuk
+  Hari 1–2 spike ini — itu baru relevan kalau nanti (pasca-spike) port ke
+  app native
+- Device sentuh untuk tes ke anak (Hari 1 langkah 7) **tidak wajib siap
+  sebelum mulai** — trackpad Mac cukup untuk validasi teknis awal, device
+  sentuh cukup didapat begitu tersedia
 
 **Lingkungan Mac**
 - Python 3.11+ terinstal
 - Library: `anthropic` (untuk Hari 4), `pyyaml`, `pillow` (render PNG)
 - Kunci API Anthropic tersedia di environment variable `ANTHROPIC_API_KEY`
-  (tidak pernah masuk ke APK, hanya di Mac)
+  (tidak pernah masuk ke perekam goresan, hanya di Mac)
 - Folder kerja: `~/Documents/osn/spike/`
+- (Opsional) Node.js kalau golden test `toSamples()` ditulis pakai
+  vitest/Jest — atau cukup skrip assert JS sederhana tanpa dependency
 
 **Konten soal**
 - 10 soal dari Tes Kalibrasi Minggu 0 sudah dipilih dan diketik sebagai
@@ -709,8 +760,8 @@ Hal-hal yang harus siap sebelum mulai, supaya Hari 1 tidak habis untuk setup.
 - Kunci jawaban untuk 10 soal sudah ada (tidak masuk HP, hanya di Mac)
 
 **Anak**
-- Tahu bahwa Ayah akan meminta mengerjakan sesuatu di HP, tapi tidak tahu
-  kapan — jangan jadwalkan, biarkan spontaneous saat Bapak siap
+- Tahu bahwa Ayah akan meminta mengerjakan sesuatu di HP/tablet, tapi tidak
+  tahu kapan — jangan jadwalkan, biarkan spontaneous saat Bapak siap
 - Tidak sedang ujian sekolah, tidak sakit, tidak terlalu lelah
 
 ---
@@ -732,3 +783,4 @@ ingat: spike ini menguji SATU asumsi. Bukan membangun produk.
 | Foto kertas buram | Kanal tinta lebih kaya; foto menyusul Fase 2 |
 | Pra-fondasi kelas 4 | Baru relevan setelah diagnosis terbukti |
 | AI di dalam aplikasi | Sengaja dihindari |
+| Port ke app Android/iOS native | Web sudah cukup untuk membuktikan tesis; keputusan platform native ditunda sampai jelas apakah presisi web cukup (perubahan 18 Agustus) |

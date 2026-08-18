@@ -29,6 +29,24 @@ Yang **tidak** berubah: file-based tanpa server/DB, tanpa izin INTERNET,
 tanpa OCR, tanpa UI review, satu operator, batch bukan real-time. Ukuran
 arsitektur §8.6 tetap dinilai tepat untuk skala satu keluarga.
 
+### Catatan 18 Agustus — perekam goresan spike jadi web, platform native ditunda
+
+Untuk **spike** (Fase 0), perekam goresan dibangun sebagai halaman web statis
+(`PointerEvent.getCoalescedEvents()`), bukan app Android native — detail
+teknis penuh ada di `Rencana Spike - Coretan ke Diagnosis.md`. Alasannya
+kecepatan iterasi dan menghilangkan blocker "harus punya HP Android
+tertentu", bukan perubahan pada apa yang direkam atau bagaimana datanya
+diproses.
+
+Konsekuensinya ke dokumen ini: setiap referensi "App Android" / `MotionEvent`
+di bagian-bagian di bawah (§2.6, §8.1, §8.8, dan Mode Anak/Screen Pinning)
+menjelaskan **asumsi v1 yang belum diputuskan ulang**, bukan keputusan final.
+Platform v1 (native Android, native iOS, atau tetap web dibungkus WebView)
+ditunda sampai spike lulus dan jelas apakah presisi capture web sudah
+cukup. Prinsip yang tidak berubah oleh ini: tanpa internet, batch bukan
+real-time, kunci jawaban & diagnosis tidak pernah ada di device anak
+(§7.1–§7.4) — itu semua soal alur data, bukan soal platform.
+
 ## 1. Remediasi
 
 ### 1.1 Kenapa ini bukan opsional
@@ -395,8 +413,9 @@ perbaikan jadi murah, dan angka gerbang §2.7 selalu bisa direproduksi persis.
 
 ### 2.6 Sifat batch, bukan real-time
 
-Sejalan dengan arsitektur spike: aplikasi Android hanya merekam ke JSON
-selama sesi anak berlangsung. Diagnosis (Tahap A+B) dan tinjauan (Tahap C)
+Sejalan dengan arsitektur spike: perekam goresan (web untuk spike, lihat
+catatan 18 Agustus di atas) hanya merekam ke JSON selama sesi anak
+berlangsung. Diagnosis (Tahap A+B) dan tinjauan (Tahap C)
 terjadi **setelah** sesi selesai, lewat skrip terpisah — bukan live saat anak
 masih memegang HP. Ini bukan keterbatasan teknis yang perlu ditutup nanti,
 ini keputusan sengaja: kunci jawaban & diagnosis tidak boleh tersentuh anak
@@ -998,8 +1017,9 @@ diagnosis apa pun.
 Enam komponen, tidak lebih:
 
 ```
-1. App Android (capture-only)
-   - TANPA android.permission.INTERNET (lihat spike, keputusan final)
+1. App Android (capture-only) — platform v1 belum final, lihat catatan
+   18 Agustus di atas; untuk spike, komponen ini adalah halaman web statis
+   - Tanpa akses internet dalam bentuk apa pun (lihat spike, keputusan final)
    - Output: 1 file JSON per sesi — goresan (stroke+timestamp) + jawaban akhir yang diketik
 
 2. Mekanisme pemindahan file (HP ↔ Mac, dua arah — lihat §8.2 & §8.5)
@@ -1217,7 +1237,7 @@ sekali, derive sesuai kebutuhan.
 Anak pegang HP, kerjakan sesi
         │
         ▼
-App Android (capture-only, tanpa INTERNET)
+Perekam goresan v1 — platform belum final (capture-only, tanpa INTERNET)
   → tulis 1 file JSON per sesi (goresan+timestamp+jawaban akhir)
         │
         ▼  (kabel USB / adb — §8.2, dipicu `osn sync` §8.7)
@@ -1346,13 +1366,17 @@ Dua sifat orkestrator ini yang harus dijaga:
 
 ### 8.8 Satu-satunya test yang wajib ada sejak hari pertama
 
-**Keputusan: golden test untuk `MotionEvent.toSamples()` ditulis sebelum
-kanvas dipakai anak. Sisanya menyusul.**
+**Keputusan: golden test untuk `toSamples()` ditulis sebelum kanvas dipakai
+anak. Sisanya menyusul.** (Untuk spike, ini fungsi JS berbasis
+`PointerEvent.getCoalescedEvents()` — lihat catatan 18 Agustus di atas dan
+`Rencana Spike - Coretan ke Diagnosis.md`; `MotionEvent` di bawah menjelaskan
+padanan native Android kalau v1 nanti porting ke situ.)
 
 PRD ini bukan dokumen yang mewajibkan coverage tinggi di mana-mana — untuk
 alat satu operator, sebagian besar bug cukup diperbaiki saat ketemu. Tapi ada
 satu lapisan dengan sifat berbeda: **kegagalan di perekaman sampel goresan
-tidak bisa diperbaiki belakangan.** Kalau titik historis `MotionEvent`
+tidak bisa diperbaiki belakangan.** Kalau titik historisnya (`MotionEvent` di
+Android, `getCoalescedEvents()` di web)
 hilang, salah urut, atau timestamp-nya bergeser, seluruh sinyal Tahap B
 (§2.2) rusak dan satu-satunya perbaikan adalah meminta anak mengerjakan ulang
 soal yang sama — yang justru dilarang oleh alasan arsitektur batch (§2.6).
