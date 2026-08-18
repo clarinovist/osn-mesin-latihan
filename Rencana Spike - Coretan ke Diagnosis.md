@@ -816,6 +816,58 @@ hijau).
 **Urutan sengaja:** heuristik didahulukan. Menulis baseline setelah melihat
 hasil LLM adalah cara paling mudah untuk tanpa sadar membuatnya kalah.
 
+**Status 18 Agustus — kedua implementasi berdiri, menunggu data sungguhan.**
+
+Berkas baru: `tinta_heuristik.py` + `tinta_heuristik_test.py` (12 test),
+`tinta_llm.py` + `tinta_llm_test.py` (10 test). Seluruhnya hijau lewat
+`bash spike/test.sh`, nol panggilan API sungguhan.
+
+`tinta_heuristik` — lima aturan berurutan atas turunan waktu, dengan ambang
+dikumpulkan di satu tempat (`JEDA_PANJANG_MS` dst.) supaya jelas mana yang
+arbitrer:
+
+| Sinyal | Kode | Alasannya |
+|---|---|---|
+| Jawaban ditulis duluan **dan** total pengerjaan ≤6 detik | B | condong menebak |
+| Jeda awal ≥8 detik | K | tertahan sebelum mulai — tidak tahu caranya |
+| Jeda awal ≤3 detik **dan** nol hapus | K | lancar tapi salah = keyakinan yang keliru |
+| Total hapus ≥2 | H | mengoreksi berulang = tersandung di hitungan |
+| selain itu | `tidak_pasti` | sengaja menyerah |
+
+Dua batas yang ditulis sebagai test, bukan sebagai niat baik. Pertama,
+syarat durasi pada aturan B: tanpa itu, anak yang mencatat dugaan lalu
+benar-benar mengerjakan lama akan salah dituduh menebak. Kedua, urutan
+"banyak hapus → H" mendahului kesimpulan K mana pun — itu garis pertahanan
+langsung terhadap false-K, kegagalan yang gerbang sebut paling mahal.
+Tahap A juga tidak pernah ditimpa: kalau malrule sudah memutuskan, heuristik
+menyerahkan apa adanya.
+
+`tinta_llm` — PNG per langkah + ringkasan waktu + malrule yang berlaku
+beserta prediksinya, dikirim ke `claude-opus-5`, respons divalidasi ke skema
+Bagian 2 sebelum dipakai (`kode` di luar B/K/H/benar ditolak, `terbaca` wajib
+boolean). Cache berkunci `sha256(soal + konteks + isi PNG + prompt_versi +
+model + teks instruksi)`. Yang dikunci test: panggilan kedua atas data sama
+**tidak** menyentuh API, entri lama **tidak** terpakai begitu `prompt_versi`
+naik — tanpa sifat kedua itu, batas "maksimal 3 putaran" tidak bisa dihitung,
+hanya diingat-ingat.
+
+`cache_llm/` masuk `.gitignore` bersama `turunan/`: isinya diagnosis atas
+coretan anak, turunan langsung dari data anak.
+
+**Yang belum terjawab, dan tidak bisa dijawab hari ini.** Angka gerbang
+(berapa dari 10 cocok, berapa `terbaca: false`) belum ada — dan memang belum
+seharusnya ada. Keduanya butuh dua hal yang baru muncul Hari 5: coretan
+sungguhan dari anak, dan penilaian independen Bapak sebagai pembanding.
+Menjalankan `tinta_llm` atas fixture sintetis hanya akan menghasilkan angka
+yang terlihat resmi tapi tidak mengukur apa pun — goresan buatan tidak memuat
+proses berpikir siapa pun.
+
+Satu catatan jujur dari uji coba di fixture: pada sesi sintetis, heuristik
+tidak menambah satu kode pun di atas Tahap A (9/10 sebelum dan sesudah).
+Itu **bukan** temuan tentang heuristiknya — fixture memakai pola waktu yang
+seragam untuk semua soal, jadi tidak ada variasi untuk dibaca. Angka
+sesungguhnya baru berarti setelah Hari 5.
+
 ### Hari 5 — Sesi uji sungguhan dengan anak
 
 **Pagi: persiapan**

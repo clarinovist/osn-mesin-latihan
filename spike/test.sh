@@ -27,4 +27,12 @@ echo "=== tahap_a.py — malrule deterministik ==="
 "$PY" tahap_a.py
 
 echo
+echo "=== tinta_heuristik.py — Tahap B baseline (Hari 4 pagi) ==="
+"$PY" tinta_heuristik_test.py
+
+echo
+echo "=== tinta_llm.py — prompt, skema, cache (Hari 4 sore) ==="
+"$PY" tinta_llm_test.py
+
+echo
 echo "Semua test spike hijau."

@@ -18,6 +18,11 @@
 kejadian/
 turunan/
 
+# Cache respons LLM: berisi diagnosis atas coretan anak (bukti, diagnosis,
+# topik) — turunan langsung dari data anak, jadi diperlakukan sama dengan
+# turunan/. Bisa dibangkitkan ulang dengan memanggil API lagi.
+cache_llm/
+
 # Artefak build/runtime app & skrip (belum ada, disiapkan lebih awal)
 __pycache__/
 *.pyc
