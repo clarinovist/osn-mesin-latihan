@@ -1,0 +1,100 @@
+# Malrule untuk 10 soal spike, diturunkan dari "Membaca proses dari jawaban
+# yang salah" di Tes Kalibrasi - Panduan Orang Tua.pdf. Ditulis sebagai fungsi
+# atas parameter (dieksekusi di tahap_a.py), bukan tabel jawaban-salah literal.
+# Soal 8 dan 15 sengaja tidak punya malrule — tidak ada pola sidik jari yang
+# terdokumentasi untuk keduanya di panduan, jadi jawaban salahnya jatuh ke
+# Tahap B (tidak ada jalur otomatis ke K).
+
+- template_id: urutan_operasi_1
+  soal_id: 1
+  parameter: { a: 24, b: 36, c: 4, d: 3, e: 10 }
+  jawaban_benar: "41"
+  malrule:
+    - id: urutan_operasi.kiri_ke_kanan_tanpa_prioritas
+      kode: K
+      alasan_singkat: "mengerjakan lurus kiri ke kanan, tidak mendahulukan kali/bagi"
+    - id: urutan_operasi.kali_sebelum_bagi_tanpa_kiri_ke_kanan
+      kode: K
+      alasan_singkat: "mendahulukan kali sebelum bagi, belum tahu urutan kiri-ke-kanan antar keduanya"
+
+- template_id: pecahan_operasi_campuran
+  soal_id: 2
+  parameter:
+    suku:
+      - { n: 2, d: 3, tanda: 1 }
+      - { n: 3, d: 4, tanda: 1 }
+      - { n: 1, d: 2, tanda: -1 }
+  jawaban_benar: "11/12"
+  malrule:
+    - id: pecahan.operasi_pembilang_penyebut_terpisah
+      kode: K
+      alasan_singkat: "pembilang & penyebut dioperasikan sendiri-sendiri"
+
+- template_id: desimal_pecahan_campuran
+  soal_id: 3
+  parameter: { desimal: 0.25, n: 3, d: 5 }
+  jawaban_benar: "0,85"
+  malrule:
+    - id: desimal.pecahan_dibaca_sebagai_persepuluh
+      kode: K
+      alasan_singkat: "3/5 dibaca sebagai 0,3 (pembilang jadi persepuluh), bukan hasil pembagian"
+
+- template_id: persen_dari_nilai
+  soal_id: 4
+  parameter: { persen: 45, nilai: 240 }
+  jawaban_benar: "108"
+  malrule:
+    - id: persen.koma_bergeser
+      kode: H
+      alasan_singkat: "hitungan benar, koma desimal bergeser satu posisi"
+
+- template_id: fpb_dua_bilangan
+  soal_id: 5
+  parameter: { a: 36, b: 48 }
+  jawaban_benar: "12"
+  malrule:
+    - id: fpb.tertukar_dengan_kpk
+      kode: B
+      alasan_singkat: "menjawab KPK padahal diminta FPB — kata kunci soal tidak dibaca cermat"
+
+- template_id: kpk_dua_bilangan
+  soal_id: 6
+  parameter: { a: 12, b: 18 }
+  jawaban_benar: "36"
+  malrule:
+    - id: kpk.tertukar_dengan_fpb
+      kode: B
+      alasan_singkat: "menjawab FPB padahal diminta KPK — kata kunci soal tidak dibaca cermat"
+
+- template_id: luas_persegi_panjang
+  soal_id: 8
+  parameter: { panjang: 18, lebar: 7 }
+  jawaban_benar: "126"
+  malrule: []
+
+- template_id: volume_kubus
+  soal_id: 10
+  parameter: { rusuk: 8 }
+  jawaban_benar: "512"
+  malrule:
+    - id: volume_kubus.luas_permukaan
+      kode: K
+      alasan_singkat: "menghitung luas permukaan (6×rusuk²), bukan volume (rusuk³)"
+    - id: volume_kubus.rusuk_kali_tiga
+      kode: K
+      alasan_singkat: "mengalikan rusuk dengan 3, bukan memangkatkan tiga"
+
+- template_id: satuan_waktu_tambah
+  soal_id: 13
+  parameter: { jam1: 3, menit1: 45, jam2: 2, menit2: 40 }
+  jawaban_benar: "6 jam 25 menit"
+  malrule:
+    - id: satuan_waktu.tidak_menyimpan_60
+      kode: H
+      alasan_singkat: "berhenti sebelum mengonversi 85 menit menjadi 1 jam 25 menit"
+
+- template_id: rata_rata_lima_data
+  soal_id: 15
+  parameter: { data: [7, 9, 12, 8, 14] }
+  jawaban_benar: "10"
+  malrule: []

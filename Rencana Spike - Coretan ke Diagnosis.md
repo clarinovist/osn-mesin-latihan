@@ -138,6 +138,67 @@ persis — jumlah, urutan, dan selisih waktu relatif terhadap `t0`.
 
 Ini satu-satunya test yang wajib ada di spike. Sisanya menyusul di v1.
 
+### Risiko — fallback yang gagal diam-diam
+
+**Ditambahkan 18 Agustus.** Golden test di atas menguji `toSamples()` sebagai
+fungsi murni di atas fixture array biasa. Justru karena itu, ia **buta
+terhadap satu kegagalan**: apakah browser sungguhan benar-benar menyerahkan
+sampel antar-frame.
+
+Perhatikan barisnya:
+
+```javascript
+const raw = e.getCoalescedEvents
+  ? e.getCoalescedEvents().map(titikDariEvent)
+  : [titikDariEvent(e)];
+```
+
+Cabang `else` itu diam. Dan bahkan ketika `getCoalescedEvents` ada, spesifikasi
+web hanya mewajibkannya mengembalikan *paling sedikit* satu titik — ia
+best-effort per implementasi, tidak seperti `getHistoricalX/Y` yang dijamin
+oleh batching `MotionEvent` di level OS. Jadi ada dua cara gagal tanpa suara:
+API-nya tidak ada, atau API-nya ada tapi hanya mengembalikan satu titik per
+frame.
+
+Dalam kedua kasus, JSON tetap terisi ribuan titik, kanvas tetap tergambar
+mulus, dan golden test tetap hijau. Yang hilang cuma resolusi antar-frame —
+persis hal yang menjadi seluruh nilai spike ini.
+
+**Kenapa ini penting justru untuk gerbangnya.** Kalau kecocokan akhirnya
+5/10, tanpa instrumentasi ini tidak ada cara memisahkan dua sebab: prompt
+diagnosisnya yang lemah, atau data goresannya yang cacat sejak awal. Dua
+kegagalan yang berbeda jadi tak terbedakan — dan gerbang yang tidak bisa
+membedakan sebab tidak bisa dipakai untuk memutuskan apa pun.
+
+**Mitigasi — beberapa baris, dijalankan sekali di Hari 1.** Rekam sendiri
+statistik koalisi selama sesi, lalu simpan di JSON:
+
+```json
+"capture": {
+  "coalesced_didukung": true,
+  "titik_per_event_rata2": 3.4,
+  "titik_per_event_maks": 7,
+  "jumlah_event_pointermove": 812,
+  "browser": "Chrome/128 Android 14",
+  "layar_hz": 120
+}
+```
+
+Cara bacanya satu kalimat: **kalau `titik_per_event_rata2` mendekati 1,0,
+alatnya yang bermasalah, bukan promptnya.** Angka sehat pada layar 120 Hz
+dengan tangan bergerak cepat berada di kisaran 2–8; konsisten 1,0 berarti
+perekam ini setara `pointermove` polling biasa dan tesis belum benar-benar
+diuji.
+
+Ini bukan test tambahan — ini satu angka yang membuat hasil gerbang bisa
+ditafsirkan. Biayanya beberapa baris kode dan nol dependensi.
+
+**Kalau angkanya jelek**, urutannya: kunci ke browser lain di device yang
+sama, lalu device lain, sebelum menyimpulkan apa pun tentang web sebagai
+platform. Baru kalau semua kombinasi memberi ≈1,0, keputusan "web statis
+untuk spike" perlu ditinjau ulang dan port native (PRD §8) naik jadi
+prasyarat, bukan penundaan.
+
 ### Bentuk kanvas
 
 Satu kanvas per langkah, tinggi tetap sekitar 3 cm, lebar penuh. Anak
@@ -183,9 +244,21 @@ Vektor, bukan gambar. Gambar hanya dirender belakangan oleh skrip diagnosis.
   ],
   "jawaban_diketik": "11/12",
   "jawaban_ditulis_pada_ms": 51200,
-  "selesai_ms": 63800
+  "selesai_ms": 63800,
+  "capture": {
+    "coalesced_didukung": true,
+    "titik_per_event_rata2": 3.4,
+    "titik_per_event_maks": 7,
+    "jumlah_event_pointermove": 812,
+    "browser": "Chrome/128 Android 14",
+    "layar_hz": 120
+  }
 }
 ```
+
+Blok `capture` bukan data anak — ia data tentang alatnya, dan ada supaya
+hasil gerbang bisa ditafsirkan. Lihat "Risiko — fallback yang gagal
+diam-diam" di atas untuk cara membacanya.
 
 ### Turunan waktu yang dihitung aplikasi
 
@@ -426,6 +499,15 @@ Di antara keduanya — 5 atau 6 cocok — artinya promptnya yang perlu
 diperbaiki, bukan tesisnya yang gugur. Karena data goresan sudah tersimpan,
 putaran perbaikan berikutnya tidak perlu melibatkan anak sama sekali.
 
+**Prasyarat sebelum tabel ini dipakai sama sekali:** periksa
+`titik_per_event_rata2` di JSON. Kalau angkanya ≈1,0, tabel di atas tidak
+berlaku — berapa pun hasilnya, yang diuji bukan tesisnya melainkan perekam
+yang kehilangan resolusi antar-frame. Baik "gagal" maupun "lulus" sama-sama
+tidak bisa dipercaya: gagal bisa jadi karena datanya cacat, dan lulus berarti
+tesisnya justru terbukti dengan data yang lebih miskin dari rancangan —
+menarik, tapi bukan yang sedang diukur. Perbaiki alatnya dulu (Bagian 1),
+ambil ulang data, baru baca tabel.
+
 **Batas maksimal 3 putaran perbaikan prompt** di atas data yang sama sebelum
 memutuskan lulus/gagal final — supaya tidak diam-diam overfitting ke 10 soal
 satu anak ini. Batas ini dihitung dari `prompt_versi` yang tercatat, bukan
@@ -544,19 +626,27 @@ bukan app Android native. Lihat Bagian 1 untuk alasannya.
    memastikan `toSamples()` mengembalikan jumlah, urutan, dan selisih waktu
    yang sama persis. **Tesnya harus hijau sebelum lanjut.**
 5. Goresan ditulis ke array in-memory; tombol "Selesai" menutup sesi
+6. Tambahkan penghitung koalisi: hitung rata-rata dan maksimum titik per
+   event `pointermove`, plus flag `coalesced_didukung`, dan simpan sebagai
+   blok `capture` di JSON (lihat "Risiko — fallback yang gagal diam-diam"
+   di Bagian 1). Beberapa baris, tanpa dependensi.
 
 **Sore: cek di trackpad Mac, lalu tes ke anak kalau device sudah ada**
 
-6. Buka `index.html` langsung di browser Mac (`file://`), coba gambar pakai
+7. Buka `index.html` langsung di browser Mac (`file://`), coba gambar pakai
    trackpad/mouse — ini sudah cukup untuk menilai kualitas datanya hari ini
    juga, tanpa perlu device sentuh apa pun
-7. Kalau ada HP/tablet sentuh yang bisa dipinjam hari ini: buka file yang
+8. Kalau ada HP/tablet sentuh yang bisa dipinjam hari ini: buka file yang
    sama di browser device itu, serahkan ke anak, minta coret-coret bebas —
    tidak ada soal, tidak ada target. Observasi: apakah jari dipakai atau
    stylus? Apakah tulisannya terbaca? Apakah anak mengeluh setelah 5 menit?
-8. Kalau belum ada device sentuh: **tidak masalah, tidak blocking** — tunda
-   langkah 7 sampai ada device, lanjut ke Hari 2 memakai data trackpad Mac
-   untuk sementara
+9. **Baca `titik_per_event_rata2` dari device sentuh itu, bukan dari
+   trackpad Mac.** Trackpad tidak membuktikan apa pun soal ini — angka yang
+   dipakai untuk kesepuluh soal harus datang dari device dan browser yang
+   sama yang nanti dipakai anak. Catat angkanya sebelum lanjut.
+10. Kalau belum ada device sentuh: **tidak masalah, tidak blocking** — tunda
+    langkah 8–9 sampai ada device, lanjut ke Hari 2 memakai data trackpad Mac
+    untuk sementara
 
 **Selesai kalau:** menggambar terasa mulus (di trackpad Mac minimal), JSON
 berisi ribuan titik dengan timestamp, dan test `toSamples()` hijau.
@@ -564,6 +654,10 @@ berisi ribuan titik dengan timestamp, dan test `toSamples()` hijau.
 **Berhenti kalau (begitu ada tes ke anak):** anak menolak menulis dengan
 jari, atau tulisannya jauh lebih buruk daripada di kertas. Jangan lanjut ke
 Hari 2 dengan asumsi itu — ini asumsi paling murah untuk digugurkan.
+
+**Tinjau ulang alat kalau:** `titik_per_event_rata2` di device sentuh
+konsisten ≈1,0. Ini bukan "berhenti" — ini "jangan percaya hasil gerbang
+sebelum dicoba browser/device lain". Urutan penanganannya ada di Bagian 1.
 
 ### Hari 2 — Kanvas berlangkah + alur ekspor
 
