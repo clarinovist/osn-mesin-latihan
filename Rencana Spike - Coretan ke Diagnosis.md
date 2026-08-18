@@ -156,13 +156,20 @@ const raw = e.getCoalescedEvents
 Cabang `else` itu diam. Dan bahkan ketika `getCoalescedEvents` ada, spesifikasi
 web hanya mewajibkannya mengembalikan *paling sedikit* satu titik — ia
 best-effort per implementasi, tidak seperti `getHistoricalX/Y` yang dijamin
-oleh batching `MotionEvent` di level OS. Jadi ada dua cara gagal tanpa suara:
-API-nya tidak ada, atau API-nya ada tapi hanya mengembalikan satu titik per
-frame.
+oleh batching `MotionEvent` di level OS. Jadi ada tiga cara gagal tanpa suara:
+API-nya tidak ada; API-nya ada tapi hanya mengembalikan satu titik per frame;
+atau — **ditemukan 18 Agustus** — API-nya ada, dipanggil, dan mengembalikan
+array **kosong**, sehingga event mengalir tapi nol titik tersimpan.
 
-Dalam kedua kasus, JSON tetap terisi ribuan titik, kanvas tetap tergambar
+Yang ketiga itu awalnya lolos justru dari alat yang dipasang untuk
+menangkapnya: guard `rata > 0 && rata < 1.5` diam ketika rata-ratanya tepat
+0,0. Penanganannya sekarang ada di `verdictKoalisi()` — lihat tabel empat
+status di catatan Hari 3 (Lampiran A).
+
+Dalam dua kasus pertama, JSON tetap terisi ribuan titik, kanvas tetap tergambar
 mulus, dan golden test tetap hijau. Yang hilang cuma resolusi antar-frame —
-persis hal yang menjadi seluruh nilai spike ini.
+persis hal yang menjadi seluruh nilai spike ini. Kasus ketiga lebih kasar
+(JSON-nya kosong melompong), tapi dulu sama diamnya di layar.
 
 **Kenapa ini penting justru untuk gerbangnya.** Kalau kecocokan akhirnya
 5/10, tanpa instrumentasi ini tidak ada cara memisahkan dua sebab: prompt
@@ -523,7 +530,7 @@ dari ingatan.
 | 1 | **Tes 10 menit ke anak — cukup coret-coret bebas** (di device sentuh apa pun yang tersedia; boleh geser ke hari lain kalau belum ada) | Anak nyaman menulis dengan jari. **Kalau tidak, berhenti di sini.** |
 | 2 | Kanvas berlangkah, kotak jawaban, 10 soal, tombol unduh JSON + **pindahkan berkas ke Mac (USB/AirDrop/kirim manual)** | Satu sesi lengkap keluar sebagai satu berkas JSON, dan berkas itu sampai ke Mac |
 | 3 | Skrip render goresan jadi PNG + hitung turunan waktu | Bapak bisa melihat kembali tulisan anak per langkah |
-| 3 | Tulis malrule untuk 10 soal uji (Tahap A) | Menjalankan Tahap A atas jawaban salah buatan menghasilkan kode yang benar tanpa LLM |
+| 3 | Tulis malrule untuk 10 soal uji (Tahap A) + sambungkan `turunan.yaml` → kode lewat `diagnosa_sesi.py` | Menjalankan Tahap A atas satu sesi 10 soal menghasilkan kode yang benar tanpa LLM |
 | 4 | **`tinta_heuristik`** — aturan if-then atas turunan waktu | Skrip mengembalikan kode untuk 10 soal, tanpa panggilan API sama sekali |
 | 4 | **`tinta_llm`** — prompt + structured output + cache berkunci versi | Skrip mengembalikan JSON diagnosis untuk 10 soal; menjalankan ulang membaca cache, bukan memanggil API |
 | 5 | Sesi uji sungguhan dengan anak | Data terkumpul; Bapak sudah menilai sendiri lebih dulu |
@@ -723,6 +730,60 @@ folder publik, bukan storage privat app yang butuh `adb run-as`.
 **Selesai kalau:** Bapak bisa melihat tulisan anak per langkah sebagai PNG,
 dan Tahap A menghasilkan kode yang benar untuk jawaban salah yang sudah diketahui
 pola salahnya — tanpa panggilan API apa pun.
+
+**Status 18 Agustus — tuntas, dengan dua perbaikan yang lahir dari verifikasi.**
+
+Yang sudah berdiri: `render.py`, `malrule.yaml` (10 template), `tahap_a.py`
+(14 kasus hijau, nol tumbukan). Yang kurang saat ditinjau ulang: keduanya
+belum pernah diuji pada bentuk data Hari 5 yang sesungguhnya — sesi berisi
+sepuluh soal — dan tidak pernah bersambung satu sama lain.
+
+Ditambahkan untuk menutupnya:
+
+- `render_test.py` — `hitung_turunan()` sebelumnya nol test. Sekarang empat
+  kasus batas ikut terkunci: langkah belum tersegel (`segel_ms: null`),
+  langkah tanpa goresan, sesi tanpa goresan sama sekali, dan render penuh
+  10 soal (20 PNG + `turunan.yaml` terverifikasi isinya).
+- `diagnosa_sesi.py` — mata rantai yang hilang. `render.py` berhenti di
+  `turunan.yaml`, `tahap_a.py` hanya menjalankan daftar kasus di dalam
+  dirinya sendiri; tidak ada yang membaca sesi nyata lalu mengeluarkan kode.
+  Sekarang: satu sesi 10 soal → `B=2, H=2, K=4, benar=1, tidak_pasti=1`,
+  9/10 terjawab Tahap A, nol panggilan API.
+- `test.sh` — satu perintah untuk seluruh test spike.
+
+**Bug yang ditemukan dan sudah diperbaiki.** Saat mencoba mengisi sesi lewat
+event sintetis, 28 `pointermove` terkirim dan **nol titik** terekam —
+`getCoalescedEvents()` mengembalikan array kosong untuk event non-trusted.
+Yang penting bukan event sintetisnya, melainkan bahwa **alat ukurnya diam**:
+guard lama berbunyi `rata > 0 && rata < 1.5`, sehingga rata-rata tepat 0,0
+lolos tanpa peringatan apa pun. Kegagalan terparah — perekaman mati total —
+justru dilaporkan seolah normal, persis kebalikan dari maksud instrumentasi
+di Bagian 1.
+
+Bagian 1 menyebut dua cara gagal tanpa suara (API tidak ada; API ada tapi
+mengembalikan satu titik per frame). Ternyata ada **yang ketiga**: API ada,
+dipanggil, dan mengembalikan nol. Perbaikannya `verdictKoalisi()` di
+`toSamples.js` — membedakan empat keadaan, bukan dua:
+
+| status | arti | tindakan |
+|---|---|---|
+| `kosong` | belum ada `pointermove` sama sekali | sesi belum digores, bukan kerusakan |
+| `rusak` | ada event, **nol** titik | data tidak bisa dipakai, hentikan |
+| `degradasi` | ada titik, ~1 per event | resolusi antar-frame hilang, cek browser/device |
+| `sehat` | ≥1,5 titik per event | lanjut |
+
+Status ikut tertulis ke `capture.verdict` di JSON sesi, jadi sesi yang cacat
+ketahuan saat dibaca ulang, bukan hanya saat diunduh. Test regresinya mengunci
+persis kasus 28-event-nol-titik itu.
+
+**Catatan alat, bukan produk.** Sesi 10 soal di atas memakai fixture sintetis
+untuk membuktikan pipeline, bukan tulisan anak. Goresan sungguhan tetap Hari 5.
+Upaya mengotomatiskan pengisian lewat CDP `Input.dispatchMouseEvent` gagal —
+domain `Input` menggantung di harness ini (`Runtime` menjawab seketika, `Input`
+timeout 5 detik, dan hanya pulih sesaat setelah daemon di-restart). Kalau nanti
+perlu sesi terisi otomatis, jalurnya Playwright/`puppeteer` yang menggerakkan
+pointer sungguhan, bukan `PointerEvent` buatan — event sintetis tidak akan
+pernah menghasilkan koalisi, jadi ia menguji hal yang salah.
 
 ### Hari 4 — tinta_heuristik (pagi) + tinta_llm (sore)
 

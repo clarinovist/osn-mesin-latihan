@@ -1,7 +1,12 @@
 // Golden test wajib (PRD §8.8) — jalankan: node spike/toSamples.test.js
 // Tanpa dependency, tanpa build step.
 const assert = require("node:assert/strict");
-const { toSamples, akumulasiKoalisi, ringkasKoalisi } = require("./toSamples.js");
+const {
+  toSamples,
+  akumulasiKoalisi,
+  ringkasKoalisi,
+  verdictKoalisi,
+} = require("./toSamples.js");
 
 const t0 = 1000;
 
@@ -86,4 +91,47 @@ console.log(
   "koalisi: PASS (sehat=%s, degradasi=%s)",
   ringkasSehat.titik_per_event_rata2,
   ringkasDegradasi.titik_per_event_rata2,
+);
+
+// --- Verdict koalisi ---
+// Regresi untuk lubang yang ditemukan 18 Agustus saat mencoba mengisi sesi
+// 10 soal lewat event sintetis: 28 pointermove terkirim, NOL titik terekam
+// (getCoalescedEvents mengembalikan array kosong untuk event non-trusted).
+// Guard lama `rata > 0 && rata < 1.5` diam saja karena rata-ratanya tepat 0,0
+// — kegagalan terparah justru dilaporkan seolah normal.
+
+// Kasus yang dulu lolos diam-diam: ada event, nol titik.
+let rusak = KOSONG;
+for (let i = 0; i < 28; i += 1) rusak = akumulasiKoalisi(rusak, 0);
+const ringkasRusak = ringkasKoalisi(rusak);
+assert.equal(ringkasRusak.jumlah_event_pointermove, 28);
+assert.equal(ringkasRusak.total_titik, 0);
+assert.equal(ringkasRusak.titik_per_event_rata2, 0);
+assert.equal(
+  verdictKoalisi(ringkasRusak).status,
+  "rusak",
+  "28 event dengan nol titik harus berstatus 'rusak', bukan lolos diam-diam",
+);
+assert.match(verdictKoalisi(ringkasRusak).pesan, /NOL titik terekam/);
+
+// Sesi yang memang belum digores berbeda dari sesi rusak.
+assert.equal(
+  verdictKoalisi(ringkasKoalisi(KOSONG)).status,
+  "kosong",
+  "nol event bukan kerusakan — belum ada goresan sama sekali",
+);
+
+// Degradasi (~1 titik per event) tetap terdeteksi terpisah.
+assert.equal(verdictKoalisi(ringkasDegradasi).status, "degradasi");
+
+// Sesi sehat tidak boleh memicu peringatan apa pun.
+assert.equal(verdictKoalisi(ringkasSehat).status, "sehat");
+
+// Ambang batas: tepat di 1,5 sudah dianggap sehat, sedikit di bawahnya tidak.
+assert.equal(verdictKoalisi({ jumlah_event_pointermove: 10, total_titik: 15, titik_per_event_rata2: 1.5 }).status, "sehat");
+assert.equal(verdictKoalisi({ jumlah_event_pointermove: 10, total_titik: 14, titik_per_event_rata2: 1.4 }).status, "degradasi");
+
+console.log(
+  "verdict: PASS (rusak/kosong/degradasi/sehat terbedakan, %d event nol-titik tertangkap)",
+  ringkasRusak.jumlah_event_pointermove,
 );
