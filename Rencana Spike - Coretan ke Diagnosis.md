@@ -854,6 +854,40 @@ hanya diingat-ingat.
 `cache_llm/` masuk `.gitignore` bersama `turunan/`: isinya diagnosis atas
 coretan anak, turunan langsung dari data anak.
 
+> **Ditunda 18 Agustus — `tinta_llm` tidak dijalankan sampai ada keputusan
+> eksplisit.**
+>
+> `tinta_llm` mengirim PNG tulisan tangan anak ke API Anthropic. PRD §7.1
+> menetapkan sebaliknya, dan itu kebijakan produk, bukan detail
+> implementasi: *"tidak ada cloud, tidak ada API pihak ketiga, tidak ada data
+> anak yang pernah meninggalkan device+Mac keluarga itu sendiri… kecuali
+> diputuskan ulang secara eksplisit"*. Alasan keduanya bukan soal API key
+> melainkan soal persetujuan — *"anak kelas 4 tidak punya cara memberi
+> persetujuan berarti atas ke mana data tulisan tangannya pergi"*.
+>
+> Jaminan "tidak menyentuh internet" di Bagian 1 berlaku untuk **perekamnya**,
+> bukan untuk skrip diagnosis di Mac. Jadi §7.1 dan `tinta_llm` memang
+> bertabrakan, dan pintu "kecuali diputuskan ulang" itu belum pernah dilewati
+> secara sadar.
+>
+> **Keputusan: heuristik diukur lebih dulu.** Hari 5 mengambil data anak,
+> Hari 6–7 membandingkan `tinta_heuristik` dengan penilaian Bapak. Kalau
+> hasilnya ≥7/10 dengan nol false-K, LLM keluar dari lingkup v1 seluruhnya
+> (lihat tabel "Membaca dua angka itu") — dan pertanyaan privasi ini tidak
+> pernah perlu dijawab sama sekali.
+>
+> Kodenya tetap disimpan lengkap dan teruji, supaya kalau nanti keputusan itu
+> memang perlu diambil, yang tersisa hanya menyalakan — bukan menulis ulang
+> sambil terburu-buru. Sampai saat itu: **jangan set `ANTHROPIC_API_KEY` dan
+> jangan jalankan `tinta_llm.py` tanpa `--dry-run`.** Sampai hari ini belum
+> ada satu pun goresan yang pernah terkirim.
+>
+> Kalau nanti dijalankan, konsekuensinya juga perlu jadi bagian dari
+> keputusan, bukan kejutan belakangan: `tinta_llm` butuh model **vision** —
+> seluruh nilainya ada pada membaca bentuk coretan. LLM teks-saja hanya akan
+> membaca ringkasan waktu, yaitu persis yang sudah dikerjakan
+> `tinta_heuristik` secara gratis dan offline.
+
 **Yang belum terjawab, dan tidak bisa dijawab hari ini.** Angka gerbang
 (berapa dari 10 cocok, berapa `terbaca: false`) belum ada — dan memang belum
 seharusnya ada. Keduanya butuh dua hal yang baru muncul Hari 5: coretan

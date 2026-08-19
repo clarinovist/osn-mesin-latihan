@@ -223,10 +223,47 @@ def tes_terbaca_false_dihormati(tmp):
     print("terbaca=false dihormati: PASS")
 
 
+def tes_palang_izin_menahan_secara_default():
+    """Tanpa izin eksplisit, klien tidak boleh terbentuk — walau API key ada.
+
+    Ini penjaga PRD §7.1. Dua syarat sengaja dipisah: kunci API bisa saja
+    sudah ada di environment untuk keperluan lain, dan kealpaan seperti itu
+    tidak boleh berujung terkirimnya tulisan tangan anak ke pihak ketiga.
+    """
+    import os
+
+    asli_izin = os.environ.pop("OSN_IZIN_KIRIM_DATA_ANAK", None)
+    asli_key = os.environ.get("ANTHROPIC_API_KEY")
+    os.environ["ANTHROPIC_API_KEY"] = "sk-palsu-untuk-test"
+    try:
+        try:
+            tl.buat_klien()
+        except SystemExit as e:
+            assert "§7.1" in str(e), e
+            assert "--dry-run" in str(e), e
+        else:
+            raise AssertionError("palang izin tidak menahan — data anak bisa terkirim tanpa keputusan sadar")
+
+        # Dengan izin eksplisit, palang membuka (kunci palsu -> klien tetap terbentuk).
+        os.environ["OSN_IZIN_KIRIM_DATA_ANAK"] = "1"
+        klien = tl.buat_klien()
+        assert klien is not None, "izin diberikan tapi klien tidak terbentuk"
+    finally:
+        os.environ.pop("OSN_IZIN_KIRIM_DATA_ANAK", None)
+        if asli_izin is not None:
+            os.environ["OSN_IZIN_KIRIM_DATA_ANAK"] = asli_izin
+        if asli_key is None:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+        else:
+            os.environ["ANTHROPIC_API_KEY"] = asli_key
+    print("palang izin menahan secara default: PASS")
+
+
 def main():
     tes_susun_konteks()
     tes_konteks_tanpa_malrule()
     tes_validasi_menolak_yang_cacat()
+    tes_palang_izin_menahan_secara_default()
 
     tmp = Path(tempfile.mkdtemp(prefix="spike-llm-test-"))
     try:

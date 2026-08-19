@@ -25,10 +25,31 @@ benar atau salah. Benar-salah datang dari kotak jawaban yang diketik anak.
 Karena itu `jawaban_benar` dan `jawaban_diketik` dikirim apa adanya, dan
 model diminta mendiagnosis PROSES, bukan menilai hasil.
 
+⚠️  DITUNDA 18 Agustus — JANGAN dijalankan tanpa keputusan eksplisit.
+
+    Modul ini mengirim PNG tulisan tangan anak ke API pihak ketiga. PRD §7.1
+    menetapkan sebaliknya: "tidak ada cloud, tidak ada API pihak ketiga,
+    tidak ada data anak yang pernah meninggalkan device+Mac keluarga itu
+    sendiri ... kecuali diputuskan ulang secara eksplisit". Alasannya bukan
+    soal API key, melainkan soal persetujuan — anak kelas 4 tidak punya cara
+    memberi persetujuan berarti atas ke mana tulisan tangannya pergi.
+
+    Keputusan yang berlaku sekarang: ukur `tinta_heuristik` lebih dulu (Hari
+    5-7). Kalau hasilnya >=7/10 dengan nol false-K, LLM keluar dari lingkup
+    v1 dan modul ini tidak pernah perlu dijalankan.
+
+    Kode ini disimpan lengkap dan teruji supaya siap kalau keputusan itu
+    memang diambil — bukan supaya dijalankan diam-diam. Karena itu ada
+    IZIN_KIRIM_DATA_ANAK di bawah: satu palang sengaja, supaya menjalankannya
+    tidak pernah bisa terjadi karena lupa.
+
+Butuh model VISION. Seluruh nilai modul ini ada pada membaca bentuk coretan;
+model teks-saja hanya membaca ringkasan waktu, yang sudah dikerjakan
+`tinta_heuristik` secara gratis dan offline.
+
 Pemakaian:
-    export ANTHROPIC_API_KEY=...
-    ./.venv/bin/python tinta_llm.py turunan/<sesi>/turunan.yaml
-    ./.venv/bin/python tinta_llm.py <...> --dry-run   # tanpa API, lihat prompt
+    ./.venv/bin/python tinta_llm.py turunan/<sesi>/turunan.yaml --dry-run  # aman, tanpa API
+    OSN_IZIN_KIRIM_DATA_ANAK=1 ./.venv/bin/python tinta_llm.py <...>       # butuh keputusan sadar
 """
 import argparse
 import base64
@@ -277,6 +298,25 @@ def diagnosa_sesi(turunan_path, klien=None, cache_dir=None):
 
 
 def buat_klien():
+    """Kembalikan klien Anthropic — hanya kalau izin eksplisit diberikan.
+
+    Dua syarat, sengaja terpisah: kunci API saja tidak cukup. Kunci itu bisa
+    saja sudah ada di environment untuk keperluan lain, dan kealpaan seperti
+    itu tidak boleh berujung terkirimnya tulisan tangan anak ke pihak ketiga.
+    Lihat catatan "DITUNDA" di docstring modul dan PRD §7.1.
+    """
+    if os.environ.get("OSN_IZIN_KIRIM_DATA_ANAK") != "1":
+        raise SystemExit(
+            "⛔ tinta_llm ditunda — menjalankan ini mengirim tulisan tangan anak ke API\n"
+            "   pihak ketiga, yang bertentangan dengan PRD §7.1 (privacy-by-default).\n\n"
+            "   Keputusan yang berlaku: ukur tinta_heuristik lebih dulu (Hari 5-7).\n"
+            "   Kalau >=7/10 dengan nol false-K, LLM keluar dari lingkup v1.\n\n"
+            "   Untuk melihat prompt tanpa mengirim apa pun:\n"
+            "       ./.venv/bin/python tinta_llm.py <turunan.yaml> --dry-run\n\n"
+            "   Kalau keputusan mengizinkan memang sudah diambil secara sadar:\n"
+            "       OSN_IZIN_KIRIM_DATA_ANAK=1 ./.venv/bin/python tinta_llm.py <turunan.yaml>"
+        )
+
     kunci = os.environ.get("ANTHROPIC_API_KEY")
     if not kunci:
         return None
