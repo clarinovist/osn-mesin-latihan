@@ -29,6 +29,13 @@
   }
   button:active { background: #eee; }
 
+  /* Tombol harus selalu jadi target sentuh, apa pun isinya.
+     Safari iOS mengarahkan tap ke elemen terdalam di bawah jari — kalau
+     tombol berisi anak elemen (<small>, <span>, ikon), tap bisa mendarat di
+     sana dan tombolnya tidak pernah menerima klik. Ditemukan 18 Agustus dari
+     laporan langsung: "buttonnya gabisa di klik smw". */
+  button * { pointer-events: none; }
+
   ol#daftarSoal { list-style: none; padding: 0; margin: 0 0 16px; }
   ol#daftarSoal li { margin-bottom: 10px; }
   ol#daftarSoal button {
@@ -95,7 +102,24 @@
 
   .pilihanMode { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
   .pilihanMode button { text-align: left; line-height: 1.45; }
-  .pilihanMode small { display: block; color: #666; font-weight: normal; margin-top: 3px; }
+
+  /* Teks kecil di dalam tombol: dulu #666, dan di atas tombol biru #1a6fd4
+     praktis tidak terbaca ("tulisan dibawahnya g kebaca dengan jelas").
+     Sekarang mewarisi warna tombol induknya dan hanya diredupkan sedikit,
+     jadi kontrasnya aman di tombol biru maupun putih. */
+  .pilihanMode small {
+    display: block;
+    color: inherit;
+    opacity: 0.85;
+    font-weight: normal;
+    margin-top: 4px;
+    font-size: 13px;
+  }
+  /* Opacity 1.0 di tombol biru: pada 0.92 kontrasnya 4.4:1, tepat di bawah
+     ambang WCAG AA (4.5:1). Putih penuh memberi 12.6:1 — dan keluhan yang
+     memicu perbaikan ini memang soal keterbacaan, jadi tidak ada gunanya
+     berhemat kontras demi estetika. */
+  .pilihanMode button.utama small { opacity: 1; }
 
   footer.privasi { margin-top: 28px; font-size: 12px; color: #777; line-height: 1.5; }
 </style>
