@@ -25,7 +25,19 @@
     border-radius: 8px;
     border: 1px solid #999;
     background: #fff;
+    color: #1a1a1a;
     min-height: 44px;
+    /* Safari iOS memberi <button> gaya bawaan sendiri; begitu background
+       diubah tanpa mematikan appearance, tampilan dan perilaku sentuhnya
+       bisa menyimpang. Dimatikan eksplisit supaya sama persis lintas
+       browser. */
+    -webkit-appearance: none;
+    appearance: none;
+    /* Hilangkan jeda 300ms dan kotak sorot abu-abu khas Safari iOS —
+       tanpa ini tap terasa "tidak bereaksi" walau sebenarnya terdaftar. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+    cursor: pointer;
   }
   button:active { background: #eee; }
 
@@ -180,6 +192,24 @@
   </footer>
 
   <script src="toSamples.js"></script>
+  <script>
+    // Dipasang paling awal, sebelum kode lain apa pun: kalau skrip berhenti
+    // di tengah, halaman TIDAK boleh diam. Gejala yang dilaporkan dari iPhone
+    // ("buttonnya gabisa di klik smw") persis berbentuk seperti itu — handler
+    // tidak pernah terpasang, sementara layar tampak normal. Pesan di layar
+    // mengubah kebingungan jadi keterangan yang bisa ditindaklanjuti.
+    window.addEventListener("error", (e) => {
+      const kotak = document.createElement("div");
+      kotak.style.cssText =
+        "position:fixed;left:0;right:0;bottom:0;background:#b00020;color:#fff;" +
+        "padding:12px 14px;font-size:13px;line-height:1.5;z-index:9999;";
+      kotak.textContent =
+        "Ada kesalahan di halaman ini: " + (e.message || "tidak diketahui") +
+        (e.lineno ? " (baris " + e.lineno + ")" : "") +
+        " — tolong beritahu Ayah, tulisan ini yang perlu disampaikan.";
+      (document.body || document.documentElement).appendChild(kotak);
+    });
+  </script>
   <script>
     const SOAL = [
       { soal_id: 1, teks: "Hitunglah 24 + 36 : 4 × 3 − 10." },
