@@ -31,3 +31,6 @@ build/
 *.apk
 local.properties
 .gradle/
+
+# Artefak bundel (dibangkitkan ulang: python spike/bundel.py)
+spike/latihan.html

@@ -2,112 +2,157 @@
 <html lang="id">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Spike — kanvas tinta</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Latihan — kanvas tulis</title>
 <style>
+  * { box-sizing: border-box; }
   body {
-    font-family: system-ui, sans-serif;
-    max-width: 640px;
-    margin: 24px auto;
-    padding: 0 16px;
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 12px 14px 32px;
     color: #1a1a1a;
+    -webkit-text-size-adjust: 100%;
   }
-  h1 { font-size: 18px; }
-  h2 { font-size: 16px; }
-  p.hint { color: #555; font-size: 14px; }
-  ol#daftarSoal { list-style: none; padding: 0; }
-  ol#daftarSoal li { margin-bottom: 8px; }
+  h1 { font-size: 18px; margin: 12px 0 6px; }
+  h2 { font-size: 17px; line-height: 1.4; margin: 8px 0 10px; }
+  p.hint { color: #555; font-size: 14px; margin: 6px 0 14px; }
+
+  /* Tombol besar — jari anak, bukan kursor mouse. */
+  button {
+    font-size: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #999;
+    background: #fff;
+    min-height: 44px;
+  }
+  button:active { background: #eee; }
+
+  ol#daftarSoal { list-style: none; padding: 0; margin: 0 0 16px; }
+  ol#daftarSoal li { margin-bottom: 10px; }
   ol#daftarSoal button {
     width: 100%;
     text-align: left;
-    padding: 10px 12px;
+    line-height: 1.4;
   }
-  ol#daftarSoal button:disabled {
-    background: #eef7ee;
-    color: #2a7a2a;
-  }
+  ol#daftarSoal button:disabled { background: #eef7ee; color: #2a7a2a; }
+
   .langkah {
     border: 1px solid #999;
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
-  .langkah.tersegel {
-    border-color: #ccc;
-    background: #fafafa;
-  }
-  .labelLangkah {
-    font-size: 12px;
-    color: #555;
-    margin-bottom: 4px;
-  }
+  .langkah.tersegel { border-color: #ddd; background: #fafafa; }
+  .labelLangkah { font-size: 12px; color: #555; margin-bottom: 4px; }
+
+  /* Kanvas: setinggi mungkin tanpa mengorbankan soal yang harus tetap terbaca.
+     Di iPhone potrait 120px terlalu sempit untuk menulis dengan jari. */
   .kanvasLangkah {
     display: block;
     width: 100%;
-    height: 120px;
+    height: 200px;
     border: 1px solid #bbb;
-    border-radius: 4px;
-    touch-action: none;
+    border-radius: 6px;
+    touch-action: none;          /* wajib: cegah scroll saat menulis */
+    -webkit-user-select: none;
+    user-select: none;
     background: #fff;
   }
-  .baris {
-    display: flex;
-    gap: 8px;
-    margin: 12px 0;
-    align-items: center;
+  @media (max-height: 500px) {   /* landscape HP: layar pendek, kanvas mengecil */
+    .kanvasLangkah { height: 150px; }
+    h2 { font-size: 15px; margin: 4px 0 6px; }
+    body { padding-top: 6px; }
   }
-  button {
-    font-size: 14px;
-    padding: 6px 12px;
+  @media (min-width: 700px) {
+    .kanvasLangkah { height: 220px; }
   }
-  .btnHapusLangkah {
-    margin-top: 6px;
-    font-size: 12px;
-  }
+
+  .baris { display: flex; gap: 8px; margin: 14px 0; align-items: center; flex-wrap: wrap; }
+  .baris label { font-size: 15px; }
+  .btnHapusLangkah { margin-top: 8px; font-size: 14px; padding: 8px 12px; min-height: 40px; }
+
   input[type="text"] {
-    font-size: 16px;
-    padding: 6px 8px;
+    font-size: 17px;             /* >=16px: cegah iOS auto-zoom saat fokus */
+    padding: 10px 12px;
     flex: 1;
+    min-width: 140px;
+    border: 1px solid #999;
+    border-radius: 8px;
   }
-  #statusUnduh { font-size: 13px; color: #333; }
-  footer.privasi {
-    margin-top: 32px;
-    font-size: 12px;
-    color: #777;
+
+  .utama {
+    background: #1a6fd4;
+    color: #fff;
+    border-color: #1a6fd4;
+    font-weight: 600;
   }
+  .utama:active { background: #155ab0; }
+
+  #statusUnduh { font-size: 14px; color: #333; line-height: 1.5; }
+  #kemajuan { font-size: 13px; color: #666; margin-bottom: 8px; }
+
+  .pilihanMode { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .pilihanMode button { text-align: left; line-height: 1.45; }
+  .pilihanMode small { display: block; color: #666; font-weight: normal; margin-top: 3px; }
+
+  footer.privasi { margin-top: 28px; font-size: 12px; color: #777; line-height: 1.5; }
 </style>
 </head>
 <body>
 
-  <div id="layarDaftar">
-    <h1>Sesi latihan — 10 soal</h1>
-    <p class="hint">Ketuk soal untuk mulai. Soal yang sudah selesai ditandai ✓.</p>
+  <div id="layarMulai">
+    <h1>Latihan menulis — 10 soal</h1>
+    <p class="hint">
+      Kerjakan seperti biasa di kertas buram: tulis langkahnya, bukan cuma
+      jawabannya. Kalau keliru, <strong>cukup dicoret</strong> — coretannya
+      tidak hilang, dan itu tidak apa-apa.
+    </p>
+    <div class="pilihanMode">
+      <button id="btnModeRuntut" class="utama">
+        Mulai — satu per satu
+        <small>Soal muncul satu-satu, selesai satu langsung lanjut berikutnya.</small>
+      </button>
+      <button id="btnModePilih">
+        Mulai — pilih sendiri
+        <small>Lihat daftar semua soal, kerjakan yang mana dulu pun boleh.</small>
+      </button>
+    </div>
+    <p class="hint">Tidak ada nilainya. Kalau ada yang sulit, boleh dilewati.</p>
+  </div>
+
+  <div id="layarDaftar" hidden>
+    <h1>Daftar soal</h1>
+    <p class="hint">Ketuk soal untuk mengerjakan. Yang sudah selesai ditandai ✓.</p>
     <ol id="daftarSoal"></ol>
-    <button id="btnSelesaiSesi">Selesai Sesi &amp; Unduh</button>
+    <button id="btnSelesaiSesi" class="utama">Selesai &amp; Simpan</button>
   </div>
 
   <div id="layarSoal" hidden>
-    <button id="btnKembali">&larr; Kembali ke daftar (tanpa simpan)</button>
+    <button id="btnKembali">&larr; Kembali</button>
+    <div id="kemajuan"></div>
     <h2 id="judulSoal"></h2>
     <div id="daftarLangkah"></div>
     <button id="btnTambahLangkah">+ Tambah Langkah</button>
     <div class="baris">
       <label for="inputJawaban">Jawaban akhir:</label>
-      <input id="inputJawaban" type="text" autocomplete="off" placeholder="mis. 11/12" />
+      <input id="inputJawaban" type="text" autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false" placeholder="mis. 11/12" />
     </div>
-    <button id="btnSelesaiSoal">Selesai Soal</button>
+    <button id="btnSelesaiSoal" class="utama">Selesai Soal</button>
   </div>
 
   <div id="layarUcapan" hidden>
     <h1>Terima kasih!</h1>
-    <p>Sesi latihan sudah selesai.</p>
-    <button id="btnUnduh">Unduh Data Sesi</button>
+    <p>Latihan sudah selesai.</p>
+    <button id="btnUnduh" class="utama">Simpan Data Sesi</button>
     <p id="statusUnduh"></p>
   </div>
 
   <footer class="privasi">
-    Tidak ada koneksi jaringan dari halaman ini — semua data tetap di memori
-    browser sampai diunduh secara manual.
+    Halaman ini tidak terhubung ke internet. Semua data tetap di perangkat ini
+    sampai disimpan secara manual.
   </footer>
 
   <script src="toSamples.js"></script>
@@ -130,6 +175,10 @@
       soal: {},
     };
 
+    // "runtut" = selesai satu soal langsung lanjut berikutnya.
+    // "pilih"  = kembali ke daftar setelah tiap soal.
+    let mode = "runtut";
+
     // Statistik alat, bukan data anak — dikumpulkan lintas seluruh sesi.
     // Lihat "Rencana Spike" Bagian 1, "Risiko — fallback yang gagal diam-diam".
     let koalisi = { jumlah_event: 0, total_titik: 0, maks: 0 };
@@ -138,14 +187,19 @@
 
     let kerja = null;
 
+    const layarMulai = document.getElementById("layarMulai");
     const layarDaftar = document.getElementById("layarDaftar");
     const layarSoal = document.getElementById("layarSoal");
     const layarUcapan = document.getElementById("layarUcapan");
+    const SEMUA_LAYAR = [layarMulai, layarDaftar, layarSoal, layarUcapan];
 
     function tampilkan(layar) {
-      layarDaftar.hidden = layar !== layarDaftar;
-      layarSoal.hidden = layar !== layarSoal;
-      layarUcapan.hidden = layar !== layarUcapan;
+      for (const el of SEMUA_LAYAR) el.hidden = el !== layar;
+      window.scrollTo(0, 0);
+    }
+
+    function belumSelesai() {
+      return SOAL.filter((s) => !sesi.soal[s.soal_id]);
     }
 
     function renderDaftarSoal() {
@@ -175,12 +229,28 @@
         jawaban_diketik: "",
         jawaban_ditulis_pada_ms: null,
       };
-      document.getElementById("judulSoal").textContent =
-        "Soal " + soalDef.soal_id + " · " + soalDef.teks;
+      const sudah = Object.keys(sesi.soal).length;
+      document.getElementById("kemajuan").textContent =
+        "Soal ke-" + (sudah + 1) + " dari " + SOAL.length;
+      document.getElementById("judulSoal").textContent = soalDef.teks;
       document.getElementById("daftarLangkah").innerHTML = "";
       document.getElementById("inputJawaban").value = "";
       tampilkan(layarSoal);
       tambahLangkah();
+    }
+
+    function lanjutSetelahSoal() {
+      const sisa = belumSelesai();
+      if (mode === "runtut" && sisa.length > 0) {
+        bukaSoal(sisa[0]);
+        return;
+      }
+      if (sisa.length === 0) {
+        tampilkan(layarUcapan);
+        return;
+      }
+      renderDaftarSoal();
+      tampilkan(layarDaftar);
     }
 
     function tambahLangkah() {
@@ -225,39 +295,76 @@
 
       const btnHapus = document.createElement("button");
       btnHapus.className = "btnHapusLangkah";
-      btnHapus.textContent = "Hapus langkah ini";
-      btnHapus.addEventListener("click", () => {
-        if (langkah.segel_ms !== null) return;
-        langkah.goresan = [];
-        langkah.jumlah_hapus += 1;
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      });
+      btnHapus.textContent = "Coret langkah ini";
 
       kartu.appendChild(label);
       kartu.appendChild(canvas);
       kartu.appendChild(btnHapus);
       wadah.appendChild(kartu);
 
-      pasangKanvas(canvas, langkah);
+      const api = pasangKanvas(canvas, langkah);
+
+      // Mencoret TIDAK membuang goresan — hanya menandainya.
+      //
+      // Versi lama melakukan `langkah.goresan = []`, dan itu menghapus bukti
+      // paling berharga: apa yang sempat dipikirkan anak sebelum berubah
+      // pikiran. Panduan Orang Tua sudah menetapkan aturannya untuk kertas
+      // ("Larang menghapus coretan; kalau keliru cukup dicoret") — di sini
+      // aturan yang sama ditegakkan oleh alatnya, bukan oleh disiplin anak.
+      //
+      // Ini juga menutup lubang di tinta_heuristik: aturan "hapus >= 2 -> H"
+      // dulu menyimpulkan dari penghitung sementara goresannya sudah dibuang.
+      btnHapus.addEventListener("click", () => {
+        if (langkah.segel_ms !== null) return;
+        let adaYangDicoret = false;
+        for (const g of langkah.goresan) {
+          if (!g.dicoret) {
+            g.dicoret = true;
+            g.dicoret_pada_ms = waktuSekarangRelatif();
+            adaYangDicoret = true;
+          }
+        }
+        if (!adaYangDicoret) return;
+        langkah.jumlah_hapus += 1;
+        api.gambarUlang();
+      });
     }
 
     function pasangKanvas(canvas, langkah) {
       const ctx = canvas.getContext("2d");
 
-      function fit() {
+      function siapkanKonteks() {
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
         canvas.width = Math.round(rect.width * dpr);
         canvas.height = Math.round(rect.height * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.strokeStyle = "#1a1a1a";
       }
-      fit();
-      window.addEventListener("resize", fit);
+
+      function gambarGoresan(g) {
+        // Yang dicoret tetap tampak, tapi jelas berbeda: abu-abu tipis.
+        ctx.strokeStyle = g.dicoret ? "#c4c4c4" : "#1a1a1a";
+        ctx.lineWidth = g.dicoret ? 1.5 : 2.5;
+        ctx.beginPath();
+        const t = g.titik;
+        if (!t.length) return;
+        ctx.moveTo(t[0][0], t[0][1]);
+        for (let i = 1; i < t.length; i++) ctx.lineTo(t[i][0], t[i][1]);
+        ctx.stroke();
+      }
+
+      function gambarUlang() {
+        siapkanKonteks();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (const g of langkah.goresan) gambarGoresan(g);
+      }
+
+      siapkanKonteks();
+      window.addEventListener("resize", gambarUlang);
+      window.addEventListener("orientationchange", gambarUlang);
 
       let goresanAktif = null;
 
@@ -272,18 +379,23 @@
 
       canvas.addEventListener("pointerdown", (e) => {
         if (langkah.segel_ms !== null) return;
+        e.preventDefault();
         canvas.setPointerCapture(e.pointerId);
         const samples = toSamples([titikDariEvent(e)], kerja.t0);
         goresanAktif = {
           mulai_ms: samples[0].t,
           titik: samples.map((s) => [s.x, s.y, s.t]),
+          dicoret: false,
         };
+        ctx.strokeStyle = "#1a1a1a";
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(samples[0].x, samples[0].y);
       });
 
       canvas.addEventListener("pointermove", (e) => {
         if (!goresanAktif || langkah.segel_ms !== null) return;
+        e.preventDefault();
         const raw = e.getCoalescedEvents
           ? e.getCoalescedEvents().map(titikDariEvent)
           : [titikDariEvent(e)];
@@ -303,7 +415,20 @@
       }
       canvas.addEventListener("pointerup", akhiriGoresan);
       canvas.addEventListener("pointercancel", akhiriGoresan);
+
+      return { gambarUlang: gambarUlang };
     }
+
+    document.getElementById("btnModeRuntut").addEventListener("click", () => {
+      mode = "runtut";
+      bukaSoal(SOAL[0]);
+    });
+
+    document.getElementById("btnModePilih").addEventListener("click", () => {
+      mode = "pilih";
+      renderDaftarSoal();
+      tampilkan(layarDaftar);
+    });
 
     document.getElementById("btnTambahLangkah").addEventListener("click", tambahLangkah);
 
@@ -314,10 +439,12 @@
       }
     });
 
+    // Keluar tanpa menyimpan soal ini. Selalu tersedia — anak harus selalu
+    // punya jalan keluar, termasuk di mode runtut.
     document.getElementById("btnKembali").addEventListener("click", () => {
       kerja = null;
-      tampilkan(layarDaftar);
       renderDaftarSoal();
+      tampilkan(layarDaftar);
     });
 
     document.getElementById("btnSelesaiSoal").addEventListener("click", () => {
@@ -333,8 +460,7 @@
         selesai_ms: sekarang,
       };
       kerja = null;
-      tampilkan(layarDaftar);
-      renderDaftarSoal();
+      lanjutSetelahSoal();
     });
 
     document.getElementById("btnSelesaiSesi").addEventListener("click", () => {
@@ -352,6 +478,8 @@
         total_titik: ringkas.total_titik,
         verdict: verdictCapture.status,
         browser: navigator.userAgent,
+        layar: (window.screen && screen.width) ? screen.width + "x" + screen.height : null,
+        dpr: window.devicePixelRatio || null,
         layar_hz: null,
       };
       const data = {
@@ -369,10 +497,11 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
 
       document.getElementById("statusUnduh").textContent =
-        "Diunduh sebagai " + nama + " (" + Object.keys(sesi.soal).length + " dari 10 soal terisi). " + verdictCapture.pesan;
+        "Tersimpan sebagai " + nama + " (" + Object.keys(sesi.soal).length +
+        " dari " + SOAL.length + " soal terisi). " + verdictCapture.pesan;
     });
 
     renderDaftarSoal();

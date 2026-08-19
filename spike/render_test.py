@@ -180,6 +180,42 @@ def tes_render_10_soal(tmp):
     print(f"render 10 soal: PASS ({total_png} PNG, {len(turunan['soal'])} soal di turunan.yaml)")
 
 
+def tes_goresan_dicoret_tetap_dirender(tmp):
+    """Goresan yang dicoret anak TIDAK boleh hilang dari PNG.
+
+    Panduan Orang Tua: "Larang menghapus coretan; kalau keliru cukup dicoret."
+    Versi lama index.html melakukan `langkah.goresan = []` — membuang bukti
+    paling berharga, yaitu apa yang sempat dipikirkan anak sebelum berubah
+    pikiran. Test ini mengunci perilaku barunya.
+    """
+    langkah = buat_langkah(0, 0, 5000, n_goresan=2)
+    langkah["goresan"][0]["dicoret"] = True
+    langkah["goresan"][0]["dicoret_pada_ms"] = 1200
+
+    out = tmp / "dicoret.png"
+    render.render_langkah(langkah, out)
+    assert out.stat().st_size > 0, "PNG kosong"
+
+    from PIL import Image
+    daftar = Image.open(out).convert("RGB").getcolors(maxcolors=100000)
+    assert daftar is not None, "gambar terlalu banyak warna — tidak terduga untuk goresan"
+    warna = [w for _, w in daftar]
+    # Hitam = goresan asli, abu-abu = yang dicoret. Keduanya harus ada.
+    assert any(sum(w) < 200 for w in warna), f"goresan asli hilang: {warna}"
+    assert any(150 < sum(w) < 700 for w in warna), f"goresan dicoret tidak dirender: {warna}"
+    print("goresan dicoret tetap dirender: PASS")
+
+
+def tes_goresan_tanpa_flag_dicoret(tmp):
+    """Sesi lama (sebelum flag `dicoret` ada) harus tetap bisa dirender."""
+    langkah = buat_langkah(0, 0, 5000, n_goresan=1)
+    assert "dicoret" not in langkah["goresan"][0]
+    out = tmp / "lama.png"
+    render.render_langkah(langkah, out)
+    assert out.stat().st_size > 0
+    print("kompatibel dengan sesi lama: PASS")
+
+
 def main():
     tes_hitung_turunan_dasar()
     tes_langkah_belum_tersegel()
@@ -188,6 +224,8 @@ def main():
 
     tmp = Path(tempfile.mkdtemp(prefix="spike-render-test-"))
     try:
+        tes_goresan_dicoret_tetap_dirender(tmp)
+        tes_goresan_tanpa_flag_dicoret(tmp)
         tes_render_10_soal(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

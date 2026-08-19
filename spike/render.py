@@ -36,12 +36,19 @@ def render_langkah(langkah, out_path):
     img = Image.new("RGB", (lebar, tinggi), "white")
     draw = ImageDraw.Draw(img)
     for goresan in langkah["goresan"]:
+        # Goresan yang dicoret anak tetap dirender — di situ sering justru
+        # terlihat apa yang sempat dipikirkan sebelum berubah pikiran. Tapi
+        # harus jelas berbeda, supaya tidak terbaca sebagai jawaban final.
+        dicoret = goresan.get("dicoret", False)
+        warna = "#c4c4c4" if dicoret else "black"
+        tebal = 2 if dicoret else 3
         titik = [(p[0], p[1]) for p in goresan["titik"]]
         if len(titik) >= 2:
-            draw.line(titik, fill="black", width=3, joint="curve")
+            draw.line(titik, fill=warna, width=tebal, joint="curve")
         elif titik:
             x, y = titik[0]
-            draw.ellipse([x - 1.5, y - 1.5, x + 1.5, y + 1.5], fill="black")
+            r = tebal / 2
+            draw.ellipse([x - r, y - r, x + r, y + r], fill=warna)
     img.save(out_path)
 
 
