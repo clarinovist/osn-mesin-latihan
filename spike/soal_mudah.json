@@ -1,0 +1,26 @@
+{
+  "nama": "set-mudah-uji-alat",
+  "tujuan": "Menguji perekam goresan, BUKAN mengukur kemampuan anak.",
+  "catatan": [
+    "Soal sengaja dipilih yang hampir pasti bisa dikerjakan, supaya anak MAU MENULIS.",
+    "Sesi 19 Agustus menunjukkan pola jelas: soal yang tidak dipahami ditinggalkan",
+    "dengan nol goresan (soal 2 pecahan: 1 detik, tanpa satu goresan pun). Nol goresan",
+    "berarti nol data untuk menguji perekam — itu yang harus dihindari di sesi uji alat.",
+    "Semua soal di sini butuh setidaknya satu langkah tertulis; tidak ada yang bisa",
+    "dijawab hanya dari hafalan, supaya tetap ada goresan untuk direkam.",
+    "Topik yang kemarin dihindari (FPB, KPK, volume, pecahan) sengaja TIDAK dipakai.",
+    "Itu bahan untuk sesi sungguhan nanti, bukan untuk menguji alat."
+  ],
+  "soal": [
+    { "soal_id": 101, "teks": "Hitunglah 7 + 8.", "jawaban_benar": "15", "topik": "penjumlahan" },
+    { "soal_id": 102, "teks": "Hitunglah 25 − 9.", "jawaban_benar": "16", "topik": "pengurangan" },
+    { "soal_id": 103, "teks": "Hitunglah 6 × 7.", "jawaban_benar": "42", "topik": "perkalian" },
+    { "soal_id": 104, "teks": "Hitunglah 48 : 6.", "jawaban_benar": "8", "topik": "pembagian" },
+    { "soal_id": 105, "teks": "Hitunglah 34 + 27.", "jawaban_benar": "61", "topik": "penjumlahan menyimpan" },
+    { "soal_id": 106, "teks": "Hitunglah 52 − 18.", "jawaban_benar": "34", "topik": "pengurangan meminjam" },
+    { "soal_id": 107, "teks": "Hitunglah 12 × 4.", "jawaban_benar": "48", "topik": "perkalian dua angka" },
+    { "soal_id": 108, "teks": "Ibu punya 24 kue, dibagi rata untuk 4 anak. Berapa kue tiap anak?", "jawaban_benar": "6", "topik": "cerita pembagian" },
+    { "soal_id": 109, "teks": "Hitunglah 100 − 45.", "jawaban_benar": "55", "topik": "pengurangan dari 100" },
+    { "soal_id": 110, "teks": "Hitunglah 15 + 15 + 15.", "jawaban_benar": "45", "topik": "penjumlahan berulang" }
+  ]
+}

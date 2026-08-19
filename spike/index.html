@@ -211,7 +211,10 @@
     });
   </script>
   <script>
-    const SOAL = [
+    // Set soal bawaan (kalibrasi). Bisa ditimpa dari luar dengan mendefinisikan
+    // window.SOAL_KUSTOM sebelum skrip ini jalan — dipakai bundel.py untuk
+    // membuat berkas set-mudah tanpa menggandakan seluruh perekam.
+    const SOAL = (typeof window !== "undefined" && window.SOAL_KUSTOM) || [
       { soal_id: 1, teks: "Hitunglah 24 + 36 : 4 × 3 − 10." },
       { soal_id: 2, teks: "Hitunglah 2/3 + 3/4 − 1/2." },
       { soal_id: 3, teks: "Hitunglah 0,25 + 3/5 dalam bentuk desimal." },

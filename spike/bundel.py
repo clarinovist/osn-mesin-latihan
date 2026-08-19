@@ -18,6 +18,7 @@ diasumsikan — jaminan "tidak menyentuh internet" (Rencana Spike, Bagian
 Sumbernya tetap dua berkas terpisah supaya `toSamples.js` bisa diuji Node
 tanpa DOM. Bundel ini artefak turunan, bukan sumber kebenaran.
 """
+import json
 import re
 import sys
 from pathlib import Path
@@ -38,7 +39,7 @@ POLA_JARINGAN = [
 ]
 
 
-def bundel(sumber_html=None, sumber_js=None):
+def bundel(sumber_html=None, sumber_js=None, soal_json=None):
     sumber_html = Path(sumber_html or SPIKE_DIR / "index.html")
     sumber_js = Path(sumber_js or SPIKE_DIR / "toSamples.js")
 
@@ -58,6 +59,20 @@ def bundel(sumber_html=None, sumber_js=None):
         "     Nol rujukan ke luar: tidak ada script src, fetch, atau URL domain lain. -->"
     )
     sisip = catatan + "\n<script>\n" + js.rstrip() + "\n</script>"
+
+    # Set soal alternatif disuntikkan SEBELUM skrip utama, lewat window.SOAL_KUSTOM.
+    # index.html memakainya kalau ada, jadi perekamnya tidak perlu digandakan.
+    if soal_json:
+        data = json.loads(Path(soal_json).read_text())
+        daftar = [{"soal_id": s["soal_id"], "teks": s["teks"]} for s in data["soal"]]
+        sisip += (
+            "\n<script>\n"
+            f"  // Set soal: {data.get('nama', '?')}\n"
+            f"  // {data.get('tujuan', '')}\n"
+            "  window.SOAL_KUSTOM = " + json.dumps(daftar, ensure_ascii=False, indent=2) + ";\n"
+            "</script>"
+        )
+
     return pola.sub(lambda _: sisip, html, count=1)
 
 
@@ -72,8 +87,18 @@ def periksa_mandiri(teks):
 
 
 def main():
-    keluaran = Path(sys.argv[1]) if len(sys.argv) > 1 else SPIKE_DIR / "latihan.html"
-    teks = bundel()
+    argumen = [a for a in sys.argv[1:] if not a.startswith("--")]
+    soal_json = None
+    for a in sys.argv[1:]:
+        if a.startswith("--soal="):
+            soal_json = a.split("=", 1)[1]
+
+    if soal_json == "mudah":
+        soal_json = SPIKE_DIR / "soal_mudah.json"
+
+    bawaan = "latihan-mudah.html" if soal_json else "latihan.html"
+    keluaran = Path(argumen[0]) if argumen else SPIKE_DIR / bawaan
+    teks = bundel(soal_json=soal_json)
 
     masalah = periksa_mandiri(teks)
     if masalah:
@@ -85,7 +110,11 @@ def main():
     keluaran.write_text(teks)
     kb = keluaran.stat().st_size / 1024
     print(f"Selesai: {keluaran}  ({kb:.0f} KB, satu berkas, nol rujukan luar)")
-    print("\nKirim berkas ini ke iPhone (AirDrop paling mudah), lalu buka di Safari.")
+    if soal_json:
+        data = json.loads(Path(soal_json).read_text())
+        print(f"Set soal: {data.get('nama')} — {len(data['soal'])} soal")
+    print("\nSajikan lewat WiFi supaya bisa dibuka di HP:")
+    print("    ./.venv/bin/python sajikan.py")
 
 
 if __name__ == "__main__":
