@@ -53,6 +53,7 @@ mesin/lembar/
 mesin/*.db
 mesin/*.db-journal
 mesin/*.db-wal
+mesin/*.db-shm
 mesin/cadangan/
 
 # Rencana kerja memuat detail internal (lihat AGENTS.md project polyflow untuk
