@@ -18,6 +18,13 @@
 kejadian/
 turunan/
 
+# Lembar latihan yang SUDAH DIISI anak. Lembar kosong (SOAL/PENILAIAN) itu
+# lapisan konten dan boleh masuk repo; begitu terisi jawaban, berkasnya jadi
+# data anak dan tunduk aturan yang sama dengan turunan/. Konvensi nama:
+# akhiri dengan -ISI.md atau taruh di latihan/hasil/.
+latihan/hasil/
+latihan/*-ISI.*
+
 # Cache respons LLM: berisi diagnosis atas coretan anak (bukti, diagnosis,
 # topik) — turunan langsung dari data anak, jadi diperlakukan sama dengan
 # turunan/. Bisa dibangkitkan ulang dengan memanggil API lagi.
@@ -35,3 +42,19 @@ local.properties
 # Artefak bundel (dibangkitkan ulang: python spike/bundel.py)
 spike/latihan.html
 spike/latihan-mudah.html
+
+# Mesin latihan — lingkungan & artefak yang bisa dibangkitkan ulang
+mesin/.venv/
+mesin/**/__pycache__/
+mesin/lembar/
+
+# Basis data latihan: berisi jawaban & diagnosis anak. Sama statusnya dengan
+# turunan/ — data anak, tidak pernah masuk repo. Cadangannya ke luar git.
+mesin/*.db
+mesin/*.db-journal
+mesin/*.db-wal
+mesin/cadangan/
+
+# Rencana kerja memuat detail internal (lihat AGENTS.md project polyflow untuk
+# alasan yang sama): tetap lokal.
+docs/plan/

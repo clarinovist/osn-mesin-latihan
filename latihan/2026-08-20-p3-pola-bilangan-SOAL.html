@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Latihan Pola Bilangan — P3</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm 12mm 13mm; }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #000;
+    margin: 0;
+  }
+
+  /* ── Kepala halaman ─────────────────────────────── */
+  .judul {
+    font-size: 15pt;
+    font-weight: 700;
+    margin: 0 0 2mm;
+  }
+  .identitas {
+    display: flex;
+    gap: 6mm;
+    font-size: 10.5pt;
+    margin-bottom: 3mm;
+  }
+  .identitas span { white-space: nowrap; }
+  .garis { border-bottom: 1px solid #000; display: inline-block; }
+  .g-nama  { width: 42mm; }
+  .g-tgl   { width: 26mm; }
+  .g-jam   { width: 15mm; }
+
+  .aturan {
+    border: 1.2pt solid #000;
+    padding: 3mm 4mm;
+    font-size: 10.5pt;
+    margin-bottom: 5mm;
+    background: #f4f4f4;
+  }
+  .aturan p { margin: 0 0 1.5mm; }
+  .aturan p:last-child { margin-bottom: 0; }
+  .aturan b { font-weight: 700; }
+
+  /* ── Judul bagian ───────────────────────────────── */
+  h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0 0 3mm;
+    padding-bottom: 1mm;
+    border-bottom: 1.5pt solid #000;
+    page-break-after: avoid;
+  }
+  h2 .catatan {
+    font-weight: 400;
+    font-size: 10pt;
+    font-style: italic;
+  }
+
+  /* ── Kartu soal ─────────────────────────────────── */
+  .soal {
+    border: 1.2pt solid #000;
+    padding: 3.5mm 4mm 3mm;
+    margin-bottom: 3.5mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .nomor {
+    display: inline-block;
+    border: 1.2pt solid #000;
+    width: 7mm; height: 7mm;
+    line-height: 6.6mm;
+    text-align: center;
+    font-weight: 700;
+    font-size: 11pt;
+    margin-right: 2.5mm;
+    vertical-align: top;
+  }
+
+  .pertanyaan {
+    display: inline-block;
+    width: calc(100% - 11mm);
+    vertical-align: top;
+  }
+  .deret {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 13pt;
+    letter-spacing: 0.6pt;
+    margin: 1mm 0 1.5mm;
+  }
+  .tanya { margin-top: 1mm; }
+  .isian {
+    display: inline-block;
+    width: 16mm;
+    border-bottom: 1.4pt solid #000;
+    vertical-align: -0.6mm;
+  }
+
+  /* Diagram digambar sebagai SVG, bukan seni ASCII: font monospace tidak
+     dijamin ada saat render, dan pergeseran satu karakter membuat bentuk
+     segitiga tidak terbaca. */
+  .diagram { margin: 2mm 0 1mm; }
+  .diagram svg { display: block; }
+
+  /* ── Kotak isian ────────────────────────────────── */
+  .minta {
+    margin-top: 2.5mm;
+    font-size: 10.5pt;
+  }
+  .minta-label { font-style: italic; }
+  .minta-baris {
+    border-bottom: 1px solid #000;
+    height: 6mm;
+    margin-top: 1mm;
+  }
+
+  .cara-label {
+    font-size: 10.5pt;
+    font-weight: 700;
+    margin-top: 2.5mm;
+    margin-bottom: 1mm;
+  }
+  .cara {
+    border: 1px dashed #666;
+    background: repeating-linear-gradient(
+      transparent, transparent 7.4mm,
+      #d8d8d8 7.4mm, #d8d8d8 7.5mm
+    );
+  }
+  .cara.h3 { height: 21mm; }
+  .cara.h4 { height: 26mm; }
+  .cara.h5 { height: 30mm; }
+
+  .kaki {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 2.5mm;
+  }
+  .jawab { font-size: 11pt; font-weight: 700; }
+  .j-garis {
+    border-bottom: 1.5pt solid #000;
+    display: inline-block;
+    width: 22mm;
+    margin: 0 1mm;
+  }
+  .j-garis.lebar { width: 30mm; }
+  .centang {
+    font-size: 9.5pt;
+    font-style: italic;
+  }
+  .kotak-centang {
+    display: inline-block;
+    width: 3.6mm; height: 3.6mm;
+    border: 1.1pt solid #000;
+    vertical-align: -0.4mm;
+    margin-right: 1.2mm;
+  }
+
+  .penutup {
+    border: 1.2pt solid #000;
+    padding: 3mm 4mm;
+    font-size: 10.5pt;
+    margin-top: 2mm;
+    page-break-inside: avoid;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="judul">Latihan Pola Bilangan</div>
+<div class="identitas">
+  <span>Nama: <span class="garis g-nama"></span></span>
+  <span>Tanggal: <span class="garis g-tgl"></span></span>
+  <span>Mulai: <span class="garis g-jam"></span></span>
+  <span>Selesai: <span class="garis g-jam"></span></span>
+</div>
+
+<div class="aturan">
+  <p>Tiap soal ada kotak <b>Caraku</b>. Tulis di situ bagaimana kamu dapat
+     jawabannya. Boleh berantakan, boleh dicoret-coret — yang penting
+     kelihatan caramu.</p>
+  <p>Kalau ada soal yang belum pernah kamu lihat, centang kotak
+     <b>&ldquo;belum pernah lihat&rdquo;</b>. Itu bukan salah — itu justru berguna.</p>
+  <p>Tidak apa-apa ada yang kosong. <b>Jangan menebak asal.</b></p>
+</div>
+
+<h2>Bagian A &mdash; Lanjutkan polanya</h2>
+
+<div class="soal">
+  <span class="nomor">1</span><span class="pertanyaan">
+    <div class="deret">4, 9, 14, 19, <span class="isian"></span>, <span class="isian"></span></div>
+  </span>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h3"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span> dan <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">2</span><span class="pertanyaan">
+    <div class="deret">96, 88, 80, 72, <span class="isian"></span></div>
+  </span>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h3"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">3</span><span class="pertanyaan">
+    <div class="deret">1, 2, 4, 8, 16, <span class="isian"></span></div>
+  </span>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h3"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">4</span><span class="pertanyaan">
+    <div class="deret">2, 5, 10, 17, 26, <span class="isian"></span></div>
+  </span>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h4"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<h2>Bagian B &mdash; Pola berulang</h2>
+
+<div class="soal">
+  <span class="nomor">5</span><span class="pertanyaan">
+    Huruf disusun berulang seperti ini:
+    <div class="deret">A B B C&nbsp;&nbsp; A B B C&nbsp;&nbsp; A B B C&nbsp;&nbsp; ...</div>
+    <div class="tanya">Huruf ke-20 adalah huruf apa?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa? (tulis pakai kalimatmu sendiri)</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h4"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">6</span><span class="pertanyaan">
+    Manik-manik dironce berulang:
+    <div class="deret">merah, kuning, kuning, biru,<br>merah, kuning, kuning, biru, ...</div>
+    <div class="tanya">Manik ke-33 warnanya apa?</div>
+  </span>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h4"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis lebar"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<h2>Bagian C &mdash; Pola gambar</h2>
+
+<div class="soal">
+  <span class="nomor">7</span><span class="pertanyaan">
+    Segitiga dibuat dari batang korek api.
+    Segitiga yang bersebelahan memakai batang bersama.
+    <div class="diagram">
+      <svg width="340" height="80" viewBox="0 0 340 80">
+        <g font-family="Helvetica, Arial" font-size="10" text-anchor="middle">
+          <text x="36"  y="10">Gambar 1</text>
+          <text x="153" y="10">Gambar 2</text>
+          <text x="280" y="10">Gambar 3</text>
+          <text x="36"  y="76">3 batang</text>
+          <text x="153" y="76">5 batang</text>
+          <text x="280" y="76">7 batang</text>
+        </g>
+        <g stroke="#000" stroke-width="2" stroke-linecap="round" fill="none">
+          <path d="M 14 62 L 36 24 L 58 62 M 14 62 L 58 62"/>
+          <path d="M 120 62 L 142 24 L 164 62 L 186 24 M 120 62 L 164 62 M 142 24 L 186 24"/>
+          <path d="M 236 62 L 258 24 L 280 62 L 302 24 L 324 62 M 236 62 L 280 62 M 280 62 L 324 62 M 258 24 L 302 24"/>
+        </g>
+      </svg>
+    </div>
+    <div class="tanya">Gambar ke-10 butuh berapa batang?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa?</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h4"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">8</span><span class="pertanyaan">
+    Titik disusun jadi segitiga:
+    <div class="diagram">
+      <svg width="376" height="94" viewBox="0 0 376 94">
+        <g font-family="Helvetica, Arial" font-size="10" text-anchor="middle">
+          <text x="44"  y="10">Gambar 1</text>
+          <text x="140" y="10">Gambar 2</text>
+          <text x="236" y="10">Gambar 3</text>
+          <text x="332" y="10">Gambar 4</text>
+          <text x="44"  y="88" font-weight="700">1</text>
+          <text x="140" y="88" font-weight="700">3</text>
+          <text x="236" y="88" font-weight="700">6</text>
+          <text x="332" y="88" font-weight="700">10</text>
+        </g>
+        <g fill="#000">
+          <circle cx="44" cy="22" r="3.2"/>
+          <circle cx="140" cy="22" r="3.2"/>
+          <circle cx="132" cy="36" r="3.2"/><circle cx="148" cy="36" r="3.2"/>
+          <circle cx="236" cy="22" r="3.2"/>
+          <circle cx="228" cy="36" r="3.2"/><circle cx="244" cy="36" r="3.2"/>
+          <circle cx="221" cy="50" r="3.2"/><circle cx="236" cy="50" r="3.2"/><circle cx="251" cy="50" r="3.2"/>
+          <circle cx="332" cy="22" r="3.2"/>
+          <circle cx="324" cy="36" r="3.2"/><circle cx="340" cy="36" r="3.2"/>
+          <circle cx="317" cy="50" r="3.2"/><circle cx="332" cy="50" r="3.2"/><circle cx="347" cy="50" r="3.2"/>
+          <circle cx="310" cy="64" r="3.2"/><circle cx="324" cy="64" r="3.2"/><circle cx="340" cy="64" r="3.2"/><circle cx="354" cy="64" r="3.2"/>
+        </g>
+      </svg>
+    </div>
+    <div class="tanya">Gambar ke-7 punya berapa titik?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa?</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h4"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<h2>Bagian D &mdash; Pola dibalik
+    <span class="catatan">&mdash; baca pelan-pelan, yang ditanya berbeda dari Bagian A</span></h2>
+
+<div class="soal">
+  <span class="nomor">9</span><span class="pertanyaan">
+    <div class="deret">5, 8, 11, 14, 17, ...</div>
+    <div class="tanya">Bilangan <b>41</b> ada di urutan ke berapa?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa?</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h5"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: urutan ke- <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">10</span><span class="pertanyaan">
+    <div class="deret">3, 6, 12, 24, ...</div>
+    <div class="tanya">Bilangan <b>96</b> ada di urutan ke berapa?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa?</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h5"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: urutan ke- <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<h2>Bagian E &mdash; Pola dalam cerita</h2>
+
+<div class="soal">
+  <span class="nomor">11</span><span class="pertanyaan">
+    <div class="tanya">Hari ini hari <b>Selasa</b>. 30 hari lagi hari apa?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa?</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h5"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis lebar"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="soal">
+  <span class="nomor">12</span><span class="pertanyaan">
+    <b>&#9733; Soal tantangan &mdash; boleh dikosongkan.</b>
+    <div style="margin-top:1.5mm">Angka ditulis berulang:</div>
+    <div class="deret">1, 2, 3,&nbsp; 1, 2, 3,&nbsp; 1, 2, 3, ...</div>
+    <div class="tanya">Berapa <b>JUMLAH</b> 20 angka pertama?</div>
+  </span>
+  <div class="minta">
+    <span class="minta-label">Soal ini mintanya apa?</span>
+    <div class="minta-baris"></div>
+  </div>
+  <div class="cara-label">Caraku:</div>
+  <div class="cara h5"></div>
+  <div class="kaki">
+    <span class="jawab">Jawabanku: <span class="j-garis"></span></span>
+    <span class="centang"><span class="kotak-centang"></span>belum pernah lihat</span>
+  </div>
+</div>
+
+<div class="penutup">
+  <b>Sudah selesai?</b> Cek sekali lagi: apakah setiap kotak
+  <b>Caraku</b> ada isinya? Kalau ada jawaban yang kamu tulis tanpa cara,
+  tulis dulu caranya sekarang.
+</div>
+
+</body>
+</html>
