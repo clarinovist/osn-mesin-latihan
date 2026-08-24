@@ -20,6 +20,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler
 
 import basis
+import sandi
 from diagnosa import diagnosa
 from generator import buat_soal
 from templates import REGISTRI, Soal
@@ -369,7 +370,35 @@ class Penangan(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(isi)
 
+    def _lolos_sandi(self) -> bool:
+        """Palang sandi. Dilewati kalau berkas sandi tidak ada (mode lokal).
+
+        Diperiksa di SETIAP permintaan, termasuk POST — bukan hanya di
+        halaman depan. Palang yang hanya menjaga GET akan membiarkan orang
+        mengirim data langsung ke /sesi/<id>.
+        """
+        if not sandi.wajib_sandi():
+            return True
+
+        kredensial = sandi.dari_header(self.headers.get("Authorization"))
+        if kredensial and sandi.periksa(*kredensial):
+            return True
+
+        pesan = _halaman(
+            "Perlu masuk",
+            "<h1>Perlu masuk</h1><p>Halaman ini memuat data anak.</p>",
+        )
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="Mesin Latihan"')
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(pesan)))
+        self.end_headers()
+        self.wfile.write(pesan)
+        return False
+
     def do_GET(self) -> None:  # noqa: N802
+        if not self._lolos_sandi():
+            return
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
         try:
             with basis.buka() as kon:
@@ -384,6 +413,8 @@ class Penangan(BaseHTTPRequestHandler):
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
     def do_POST(self) -> None:  # noqa: N802
+        if not self._lolos_sandi():
+            return
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
         if not jalur.startswith("/sesi/"):
             return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)

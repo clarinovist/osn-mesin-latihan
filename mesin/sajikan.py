@@ -16,6 +16,7 @@ import sys
 from http.server import ThreadingHTTPServer
 
 import basis
+import sandi
 from web import Penangan
 
 PORT = 8724
@@ -38,10 +39,36 @@ def main() -> int:
     p.add_argument("--jaringan", action="store_true",
                    help="izinkan akses dari perangkat lain di WiFi")
     p.add_argument("--port", type=int, default=PORT)
+    p.add_argument("--setel-sandi", metavar="SANDI",
+                   help="setel sandi guru lalu keluar")
+    p.add_argument("--pengguna", default="guru",
+                   help="nama pengguna untuk --setel-sandi (bawaan: guru)")
     arg = p.parse_args()
+
+    if arg.setel_sandi:
+        berkas = sandi.simpan_sandi(arg.setel_sandi, arg.pengguna)
+        print(f"sandi tersimpan: {berkas}")
+        print(f"pengguna       : {arg.pengguna}")
+        print("hash PBKDF2, izin berkas 600. Sandi tidak disimpan sebagai teks.")
+        return 0
 
     basis.siapkan()
     inang = "0.0.0.0" if arg.jaringan else "127.0.0.1"
+
+    # Palang kedua. Palang pertama ada di web.py (memeriksa tiap permintaan);
+    # yang ini mencegah kelalaian yang lebih berbahaya — menjalankan server
+    # terbuka ke jaringan padahal sandinya belum pernah disetel. Tanpa ini,
+    # lupa satu langkah saat deploy berarti data anak terbuka tanpa palang
+    # apa pun, dan tidak ada yang memberi tahu.
+    if arg.jaringan and not sandi.wajib_sandi():
+        print("DITOLAK: --jaringan tanpa sandi.", file=sys.stderr)
+        print(file=sys.stderr)
+        print("Halaman ini memuat jawaban dan diagnosis anak. Setel sandi", file=sys.stderr)
+        print("dulu:", file=sys.stderr)
+        print(file=sys.stderr)
+        print("    ./.venv/bin/python sajikan.py --setel-sandi 'sandi-anda'",
+              file=sys.stderr)
+        return 2
 
     with basis.buka() as kon:
         n_siswa = len(basis.daftar_siswa(kon))
@@ -49,6 +76,7 @@ def main() -> int:
 
     print(f"basis data : {basis.BAWAAN}")
     print(f"isi        : {n_siswa} siswa, {n_sesi} sesi")
+    print(f"sandi      : {'aktif' if sandi.wajib_sandi() else 'TIDAK aktif (lokal saja)'}")
     print()
     print(f"  http://127.0.0.1:{arg.port}")
     if arg.jaringan:
