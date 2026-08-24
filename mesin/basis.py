@@ -7,6 +7,7 @@ ketergantungan tambahan hanya menambah hal yang bisa rusak saat deploy.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -16,7 +17,16 @@ from generator import buat_lembar
 from skema import SKEMA
 from templates import Soal
 
-BAWAAN = Path(__file__).resolve().parent / "latihan.db"
+# Lokasi basis data bisa disetel lewat lingkungan, seperti berkas sandi.
+#
+# Diperlukan karena di dalam container /app dimiliki root dan hanya bisa
+# dibaca: basis data harus tinggal di volume (/data) agar bisa ditulis DAN
+# selamat saat container diganti. Tanpa ini container gagal start dengan
+# "unable to open database file" — kegagalan yang hanya muncul saat deploy,
+# tidak pernah saat dijalankan lokal.
+BAWAAN = Path(
+    os.environ.get("OSN_BERKAS_DB", Path(__file__).resolve().parent / "latihan.db")
+)
 
 
 @contextmanager

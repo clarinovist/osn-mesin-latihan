@@ -207,3 +207,121 @@ def test_menghapus_sesi_membersihkan_jawaban_dan_diagnosis(db):
     assert sisa_j == 0
     assert sisa_d == 0
     assert sisa_s == 12
+
+
+# ── Konfigurasi lewat lingkungan (dipakai saat deploy) ──────────────────
+
+
+def test_lokasi_basis_data_bisa_disetel_lewat_lingkungan(tmp_path, monkeypatch):
+    """Regresi deploy: container gagal start karena basis data menunjuk /app.
+
+    Di dalam container /app dimiliki root dan read-only, sehingga basis data
+    WAJIB tinggal di volume. Sebelum ada OSN_BERKAS_DB, `basis.BAWAAN`
+    dihitung sekali dari lokasi berkas sumber dan tidak bisa dialihkan —
+    container mati berulang dengan "unable to open database file".
+
+    Kegagalan seperti ini tidak pernah muncul saat dijalankan lokal, jadi
+    satu-satunya cara menahannya adalah test yang meniru kondisi deploy.
+    """
+    import importlib
+
+    tujuan = tmp_path / "volume" / "latihan.db"
+    tujuan.parent.mkdir()
+    monkeypatch.setenv("OSN_BERKAS_DB", str(tujuan))
+
+    import basis as basis_modul
+
+    importlib.reload(basis_modul)
+    try:
+        assert basis_modul.BAWAAN == tujuan
+        basis_modul.siapkan()
+        with basis_modul.buka() as kon:
+            basis_modul.tambah_siswa(kon, "Volume")
+            assert [r["nama"] for r in basis_modul.daftar_siswa(kon)] == ["Volume"]
+        assert tujuan.exists(), "basis data tidak dibuat di lokasi yang disetel"
+    finally:
+        monkeypatch.delenv("OSN_BERKAS_DB", raising=False)
+        importlib.reload(basis_modul)
+
+
+def test_lokasi_berkas_sandi_bisa_disetel_lewat_lingkungan(tmp_path, monkeypatch):
+    """Alasan yang sama dengan basis data: sandi harus tinggal di volume,
+    kalau tidak ia hilang tiap container diganti dan palangnya mati."""
+    import importlib
+
+    tujuan = tmp_path / "volume" / "sandi.json"
+    tujuan.parent.mkdir()
+    monkeypatch.setenv("OSN_BERKAS_SANDI", str(tujuan))
+
+    import sandi as sandi_modul
+
+    importlib.reload(sandi_modul)
+    try:
+        assert sandi_modul.BERKAS_SANDI == tujuan
+        sandi_modul.simpan_sandi("uji-volume", "guru")
+        assert tujuan.exists()
+        assert sandi_modul.wajib_sandi()
+        assert sandi_modul.periksa("guru", "uji-volume")
+    finally:
+        monkeypatch.delenv("OSN_BERKAS_SANDI", raising=False)
+        importlib.reload(sandi_modul)
+
+
+def test_folder_lembar_bisa_disetel_lewat_lingkungan(tmp_path, monkeypatch):
+    """Regresi deploy ketiga dari kelas yang sama.
+
+    Setelah basis data dan berkas sandi, `buat_lembar.py` masih menulis ke
+    /app/lembar dan gagal dengan "Permission denied" di container. Pola yang
+    berulang: apa pun yang DITULIS aplikasi harus bisa diarahkan ke volume,
+    karena /app read-only.
+
+    Test ini menahan jalur ketiga; kalau nanti ada jalur tulis baru, ia harus
+    ikut daftar di test_semua_jalur_tulis_bisa_diarahkan().
+    """
+    import importlib
+
+    tujuan = tmp_path / "volume" / "lembar"
+    monkeypatch.setenv("OSN_FOLDER_LEMBAR", str(tujuan))
+
+    import buat_lembar as bl
+
+    importlib.reload(bl)
+    try:
+        assert bl.KELUARAN == tujuan
+    finally:
+        monkeypatch.delenv("OSN_FOLDER_LEMBAR", raising=False)
+        importlib.reload(bl)
+
+
+def test_semua_jalur_tulis_bisa_diarahkan(tmp_path, monkeypatch):
+    """Daftar tunggal semua lokasi yang ditulis aplikasi.
+
+    Tiga kali berturut-turut deploy gagal karena satu jalur tulis terlewat:
+    basis data, lalu berkas sandi, lalu folder lembar. Masing-masing hanya
+    ketahuan setelah container mati di VPS, tidak pernah saat dijalankan di
+    Mac.
+
+    Test ini menjadi tempat tunggal untuk memeriksanya. Menambah jalur tulis
+    baru tanpa mendaftarkannya di sini berarti mengulang kesalahan yang sama
+    untuk keempat kalinya.
+    """
+    import importlib
+
+    jalur = [
+        ("OSN_BERKAS_DB", "basis", "BAWAAN", tmp_path / "v" / "x.db"),
+        ("OSN_BERKAS_SANDI", "sandi", "BERKAS_SANDI", tmp_path / "v" / "s.json"),
+        ("OSN_FOLDER_LEMBAR", "buat_lembar", "KELUARAN", tmp_path / "v" / "lembar"),
+    ]
+
+    for env, nama_modul, atribut, tujuan in jalur:
+        monkeypatch.setenv(env, str(tujuan))
+        modul = importlib.import_module(nama_modul)
+        importlib.reload(modul)
+        try:
+            assert getattr(modul, atribut) == tujuan, (
+                f"{nama_modul}.{atribut} tidak menghormati {env} — "
+                f"akan gagal di container"
+            )
+        finally:
+            monkeypatch.delenv(env, raising=False)
+            importlib.reload(modul)

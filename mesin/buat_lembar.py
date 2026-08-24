@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import random
 import subprocess
 import sys
@@ -24,7 +25,14 @@ import basis
 import cetak
 from generator import buat_lembar
 
-KELUARAN = Path(__file__).resolve().parent / "lembar"
+# Folder keluaran bisa disetel lewat lingkungan, sama alasannya dengan
+# basis data: di dalam container /app dimiliki root dan read-only, sehingga
+# lembar harus ditulis ke volume. Tanpa ini perintah gagal dengan
+# "Permission denied: /app/lembar" — dan hanya saat deploy, tidak pernah
+# saat dijalankan lokal.
+KELUARAN = Path(
+    os.environ.get("OSN_FOLDER_LEMBAR", Path(__file__).resolve().parent / "lembar")
+)
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 

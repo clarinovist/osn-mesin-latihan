@@ -1,0 +1,49 @@
+"""Pemeriksaan kesehatan container.
+
+Yang dianggap SEHAT: server menjawab 401 tanpa kredensial. Itu membuktikan
+dua hal sekaligus — prosesnya hidup, dan palang sandinya aktif.
+
+Yang dianggap SAKIT:
+  - tidak menjawab sama sekali (proses mati / menggantung)
+  - menjawab 200 tanpa diminta sandi
+
+Kasus kedua penting: kalau berkas sandi hilang dari volume, aplikasi akan
+tetap jalan tapi terbuka tanpa palang. Tanpa pemeriksaan ini, container
+terlihat "sehat" sementara data anak bisa dibaca siapa saja. Lebih baik
+container ditandai tidak sehat dan terlihat, daripada diam-diam terbuka.
+"""
+
+import sys
+import urllib.error
+import urllib.request
+
+ALAMAT = "http://127.0.0.1:8724/"
+
+
+def main() -> int:
+    try:
+        with urllib.request.urlopen(ALAMAT, timeout=6) as jawab:
+            kode = jawab.status
+    except urllib.error.HTTPError as e:
+        kode = e.code
+    except Exception as e:  # noqa: BLE001 — apa pun berarti tidak menjawab
+        print(f"tidak menjawab: {e}", file=sys.stderr)
+        return 1
+
+    if kode == 401:
+        return 0
+
+    if kode == 200:
+        print(
+            "BAHAYA: server menjawab 200 tanpa sandi — palang tidak aktif. "
+            "Periksa /data/sandi.json.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"kode tak terduga: {kode}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
