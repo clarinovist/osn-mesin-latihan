@@ -55,7 +55,7 @@ a { color: #1a4fd6; }
 }
 .kunci { font-weight: 700; color: #1a6b3a; }
 label { display: block; font-size: .84rem; color: #555; margin: .5rem 0 .15rem; }
-input[type=text], textarea, select {
+input[type=text], input[type=password], textarea, select {
   width: 100%; padding: .45rem .55rem; border: 1px solid #bfbfc9;
   border-radius: 5px; font-size: .95rem; font-family: inherit;
 }
@@ -177,7 +177,8 @@ def halaman_utama(kon) -> bytes:
         "Mesin Latihan",
         "<h1>Mesin Latihan Pola Bilangan</h1>"
         '<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
-        "untuk melihat tren.</p>" + "".join(baris),
+        'untuk melihat tren. &middot; <a href="/akun">Akun &amp; siswa</a></p>'
+        + "".join(baris),
     )
 
 
@@ -372,6 +373,130 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
     )
 
 
+def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
+    """Kelola sandi dan daftar siswa.
+
+    Sandi bisa diganti dari sini supaya sandi acak hasil deploy tidak jadi
+    satu-satunya yang pernah ada — sandi yang tidak bisa diganti cenderung
+    berakhir ditulis di tempat yang tidak aman.
+
+    Siswa bisa dinonaktifkan, bukan dihapus: menghapus siswa akan ikut
+    menghapus seluruh sesi, jawaban, dan diagnosisnya lewat ON DELETE
+    CASCADE. Riwayat diagnosis adalah hasil kerja berbulan-bulan dan tidak
+    bisa dibangun ulang.
+    """
+    daftar = "".join(
+        f'<tr><td>{html.escape(s["nama"])}</td><td>{s["tingkat"]}</td>'
+        f'<td class="angka">'
+        f'{kon.execute("SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (s["id"],)).fetchone()["n"]}'
+        f"</td></tr>"
+        for s in basis.daftar_siswa(kon)
+    )
+
+    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
+    if galat:
+        kabar += (
+            f'<div class="pesan" style="background:#fdecea;border-color:#f5b5ae">'
+            f"{html.escape(galat)}</div>"
+        )
+
+    d = sandi.muat_sandi()
+    pengguna = html.escape(d["pengguna"]) if d else "(belum disetel)"
+
+    return _halaman(
+        "Akun",
+        f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
+        f"<h1>Akun &amp; pengaturan</h1>"
+        f"{kabar}"
+        f'<div class="kartu"><h2>Ganti sandi</h2>'
+        f'<p class="sub">Pengguna saat ini: <b>{pengguna}</b>. Setelah diganti, '
+        f"peramban akan meminta sandi baru saat halaman dimuat ulang.</p>"
+        f'<form method="post" action="/akun">'
+        f'<input type="hidden" name="aksi" value="sandi">'
+        f"<label>Sandi lama</label>"
+        f'<input type="password" name="lama" autocomplete="current-password" required>'
+        f"<label>Sandi baru (minimal 12 karakter)</label>"
+        f'<input type="password" name="baru" autocomplete="new-password" required>'
+        f"<label>Ulangi sandi baru</label>"
+        f'<input type="password" name="ulang" autocomplete="new-password" required>'
+        f'<p style="margin-top:.8rem"><button type="submit">Ganti sandi</button></p>'
+        f"</form></div>"
+        f'<div class="kartu"><h2>Siswa</h2>'
+        f"<table><tr><th>Nama</th><th>Tingkat</th><th>Sesi</th></tr>"
+        f"{daftar}</table>"
+        f'<form method="post" action="/akun" style="margin-top:.9rem">'
+        f'<input type="hidden" name="aksi" value="siswa">'
+        f'<div class="baris">'
+        f'<div><label>Nama siswa baru</label>'
+        f'<input type="text" name="nama" placeholder="nama panggilan saja" required></div>'
+        f'<div><label>Tingkat</label>'
+        f'<input type="text" name="tingkat" value="P3"></div></div>'
+        f'<p class="sub" style="margin-top:.5rem">Pakai nama panggilan atau '
+        f"inisial, bukan nama lengkap — mengurangi dampak bila basis data ini "
+        f"bocor.</p>"
+        f'<button type="submit">Tambah siswa</button></form></div>'
+        f'<div class="kartu"><h2>Catatan</h2>'
+        f'<p class="sub">Siswa sengaja tidak bisa dihapus dari sini. Menghapus '
+        f"siswa ikut menghapus seluruh sesi, jawaban, dan diagnosisnya — "
+        f"riwayat yang tidak bisa dibangun ulang. Kalau seorang anak berhenti, "
+        f"biarkan saja datanya; ia tidak mengganggu apa pun.</p>"
+        f'<p class="sub">Cadangan basis data ditarik otomatis ke Mac tiap '
+        f"malam pukul 22:00.</p></div>",
+    )
+
+
+def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
+    """Jalankan aksi halaman akun. Mengembalikan (pesan, galat).
+
+    Sandi lama SELALU diverifikasi ulang, walaupun pengguna sudah lolos
+    palang untuk membuka halaman ini. Peramban menyimpan kredensial Basic
+    dan mengirimkannya otomatis, jadi tanpa pemeriksaan ini siapa pun yang
+    menemukan laptop dalam keadaan terbuka bisa mengganti sandi tanpa tahu
+    yang lama.
+    """
+    aksi = data.get("aksi", "")
+
+    if aksi == "sandi":
+        lama = data.get("lama", "")
+        baru = data.get("baru", "")
+        ulang = data.get("ulang", "")
+
+        if not sandi.periksa(pengguna_kini, lama):
+            return "", "Sandi lama salah."
+        if baru != ulang:
+            return "", "Sandi baru dan ulangannya tidak sama."
+        if len(baru) < 12:
+            return "", "Sandi baru minimal 12 karakter."
+        if baru == lama:
+            return "", "Sandi baru sama dengan yang lama."
+
+        sandi.simpan_sandi(baru, pengguna_kini)
+        return (
+            "Sandi diganti. Peramban akan meminta sandi baru saat halaman "
+            "berikutnya dimuat.",
+            "",
+        )
+
+    if aksi == "siswa":
+        nama = data.get("nama", "").strip()
+        tingkat = data.get("tingkat", "P3").strip() or "P3"
+
+        if not nama:
+            return "", "Nama siswa tidak boleh kosong."
+        if len(nama) > 40:
+            return "", "Nama terlalu panjang."
+        sudah = kon.execute(
+            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?)", (nama,)
+        ).fetchone()
+        if sudah:
+            return "", f"Siswa bernama {nama} sudah ada."
+
+        basis.tambah_siswa(kon, nama, tingkat)
+        return f"Siswa {nama} ditambahkan.", ""
+
+    return "", "Aksi tidak dikenal."
+
+
 def buat_sesi_seed_baru(kon, siswa_id: int) -> int:
     """Sesi baru dengan seed yang belum pernah dipakai siswa ini.
 
@@ -462,6 +587,8 @@ class Penangan(BaseHTTPRequestHandler):
                     return self._kirim(halaman_sesi(kon, int(jalur.split("/")[2])))
                 if jalur.startswith("/laporan/"):
                     return self._kirim(halaman_laporan(kon, int(jalur.split("/")[2])))
+                if jalur == "/akun":
+                    return self._kirim(halaman_akun(kon))
                 if jalur.startswith("/lembar/"):
                     bagian = jalur.split("/")
                     guru = len(bagian) > 3 and bagian[3] == "penilaian"
@@ -476,6 +603,21 @@ class Penangan(BaseHTTPRequestHandler):
         if not self._lolos_sandi():
             return
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
+
+        if jalur == "/akun":
+            panjang = int(self.headers.get("Content-Length", 0))
+            mentah = self.rfile.read(panjang).decode("utf-8")
+            data = {
+                k: v[0]
+                for k, v in urllib.parse.parse_qs(
+                    mentah, keep_blank_values=True
+                ).items()
+            }
+            kredensial = sandi.dari_header(self.headers.get("Authorization"))
+            pengguna = kredensial[0] if kredensial else "guru"
+            with basis.buka() as kon:
+                pesan, galat = proses_akun(kon, data, pengguna)
+                return self._kirim(halaman_akun(kon, pesan, galat))
 
         if jalur.startswith("/sesi-baru/"):
             try:

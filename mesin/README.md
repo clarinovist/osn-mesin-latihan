@@ -82,17 +82,21 @@ cd ~/Documents/osn/mesin
 Basis data lokal terpisah dari VPS. Pakai salah satu saja supaya datanya
 tidak bercabang.
 
-## Menambah anak
+## Akun & siswa
 
-Tambahkan namanya ke daftar `SISWA` di `siapkan_db.py`, lalu jalankan lagi
-(aman diulang). Untuk VPS:
+Tautan **"Akun & siswa"** di halaman utama:
 
-```bash
-ssh biznet-sekolahdesain "sudo docker exec osn-mesin python -c \"
-import basis
-with basis.buka() as k: basis.tambah_siswa(k, 'NamaBaru')
-\""
-```
+- **Ganti sandi** — minimal 12 karakter, perlu sandi lama. Ganti sandi acak
+  bawaan deploy dengan yang kamu ingat.
+- **Tambah siswa** — tanpa SSH. Pakai nama panggilan atau inisial, bukan
+  nama lengkap.
+
+Siswa sengaja tidak bisa dihapus: menghapusnya ikut menghapus seluruh sesi,
+jawaban, dan diagnosisnya. Kalau seorang anak berhenti, biarkan saja
+datanya — tidak mengganggu apa pun.
+
+Untuk pemasangan lokal di Mac, daftar awal ada di `SISWA` pada
+`siapkan_db.py` (aman dijalankan ulang).
 
 ## Cetak ulang lembar yang hilang
 
@@ -138,18 +142,39 @@ ssh biznet-sekolahdesain "sudo docker logs osn-mesin --tail 30"
 ./cadangkan.sh          # cadangan manual kapan saja
 ```
 
-Perubahan kode perlu build ulang image di VPS:
+Perubahan kode perlu build ulang image di VPS. **Urutannya penting**: build
+dulu sampai selesai, pastikan image-nya ada, BARU ganti container.
 
 ```bash
+# 1. kirim kode
 cd ~/Documents/osn/mesin
 tar czf /tmp/k.tgz *.py Dockerfile
 scp /tmp/k.tgz biznet-sekolahdesain:/tmp/
-ssh biznet-sekolahdesain "sudo tar xzf /tmp/k.tgz -C /opt/osn/app \
-  && cd /opt/osn/app && sudo docker build -q -t osn-mesin:baru . \
+ssh biznet-sekolahdesain "sudo tar xzf /tmp/k.tgz -C /opt/osn/app"
+
+# 2. build — container lama TETAP JALAN selama ini
+ssh biznet-sekolahdesain "cd /opt/osn/app && sudo docker build -t osn-mesin:baru ."
+
+# 3. ganti hanya kalau image benar-benar jadi
+ssh biznet-sekolahdesain "sudo docker image inspect osn-mesin:baru >/dev/null \
   && sudo docker rm -f osn-mesin \
   && sudo docker run -d --name osn-mesin --restart unless-stopped \
      -p 127.0.0.1:8724:8724 -v /opt/osn/data:/data \
      --memory 512m --cpus 1 --security-opt no-new-privileges osn-mesin:baru"
+
+# 4. pastikan hidup
+curl -s -o /dev/null -w "%{http_code}\n" -u guru https://osn.lesprivate.id/
+```
+
+**Kenapa urutannya begitu**: pernah terjadi `docker build` gagal karena
+Docker Hub timeout *setelah* container lama dihapus — situs mati 502 sampai
+image lama dijalankan ulang. Image lama tetap tersimpan (`docker images
+osn-mesin`), jadi pemulihannya:
+
+```bash
+ssh biznet-sekolahdesain "sudo docker run -d --name osn-mesin \
+  --restart unless-stopped -p 127.0.0.1:8724:8724 -v /opt/osn/data:/data \
+  --memory 512m --cpus 1 --security-opt no-new-privileges osn-mesin:<versi-lama>"
 ```
 
 ## Batas yang diketahui
