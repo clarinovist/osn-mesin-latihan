@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import html
 import json
+import random
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
 
 import basis
+import cetak
 import sandi
 from diagnosa import diagnosa
 from generator import buat_soal
@@ -153,16 +155,22 @@ def halaman_utama(kon) -> bytes:
             f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a></td>'
             f'<td>{r["tanggal"]}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
+            f'<td><a href="/lembar/{r["id"]}" target="_blank">soal</a> &middot; '
+            f'<a href="/lembar/{r["id"]}/penilaian" target="_blank">kunci</a></td>'
             f'<td class="tipe">seed {r["seed"]}</td></tr>'
             for r in sesi
-        ) or '<tr><td colspan="4" class="kosong">belum ada sesi</td></tr>'
+        ) or '<tr><td colspan="5" class="kosong">belum ada sesi</td></tr>'
 
         baris.append(
             f'<div class="kartu"><h2>{html.escape(s["nama"])} '
             f'<span class="tipe">({s["tingkat"]})</span></h2>'
             f'<p><a href="/laporan/{s["id"]}">Lihat laporan &rarr;</a></p>'
             f"<table><tr><th>Sesi</th><th>Tanggal</th><th>Terisi</th>"
-            f"<th></th></tr>{item}</table></div>"
+            f"<th>Lembar</th><th></th></tr>{item}</table>"
+            f'<form method="post" action="/sesi-baru/{s["id"]}" '
+            f'style="margin-top:.7rem">'
+            f'<button type="submit">Buat sesi baru untuk '
+            f'{html.escape(s["nama"])}</button></form></div>'
         )
 
     return _halaman(
@@ -254,7 +262,9 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; seed {info["seed"]} &middot; '
-        f'<a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
+        f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
+        f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
+        f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
         f"{kabar}"
         f'<form method="post" action="/sesi/{sesi_id}">'
         f'{"".join(kartu)}'
@@ -362,6 +372,50 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
     )
 
 
+def buat_sesi_seed_baru(kon, siswa_id: int) -> int:
+    """Sesi baru dengan seed yang belum pernah dipakai siswa ini.
+
+    Mengulang seed berarti mengulang soal yang persis sama — anak bisa
+    mengingat jawabannya, dan diagnosisnya berubah jadi menilai hafalan,
+    bukan pemahaman.
+    """
+    dipakai = {
+        r["seed"]
+        for r in kon.execute(
+            "SELECT seed FROM sesi WHERE siswa_id = ?", (siswa_id,)
+        ).fetchall()
+    }
+    for _ in range(500):
+        seed = random.randint(1, 9_999_999)
+        if seed not in dipakai:
+            return basis.buat_sesi(kon, siswa_id, seed)
+    raise RuntimeError("gagal menemukan seed baru")
+
+
+def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
+    """Lembar siap cetak, dibangkitkan ulang dari seed.
+
+    Tidak membaca berkas dari cakram: seed tersimpan di basis data, dan
+    membangkitkan ulang menjamin lembar yang tampil SELALU cocok dengan soal
+    yang tercatat di sesi ini. Berkas di cakram bisa terhapus, tertimpa, atau
+    tertinggal versi lama; seed tidak bisa.
+    """
+    info = kon.execute(
+        """SELECT s.seed, s.tanggal, w.nama
+           FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
+        (sesi_id,),
+    ).fetchone()
+    if not info:
+        return None
+
+    soal = [_soal_dari_baris(b) for b in basis.isi_sesi(kon, sesi_id)]
+    if untuk_guru:
+        isi = cetak.lembar_penilaian(soal, info["nama"], info["tanggal"], info["seed"])
+    else:
+        isi = cetak.lembar_soal(soal, info["nama"], info["tanggal"])
+    return isi.encode()
+
+
 class Penangan(BaseHTTPRequestHandler):
     def _kirim(self, isi: bytes, kode: int = 200) -> None:
         self.send_response(kode)
@@ -408,6 +462,12 @@ class Penangan(BaseHTTPRequestHandler):
                     return self._kirim(halaman_sesi(kon, int(jalur.split("/")[2])))
                 if jalur.startswith("/laporan/"):
                     return self._kirim(halaman_laporan(kon, int(jalur.split("/")[2])))
+                if jalur.startswith("/lembar/"):
+                    bagian = jalur.split("/")
+                    guru = len(bagian) > 3 and bagian[3] == "penilaian"
+                    isi = halaman_lembar(kon, int(bagian[2]), guru)
+                    if isi:
+                        return self._kirim(isi)
         except (ValueError, IndexError):
             pass
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
@@ -416,6 +476,24 @@ class Penangan(BaseHTTPRequestHandler):
         if not self._lolos_sandi():
             return
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
+
+        if jalur.startswith("/sesi-baru/"):
+            try:
+                siswa_id = int(jalur.split("/")[2])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            with basis.buka() as kon:
+                sesi_id = buat_sesi_seed_baru(kon, siswa_id)
+            # Alihkan ke halaman sesinya, bukan menampilkan ulang halaman
+            # utama: setelah membuat sesi yang dibutuhkan guru adalah
+            # lembarnya, dan pengalihan mencegah sesi ganda kalau halaman
+            # di-muat ulang.
+            self.send_response(303)
+            self.send_header("Location", f"/sesi/{sesi_id}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         if not jalur.startswith("/sesi/"):
             return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
 

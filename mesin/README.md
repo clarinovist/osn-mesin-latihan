@@ -12,44 +12,30 @@ python3 -m venv .venv
 ./.venv/bin/python siapkan_db.py
 ```
 
-## Tiap sesi latihan
+## Dipakai lewat website (cara utama)
 
-**1. Cetak lembar**
+**https://osn.lesprivate.id** — pengguna `guru`.
 
-```bash
-cd ~/Documents/osn/mesin
-./.venv/bin/python buat_lembar.py --pdf
-```
+Semuanya dari satu tempat, tidak perlu terminal:
 
-Menghasilkan 4 berkas di `lembar/` — SOAL dan PENILAIAN untuk tiap anak.
-Seed-nya berbeda tiap kali dan berbeda antar anak, jadi soalnya selalu baru
-dan Andi tidak bisa menyalin Bila.
+**1. Buat sesi** — tombol "Buat sesi baru untuk <nama>" di halaman utama.
+Seed-nya selalu baru dan berbeda antar anak, jadi soalnya tidak pernah
+terulang dan Andi tidak bisa menyalin Bila.
+
+**2. Cetak lembar** — kolom **Lembar** di tabel sesi:
+
+- `soal` — untuk anak. Buka lalu Ctrl+P (Cmd+P).
+- `kunci` — untuk kamu. Memuat kunci + tabel diagnosis, **jangan sampai
+  terlihat anak**.
 
 Cetak pada **skala 100%**, jangan "fit to page". Menyekalakan mengecilkan
 kotak Caraku, padahal itu inti lembarnya.
 
-Berikan yang `-SOAL.pdf` ke anak. Simpan yang `-PENILAIAN.pdf` untuk diri
-sendiri — memuat kunci dan tabel diagnosis.
+**3. Masukkan hasil** — klik nomor sesinya. Ketik jawaban anak dan ringkasan
+kotak "Caraku". Kode diagnosis muncul otomatis; kolom Kode hanya diisi kalau
+kamu tidak setuju dengan usulan mesin.
 
-**2. Masukkan hasil**
-
-```bash
-./.venv/bin/python sajikan.py
-```
-
-Buka `http://127.0.0.1:8724`, pilih sesinya. Untuk tiap soal ketik jawaban
-anak dan ringkasan isi kotak "Caraku". Kode diagnosis muncul otomatis; kolom
-Kode hanya diisi kalau kamu tidak setuju dengan usulan mesin.
-
-Kalau mau memasukkannya dari HP sambil memegang kertas:
-
-```bash
-./.venv/bin/python sajikan.py --jaringan
-```
-
-**3. Baca laporan**
-
-Tautan "Lihat laporan" di tiap anak. Tiga bagian:
+**4. Baca laporan** — tautan "Lihat laporan" di tiap anak. Tiga bagian:
 
 - **Tren per sesi** — yang dipantau kolom K, bukan Benar
 - **Miskonsepsi yang bertahan** — muncul di >1 sesi berarti belum tuntas
@@ -81,18 +67,38 @@ Cara membaca polanya:
 - **N banyak** -> hentikan penilaian, tanya lisan; kode lain tidak bisa
   dipercaya tanpa coretan
 
+## Dipakai lokal di Mac (cadangan)
+
+Berguna kalau VPS bermasalah, atau untuk menghasilkan PDF (container tidak
+punya Chrome, jadi tautan `soal` di website menghasilkan halaman untuk
+dicetak langsung dari browser, bukan berkas PDF).
+
+```bash
+cd ~/Documents/osn/mesin
+./.venv/bin/python buat_lembar.py --pdf   # cetak lembar + PDF
+./.venv/bin/python sajikan.py             # halaman guru di 127.0.0.1:8724
+```
+
+Basis data lokal terpisah dari VPS. Pakai salah satu saja supaya datanya
+tidak bercabang.
+
 ## Menambah anak
 
-Tambahkan namanya ke daftar `SISWA` di `siapkan_db.py`, lalu jalankan lagi.
-Aman diulang — yang sudah ada tidak terduplikasi.
+Tambahkan namanya ke daftar `SISWA` di `siapkan_db.py`, lalu jalankan lagi
+(aman diulang). Untuk VPS:
+
+```bash
+ssh biznet-sekolahdesain "sudo docker exec osn-mesin python -c \"
+import basis
+with basis.buka() as k: basis.tambah_siswa(k, 'NamaBaru')
+\""
+```
 
 ## Cetak ulang lembar yang hilang
 
-Seed tercetak di lembar PENILAIAN.
-
-```bash
-./.venv/bin/python buat_lembar.py --siswa Andi --seed 9593439 --pdf
-```
+Seed tercantum di kolom terakhir tabel sesi dan di lembar kunci. Sesi lama
+tetap bisa dibuka lewat tautan `soal` — lembarnya dibangkitkan ulang dari
+seed, jadi selalu sama persis.
 
 ## Menjalankan test
 
@@ -111,8 +117,40 @@ Seed tercetak di lembar PENILAIAN.
 | `diagnosa.py` | jawaban -> kode B/K/H/E/T/N |
 | `cetak.py` | render HTML lembar soal & penilaian |
 | `buat_lembar.py` | perintah cetak |
-| `web.py` | halaman guru |
+| `web.py` | halaman guru + rute lembar |
+| `sandi.py` | palang sandi |
 | `sajikan.py` | menjalankan server |
+| `cadangkan.sh` | tarik cadangan basis data dari VPS ke Mac |
+| `Dockerfile` | container untuk VPS |
+
+## Di VPS
+
+| | |
+|---|---|
+| Alamat | https://osn.lesprivate.id |
+| Container | `osn-mesin`, restart otomatis |
+| Data | `/opt/osn/data` (basis data, sandi, lembar) |
+| Cadangan | harian 22:00 ke `mesin/cadangan/` di Mac |
+
+```bash
+ssh biznet-sekolahdesain "sudo docker ps --filter name=osn-mesin"
+ssh biznet-sekolahdesain "sudo docker logs osn-mesin --tail 30"
+./cadangkan.sh          # cadangan manual kapan saja
+```
+
+Perubahan kode perlu build ulang image di VPS:
+
+```bash
+cd ~/Documents/osn/mesin
+tar czf /tmp/k.tgz *.py Dockerfile
+scp /tmp/k.tgz biznet-sekolahdesain:/tmp/
+ssh biznet-sekolahdesain "sudo tar xzf /tmp/k.tgz -C /opt/osn/app \
+  && cd /opt/osn/app && sudo docker build -q -t osn-mesin:baru . \
+  && sudo docker rm -f osn-mesin \
+  && sudo docker run -d --name osn-mesin --restart unless-stopped \
+     -p 127.0.0.1:8724:8724 -v /opt/osn/data:/data \
+     --memory 512m --cpus 1 --security-opt no-new-privileges osn-mesin:baru"
+```
 
 ## Batas yang diketahui
 
