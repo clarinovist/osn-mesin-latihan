@@ -17,7 +17,7 @@ Pasangan dari `2026-08-20-p3-pola-bilangan-SOAL.md`.
 
 ## Kode diagnosis
 
-Dari taksonomi B/K/H (`Rencana Produk - Peta Jalan.md` §02), plus dua dari
+Dari taksonomi B/K/H (`produk/Rencana Produk - Peta Jalan.md` §02), plus dua dari
 riset Newman.
 
 | Kode | Nama | Artinya untuk kamu |
