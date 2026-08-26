@@ -114,15 +114,18 @@ seed, jadi selalu sama persis.
 
 | Berkas | Isi |
 |---|---|
-| `templates.py` | 12 tipe soal — soal, kunci, dan malrule dihitung dari parameter |
-| `generator.py` | seed -> parameter, dengan batas yang menjaga level P3 |
+| `templates.py` | tipe soal per level P3–P6 — soal, kunci, dan malrule dihitung dari parameter |
+| `generator.py` | seed -> parameter, dibatasi profil level (`PROFIL_LEVEL`) |
 | `skema.py` | definisi tabel |
 | `basis.py` | akses basis data |
 | `diagnosa.py` | jawaban -> kode B/K/H/E/T/N |
 | `cetak.py` | render HTML lembar soal & penilaian |
+| `render.py` + `gaya_layar.py` + `gaya_cetak.py` | satu sumber render, dua tampilan (layar & cetak) |
 | `buat_lembar.py` | perintah cetak |
-| `web.py` | halaman guru + rute lembar |
-| `sandi.py` | palang sandi |
+| `web.py` | halaman guru & murid + rute lembar |
+| `murid.py` | halaman kerja murid — tanpa kunci/malrule/diagnosis (palang test) |
+| `llm.py` | klien DeepSeek untuk variasi cerita — gagal-diam tanpa key |
+| `sandi.py` | palang sandi, akun ber-peran guru/murid |
 | `sajikan.py` | menjalankan server |
 | `cadangkan.sh` | tarik cadangan basis data dari VPS ke Mac |
 | `Dockerfile` | container untuk VPS |
@@ -178,6 +181,27 @@ menarik image dan mengganti satu container — bukan shell, bukan sudo.
 
 Secret yang dipakai: `VPS_DEPLOY_KEY`, `VPS_HOST_KEY`, `VPS_HOST`,
 `VPS_USER`, `SITUS`.
+
+### Kunci DeepSeek (fitur variasi cerita)
+
+Fitur "variasi cerita" (`llm.py`) membaca kunci API dari env
+`DEEPSEEK_API_KEY` di dalam container. Rantainya di VPS:
+
+1. Kunci disimpan sebagai berkas `/opt/osn/data/deepseek.key`
+   (volume data, owner `osn`, mode 640). Sumber aslinya script monitoring
+   cron di `/root/monitoring/deepseek-balance.py` — salin manual dari sana
+   kalau berkasnya hilang. Kunci TIDAK pernah ada di repo, image, atau log.
+2. `osn-deploy` (di VPS) membaca berkas itu saat deploy dan menyuntikkannya
+   sebagai `-e DEEPSEEK_API_KEY=...` ke `docker run` — di jalur deploy baru
+   maupun rollback.
+3. Tanpa berkas/env itu, fitur mati diam-diam sesuai desain gagal-diam:
+   tombol cerita hanya melapor bahwa LLM tidak aktif, aplikasi tetap jalan.
+
+Respons API LLM di-cache per soal (`llm_cache`) — satu soal tidak dibayar
+dua kali. Saldo dipantau oleh cron harian yang sama dengan sumber kuncinya.
+
+Patch ini hanya ada di VPS (`/usr/local/bin/osn-deploy` tidak ter-track);
+backup sebelum patch: `/root/osn-deploy.bak.<tanggal>`.
 
 
 ## Batas yang diketahui
