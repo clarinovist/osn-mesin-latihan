@@ -14,7 +14,7 @@ python3 -m venv .venv
 
 ## Dipakai lewat website (cara utama)
 
-**https://osn.lesprivate.id** — pengguna `guru`.
+**https://<domain-anda>** — pengguna `guru`.
 
 Semuanya dari satu tempat, tidak perlu terminal:
 
@@ -131,51 +131,54 @@ seed, jadi selalu sama persis.
 
 | | |
 |---|---|
-| Alamat | https://osn.lesprivate.id |
+| Alamat | https://<domain-anda> |
 | Container | `osn-mesin`, restart otomatis |
 | Data | `/opt/osn/data` (basis data, sandi, lembar) |
 | Cadangan | harian 22:00 ke `mesin/cadangan/` di Mac |
 
 ```bash
-ssh biznet-sekolahdesain "sudo docker ps --filter name=osn-mesin"
-ssh biznet-sekolahdesain "sudo docker logs osn-mesin --tail 30"
+ssh <host-vps> "sudo docker ps --filter name=osn-mesin"
+ssh <host-vps> "sudo docker logs osn-mesin --tail 30"
 ./cadangkan.sh          # cadangan manual kapan saja
 ```
 
-Perubahan kode perlu build ulang image di VPS. **Urutannya penting**: build
-dulu sampai selesai, pastikan image-nya ada, BARU ganti container.
+Perubahan kode dideploy otomatis lewat GitHub Actions:
 
-```bash
-# 1. kirim kode
-cd ~/Documents/osn/mesin
-tar czf /tmp/k.tgz *.py Dockerfile
-scp /tmp/k.tgz biznet-sekolahdesain:/tmp/
-ssh biznet-sekolahdesain "sudo tar xzf /tmp/k.tgz -C /opt/osn/app"
-
-# 2. build — container lama TETAP JALAN selama ini
-ssh biznet-sekolahdesain "cd /opt/osn/app && sudo docker build -t osn-mesin:baru ."
-
-# 3. ganti hanya kalau image benar-benar jadi
-ssh biznet-sekolahdesain "sudo docker image inspect osn-mesin:baru >/dev/null \
-  && sudo docker rm -f osn-mesin \
-  && sudo docker run -d --name osn-mesin --restart unless-stopped \
-     -p 127.0.0.1:8724:8724 -v /opt/osn/data:/data \
-     --memory 512m --cpus 1 --security-opt no-new-privileges osn-mesin:baru"
-
-# 4. pastikan hidup
-curl -s -o /dev/null -w "%{http_code}\n" -u guru https://osn.lesprivate.id/
+```
+push ke main -> test -> build image -> dorong ke GHCR -> VPS tarik & ganti
+             -> verifikasi situs hidup dari internet
 ```
 
-**Kenapa urutannya begitu**: pernah terjadi `docker build` gagal karena
-Docker Hub timeout *setelah* container lama dihapus — situs mati 502 sampai
-image lama dijalankan ulang. Image lama tetap tersimpan (`docker images
-osn-mesin`), jadi pemulihannya:
+Cukup `git push`. Tidak ada langkah manual di VPS, dan **jangan build di
+VPS** — build yang gagal di sana bisa menjatuhkan situs yang sedang jalan.
+
+Pantau:
 
 ```bash
-ssh biznet-sekolahdesain "sudo docker run -d --name osn-mesin \
-  --restart unless-stopped -p 127.0.0.1:8724:8724 -v /opt/osn/data:/data \
-  --memory 512m --cpus 1 --security-opt no-new-privileges osn-mesin:<versi-lama>"
+gh run list --repo clarinovist/osn-mesin-latihan
+gh run watch <id> --exit-status
 ```
+
+**Kenapa deploy memakai digest, bukan tag `latest`**: tag bisa berubah
+antara build dan deploy. Yang terpasang harus persis image yang baru saja
+lolos test.
+
+**Kalau deploy gagal**, skrip di VPS memulihkan image sebelumnya sendiri.
+Container hanya diganti setelah image baru terbukti ada, dan hanya
+dipertahankan kalau lolos pemeriksaan sehat. Sehat berarti menjawab **401**
+tanpa kredensial — server hidup dan palang sandi aktif. Menjawab 200 tanpa
+diminta sandi justru berarti palangnya jebol.
+
+### Akses deploy
+
+Kunci deploy terpisah dari kunci pribadi, dipasang dengan `command=` di
+`authorized_keys` sehingga hanya `/usr/local/bin/osn-deploy` yang bisa
+jalan. Kalau kunci itu bocor, yang bisa dilakukan penyerang terbatas pada
+menarik image dan mengganti satu container — bukan shell, bukan sudo.
+
+Secret yang dipakai: `VPS_DEPLOY_KEY`, `VPS_HOST_KEY`, `VPS_HOST`,
+`VPS_USER`, `SITUS`.
+
 
 ## Batas yang diketahui
 

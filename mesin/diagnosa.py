@@ -108,6 +108,31 @@ def diagnosa(
             True,
         )
 
+    # 2b — anak MENGAKU menebak lewat pilihan cepat di halaman murid.
+    #
+    # Pengakuan sendiri lebih kuat daripada tebakan mesin: kalau anak memilih
+    # "aku tebak saja", itu N tanpa perlu ditanya lisan lagi. Nilainya sama
+    # dengan N dari cara-kosong, tapi alasannya berbeda supaya guru tahu ini
+    # datang dari anaknya sendiri, bukan dari ketiadaan bukti.
+    #
+    # Dicek SEBELUM kunci dibandingkan: anak yang menebak lalu kebetulan benar
+    # tetap harus tercatat menebak. Jawaban benar hasil tebakan adalah tanda
+    # bahaya yang paling mudah hilang dari data.
+    if crk.startswith("[pilihan] tebak"):
+        return Usulan(
+            False, "N", None,
+            "anak sendiri menandai menebak — tanya lisan sebelum dinilai",
+            True,
+        )
+
+    # 2c — anak mengaku bingung: bukan menebak, bukan salah konsep. Ia berhenti.
+    if crk.startswith("[pilihan] bingung"):
+        return Usulan(
+            False, "T", None,
+            "anak menandai bingung — periksa apakah tipe soal ini sudah diajarkan",
+            True,
+        )
+
     benar = bool(jwb) and setara(jwb, kunci)
 
     if benar:

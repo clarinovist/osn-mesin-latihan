@@ -9,7 +9,7 @@
 # ditulis bisa menghasilkan salinan rusak yang baru ketahuan saat dipulihkan.
 set -euo pipefail
 
-INANG="biznet-sekolahdesain"
+INANG="${OSN_HOST_VPS:-vps-osn}"   # setel lewat lingkungan
 TUJUAN="$HOME/Documents/osn/mesin/cadangan"
 SIMPAN_HARI=30
 

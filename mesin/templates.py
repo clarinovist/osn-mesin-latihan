@@ -26,6 +26,17 @@ from typing import Any, Callable
 
 HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
+# Level yang didukung, urut dari termudah.
+#
+# Dipakai sebagai daftar tertutup di banyak tempat (validasi form, profil
+# parameter, komposisi lembar). Ditulis sekali di sini supaya menambah level
+# tidak berarti berburu string "P3" di seluruh berkas.
+LEVEL = ("P3", "P4", "P5", "P6")
+
+
+def level_valid(level: str) -> bool:
+    return level in LEVEL
+
 
 @dataclass(frozen=True)
 class Malrule:
@@ -49,12 +60,20 @@ class Soal:
     minta_restatement: bool = False
     bagian: str = ""
     tantangan: bool = False
+    level: str = "P3"
 
     @property
     def tanda_tangan(self) -> str:
-        """Sidik jari untuk mendeteksi soal duplikat di bank."""
+        """Sidik jari untuk mendeteksi soal duplikat di bank.
+
+        Level ikut masuk, dan itu bukan hiasan: template yang sama dengan
+        parameter yang sama bisa muncul di dua level (mis. `titik_segitiga`
+        gambar_ke=12 sah di P3 maupun P4). Tanpa level di sidik jari,
+        keduanya bertabrakan jadi satu baris bank, dan statistik "soal P5
+        yang pernah dikerjakan" jadi tidak bisa dihitung.
+        """
         butir = ",".join(f"{k}={self.parameter[k]}" for k in sorted(self.parameter))
-        return f"{self.template_id}({butir})"
+        return f"{self.level}|{self.template_id}({butir})"
 
 
 def _deret(awal: int, beda: int, n: int) -> list[int]:
@@ -283,6 +302,61 @@ def siklus_huruf(pola: tuple[str, ...], posisi: int) -> Soal:
             "K",
             "sisa pembagian diabaikan, langsung ambil unsur terakhir siklus",
         ),
+        Malrule(
+            "siklus.ambil_awal_siklus",
+            pola[0],
+            "K",
+            "langsung mengambil unsur pertama siklus tanpa menghitung sisa",
+        ),
+        Malrule(
+            "siklus.panjang_siklus_kelebihan",
+            _siklus(list(pola), ((posisi - 1) % (n + 1)) + 1),
+            "K",
+            f"siklus dihitung {n + 1} unsur, bukan {n}",
+        ),
+        # K dari arah berlawanan, dan ini bukan pengisi.
+        #
+        # Semua kandidat K lain ("ambil akhir", "ambil awal", panjang siklus
+        # kurang/kelebihan) menebak SATU huruf. Kalau beberapa tebakan itu
+        # kebetulan jatuh di huruf yang sama dengan kunci (atau saling
+        # bertabrakan), semuanya dibuang saring_malrule sekaligus dan soalnya
+        # tinggal tanpa jalur K — terukur ~3% sebelum malrule ini ada.
+        #
+        # Membaca pola terbalik tidak bergantung pada kebetulan huruf: hasil
+        # aritmetikanya (posisi - sisa) hampir selalu berbeda dari posisi
+        # itu sendiri. Anak yang melakukannya memang salah konsep: ia mengira
+        # siklus dihitung dari ujung.
+        Malrule(
+            "siklus.dihitung_dari_belakang",
+            _siklus(list(pola), posisi - sisa if sisa else n),
+            "K",
+            "pola dibaca dari belakang — arah hitung siklusnya terbalik",
+        ),
+        # Jalur H — anak sudah paham siklusnya, hanya salah menghitung sisa.
+        #
+        # Sempat TIDAK ADA di template ini (siklus_warna punya, siklus_huruf
+        # tidak), sehingga setiap kesalahan pada soal siklus huruf otomatis
+        # jadi K. Itu berarti anak yang cuma keliru membagi tercatat "salah
+        # konsep" dan diarahkan mengulang materi siklus yang sebenarnya sudah
+        # ia kuasai. Ditemukan test_setiap_template_bisa_membedakan_k_dari_h,
+        # bukan dari membaca kode — cacatnya baru kelihatan setelah
+        # penyaringan malrule.
+        #
+        # Dua arah (kelebihan & kurang satu) supaya setidaknya satu selamat
+        # dari penyaringan; dengan satu arah saja mayoritas soal kehilangan
+        # jalur H-nya.
+        Malrule(
+            "siklus.sisa_meleset",
+            _siklus(list(pola), posisi + 1),
+            "H",
+            "cara pembagiannya benar, sisanya kelebihan satu",
+        ),
+        Malrule(
+            "siklus.sisa_kurang_satu",
+            _siklus(list(pola), posisi - 1),
+            "H",
+            "cara pembagiannya benar, sisanya kurang satu",
+        ),
     ]
     if sisa == 0:
         mal.insert(
@@ -325,10 +399,36 @@ def siklus_warna(pola: tuple[str, ...], posisi: int) -> Soal:
             "sisa pembagian diabaikan, langsung ambil unsur terakhir siklus",
         ),
         Malrule(
+            "siklus.ambil_awal_siklus",
+            pola[0],
+            "K",
+            "langsung mengambil unsur pertama siklus tanpa menghitung sisa",
+        ),
+        Malrule(
+            "siklus.panjang_siklus_salah",
+            _siklus(list(pola), ((posisi - 1) % max(n - 1, 1)) + 1),
+            "K",
+            f"siklus dihitung {n - 1} unsur, bukan {n}",
+        ),
+        # Kandidat K sengaja disebut LEBIH DULU daripada H.
+        #
+        # `saring_malrule` mempertahankan yang lebih dulu muncul, dan versi
+        # sebelumnya menempatkan H di urutan kedua — akibatnya pada sebagian
+        # soal yang tersisa justru hanya jalur H, sehingga template ini tidak
+        # bisa mendeteksi miskonsepsi sama sekali. Metrik utama proyek ini
+        # adalah jumlah K; template tanpa jalur K tidak menyumbang apa pun
+        # ke situ. Tertangkap test_tiap_template_punya_malrule_konsep.
+        Malrule(
             "siklus.sisa_meleset",
             _siklus(list(pola), posisi + 1),
             "H",
-            "cara pembagian benar, sisanya salah hitung",
+            "cara pembagian benar, sisanya kelebihan satu",
+        ),
+        Malrule(
+            "siklus.sisa_kurang_satu",
+            _siklus(list(pola), posisi - 1),
+            "H",
+            "cara pembagian benar, sisanya kurang satu",
         ),
     ]
     if sisa == 0:
@@ -512,6 +612,30 @@ def deret_terbalik_geometri(awal: int, rasio: int, posisi_target: int) -> Soal:
             "K",
             f"dikira pola kelipatan {awal}, padahal pola perkalian berulang",
         ),
+        # K kedua, dan ini bukan hiasan.
+        #
+        # `dikira_kelipatan` di atas KOLAPS saat awal == 1: target // 1 ==
+        # target, yang persis sama dengan malrule B `jawab_nilainya`, jadi ia
+        # selalu dibuang `saring_malrule`. Akibatnya 15,8% soal template ini
+        # sama sekali tidak punya jalur K — anak yang benar-benar salah
+        # konsep tercatat sebagai salah hitung, dan tidak ikut terhitung di
+        # metrik utama proyek ini (jumlah K).
+        #
+        # Ini pola bug yang sama dengan `pecahan.penjumlahan_meleset`: sebuah
+        # malrule yang secara MATEMATIS tidak pernah bisa berbeda dari
+        # malrule lain untuk sebagian parameter. Bentuknya tidak kelihatan
+        # dari membaca kode template — hanya muncul setelah penyaringan.
+        #
+        # Membaginya dengan rasio (bukan awal) tetap masuk akal sebagai
+        # miskonsepsi: anak melihat 1, 2, 4, 8 lalu mengira "kelipatan 2",
+        # sehingga menjawab 2048 : 2 = 1024. Dan ia tidak pernah kolaps,
+        # karena rasio selalu >= 2.
+        Malrule(
+            "terbalik.dikira_kelipatan_rasio",
+            str(target // rasio),
+            "K",
+            f"dikira pola kelipatan {rasio}, jadi urutannya dikira hasil bagi",
+        ),
         Malrule(
             "terbalik.berhenti_satu_langkah_awal",
             str(posisi_target - 1),
@@ -622,6 +746,292 @@ def jumlah_siklus(pola: tuple[int, ...], n_angka: int) -> Soal:
     )
 
 
+# ── Bagian F — rumus suku ke-n (P4+) ────────────────────────────────────
+#
+# Inilah kenaikan level yang sesungguhnya. Bagian A-E bisa dikerjakan dengan
+# menulis deretnya satu per satu sampai ketemu; di sini tidak bisa. Posisi
+# yang ditanya sengaja jauh (ke-100, ke-250) sehingga cara manual berhenti
+# bekerja dan anak terpaksa memakai rumus.
+#
+# Lembar penilaian 20 Agustus sudah menandai kesiapan ini: "Cara manual
+# dipakai di semua soal siklus (5, 6, 11) -> konsepnya benar, tapi belum ada
+# jalan pintas pembagian. Ini penanda kesiapan naik level, bukan kesalahan.
+# Di P4 angka jadi ke-100 dan cara manual berhenti bekerja."
+
+
+def suku_ke_n(awal: int, beda: int, posisi: int) -> Soal:
+    """Nilai suku ke-n pada posisi yang terlalu jauh untuk ditulis manual."""
+    jawab = awal + beda * (posisi - 1)
+
+    mal = (
+        Malrule(
+            "suku_n.kali_posisi_penuh",
+            str(awal + beda * posisi),
+            "K",
+            f"dikali {posisi} penuh — suku pertama ikut terhitung, "
+            "seharusnya posisi dikurangi satu",
+        ),
+        Malrule(
+            "suku_n.lupa_suku_awal",
+            str(beda * posisi),
+            "K",
+            "hanya mengalikan selisih, suku awalnya tidak ditambahkan",
+        ),
+        Malrule(
+            "suku_n.dikira_kelipatan",
+            str(awal * posisi),
+            "K",
+            f"dikira kelipatan {awal}, padahal pola tambah tetap",
+        ),
+        Malrule(
+            "suku_n.perkalian_meleset",
+            str(jawab - beda),
+            "H",
+            "rumusnya benar, perkaliannya meleset satu langkah",
+        ),
+    )
+
+    urut = _deret(awal, beda, 5)
+    teks = (
+        f"Pola: {', '.join(str(x) for x in urut)}, ...\n\n"
+        f"Berapa bilangan pada urutan ke-{posisi}?"
+    )
+
+    return Soal(
+        "suku_ke_n",
+        {"awal": awal, "beda": beda, "posisi": posisi},
+        teks,
+        str(jawab),
+        saring_malrule(str(jawab), list(mal)),
+        minta_restatement=True,
+        bagian="F",
+    )
+
+
+def sisa_bagi_siklus(pola: tuple[str, ...], posisi: int) -> Soal:
+    """Siklus pada posisi yang terlalu jauh untuk dienumerasi.
+
+    Sengaja memakai posisi ratusan. Di P3 anak boleh menulis 20 huruf satu
+    per satu dan itu sah; di sini cara itu mati, dan yang tersisa hanya
+    pembagian bersisa. Kegagalan di soal ini pada anak yang benar di
+    `siklus_huruf` adalah sinyal presisi: konsep siklusnya ada, jalan
+    pintasnya belum.
+    """
+    n = len(pola)
+    jawab = _siklus(list(pola), posisi)
+    sisa = posisi % n
+
+    # Kandidat malrule sengaja BANYAK dan beragam arah.
+    #
+    # Pola huruf hanya punya 2-4 unsur berbeda, jadi tebakan salah cepat
+    # bertabrakan satu sama lain (atau dengan kunci) lalu dibuang
+    # `saring_malrule`. Dengan kandidat sedikit, mayoritas soal berakhir
+    # menyisakan satu malrule saja — terukur 78% soal hanya punya 1, dan
+    # nyaris tak pernah punya jalur H. Akibatnya anak yang cuma keliru
+    # membagi tercatat salah konsep.
+    #
+    # Urutannya penting: yang paling informatif didahulukan, karena yang
+    # bertahan setelah penyaringan adalah yang lebih dulu disebut.
+    mal = [
+        Malrule(
+            "sisa_siklus.ambil_akhir",
+            pola[-1],
+            "K",
+            "sisa pembagian diabaikan, langsung ambil unsur terakhir siklus",
+        ),
+        Malrule(
+            "sisa_siklus.hasil_bagi_dipakai",
+            pola[(posisi // n - 1) % n],
+            "K",
+            "yang dipakai hasil baginya, bukan sisanya",
+        ),
+        Malrule(
+            "sisa_siklus.sisa_meleset",
+            _siklus(list(pola), posisi + 1),
+            "H",
+            "cara pembagiannya benar, sisanya kelebihan satu",
+        ),
+        Malrule(
+            "sisa_siklus.sisa_kurang_satu",
+            _siklus(list(pola), posisi - 1),
+            "H",
+            "cara pembagiannya benar, sisanya kurang satu",
+        ),
+        Malrule(
+            "sisa_siklus.panjang_siklus_salah",
+            _siklus(list(pola), ((posisi - 1) % max(n - 1, 1)) + 1),
+            "K",
+            f"siklus dihitung {n - 1} unsur, bukan {n}",
+        ),
+        Malrule(
+            "sisa_siklus.ambil_awal_siklus",
+            pola[0],
+            "K",
+            "langsung mengambil unsur pertama siklus tanpa menghitung sisa",
+        ),
+        # Alasannya sama dengan siklus.dihitung_dari_belakang: kandidat K
+        # lain menebak satu huruf dan bisa kebetulan jatuh di huruf kunci,
+        # sedangkan arah terbalik hampir selalu menghasilkan huruf lain.
+        Malrule(
+            "sisa_siklus.dihitung_dari_belakang",
+            _siklus(list(pola), posisi - sisa if sisa else n),
+            "K",
+            "pola dibaca dari belakang — arah hitung siklusnya terbalik",
+        ),
+    ]
+    if sisa == 0:
+        mal.insert(
+            0,
+            Malrule(
+                "sisa_siklus.off_by_one_sisa_nol",
+                pola[0],
+                "K",
+                "sisa 0 dikira menunjuk posisi ke-1, padahal posisi terakhir siklus",
+            ),
+        )
+
+    teks = (
+        "Pola berulang terus-menerus:\n\n"
+        f"    {'  '.join(''.join(pola) for _ in range(3))}  ...\n\n"
+        f"Huruf ke-{posisi} adalah huruf apa?\n"
+        "(Angkanya terlalu besar untuk ditulis satu per satu.)"
+    )
+
+    return Soal(
+        "sisa_bagi_siklus",
+        {"pola": "".join(pola), "posisi": posisi},
+        teks,
+        jawab,
+        saring_malrule(jawab, mal),
+        minta_restatement=True,
+        bagian="F",
+    )
+
+
+def pola_pecahan(pembilang: int, penyebut: int, beda_pembilang: int, n_tampil: int) -> Soal:
+    """Deret pecahan berpenyebut tetap, pembilang berpola.
+
+    Bentuk soal yang tidak ada di P3 sama sekali. Miskonsepsi khasnya juga
+    baru: anak yang sudah paham pola bilangan bulat sering menambahkan
+    penyebut juga (1/4, 2/5, 3/6...) — itu K yang tidak mungkin muncul di
+    Bagian A mana pun, dan justru itulah gunanya.
+    """
+    pemb = [pembilang + beda_pembilang * i for i in range(n_tampil)]
+    jawab_pemb = pembilang + beda_pembilang * n_tampil
+    jawab = f"{jawab_pemb}/{penyebut}"
+
+    mal = (
+        Malrule(
+            "pecahan.penyebut_ikut_naik",
+            f"{jawab_pemb}/{penyebut + beda_pembilang * n_tampil}",
+            "K",
+            "penyebut ikut ditambah — pola dikira berlaku untuk kedua angka",
+        ),
+        Malrule(
+            "pecahan.pembilang_tidak_naik",
+            f"{pemb[-1]}/{penyebut}",
+            "K",
+            "pembilang tidak dilanjutkan, hanya menyalin suku terakhir",
+        ),
+        Malrule(
+            "pecahan.beda_dikira_satu",
+            f"{pemb[-1] + 1}/{penyebut}",
+            "K",
+            "selisih pembilang dikira selalu 1",
+        ),
+        # Malrule H: pembilang MELEWATI satu langkah, bukan kurang satu
+        # langkah.
+        #
+        # Versi pertama memakai `jawab_pemb - beda_pembilang`, dan itu secara
+        # matematis SELALU sama dengan `pemb[-1]` (suku terakhir yang tampil)
+        # — jadi ia selalu bertabrakan dengan `pembilang_tidak_naik` lalu
+        # dibuang `saring_malrule`. Akibatnya pola_pecahan tidak pernah punya
+        # jalur H sama sekali: anak yang cuma salah menjumlahkan pembilang
+        # akan tercatat sebagai salah konsep, dan itu kesalahan diagnosis
+        # yang paling mahal (mengirim anak mengulang materi yang sudah ia
+        # pahami). Tertangkap test_bagian_f_punya_kode_k_dan_h.
+        Malrule(
+            "pecahan.penjumlahan_meleset",
+            f"{jawab_pemb + beda_pembilang}/{penyebut}",
+            "H",
+            "polanya benar, penjumlahan pembilangnya kelebihan satu langkah",
+        ),
+    )
+
+    tampil = ", ".join(f"{p}/{penyebut}" for p in pemb)
+    teks = f"Lanjutkan polanya:\n\n    {tampil}, ___"
+
+    return Soal(
+        "pola_pecahan",
+        {
+            "pembilang": pembilang,
+            "penyebut": penyebut,
+            "beda_pembilang": beda_pembilang,
+            "n_tampil": n_tampil,
+        },
+        teks,
+        jawab,
+        saring_malrule(jawab, list(mal)),
+        bagian="F",
+    )
+
+
+def jumlah_deret(awal: int, beda: int, n: int) -> Soal:
+    """Jumlah n suku pertama. Menuntut rumus, bukan penjumlahan beruntun.
+
+    Soal paling menuntut di bank ini. Anak yang menjumlahkan satu per satu
+    biasanya kehabisan waktu atau salah di tengah — dan itu bukan kegagalan
+    konsep, melainkan penanda bahwa rumus deret belum diajarkan. Karena itu
+    `berhenti_di_tengah` diberi kode H, bukan K.
+    """
+    suku = _deret(awal, beda, n)
+    jawab = sum(suku)
+    terakhir = suku[-1]
+
+    mal = (
+        Malrule(
+            "jumlah_deret.dijawab_suku_terakhir",
+            str(terakhir),
+            "B",
+            "yang diminta JUMLAH seluruh suku, yang dijawab nilai suku terakhir",
+        ),
+        Malrule(
+            "jumlah_deret.rata_rata_ujung_tanpa_kali_n",
+            str((awal + terakhir) // 2),
+            "K",
+            "rata-rata ujung sudah benar, tapi belum dikalikan banyak suku",
+        ),
+        Malrule(
+            "jumlah_deret.kali_n_tanpa_rata_rata",
+            str(terakhir * n),
+            "K",
+            "suku terakhir dikali banyak suku — semua suku dianggap sama besar",
+        ),
+        Malrule(
+            "jumlah_deret.berhenti_di_tengah",
+            str(jawab - terakhir),
+            "H",
+            "penjumlahannya benar tapi berhenti satu suku lebih awal",
+        ),
+    )
+
+    teks = (
+        f"Pola: {', '.join(str(x) for x in suku[:5])}, ...\n\n"
+        f"Berapa JUMLAH {n} bilangan pertama pola ini?"
+    )
+
+    return Soal(
+        "jumlah_deret",
+        {"awal": awal, "beda": beda, "n": n},
+        teks,
+        str(jawab),
+        saring_malrule(str(jawab), list(mal)),
+        minta_restatement=True,
+        bagian="F",
+        tantangan=True,
+    )
+
+
 # ── Registri ────────────────────────────────────────────────────────────
 
 REGISTRI: dict[str, Callable[..., Soal]] = {
@@ -637,9 +1047,17 @@ REGISTRI: dict[str, Callable[..., Soal]] = {
     "deret_terbalik_geometri": deret_terbalik_geometri,
     "siklus_hari": siklus_hari,
     "jumlah_siklus": jumlah_siklus,
+    # Bagian F — P4 ke atas
+    "suku_ke_n": suku_ke_n,
+    "sisa_bagi_siklus": sisa_bagi_siklus,
+    "pola_pecahan": pola_pecahan,
+    "jumlah_deret": jumlah_deret,
 }
 
 # Urutan tetap satu lembar: mudah -> sulit, tantangan di akhir.
+#
+# Dipertahankan sebagai komposisi P3 dan sebagai nilai bawaan bagi pemanggil
+# lama. Komposisi per level ada di URUTAN_PER_LEVEL di bawah.
 URUTAN_LEMBAR: tuple[str, ...] = (
     "deret_aritmetika",
     "deret_aritmetika_turun",
@@ -654,3 +1072,75 @@ URUTAN_LEMBAR: tuple[str, ...] = (
     "siklus_hari",
     "jumlah_siklus",
 )
+
+# Komposisi lembar per level.
+#
+# Tetap 12 soal di semua level — bukan angka keramat, tapi batas stamina:
+# lembar penilaian 20 Agustus mencatat risiko anak lelah menulis dan mulai
+# mengosongkan kotak di paruh kedua. Menambah soal untuk level atas akan
+# menukar informasi diagnosis dengan kelelahan.
+#
+# Yang berubah adalah KOMPOSISINya. Makin tinggi level, makin banyak Bagian F
+# (rumus suku ke-n) menggantikan Bagian A-C yang bisa diselesaikan dengan
+# menulis deretnya satu per satu.
+URUTAN_PER_LEVEL: dict[str, tuple[str, ...]] = {
+    # P3: seperti lembar 20 Agustus, tanpa Bagian F sama sekali.
+    "P3": URUTAN_LEMBAR,
+    # P4: dua soal Bagian F masuk, menggantikan satu deret dan satu siklus
+    # yang paling mudah dienumerasi.
+    "P4": (
+        "deret_aritmetika",
+        "deret_aritmetika_turun",
+        "deret_geometri",
+        "deret_bertingkat",
+        "siklus_huruf",
+        "korek_api",
+        "titik_segitiga",
+        "deret_terbalik_aritmetika",
+        "deret_terbalik_geometri",
+        "siklus_hari",
+        "suku_ke_n",
+        "sisa_bagi_siklus",
+    ),
+    # P5: pecahan masuk (bentuk soal yang sama sekali tidak ada di P3),
+    # Bagian A menyusut.
+    "P5": (
+        "deret_aritmetika",
+        "deret_geometri",
+        "deret_bertingkat",
+        "siklus_huruf",
+        "korek_api",
+        "titik_segitiga",
+        "deret_terbalik_aritmetika",
+        "deret_terbalik_geometri",
+        "jumlah_siklus",
+        "suku_ke_n",
+        "sisa_bagi_siklus",
+        "pola_pecahan",
+    ),
+    # P6: separuh lembar Bagian F, ditutup jumlah_deret sebagai tantangan.
+    "P6": (
+        "deret_aritmetika",
+        "deret_geometri",
+        "deret_bertingkat",
+        "titik_segitiga",
+        "deret_terbalik_aritmetika",
+        "deret_terbalik_geometri",
+        "siklus_hari",
+        "jumlah_siklus",
+        "suku_ke_n",
+        "sisa_bagi_siklus",
+        "pola_pecahan",
+        "jumlah_deret",
+    ),
+}
+
+
+def susun_lembar(level: str) -> tuple[str, ...]:
+    """Daftar template untuk satu lembar di level tertentu.
+
+    Level tak dikenal jatuh ke P3 — sama alasannya dengan `generator.profil`:
+    satu nilai aneh di kolom `siswa.tingkat` tidak boleh membuat guru gagal
+    membuat sesi.
+    """
+    return URUTAN_PER_LEVEL.get(level, URUTAN_LEMBAR)

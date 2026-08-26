@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS siswa (
 );
 
 -- Bank soal. Tumbuh tiap generate; tanda_tangan mencegah duplikat.
+--
+-- `level` ikut masuk tanda_tangan (lihat Soal.tanda_tangan): template dengan
+-- parameter sama bisa sah di dua level, dan tanpa level keduanya bertabrakan
+-- jadi satu baris.
 CREATE TABLE IF NOT EXISTS soal (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     tanda_tangan  TEXT    NOT NULL UNIQUE,
@@ -40,10 +44,19 @@ CREATE TABLE IF NOT EXISTS soal (
     kunci         TEXT    NOT NULL,
     bagian        TEXT    NOT NULL DEFAULT '',
     tantangan     INTEGER NOT NULL DEFAULT 0,
+    level         TEXT    NOT NULL DEFAULT 'P3',
+    -- Kalimat soal versi cerita dari LLM (B2). Kosong = pakai kalimat bawaan.
+    --
+    -- Disimpan, bukan dihasilkan ulang saat render: kalimatnya sudah dibayar
+    -- sekali, dan yang lebih penting — anak mengerjakan kalimat TERTENTU.
+    -- Menghasilkan ulang berarti lembar yang dicetak guru bisa berbeda dari
+    -- yang dikerjakan anak, dan itu membuat diagnosisnya menilai soal yang salah.
+    cerita        TEXT    NOT NULL DEFAULT '',
     dibuat        TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_soal_template ON soal(template_id);
+CREATE INDEX IF NOT EXISTS idx_soal_level ON soal(level);
 
 -- Malrule per soal: jawaban salah yang bisa diprediksi + kodenya.
 -- Disimpan (bukan dihitung saat baca) supaya diagnosis lama tetap terbaca
@@ -59,11 +72,17 @@ CREATE TABLE IF NOT EXISTS malrule (
 );
 
 -- Satu kali latihan. seed disimpan supaya lembarnya bisa dicetak ulang persis.
+--
+-- `level` disimpan di sesi, bukan dibaca ulang dari siswa.tingkat saat
+-- mencetak: kalau anak naik dari P3 ke P4, lembar sesi lamanya harus tetap
+-- tercetak sebagai P3. Membaca tingkat siswa saat render akan diam-diam
+-- mengubah sejarah.
 CREATE TABLE IF NOT EXISTS sesi (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     siswa_id  INTEGER NOT NULL REFERENCES siswa(id) ON DELETE CASCADE,
     seed      INTEGER NOT NULL,
     topik     TEXT    NOT NULL DEFAULT 'pola bilangan',
+    level     TEXT    NOT NULL DEFAULT 'P3',
     tanggal   TEXT    NOT NULL DEFAULT (date('now', '+7 hours')),
     mulai     TEXT,
     selesai   TEXT,
@@ -121,6 +140,7 @@ SELECT
     w.nama                                            AS siswa,
     s.tanggal,
     s.seed,
+    s.level,
     COUNT(ss.id)                                      AS jumlah_soal,
     SUM(COALESCE(d.benar, 0))                         AS benar,
     SUM(CASE WHEN d.kode_final = 'K' THEN 1 ELSE 0 END) AS k,
@@ -136,3 +156,28 @@ LEFT JOIN jawaban j    ON j.sesi_soal_id = ss.id
 LEFT JOIN diagnosis d  ON d.jawaban_id = j.id
 GROUP BY s.id;
 """
+
+# Migrasi untuk basis data yang SUDAH berisi data.
+#
+# `CREATE TABLE IF NOT EXISTS` di atas tidak menyentuh tabel yang sudah ada —
+# ia diam saja. Jadi menambah kolom pada pemasangan yang sudah jalan (VPS
+# sudah berisi sesi anak) butuh ALTER eksplisit, dan tanpa ini kolom `level`
+# hanya lahir di basis data baru. Kegagalannya senyap dan hanya muncul saat
+# deploy: kueri menyebut kolom yang tidak ada.
+#
+# Tiap langkah harus aman dijalankan berulang. SQLite tidak punya
+# "ADD COLUMN IF NOT EXISTS", jadi kolom yang ada diperiksa dulu lewat
+# PRAGMA table_info dan langkah yang tidak perlu dilewati.
+#
+# View sengaja di-DROP lalu dibiarkan dibuat ulang oleh SKEMA: definisinya
+# ikut berubah (kolom `level` masuk ringkasan), dan CREATE VIEW IF NOT EXISTS
+# tidak memperbarui view lama.
+MIGRASI: list[tuple[str, str, str]] = [
+    # (tabel, kolom, pernyataan ALTER)
+    ("soal", "level", "ALTER TABLE soal ADD COLUMN level TEXT NOT NULL DEFAULT 'P3'"),
+    ("sesi", "level", "ALTER TABLE sesi ADD COLUMN level TEXT NOT NULL DEFAULT 'P3'"),
+    ("soal", "cerita", "ALTER TABLE soal ADD COLUMN cerita TEXT NOT NULL DEFAULT ''"),
+]
+
+# View yang definisinya berubah dan karena itu harus dibangun ulang.
+VIEW_USANG: list[str] = ["ringkasan_sesi"]

@@ -18,14 +18,15 @@ import html
 import json
 import random
 import urllib.parse
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler
 
 import basis
 import cetak
 import sandi
 from diagnosa import diagnosa
-from generator import buat_soal
-from templates import REGISTRI, Soal
+from generator import LEVEL_BAWAAN, buat_soal
+from templates import LEVEL, REGISTRI, Soal, level_valid
 
 GAYA = """
 * { box-sizing: border-box; }
@@ -124,6 +125,9 @@ def _soal_dari_baris(baris) -> Soal:
 
     Teks soal sengaja tidak disimpan di basis data — hanya parameter — supaya
     perbaikan kalimat soal langsung berlaku untuk sesi lama juga.
+
+    Level diambil dari baris, bukan dari tingkat siswa saat ini: anak yang
+    sudah naik ke P5 tetap harus melihat sesi P3-nya tercetak sebagai P3.
     """
     param = json.loads(baris["parameter"])
     fungsi = REGISTRI[baris["template_id"]]
@@ -134,14 +138,37 @@ def _soal_dari_baris(baris) -> Soal:
         param["pola"] = tuple(param["pola"].split(","))
     elif baris["template_id"] == "jumlah_siklus":
         param["pola"] = tuple(int(x) for x in param["pola"].split(","))
-    return fungsi(**param)
+    soal = fungsi(**param)
+    soal = replace(soal, level=_ambil(baris, "level", LEVEL_BAWAAN))
+
+    # Versi cerita dari LLM (B2), kalau ada. Yang diganti HANYA kalimatnya;
+    # kunci, malrule, dan parameter tetap hasil hitungan Python — itulah
+    # yang membuat diagnosis tetap hidup meski kalimatnya dikarang model.
+    cerita = (_ambil(baris, "cerita", "") or "").strip()
+    if cerita:
+        soal = replace(soal, teks=cerita)
+    return soal
+
+
+def _ambil(baris, kolom: str, bawaan):
+    """Baca kolom yang mungkin belum ada di baris.
+
+    sqlite3.Row melempar IndexError untuk kolom tak dikenal, dan sebagian
+    test memberi dict biasa. Dipakai untuk kolom hasil migrasi supaya
+    pemanggil lama tidak pecah.
+    """
+    try:
+        nilai = baris[kolom]
+    except (IndexError, KeyError):
+        return bawaan
+    return bawaan if nilai is None else nilai
 
 
 def halaman_utama(kon) -> bytes:
     baris = []
     for s in basis.daftar_siswa(kon):
         sesi = kon.execute(
-            """SELECT s.id, s.tanggal, s.seed,
+            """SELECT s.id, s.tanggal, s.seed, s.level,
                       (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
                       (SELECT COUNT(*) FROM sesi_soal ss
                          JOIN jawaban j ON j.sesi_soal_id = ss.id
@@ -154,23 +181,24 @@ def halaman_utama(kon) -> bytes:
         item = "".join(
             f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a></td>'
             f'<td>{r["tanggal"]}</td>'
+            f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
             f'<td><a href="/lembar/{r["id"]}" target="_blank">soal</a> &middot; '
             f'<a href="/lembar/{r["id"]}/penilaian" target="_blank">kunci</a></td>'
             f'<td class="tipe">seed {r["seed"]}</td></tr>'
             for r in sesi
-        ) or '<tr><td colspan="5" class="kosong">belum ada sesi</td></tr>'
+        ) or '<tr><td colspan="6" class="kosong">belum ada sesi</td></tr>'
 
         baris.append(
             f'<div class="kartu"><h2>{html.escape(s["nama"])} '
             f'<span class="tipe">({s["tingkat"]})</span></h2>'
             f'<p><a href="/laporan/{s["id"]}">Lihat laporan &rarr;</a></p>'
-            f"<table><tr><th>Sesi</th><th>Tanggal</th><th>Terisi</th>"
-            f"<th>Lembar</th><th></th></tr>{item}</table>"
+            f"<table><tr><th>Sesi</th><th>Tanggal</th><th>Level</th>"
+            f"<th>Terisi</th><th>Lembar</th><th></th></tr>{item}</table>"
             f'<form method="post" action="/sesi-baru/{s["id"]}" '
             f'style="margin-top:.7rem">'
             f'<button type="submit">Buat sesi baru untuk '
-            f'{html.escape(s["nama"])}</button></form></div>'
+            f'{html.escape(s["nama"])} ({s["tingkat"]})</button></form></div>'
         )
 
     return _halaman(
@@ -182,9 +210,55 @@ def halaman_utama(kon) -> bytes:
     )
 
 
+def _tombol_cerita(kon, sesi_id: int) -> str:
+    """Tombol "variasi cerita" (LLM B2). Manual, bukan otomatis.
+
+    Otomatis saat buat sesi berarti tiap sesi membayar 12 panggilan API
+    tanpa guru pernah memilih. Satu tombol membuat biayanya sadar: guru
+    menekannya kalau anak mulai hafal kalimat soalnya, bukan tiap kali.
+
+    Kalau kunci DeepSeek tidak dipasang, tombolnya tidak muncul sama sekali
+    — bukan muncul lalu gagal saat ditekan. Fitur yang mati harus terlihat
+    mati.
+    """
+    import llm
+
+    if not llm.aktif():
+        return ""
+
+    sudah = kon.execute(
+        """SELECT COUNT(*) AS n FROM soal s
+           JOIN sesi_soal ss ON ss.soal_id = s.id
+           WHERE ss.sesi_id = ? AND TRIM(COALESCE(s.cerita, '')) <> ''""",
+        (sesi_id,),
+    ).fetchone()["n"]
+    total = kon.execute(
+        "SELECT COUNT(*) AS n FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()["n"]
+
+    if sudah >= total and total:
+        catatan = f"Semua {total} soal sudah punya versi cerita."
+        tombol = ""
+    else:
+        catatan = (
+            f"{sudah} dari {total} soal punya versi cerita. "
+            "Angka dan kuncinya tidak berubah — hanya kalimatnya."
+        )
+        tombol = (
+            f'<form method="post" action="/cerita/{sesi_id}" '
+            f'style="margin-top:.6rem">'
+            f'<button type="submit">Buat variasi cerita</button></form>'
+        )
+
+    return (
+        f'<div class="kartu"><h2>Variasi cerita</h2>'
+        f'<p class="sub">{catatan}</p>{tombol}</div>'
+    )
+
+
 def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
     info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, w.nama, w.id AS siswa_id
+        """SELECT s.id, s.tanggal, s.seed, s.level, w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
     ).fetchone()
@@ -262,11 +336,13 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f"Sesi #{sesi_id}",
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
-        f'<p class="sub">{info["tanggal"]} &middot; seed {info["seed"]} &middot; '
+        f'<p class="sub">{info["tanggal"]} &middot; '
+        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; seed {info["seed"]} &middot; '
         f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
         f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
         f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
         f"{kabar}"
+        f"{_tombol_cerita(kon, sesi_id)}"
         f'<form method="post" action="/sesi/{sesi_id}">'
         f'{"".join(kartu)}'
         f'<button type="submit">Simpan &amp; diagnosis</button></form>',
@@ -324,13 +400,14 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
     tren = "".join(
         f'<tr><td><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
         f'<td>{r["tanggal"]}</td>'
+        f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
         f'<td class="angka">{r["benar"] or 0}/{r["jumlah_soal"]}</td>'
         f'<td class="angka"><b>{r["k"] or 0}</b></td>'
         f'<td class="angka">{r["b"] or 0}</td><td class="angka">{r["h"] or 0}</td>'
         f'<td class="angka">{r["e"] or 0}</td><td class="angka">{r["t"] or 0}</td>'
         f'<td class="angka">{r["n"] or 0}</td></tr>'
         for r in ring
-    ) or '<tr><td colspan="9" class="kosong">belum ada sesi dinilai</td></tr>'
+    ) or '<tr><td colspan="10" class="kosong">belum ada sesi dinilai</td></tr>'
 
     mis = basis.miskonsepsi_berulang(kon, siswa_id)
     daftar_mis = "".join(
@@ -356,8 +433,8 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
         f'<p class="sub">Yang dipantau adalah <b>jumlah K</b>, bukan skor. '
         f"Anak dengan 9 H skor 3 lebih siap daripada anak dengan 3 K skor 9.</p>"
         f'<div class="kartu"><h2>Tren per sesi</h2><table>'
-        f"<tr><th>Sesi</th><th>Tanggal</th><th>Benar</th><th>K</th><th>B</th>"
-        f"<th>H</th><th>E</th><th>T</th><th>N</th></tr>{tren}</table></div>"
+        f"<tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Benar</th><th>K</th>"
+        f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr>{tren}</table></div>"
         f'<div class="kartu"><h2>Miskonsepsi yang bertahan</h2>'
         f'<p class="sub">Dihitung per gagasan keliru, bukan per soal. Satu '
         f"miskonsepsi yang muncul di tiga soal tetap satu baris. Yang muncul "
@@ -370,6 +447,82 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
         f"peta urutan belajar, bukan daftar kegagalan.</p><table>"
         f"<tr><th>Tipe soal</th><th>Berapa kali</th><th>Terakhir</th></tr>"
         f"{daftar_peta}</table></div>",
+    )
+
+
+def _kartu_akun_murid(kon) -> str:
+    """Kartu akun murid di halaman akun.
+
+    Pola persis kartu Siswa: tabel + form di bawahnya. Daftar akun diambil
+    dari sandi.muat_akun() yang disaring peran == murid. Tiap akun dicek
+    kecocokannya dengan tabel siswa lewat murid.siswa_dari_akun; kalau tidak
+    cocok ditandai jelas "belum terhubung ke siswa" supaya guru tahu kenapa
+    anak tidak bisa masuk.
+    """
+    import murid as _murid
+
+    daftar_siswa = basis.daftar_siswa(kon)
+    akun_murid = [a for a in sandi.muat_akun() if a.get("peran") == "murid"]
+
+    if akun_murid:
+        baris = ""
+        for a in akun_murid:
+            nama = a["pengguna"]
+            nama_esc = html.escape(nama)
+            sid = _murid.siswa_dari_akun(kon, nama)
+            if sid is None:
+                status = '<span style="color:#c2352b">belum terhubung ke siswa</span>'
+            else:
+                status = '<span style="color:#2e9e5b">terhubung</span>'
+            baris += (
+                f"<tr><td>{nama_esc}</td><td>{status}</td><td>"
+                f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center">'
+                f'<input type="hidden" name="aksi" value="akun_murid_hapus">'
+                f'<input type="hidden" name="nama" value="{nama_esc}">'
+                f'<button type="submit" style="padding:.3rem .6rem;font-size:.8rem;background:#c2352b">Hapus</button>'
+                f"</form> "
+                f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center;margin-left:.4rem">'
+                f'<input type="hidden" name="aksi" value="akun_murid_sandi">'
+                f'<input type="hidden" name="nama" value="{nama_esc}">'
+                f'<input type="password" name="baru" placeholder="sandi baru" required style="width:130px;padding:.3rem .5rem;font-size:.85rem">'
+                f'<button type="submit" style="padding:.3rem .6rem;font-size:.8rem">Setel sandi baru</button>'
+                f"</form>"
+                f"</td></tr>"
+            )
+    else:
+        baris = '<tr><td colspan="3" class="kosong">belum ada akun murid</td></tr>'
+
+    if daftar_siswa:
+        opsi = "".join(
+            f'<option value="{html.escape(s["nama"])}">{html.escape(s["nama"])}</option>'
+            for s in daftar_siswa
+        )
+        pilih = f'<select name="nama" required><option value="">— pilih siswa —</option>{opsi}</select>'
+        dis = ""
+    else:
+        pilih = '<select name="nama" disabled><option>belum ada siswa</option></select>'
+        dis = " disabled"
+
+    tambah = (
+        f'<form method="post" action="/akun" style="margin-top:.8rem">'
+        f'<input type="hidden" name="aksi" value="akun_murid_tambah">'
+        f'<div class="baris">'
+        f"<div><label>Siswa</label>"
+        f"{pilih}</div>"
+        f'<div><label>Sandi baru (minimal 8 karakter)</label>'
+        f'<input type="password" name="sandi" placeholder="sandi untuk murid" required minlength="8">'
+        f"</div></div>"
+        f'<p style="margin-top:.6rem"><button type="submit"{dis}>Tambah akun murid</button></p>'
+        f"</form>"
+    )
+
+    return (
+        f'<div class="kartu"><h2>Akun murid</h2>'
+        f"<p class=\"sub\">Akun murid dipakai anak untuk masuk ke /murid. "
+        f"Nama akun harus sama persis dengan nama siswa — kalau tidak, anak tidak bisa masuk meski sandi benar.</p>"
+        f"<table><tr><th>Nama</th><th>Status</th><th>Aksi</th></tr>{baris}</table>"
+        f"{tambah}"
+        f"</div>"
     )
 
 
@@ -386,7 +539,18 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
     bisa dibangun ulang.
     """
     daftar = "".join(
-        f'<tr><td>{html.escape(s["nama"])}</td><td>{s["tingkat"]}</td>'
+        f'<tr><td>{html.escape(s["nama"])}</td>'
+        f'<td><form method="post" action="/akun" style="display:flex;gap:.4rem">'
+        f'<input type="hidden" name="aksi" value="tingkat">'
+        f'<input type="hidden" name="siswa_id" value="{s["id"]}">'
+        f'<select name="tingkat" style="width:auto">'
+        + "".join(
+            f'<option value="{lv}"{" selected" if lv == s["tingkat"] else ""}>{lv}</option>'
+            for lv in LEVEL
+        )
+        + '</select>'
+        f'<button type="submit" style="padding:.3rem .7rem;font-size:.85rem">'
+        f"Simpan</button></form></td>"
         f'<td class="angka">'
         f'{kon.execute("SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (s["id"],)).fetchone()["n"]}'
         f"</td></tr>"
@@ -401,7 +565,13 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         )
 
     d = sandi.muat_sandi()
-    pengguna = html.escape(d["pengguna"]) if d else "(belum disetel)"
+    if not d:
+        pengguna = "(belum disetel)"
+    elif "akun" in d:
+        g = next((a for a in d["akun"] if a.get("peran") == "guru"), None)
+        pengguna = html.escape(g["pengguna"]) if g else "(belum disetel)"
+    else:
+        pengguna = html.escape(d["pengguna"])
 
     return _halaman(
         "Akun",
@@ -430,11 +600,17 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<div><label>Nama siswa baru</label>'
         f'<input type="text" name="nama" placeholder="nama panggilan saja" required></div>'
         f'<div><label>Tingkat</label>'
-        f'<input type="text" name="tingkat" value="P3"></div></div>'
+        f'<select name="tingkat">'
+        + "".join(
+            f'<option value="{lv}"{" selected" if lv == LEVEL_BAWAAN else ""}>{lv}</option>'
+            for lv in LEVEL
+        )
+        + f"</select></div></div>"
         f'<p class="sub" style="margin-top:.5rem">Pakai nama panggilan atau '
         f"inisial, bukan nama lengkap — mengurangi dampak bila basis data ini "
         f"bocor.</p>"
         f'<button type="submit">Tambah siswa</button></form></div>'
+        f'{_kartu_akun_murid(kon)}'
         f'<div class="kartu"><h2>Catatan</h2>'
         f'<p class="sub">Siswa sengaja tidak bisa dihapus dari sini. Menghapus '
         f"siswa ikut menghapus seluruh sesi, jawaban, dan diagnosisnya — "
@@ -479,12 +655,17 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
 
     if aksi == "siswa":
         nama = data.get("nama", "").strip()
-        tingkat = data.get("tingkat", "P3").strip() or "P3"
+        tingkat = data.get("tingkat", LEVEL_BAWAAN).strip() or LEVEL_BAWAAN
 
         if not nama:
             return "", "Nama siswa tidak boleh kosong."
         if len(nama) > 40:
             return "", "Nama terlalu panjang."
+        # Level divalidasi terhadap daftar tertutup. Tanpa ini, salah ketik
+        # ("p4", "kelas 4") diam-diam jatuh ke profil P3 lewat `profil()`,
+        # dan guru mengira anaknya dapat soal P4 padahal tidak.
+        if not level_valid(tingkat):
+            return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
         sudah = kon.execute(
             "SELECT 1 FROM siswa WHERE lower(nama) = lower(?)", (nama,)
         ).fetchone()
@@ -492,18 +673,97 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
             return "", f"Siswa bernama {nama} sudah ada."
 
         basis.tambah_siswa(kon, nama, tingkat)
-        return f"Siswa {nama} ditambahkan.", ""
+        return f"Siswa {nama} ditambahkan ({tingkat}).", ""
+
+    if aksi == "tingkat":
+        # Menaikkan level anak. Sesi LAMA tidak ikut berubah — levelnya
+        # tersimpan di baris sesi masing-masing, jadi riwayat tetap terbaca
+        # apa adanya. Yang berubah hanya sesi yang dibuat setelah ini.
+        try:
+            siswa_id = int(data.get("siswa_id", ""))
+        except ValueError:
+            return "", "Siswa tidak dikenal."
+        tingkat = data.get("tingkat", "").strip()
+        if not level_valid(tingkat):
+            return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
+        baris = kon.execute(
+            "SELECT nama FROM siswa WHERE id = ?", (siswa_id,)
+        ).fetchone()
+        if not baris:
+            return "", "Siswa tidak dikenal."
+        kon.execute(
+            "UPDATE siswa SET tingkat = ? WHERE id = ?", (tingkat, siswa_id)
+        )
+        return (
+            f"{baris['nama']} sekarang {tingkat}. Sesi lama tetap pada "
+            f"levelnya masing-masing; yang berubah hanya sesi berikutnya.",
+            "",
+        )
+
+    if aksi == "akun_murid_tambah":
+        nama = data.get("nama", "").strip()
+        sandi_baru = data.get("sandi", "")
+        # kalau form lama masih mengirim "baru", dukung juga
+        if not sandi_baru:
+            sandi_baru = data.get("baru", "")
+        if not nama:
+            return "", "Nama tidak boleh kosong."
+        # nama WAJIB sama persis dengan siswa
+        ada = kon.execute(
+            "SELECT 1 FROM siswa WHERE nama = ? COLLATE NOCASE", (nama,)
+        ).fetchone()
+        if not ada:
+            return "", f"Siswa bernama {nama} tidak ditemukan."
+        if len(sandi_baru) < 8:
+            return "", "Sandi murid minimal 8 karakter."
+        try:
+            sandi.tambah_akun(nama, sandi_baru, "murid")
+        except ValueError as e:
+            return "", str(e)
+        return f"Akun murid {nama} ditambahkan.", ""
+
+    if aksi == "akun_murid_hapus":
+        nama = data.get("nama", "").strip()
+        if not nama:
+            return "", "Nama tidak boleh kosong."
+        ok = sandi.hapus_akun(nama)
+        if not ok:
+            return "", f"Akun {nama} tidak ditemukan."
+        return f"Akun murid {nama} dihapus.", ""
+
+    if aksi == "akun_murid_sandi":
+        nama = data.get("nama", "").strip()
+        baru = data.get("baru", "")
+        if not nama:
+            return "", "Nama tidak boleh kosong."
+        if len(baru) < 8:
+            return "", "Sandi murid minimal 8 karakter."
+        ok = sandi.setel_sandi_murid(nama, baru)
+        if not ok:
+            return "", f"Akun {nama} tidak ditemukan."
+        return f"Sandi {nama} diperbarui.", ""
 
     return "", "Aksi tidak dikenal."
 
 
-def buat_sesi_seed_baru(kon, siswa_id: int) -> int:
+def buat_sesi_seed_baru(kon, siswa_id: int, level: str | None = None) -> int:
     """Sesi baru dengan seed yang belum pernah dipakai siswa ini.
 
     Mengulang seed berarti mengulang soal yang persis sama — anak bisa
     mengingat jawabannya, dan diagnosisnya berubah jadi menilai hafalan,
     bukan pemahaman.
+
+    Level diambil dari tingkat siswa kalau tidak disebut. Inilah yang membuat
+    kolom `siswa.tingkat` akhirnya berarti: sebelum ini kolom itu tersimpan
+    rapi dan tidak pernah dibaca siapa pun, sehingga mengubahnya jadi P4
+    tidak mengubah satu soal pun.
     """
+    if level is None:
+        baris = kon.execute(
+            "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
+        ).fetchone()
+        level = baris["tingkat"] if baris else LEVEL_BAWAAN
+
     dipakai = {
         r["seed"]
         for r in kon.execute(
@@ -513,7 +773,7 @@ def buat_sesi_seed_baru(kon, siswa_id: int) -> int:
     for _ in range(500):
         seed = random.randint(1, 9_999_999)
         if seed not in dipakai:
-            return basis.buat_sesi(kon, siswa_id, seed)
+            return basis.buat_sesi(kon, siswa_id, seed, level=level)
     raise RuntimeError("gagal menemukan seed baru")
 
 
@@ -534,10 +794,18 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
         return None
 
     soal = [_soal_dari_baris(b) for b in basis.isi_sesi(kon, sesi_id)]
+    # Lembar yang sama, dua tampilan (Fase 3): di web ia dibaca dari layar,
+    # jadi dipakai gaya layar — kartu sentuh, tanpa satuan mm. Versi cetak
+    # tetap keluar lewat tombol cetak browser (@media print di gaya layar
+    # menurunkan dirinya ke perilaku kertas).
+    from gaya_layar import GAYA_LAYAR
+
     if untuk_guru:
-        isi = cetak.lembar_penilaian(soal, info["nama"], info["tanggal"], info["seed"])
+        isi = cetak.lembar_penilaian(
+            soal, info["nama"], info["tanggal"], info["seed"], gaya=GAYA_LAYAR
+        )
     else:
-        isi = cetak.lembar_soal(soal, info["nama"], info["tanggal"])
+        isi = cetak.lembar_soal(soal, info["nama"], info["tanggal"], gaya=GAYA_LAYAR)
     return isi.encode()
 
 
@@ -581,6 +849,12 @@ class Penangan(BaseHTTPRequestHandler):
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
         try:
             with basis.buka() as kon:
+                # ── rute murid (Fase 4) ──
+                # Palang peran di sini, SEBELUM satu pun fungsi halaman
+                # dipanggil. Halaman guru memuat kunci & diagnosis; akun
+                # murid tidak boleh membacanya walau menebak alamat.
+                if jalur == "/murid" or jalur.startswith("/murid/"):
+                    return self._rute_murid_get(kon, jalur, self.path)
                 if jalur == "/":
                     return self._kirim(halaman_utama(kon))
                 if jalur.startswith("/sesi/"):
@@ -599,10 +873,108 @@ class Penangan(BaseHTTPRequestHandler):
             pass
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
+    def _rute_murid_get(self, kon, jalur: str, jalur_penuh: str = "") -> None:
+        """Rute /murid — hanya akun berperan murid.
+
+        Guru sengaja TIDAK bisa membuka halaman murid: halamannya memuat
+        form jawaban atas nama anak, dan guru mengerjakan lewat rutenya
+        sendiri. Kredensial salah/peran salah -> 401, bukan 404 — supaya
+        anak yang salah ketik sandi tidak mengira situsnya rusak.
+        """
+        import murid
+
+        kredensial = sandi.dari_header(self.headers.get("Authorization"))
+        if not kredensial or not sandi.periksa_peran(
+            *kredensial, "murid"
+        ):
+            return self._kirim(
+                _halaman(
+                    "Perlu masuk",
+                    "<h1>Halaman murid</h1>"
+                    "<p>Masuk dengan akun muridmu (nama &amp; sandi dari gurumu).</p>",
+                ),
+                401,
+            )
+        siswa_id = murid.siswa_dari_akun(kon, kredensial[0])
+        if siswa_id is None:
+            nama = html.escape(kredensial[0])
+            return self._kirim(
+                _halaman(
+                    "Belum terhubung",
+                    f"<h1>Halo, {nama}</h1>"
+                    "<p>Akunmu belum dihubungkan ke daftar siswa. "
+                    "Minta gurumu menyiapkannya.</p>",
+                )
+            )
+        if jalur == "/murid":
+            return self._kirim(murid.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
+        bagian = jalur.split("/")
+        # /murid/kerjakan/<id>
+        if len(bagian) >= 3 and bagian[2] == "kerjakan":
+            # Jumlah tersimpan datang dari pengalihan setelah POST. Nilainya
+            # dari URL, jadi tidak dipercaya: dibatasi ke bilangan bulat wajar
+            # dan hanya dipakai untuk kalimat konfirmasi, tidak menyentuh data.
+            tersimpan = 0
+            if jalur_penuh:
+                q = urllib.parse.parse_qs(
+                    urllib.parse.urlparse(jalur_penuh).query
+                )
+                try:
+                    tersimpan = max(0, min(99, int(q.get("tersimpan", ["0"])[0])))
+                except (ValueError, TypeError):
+                    tersimpan = 0
+            isi = murid.halaman_kerja(kon, siswa_id, int(bagian[3]), tersimpan)
+            if isi is None:
+                return self._kirim(
+                    _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
+                )
+            return self._kirim(isi)
+        self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+
     def do_POST(self) -> None:  # noqa: N802
         if not self._lolos_sandi():
             return
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
+
+        # ── simpan jawaban murid (Fase 4) ──
+        if jalur.startswith("/murid/kerjakan/"):
+            import murid
+
+            kredensial = sandi.dari_header(self.headers.get("Authorization"))
+            if not kredensial or not sandi.periksa_peran(*kredensial, "murid"):
+                return self._kirim(
+                    _halaman("Perlu masuk", "<h1>Halaman murid</h1>"), 401
+                )
+            panjang = int(self.headers.get("Content-Length", 0))
+            mentah = self.rfile.read(panjang).decode("utf-8")
+            data = {
+                k: v[0]
+                for k, v in urllib.parse.parse_qs(
+                    mentah, keep_blank_values=True
+                ).items()
+            }
+            sesi_id = int(jalur.split("/")[3])
+            with basis.buka() as kon:
+                siswa_id = murid.siswa_dari_akun(kon, kredensial[0])
+                hasil = (
+                    murid.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
+                    if siswa_id is not None
+                    else None
+                )
+            if hasil is None:
+                return self._kirim(
+                    _halaman("403", "<h1>Bukan sesimu</h1>"), 403
+                )
+            # Balik ke lembar kerja yang sama lewat 303 + parameter jumlah,
+            # bukan menampilkan halaman langsung: pengalihan mencegah
+            # pengiriman ganda kalau anak menekan muat-ulang.
+            self.send_response(303)
+            self.send_header(
+                "Location", f"/murid/kerjakan/{sesi_id}?tersimpan={hasil}"
+            )
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
 
         if jalur == "/akun":
             panjang = int(self.headers.get("Content-Length", 0))
@@ -618,6 +990,17 @@ class Penangan(BaseHTTPRequestHandler):
             with basis.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna)
                 return self._kirim(halaman_akun(kon, pesan, galat))
+
+        if jalur.startswith("/cerita/"):
+            import llm
+
+            try:
+                sesi_id = int(jalur.split("/")[2])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            with basis.buka() as kon:
+                _, _, catatan = llm.bungkus_sesi(kon, sesi_id, _soal_dari_baris)
+                return self._kirim(halaman_sesi(kon, sesi_id, catatan))
 
         if jalur.startswith("/sesi-baru/"):
             try:

@@ -190,3 +190,147 @@ def test_pesan_galat_di_escape(siap):
 
     assert "<b>X</b>" not in h
     assert "&lt;b&gt;" in h
+
+
+# ── Akun murid (plan 2026-08-25) ──────────────────────────────────────
+
+
+def test_kartu_akun_murid_tampil_dan_memuat_nama(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Sinta")
+        sandi.tambah_akun("Sinta", "rahasia-sinta-123", "murid")
+        h = web.halaman_akun(kon).decode()
+    assert "Akun murid" in h
+    assert "Sinta" in h
+
+
+def test_akun_tidak_cocok_ditandai_belum_terhubung(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Andi")
+        sandi.tambah_akun("Hantu", "rahasia-hantu-123", "murid")
+        h = web.halaman_akun(kon).decode()
+    assert "Hantu" in h
+    assert "belum terhubung ke siswa" in h.lower()
+
+
+def test_tambah_akun_murid_berhasil(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Budi")
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Budi", "sandi": "rahasia-budi-123",
+        }, "guru")
+        assert not galat, galat
+        assert "ditambahkan" in pesan.lower()
+    assert sandi.periksa_peran("Budi", "rahasia-budi-123", "murid") is True
+
+
+def test_tambah_akun_murid_nama_ganda_galat(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Citra")
+        web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Citra", "sandi": "rahasia-citra-123",
+        }, "guru")
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Citra", "sandi": "rahasia-lain-123",
+        }, "guru")
+    assert not pesan
+    assert galat  # ValueError ditangkap jadi galat, bukan 500
+    assert "sudah dipakai" in galat.lower() or "sudah ada" in galat.lower() or "ganda" in galat.lower() or "dipakai" in galat.lower()
+
+
+def test_tambah_akun_murid_sandi_pendek_ditolak(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Dina")
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Dina", "sandi": "pendek",
+        }, "guru")
+        assert not pesan
+        assert "8 karakter" in galat
+    assert not sandi.periksa_peran("Dina", "pendek", "murid")
+
+
+def test_hapus_akun_murid(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Eka")
+        web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Eka", "sandi": "rahasia-eka-12345",
+        }, "guru")
+        assert sandi.periksa_peran("Eka", "rahasia-eka-12345", "murid") is True
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_hapus", "nama": "Eka",
+        }, "guru")
+        assert not galat, galat
+        assert "dihapus" in pesan.lower()
+    assert sandi.periksa_peran("Eka", "rahasia-eka-12345", "murid") is False
+
+
+def test_setel_sandi_murid(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Fani")
+        web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Fani", "sandi": "lama-fani-12345",
+        }, "guru")
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_sandi", "nama": "Fani", "baru": "baru-fani-67890",
+        }, "guru")
+        assert not galat, galat
+        assert "diperbarui" in pesan.lower() or "sandi" in pesan.lower()
+    assert not sandi.periksa_peran("Fani", "lama-fani-12345", "murid")
+    assert sandi.periksa_peran("Fani", "baru-fani-67890", "murid") is True
+
+
+def test_sandi_murid_tidak_muncul_di_html(siap):
+    rahasia = "super-rahasia-murid-999"
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Gina")
+        web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Gina", "sandi": rahasia,
+        }, "guru")
+        h = web.halaman_akun(kon).decode()
+    assert rahasia not in h
+    assert rahasia not in sandi.BERKAS_SANDI.read_text() or rahasia not in h  # hash, bukan teks
+    # pastikan berkas sandi di disk tidak bocor ke HTML (cek kunci/garam juga tidak ada)
+    d = sandi.muat_sandi()
+    # bentuk multi-akun: cari akun Gina
+    akun = sandi.cari_akun("Gina")
+    assert akun is not None
+    assert akun["kunci"] not in h
+    # nama murid di-escape
+    with basis.buka(siap) as kon:
+        # bersihkan dulu: buat siswa dan akun dengan karakter khusus
+        # pakai DB baru (siap fixture tiap test sudah fresh), jadi buat ulang
+        basis.tambah_siswa(kon, "<b>Hacker</b>")
+        # akun murid dengan nama yang sama — harus di-escape di HTML
+        sandi.tambah_akun("<b>Hacker</b>", "rahasia-hacker-123", "murid")
+        h2 = web.halaman_akun(kon).decode()
+    assert "<b>Hacker</b>" not in h2
+    assert "&lt;b&gt;Hacker&lt;/b&gt;" in h2
+
+
+def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):
+    """Regresi: begitu satu akun murid dibuat, berkas sandi berubah jadi
+    bentuk multi-akun. `periksa()` sempat membaca d["pengguna"] yang tidak
+    ada di bentuk itu dan melempar KeyError — guru TIDAK BISA mengganti
+    sandinya sama sekali, halaman akun langsung 500.
+
+    Lolos dari seluruh test sebelumnya karena tidak ada yang menguji
+    URUTAN-nya: tambah murid dulu, baru guru ganti sandi.
+    """
+    sandi.simpan_sandi("sandi-guru-lama1", "guru")
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Feby")
+        web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Feby", "sandi": "rahasia8",
+        }, "guru")
+
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "sandi", "lama": "sandi-guru-lama1",
+            "baru": "sandi-guru-baru1", "ulang": "sandi-guru-baru1",
+        }, "guru")
+
+    assert not galat, f"guru gagal ganti sandi: {galat}"
+    assert pesan
+    assert sandi.periksa("guru", "sandi-guru-baru1")
+    assert not sandi.periksa("guru", "sandi-guru-lama1")
+    # dan akun murid tidak boleh ikut hilang
+    assert sandi.periksa_peran("Feby", "rahasia8", "murid")

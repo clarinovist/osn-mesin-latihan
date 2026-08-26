@@ -50,7 +50,23 @@ def test_tiap_lembar_punya_dua_belas_soal():
 
 
 def test_semua_template_terdaftar_di_urutan_lembar():
-    assert set(REGISTRI) == set(URUTAN_LEMBAR)
+    """Tiap template harus terpakai di setidaknya satu level.
+
+    Dulu ini berbunyi `set(REGISTRI) == set(URUTAN_LEMBAR)`, karena semua
+    template memang muncul di satu-satunya lembar yang ada. Sejak Bagian F
+    lahir, template P4+ sengaja TIDAK ada di lembar P3 — jadi yang dijaga
+    sekarang: tidak ada template yatim (terdaftar tapi tak pernah dipakai),
+    dan tidak ada nama di komposisi yang tidak punya implementasi.
+    """
+    from templates import URUTAN_PER_LEVEL
+
+    terpakai = {t for urutan in URUTAN_PER_LEVEL.values() for t in urutan}
+
+    yatim = set(REGISTRI) - terpakai
+    assert not yatim, f"template tidak pernah dipakai di level mana pun: {yatim}"
+
+    hantu = terpakai - set(REGISTRI)
+    assert not hantu, f"komposisi menyebut template yang tidak ada: {hantu}"
 
 
 # ── Kunci: dihitung ulang secara independen ─────────────────────────────

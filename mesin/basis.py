@@ -13,8 +13,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from generator import buat_lembar
-from skema import SKEMA
+from generator import LEVEL_BAWAAN, buat_lembar
+from skema import MIGRASI, SKEMA, VIEW_USANG
 from templates import Soal
 
 # Lokasi basis data bisa disetel lewat lingkungan, seperti berkas sandi.
@@ -46,8 +46,43 @@ def buka(path: Path | str = BAWAAN) -> Iterator[sqlite3.Connection]:
 
 
 def siapkan(path: Path | str = BAWAAN) -> None:
+    """Buat/segarkan skema. Aman dijalankan berulang.
+
+    Urutannya penting: view usang dibuang DULU, lalu kolom baru ditambahkan,
+    baru SKEMA dijalankan untuk membangun ulang view dengan definisi terkini.
+    Kalau view dibangun sebelum kolomnya ada, SQLite menerimanya (view tidak
+    divalidasi saat dibuat) lalu gagal saat pertama kali dibaca — kegagalan
+    yang muncul di halaman laporan, jauh dari penyebabnya.
+    """
     with buka(path) as kon:
+        for nama in VIEW_USANG:
+            kon.execute(f"DROP VIEW IF EXISTS {nama}")
+        migrasi(kon)
         kon.executescript(SKEMA)
+
+
+def migrasi(kon: sqlite3.Connection) -> list[str]:
+    """Tambahkan kolom yang belum ada. Mengembalikan yang benar-benar dijalankan.
+
+    SQLite tidak punya "ADD COLUMN IF NOT EXISTS", jadi kolomnya diperiksa
+    lewat PRAGMA table_info. Tabel yang belum ada dilewati — SKEMA akan
+    membuatnya lengkap sesaat kemudian.
+    """
+    dijalankan: list[str] = []
+    for tabel, kolom, pernyataan in MIGRASI:
+        ada_tabel = kon.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (tabel,)
+        ).fetchone()
+        if not ada_tabel:
+            continue
+        kolom_ada = {
+            r["name"] for r in kon.execute(f"PRAGMA table_info({tabel})").fetchall()
+        }
+        if kolom in kolom_ada:
+            continue
+        kon.execute(pernyataan)
+        dijalankan.append(f"{tabel}.{kolom}")
+    return dijalankan
 
 
 # ── Siswa ───────────────────────────────────────────────────────────────
@@ -82,8 +117,8 @@ def simpan_soal(kon: sqlite3.Connection, soal: Soal) -> int:
 
     cur = kon.execute(
         """INSERT INTO soal (tanda_tangan, template_id, parameter, kunci,
-                             bagian, tantangan)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+                             bagian, tantangan, level)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
         (
             soal.tanda_tangan,
             soal.template_id,
@@ -91,6 +126,7 @@ def simpan_soal(kon: sqlite3.Connection, soal: Soal) -> int:
             soal.kunci,
             soal.bagian,
             int(soal.tantangan),
+            soal.level,
         ),
     )
     soal_id = int(cur.lastrowid)
@@ -120,19 +156,21 @@ def buat_sesi(
     seed: int,
     topik: str = "pola bilangan",
     tanggal: str | None = None,
+    level: str = LEVEL_BAWAAN,
 ) -> int:
     """Bangkitkan lembar dari seed, simpan soalnya ke bank, rangkai jadi sesi."""
-    lembar = buat_lembar(seed)
+    lembar = buat_lembar(seed, level=level)
 
     if tanggal:
         cur = kon.execute(
-            "INSERT INTO sesi (siswa_id, seed, topik, tanggal) VALUES (?, ?, ?, ?)",
-            (siswa_id, seed, topik, tanggal),
+            """INSERT INTO sesi (siswa_id, seed, topik, level, tanggal)
+               VALUES (?, ?, ?, ?, ?)""",
+            (siswa_id, seed, topik, level, tanggal),
         )
     else:
         cur = kon.execute(
-            "INSERT INTO sesi (siswa_id, seed, topik) VALUES (?, ?, ?)",
-            (siswa_id, seed, topik),
+            "INSERT INTO sesi (siswa_id, seed, topik, level) VALUES (?, ?, ?, ?)",
+            (siswa_id, seed, topik, level),
         )
     sesi_id = int(cur.lastrowid)
 
@@ -150,7 +188,7 @@ def isi_sesi(kon: sqlite3.Connection, sesi_id: int) -> list[sqlite3.Row]:
     return kon.execute(
         """SELECT ss.id AS sesi_soal_id, ss.nomor,
                   s.id AS soal_id, s.template_id, s.parameter, s.kunci,
-                  s.bagian, s.tantangan,
+                  s.bagian, s.tantangan, s.level, s.cerita,
                   j.id AS jawaban_id, j.restatement, j.cara, j.jawaban,
                   j.belum_pernah, j.detik,
                   d.benar, d.kode_usulan, d.kode_final, d.malrule_id,

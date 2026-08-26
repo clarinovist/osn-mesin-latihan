@@ -63,3 +63,6 @@ mesin/sandi.json
 # Rencana kerja memuat detail internal (lihat AGENTS.md project polyflow untuk
 # alasan yang sama): tetap lokal.
 docs/plan/
+
+# Knowledge graph graphify — artefak lokal, dibangkitkan ulang.
+graphify-out/
