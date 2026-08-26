@@ -66,3 +66,9 @@ docs/plan/
 
 # Knowledge graph graphify — artefak lokal, dibangkitkan ulang.
 graphify-out/
+
+# Dokumen turunan: PDF/HTML hasil ekspor dari .md sumber.
+PRD.pdf
+Rencana Produk - Peta Jalan.pdf
+Rencana Produk - Peta Jalan.html
+Rencana Spike - Coretan ke Diagnosis.html
