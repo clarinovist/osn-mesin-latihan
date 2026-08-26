@@ -28,7 +28,7 @@ COPY --chown=osn:osn templates.py generator.py skema.py basis.py \
      diagnosa.py cetak.py web.py sandi.py sajikan.py buat_lembar.py \
      siapkan_db.py periksa_sehat.py \
      render.py gaya_layar.py gaya_cetak.py \
-     murid.py llm.py /app/
+     murid.py llm.py sesi.py /app/
 
 # Basis data & sandi tinggal di volume supaya selamat saat container diganti.
 ENV OSN_BERKAS_SANDI=/data/sandi.json \

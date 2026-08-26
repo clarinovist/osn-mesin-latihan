@@ -42,6 +42,11 @@ BERKAS_SANDI = Path(
 # login, tapi mahal bila dicoba jutaan kali.
 _ITERASI = 600_000
 
+# Garam/kunci umpan untuk jalur akun-tak-dikenal agar waktu tetap.
+# Nilai konstan ini membuat PBKDF2 tetap dijalankan walau nama tidak ada.
+_UMPAN_GARAM = bytes.fromhex("aa" * 16)
+_UMPAN_KUNCI = bytes.fromhex("bb" * 32)
+
 
 def buat_hash(sandi: str) -> dict:
     garam = secrets.token_bytes(16)
@@ -128,6 +133,9 @@ def periksa(pengguna: str, sandi: str, data: dict | None = None) -> bool:
                     d = a
                     break
             if d is None:
+                # waktu-tetap: jalankan PBKDF2 umpan supaya durasi serupa
+                _ = hashlib.pbkdf2_hmac("sha256", sandi.encode(), _UMPAN_GARAM, _ITERASI, dklen=32)
+                hmac.compare_digest(_, _UMPAN_KUNCI)
                 return False
         else:
             d = mentah
@@ -234,6 +242,8 @@ def periksa_peran(
     """
     a = cari_akun(pengguna, path)
     if not a:
+        _ = hashlib.pbkdf2_hmac("sha256", sandi_diberikan.encode(), _UMPAN_GARAM, _ITERASI, dklen=32)
+        hmac.compare_digest(_, _UMPAN_KUNCI)
         return False
     if not periksa(a["pengguna"], sandi_diberikan, data=a):
         return False
@@ -247,6 +257,8 @@ def peran_dari(
     melayani dua peran sekaligus."""
     a = cari_akun(pengguna, path)
     if not a:
+        _ = hashlib.pbkdf2_hmac("sha256", sandi_diberikan.encode(), _UMPAN_GARAM, _ITERASI, dklen=32)
+        hmac.compare_digest(_, _UMPAN_KUNCI)
         return None
     if not periksa(a["pengguna"], sandi_diberikan, data=a):
         return None

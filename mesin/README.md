@@ -82,6 +82,15 @@ cd ~/Documents/osn/mesin
 Basis data lokal terpisah dari VPS. Pakai salah satu saja supaya datanya
 tidak bercabang.
 
+## Masuk & akun
+
+Buka **/masuk**, isi nama & sandi. Sesi disimpan sebagai kuki HttpOnly
+(`osn_sesi`, TTL 14 hari, SameSite=Lax, Secure di produksi) — tidak ada
+popup peramban. Keluar lewat tombol **Keluar** (POST /keluar) yang menghapus
+sesi di server dan kuki di peramban. Percobaan masuk yang gagal dibatasi
+5 kali / 15 menit per nama+IP; akun yang tidak ada tetap menjalankan PBKDF2
+umpan (~120 ms) sehingga tidak dapat dibedakan lewat waktu respons.
+
 ## Akun & siswa
 
 Tautan **"Akun & siswa"** di halaman utama:
@@ -125,6 +134,7 @@ seed, jadi selalu sama persis.
 | `web.py` | halaman guru & murid + rute lembar |
 | `murid.py` | halaman kerja murid — tanpa kunci/malrule/diagnosis (palang test) |
 | `llm.py` | klien DeepSeek untuk variasi cerita — gagal-diam tanpa key |
+| `sesi.py` | sesi cookie (berkas JSON atomik, TTL 14 hari, rate-limit) |
 | `sandi.py` | palang sandi, akun ber-peran guru/murid |
 | `sajikan.py` | menjalankan server |
 | `cadangkan.sh` | tarik cadangan basis data dari VPS ke Mac |

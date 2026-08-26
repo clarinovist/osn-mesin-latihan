@@ -30,8 +30,16 @@ BAWAAN = Path(
 
 
 @contextmanager
-def buka(path: Path | str = BAWAAN) -> Iterator[sqlite3.Connection]:
-    """Koneksi dengan foreign key aktif dan transaksi otomatis."""
+def buka(path: Path | str | None = None) -> Iterator[sqlite3.Connection]:
+    """Koneksi dengan foreign key aktif dan transaksi otomatis.
+
+    Default dibaca DI BADAN fungsi, bukan sebagai nilai argumen bawaan:
+    nilai argumen terikat saat definisi, sehingga test yang mengganti
+    BAWAAN lewat monkeypatch tidak akan berpengaruh pada pemanggilan
+    buka() tanpa argumen dari kode halaman.
+    """
+    if path is None:
+        path = BAWAAN
     kon = sqlite3.connect(str(path))
     kon.row_factory = sqlite3.Row
     kon.execute("PRAGMA foreign_keys = ON")

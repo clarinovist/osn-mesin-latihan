@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler
 import basis
 import cetak
 import sandi
+import sesi
 from diagnosa import diagnosa
 from generator import LEVEL_BAWAAN, buat_soal
 from templates import LEVEL, REGISTRI, Soal, level_valid
@@ -205,7 +206,9 @@ def halaman_utama(kon) -> bytes:
         "Mesin Latihan",
         "<h1>Mesin Latihan Pola Bilangan</h1>"
         '<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
-        'untuk melihat tren. &middot; <a href="/akun">Akun &amp; siswa</a></p>'
+        'untuk melihat tren. &middot; <a href="/akun">Akun &amp; siswa</a> &middot; '
+        '<form method="post" action="/keluar" style="display:inline"><button type="submit" '
+        'style="padding:.2rem .6rem;font-size:.85rem;background:#777">Keluar</button></form></p>'
         + "".join(baris),
     )
 
@@ -580,7 +583,7 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f"{kabar}"
         f'<div class="kartu"><h2>Ganti sandi</h2>'
         f'<p class="sub">Pengguna saat ini: <b>{pengguna}</b>. Setelah diganti, '
-        f"peramban akan meminta sandi baru saat halaman dimuat ulang.</p>"
+        f"masuk lagi dengan sandi baru.</p>"
         f'<form method="post" action="/akun">'
         f'<input type="hidden" name="aksi" value="sandi">'
         f"<label>Sandi lama</label>"
@@ -648,8 +651,7 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
 
         sandi.simpan_sandi(baru, pengguna_kini)
         return (
-            "Sandi diganti. Peramban akan meminta sandi baru saat halaman "
-            "berikutnya dimuat.",
+            "Sandi diganti. Masuk lagi dengan sandi baru.",
             "",
         )
 
@@ -817,26 +819,80 @@ class Penangan(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(isi)
 
-    def _lolos_sandi(self) -> bool:
-        """Palang sandi. Dilewati kalau berkas sandi tidak ada (mode lokal).
+    def _ambil_token(self) -> str | None:
+        import http.cookies
 
-        Diperiksa di SETIAP permintaan, termasuk POST — bukan hanya di
-        halaman depan. Palang yang hanya menjaga GET akan membiarkan orang
-        mengirim data langsung ke /sesi/<id>.
+        raw = self.headers.get("Cookie", "") or ""
+        try:
+            c = http.cookies.SimpleCookie(raw)
+            m = c.get("osn_sesi")
+            return m.value if m else None
+        except Exception:
+            return None
+
+    def _set_cookie(self, token: str | None) -> str:
+        import http.cookies
+
+        if token is None:
+            return "osn_sesi=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+        c = http.cookies.SimpleCookie()
+        c["osn_sesi"] = token
+        c["osn_sesi"]["path"] = "/"
+        c["osn_sesi"]["httponly"] = True
+        c["osn_sesi"]["samesite"] = "Lax"
+        host = (self.headers.get("Host") or "").split(":")[0].lower()
+        if host not in ("localhost", "127.0.0.1", ""):
+            c["osn_sesi"]["secure"] = True
+        c["osn_sesi"]["max-age"] = str(sesi.TTL_DETIK)
+        return c.output(header="").strip()
+
+    def _kredensial(self):
+        return sandi.dari_header(self.headers.get("Authorization"))
+
+    def _sesi_atau_basic(self, peran_wajib: str | None = None):
+        """Kembalikan (pengguna, peran) bila lolos via cookie ATAU Basic.
+
+        Helper kecil untuk rute murid — dipakai di _rute_murid_get dan
+        POST /murid/kerjakan/. Nilai peran_wajib bila perlu (mis. "murid").
         """
-        if not sandi.wajib_sandi():
-            return True
+        tok = self._ambil_token()
+        if tok:
+            got = sesi.ambil(tok)
+            if got and (peran_wajib is None or got[1] == peran_wajib):
+                return got
+        kred = self._kredensial()
+        if not kred:
+            return None
+        # kred adalah (pengguna, sandi) dari header Basic
+        peran = sandi.peran_dari(*kred)
+        if peran and (peran_wajib is None or peran == peran_wajib):
+            return (kred[0], peran)
+        return None
 
-        kredensial = sandi.dari_header(self.headers.get("Authorization"))
-        if kredensial and sandi.periksa(*kredensial):
+    def _peran_saya(self) -> str | None:
+        if not sandi.wajib_sandi():
+            return "guru"
+        # cookie dulu
+        tok = self._ambil_token()
+        if tok:
+            got = sesi.ambil(tok)
+            if got:
+                return got[1]
+        kred = self._kredensial()
+        if not kred:
+            return None
+        return sandi.peran_dari(*kred)
+
+    def _lolos_sandi(self) -> bool:
+        """Palang guru. Dilewati kalau berkas sandi tidak ada (mode lokal)."""
+        if self._peran_saya() == "guru":
             return True
 
         pesan = _halaman(
             "Perlu masuk",
-            "<h1>Perlu masuk</h1><p>Halaman ini memuat data anak.</p>",
+            '<h1>Perlu masuk</h1><p><a href="/masuk">Masuk</a> untuk melanjutkan.</p>',
         )
         self.send_response(401)
-        self.send_header("WWW-Authenticate", 'Basic realm="Mesin Latihan"')
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(pesan)))
         self.end_headers()
@@ -844,17 +900,26 @@ class Penangan(BaseHTTPRequestHandler):
         return False
 
     def do_GET(self) -> None:  # noqa: N802
+        jalur = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
+        if jalur == "/masuk":
+            galat = ""
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if q.get("galat"):
+                galat = q["galat"][0]
+            # hilangkan sesi lain di URL supaya tidak membingungkan
+            return self._kirim(self._halaman_masuk(galat=galat))
+        if jalur == "/murid" or jalur.startswith("/murid/"):
+            try:
+                with basis.buka() as kon:
+                    return self._rute_murid_get(kon, jalur, self.path)
+            except (ValueError, IndexError):
+                pass
+            self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+            return
         if not self._lolos_sandi():
             return
-        jalur = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
         try:
             with basis.buka() as kon:
-                # ── rute murid (Fase 4) ──
-                # Palang peran di sini, SEBELUM satu pun fungsi halaman
-                # dipanggil. Halaman guru memuat kunci & diagnosis; akun
-                # murid tidak boleh membacanya walau menebak alamat.
-                if jalur == "/murid" or jalur.startswith("/murid/"):
-                    return self._rute_murid_get(kon, jalur, self.path)
                 if jalur == "/":
                     return self._kirim(halaman_utama(kon))
                 if jalur.startswith("/sesi/"):
@@ -883,10 +948,8 @@ class Penangan(BaseHTTPRequestHandler):
         """
         import murid
 
-        kredensial = sandi.dari_header(self.headers.get("Authorization"))
-        if not kredensial or not sandi.periksa_peran(
-            *kredensial, "murid"
-        ):
+        kredensial = self._sesi_atau_basic(peran_wajib="murid")
+        if not kredensial:
             return self._kirim(
                 _halaman(
                     "Perlu masuk",
@@ -931,17 +994,47 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(isi)
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
+    def _halaman_masuk(self, galat: str = "") -> bytes:
+        kabar = f'<div class="pesan" style="background:#fdecea;border-color:#f5b5ae">{html.escape(galat)}</div>' if galat else ""
+        return _halaman(
+            "Masuk",
+            f"<h1>Masuk</h1>{kabar}"
+            '<div class="kartu"><form method="post" action="/masuk">'
+            '<label>Nama</label><input type="text" name="nama" autocomplete="username" required>'
+            '<label>Sandi</label><input type="password" name="sandi" autocomplete="current-password" required>'
+            '<p style="margin-top:.9rem"><button type="submit">Masuk</button></p>'
+            "</form></div>",
+        )
+
+    def _handle_masuk(self, data: dict) -> None:
+        nama = (data.get("nama") or "").strip()
+        pw = data.get("sandi") or ""
+        ip = self.client_address[0] if self.client_address else "unknown"
+        if not nama or not pw:
+            return self._kirim(self._halaman_masuk("Nama dan sandi wajib diisi."))
+        if sesi.sedang_diblokir(nama, ip):
+            return self._kirim(self._halaman_masuk("Terlalu banyak percobaan. Coba lagi 15 menit lagi."), 429)
+        peran = sandi.peran_dari(nama, pw)
+        if not peran:
+            sesi.catat_gagal(nama, ip)
+            return self._kirim(self._halaman_masuk("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
+        sesi.catat_berhasil(nama, ip)
+        token = sesi.buat(nama, peran)
+        tujuan = "/murid" if peran == "murid" else "/"
+        self.send_response(303)
+        self.send_header("Location", tujuan)
+        self.send_header("Set-Cookie", self._set_cookie(token))
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_POST(self) -> None:  # noqa: N802
-        if not self._lolos_sandi():
-            return
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
 
-        # ── simpan jawaban murid (Fase 4) ──
         if jalur.startswith("/murid/kerjakan/"):
             import murid
 
-            kredensial = sandi.dari_header(self.headers.get("Authorization"))
-            if not kredensial or not sandi.periksa_peran(*kredensial, "murid"):
+            kredensial = self._sesi_atau_basic(peran_wajib="murid")
+            if not kredensial:
                 return self._kirim(
                     _halaman("Perlu masuk", "<h1>Halaman murid</h1>"), 401
                 )
@@ -976,6 +1069,26 @@ class Penangan(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
+        # login + logout — terbuka, tanpa palang
+        if jalur == "/masuk":
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            mentah = self.rfile.read(panjang).decode("utf-8") if panjang else ""
+            data = {k: v[0] for k, v in urllib.parse.parse_qs(mentah, keep_blank_values=True).items()}
+            return self._handle_masuk(data)
+        if jalur == "/keluar":
+            tok = self._ambil_token()
+            if tok:
+                sesi.hapus(tok)
+            self.send_response(303)
+            self.send_header("Location", "/masuk")
+            self.send_header("Set-Cookie", self._set_cookie(None))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        if not self._lolos_sandi():
+            return
+
         if jalur == "/akun":
             panjang = int(self.headers.get("Content-Length", 0))
             mentah = self.rfile.read(panjang).decode("utf-8")
@@ -985,7 +1098,7 @@ class Penangan(BaseHTTPRequestHandler):
                     mentah, keep_blank_values=True
                 ).items()
             }
-            kredensial = sandi.dari_header(self.headers.get("Authorization"))
+            kredensial = self._kredensial()
             pengguna = kredensial[0] if kredensial else "guru"
             with basis.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna)

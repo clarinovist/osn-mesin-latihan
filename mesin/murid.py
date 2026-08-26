@@ -230,6 +230,7 @@ def halaman_kerja(
 {"".join(kartu)}
 <div class="simpan-strip"><button type="submit" class="btn">Simpan jawabanku</button></div>
 </form>
+<form method="post" action="/keluar" style="margin-top:1rem"><button class="btn secondary" type="submit">Keluar</button></form>
 </div></body></html>"""
     return isi.encode()
 
@@ -255,6 +256,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sesiku</title><style>{CSS_MURID}</style></head><body><div class="wrap">
 <h1>Halo, {_escape(nama)}</h1>
+<form method="post" action="/keluar" style="margin:.6rem 0"><button class="btn secondary" type="submit">Keluar</button></form>
 {kartu}
 </div></body></html>"""
     return isi.encode()
