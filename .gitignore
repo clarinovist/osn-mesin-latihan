@@ -32,6 +32,7 @@ cache_llm/
 
 # Artefak build/runtime app & skrip (belum ada, disiapkan lebih awal)
 __pycache__/
+.pytest_cache/
 *.pyc
 .venv/
 build/
