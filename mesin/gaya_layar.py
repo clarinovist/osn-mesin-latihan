@@ -48,6 +48,10 @@ h1 {
   margin: 1.6rem 0 0.7rem; padding-bottom: 0.35rem;
   border-bottom: 2px solid #16213e;
 }
+.catatan-bagian {
+  background: #fff7e6; border: 1px solid #ecd9a8; border-radius: 8px;
+  padding: 0.55rem 0.8rem; margin: -0.2rem 0 0.8rem; font-size: 0.92rem;
+}
 
 .soal {
   background: #fff; border: 1px solid #d5d8de; border-radius: 12px;
@@ -60,8 +64,13 @@ h1 {
   margin-right: 0.55rem; font-size: 0.95rem;
 }
 .teks { display: inline; }
-.teks .deret { font-size: 1.25rem; letter-spacing: 0.03em; }
-.tanya { margin-top: 0.6rem; }
+/* Dulu ".teks .deret" (keturunan) — tidak pernah cocok karena render.py
+   menaruh kedua kelas di elemen yang SAMA, jadi deret tidak pernah
+   diperbesar. */
+.teks.deret { font-size: 1.25rem; letter-spacing: 0.03em; }
+/* Pertanyaan utama harus menonjol dari badan soal — dulu ukurannya sama,
+   jadi anak kesulitan menemukan apa yang sebenarnya ditanya. */
+.tanya { margin-top: 0.6rem; font-weight: 700; font-size: 1.06rem; }
 
 .label { font-size: 0.85rem; color: #555; margin: 0.8rem 0 0.35rem; }
 /* Di layar, kotak Caraku dibiarkan kosong polos: anak mengerjakan di

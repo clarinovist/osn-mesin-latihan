@@ -20,6 +20,7 @@ from __future__ import annotations
 import html
 
 from basis import isi_sesi
+from render import CATATAN_BAGIAN, JUDUL_BAGIAN
 from templates import Soal
 
 
@@ -83,7 +84,41 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
     return keluar
 
 
+def _badan_teks(teks: str) -> str:
+    """Pecah teks soal: baris terakhir = pertanyaan (ditonjolkan), sisanya
+    badan soal. Aturan yang sama dengan render._badan_soal untuk teks biasa.
+
+    Tanpa pemecahan ini, pengantar dan pertanyaan menyatu dalam satu div
+    berukuran sama — anak tidak tahu mana yang sebenarnya ditanya.
+    """
+    baris = [b.strip() for b in teks.split("\n") if b.strip()]
+    if len(baris) == 1:
+        return f'<div class="teks">{_escape(baris[0])}</div>'
+    return "".join(
+        f'<div class="{"tanya" if i == len(baris) - 1 else "teks"}">'
+        f"{_escape(b)}</div>"
+        for i, b in enumerate(baris)
+    )
+
+
 CSS_MURID = """
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px; line-height: 1.55; color: #111; margin: 0;
+  background: #f0f1f4;
+}
+.wrap { max-width: 46rem; margin: 0 auto; padding: 1rem 0.9rem 3rem; }
+h1 { font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: #16213e; }
+
+/* Gaya dasar di atas adalah separuh dari perbaikan tampilan berantakan:
+   halaman ini dulu hanya memuat gaya khusus murid, sementara markupnya
+   memakai kelas dasar (.wrap, .soal, .bagian, ...) yang tidak pernah
+   didefinisikan — hasilnya tampil dengan font dan lebar bawaan peramban.
+   Kelas dasar sengaja disalin dari gaya_layar.py, bukan diimpor, supaya
+   halaman murid tetap satu berkas CSS yang bisa dibaca utuh. */
+
 .murid-header { display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; }
 .murid-header h1 { margin: 0; flex: 1; }
 .btn {
@@ -92,6 +127,50 @@ CSS_MURID = """
   text-decoration: none; cursor: pointer;
 }
 .btn.secondary { background: #eef1f6; color: #16213e; border: 1px solid #ccd3dd; }
+
+.petunjuk {
+  background: #eef3fb; border: 1px solid #c4d3ea; border-radius: 10px;
+  padding: 0.9rem 1rem; margin-bottom: 1.2rem; font-size: 0.95rem;
+}
+.petunjuk p { margin: 0 0 0.6rem; }
+.petunjuk p:last-child { margin-bottom: 0; }
+
+.bagian {
+  font-size: 1.05rem; font-weight: 700; color: #16213e;
+  margin: 1.6rem 0 0.7rem; padding-bottom: 0.35rem;
+  border-bottom: 2px solid #16213e;
+}
+.catatan-bagian {
+  background: #fff7e6; border: 1px solid #ecd9a8; border-radius: 8px;
+  padding: 0.55rem 0.8rem; margin: -0.2rem 0 0.8rem; font-size: 0.92rem;
+}
+
+.soal {
+  background: #fff; border: 1px solid #d5d8de; border-radius: 12px;
+  padding: 1rem; margin-bottom: 1rem;
+}
+.nomor {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2rem; height: 2rem; font-weight: 700;
+  border: 2px solid #16213e; border-radius: 50%;
+  margin-right: 0.55rem; font-size: 0.95rem;
+}
+.bintang { font-weight: 700; color: #b8860b; }
+
+/* Pertanyaan utama adalah yang paling penting di kartu, jadi ia harus
+   paling menonjol. Dulu badan soal dan pertanyaan berukuran sama persis —
+   anak membaca ulang semua kalimat untuk mencari apa yang ditanya. */
+.teks { display: block; margin-top: 0.4rem; }
+.tanya {
+  display: block; font-size: 1.12rem; font-weight: 700;
+  margin-top: 0.6rem; color: #16213e;
+}
+
+.label { display: block; font-size: 0.85rem; color: #555; margin: 0.8rem 0 0.35rem; }
+
+.daftar-sesi { display: block; color: inherit; text-decoration: none; }
+.daftar-sesi:hover { border-color: #16213e; }
+
 .soal-murid textarea {
   width: 100%; min-height: 84px; border: 1.5px dashed #99a;
   border-radius: 8px; padding: .6rem; font-size: 1rem; font-family: inherit;
@@ -134,6 +213,19 @@ CSS_MURID = """
   border-radius: 10px; padding: .8rem 1rem; margin-bottom: 1rem;
   font-size: .98rem;
 }
+
+@media print {
+  /* Tombol "Cetak / PDF" di kepala halaman memicu window.print(); di sini
+     halaman menurunkan dirinya ke kertas: kontrol hilang, kartu jadi kotak
+     hitam-putih, soal tidak terpotong antarhalaman. Di dialog cetak, murid
+     memilih "Simpan sebagai PDF" — tidak perlu berkas PDF terpisah. */
+  body { background: #fff; font-size: 10.5pt; }
+  .wrap { max-width: none; padding: 0; }
+  .hanya-layar { display: none; }
+  .soal, .petunjuk { border-color: #000; border-radius: 0; }
+  .soal { break-inside: avoid; }
+  .bagian { break-after: avoid; }
+}
 """
 
 
@@ -151,7 +243,13 @@ def halaman_kerja(
     for s in daftar:
         if s["bagian"] != bagian_kini:
             bagian_kini = s["bagian"]
-            kartu.append(f'<div class="bagian">Bagian {bagian_kini}</div>')
+            judul = JUDUL_BAGIAN.get(bagian_kini, f"Bagian {bagian_kini}")
+            kartu.append(f'<div class="bagian">{judul}</div>')
+            if bagian_kini in CATATAN_BAGIAN:
+                kartu.append(
+                    f'<div class="catatan-bagian">'
+                    f"{CATATAN_BAGIAN[bagian_kini]}</div>"
+                )
         t = s["terjawab"] or {}
         restate = ""
         if s["minta_restatement"]:
@@ -187,7 +285,7 @@ def halaman_kerja(
 <div class="soal soal-murid">
   <span class="nomor">{s['nomor']}</span>
   {'<span class="bintang">★</span>' if s['tantangan'] else ''}
-  <div class="teks-soal">{_escape(s['teks'])}</div>
+  {_badan_teks(s['teks'])}
   {restate}
   <label class="label">Caraku — pilih dulu yang paling mirip:</label>
   <div class="pilih-cara-grup">{tombol}</div>
@@ -221,16 +319,27 @@ def halaman_kerja(
 <style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
   <h1>Halo, {_escape(info['nama'])}</h1>
-  <a class="btn secondary" href="/murid">Sesi lain</a>
+  <button class="btn secondary hanya-layar" type="button"
+          onclick="window.print()">Cetak / PDF</button>
+  <a class="btn secondary hanya-layar" href="/murid">Sesi lain</a>
 </div>
 <p>{_escape(info['tanggal'])} &middot; level {_escape(info['level'])}
  &middot; {len(daftar)} soal</p>
 {kabar}
+<div class="petunjuk">
+  <p><b>Cara mengerjakan — baca dulu:</b></p>
+  <p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan
+  caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>
+  <p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu
+  <b>bukan</b> salah — itu berguna untuk gurumu.</p>
+  <p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai,
+  tekan <b>Simpan jawabanku</b> di paling bawah.</p>
+</div>
 <form method="post" action="/murid/kerjakan/{sesi_id}">
 {"".join(kartu)}
-<div class="simpan-strip"><button type="submit" class="btn">Simpan jawabanku</button></div>
+<div class="simpan-strip hanya-layar"><button type="submit" class="btn">Simpan jawabanku</button></div>
 </form>
-<form method="post" action="/keluar" style="margin-top:1rem"><button class="btn secondary" type="submit">Keluar</button></form>
+<form method="post" action="/keluar" class="hanya-layar" style="margin-top:1rem"><button class="btn secondary" type="submit">Keluar</button></form>
 </div></body></html>"""
     return isi.encode()
 

@@ -44,6 +44,10 @@ h1 { font-size: 14pt; margin: 0 0 1mm; }
      mengira bagian itu kosong. Paksa ia menempel ke soal sesudahnya. */
   break-after: avoid; page-break-after: avoid;
 }
+.catatan-bagian {
+  border: 0.8pt dashed #666; padding: 1.5mm 2mm; margin: -1mm 0 2mm;
+  font-size: 9pt;
+}
 
 .soal {
   border: 1.2pt solid #000; padding: 2mm 2.5mm; margin-bottom: 2.2mm;
@@ -55,8 +59,12 @@ h1 { font-size: 14pt; margin: 0 0 1mm; }
   border-radius: 50%; margin-right: 2mm; font-size: 10pt;
 }
 .teks { display: inline; }
-.teks .deret { font-size: 12pt; letter-spacing: 0.3pt; }
-.tanya { margin-top: 1.5mm; }
+/* Dulu ".teks .deret" (keturunan) — tidak pernah cocok karena render.py
+   menaruh kedua kelas di elemen yang SAMA, jadi deret tidak pernah
+   diperbesar. */
+.teks.deret { font-size: 12pt; letter-spacing: 0.3pt; }
+/* Pertanyaan utama ditebalkan supaya tidak tenggelam di antara badan soal. */
+.tanya { margin-top: 1.5mm; font-weight: bold; }
 
 .label { font-size: 9pt; color: #333; margin: 1.4mm 0 0.8mm; }
 .cara {
