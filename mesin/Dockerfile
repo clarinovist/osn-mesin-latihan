@@ -32,6 +32,7 @@ COPY --chown=osn:osn templates.py generator.py skema.py basis.py \
 
 # Basis data & sandi tinggal di volume supaya selamat saat container diganti.
 ENV OSN_BERKAS_SANDI=/data/sandi.json \
+    OSN_BERKAS_SESI=/data/sesi.json \
     OSN_BERKAS_DB=/data/latihan.db \
     OSN_FOLDER_LEMBAR=/data/lembar \
     PYTHONUNBUFFERED=1 \
