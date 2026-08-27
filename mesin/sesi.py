@@ -49,12 +49,22 @@ def muat(path: Path | None = None) -> dict:
 def _tulis(data: dict, path: Path | None = None) -> None:
     p = path or BERKAS_SESI
     with _kunci_tulis:
-        fd, nama_sementara = tempfile.mkstemp(dir=p.parent, prefix=".sesi-")
+        # Tulis dulu ke direktori sementara sistem (mis. /tmp di kontainer).
+        # Jangan pakai dir=p.parent: di kontainer, /app adalah bind-mount
+        # read-only — mkstemp di situ melempar PermissionError, dan tiap
+        # POST /masuk gagal 500, yang di balik proxy tampil sebagai 502.
+        # Berkas akhir tetap pindah ke p via os.replace di bawah.
+        fd, nama_sementara = tempfile.mkstemp(prefix=".sesi-")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(data, f)
             os.replace(nama_sementara, p)
-            p.chmod(0o600)
+            # Best-effort: filesystem read-only (mis. di kontainer) tidak
+            # mendukung chmod; abaikan agar alur masuk tetap berjalan.
+            try:
+                p.chmod(0o600)
+            except OSError:
+                pass
         except Exception:
             try:
                 os.unlink(nama_sementara)
