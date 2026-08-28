@@ -47,6 +47,13 @@ MODEL_BAWAAN = "deepseek-chat"
 # dari ini lebih baik dibuang daripada membuat murid menunggu.
 BATAS_WAKTU_DETIK = 20
 
+# max_tokens harus menampung reasoning model: deepseek-v4-flash menulis
+# reasoning_content SEBELUM konten (terukur: +-825 reasoning token untuk
+# 6 soal). Batas lama 200 membuat konten sering kosong dan fitur gagal
+# diam-diam. Cerita 1 kalimat tetap pendek — kelebihan kuota tidak
+# berarti teks lebih panjang, dan cache membuat biaya dibayar sekali.
+MAX_TOKENS = 2000
+
 # Naikkan versi ini kalau prompt berubah — kunci cache ikut berubah,
 # jadi kalimat lama tidak dipakai ulang untuk soal berprompt baru.
 VERSI_PROMPT = "b2-cerita-v1"
@@ -238,6 +245,11 @@ def parse_respons(data: bytes | bytearray | str | dict) -> str | None:
         konten = muatan["choices"][0]["message"]["content"]
         if not isinstance(konten, str):
             return None
+        if not konten.strip():
+            # Reasoning model (v4-flash) yang kehabisan max_tokens di
+            # reasoning_content mengirim content kosong. Itu kegagalan
+            # permintaan, bukan kalimat sah berupa string kosong.
+            return None
         return konten.strip()
     except (KeyError, IndexError, TypeError, ValueError, UnicodeDecodeError):
         return None
@@ -255,7 +267,7 @@ def _panggil(pesan: list[dict[str, str]]) -> str | None:
             "model": cfg["model"],
             "messages": pesan,
             "temperature": 1.0,
-            "max_tokens": 200,
+            "max_tokens": MAX_TOKENS,
         },
         ensure_ascii=False,
     ).encode("utf-8")

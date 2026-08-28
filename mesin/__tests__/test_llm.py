@@ -198,6 +198,53 @@ def test_parse_respons_rusak_tetap_none():
         assert llm.parse_respons(rusak) is None
 
 
+def test_parse_respons_konten_kosong_reasoning_model_tetap_none():
+    """v4-flash adalah reasoning model: kalau max_tokens habis di
+    reasoning_content, content datang kosong. Konten kosong harus dianggap
+    gagal (None), bukan kalimat sah berupa string kosong."""
+    muatan = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "",
+                    "reasoning_content": "kita perlu menjawab dalam bahasa "
+                    "indonesia ... (habis di sini)",
+                }
+            }
+        ]
+    }
+    assert llm.parse_respons(muatan) is None
+
+
+def test_parse_respons_reasoning_content_tidak_mengganggu_konten():
+    """Saat reasoning selesai dan konten ada, kehadiran reasoning_content
+    tidak boleh mengubah hasil."""
+    muatan = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "kalimat sah.",
+                    "reasoning_content": "pikir dulu ...",
+                }
+            }
+        ]
+    }
+    assert llm.parse_respons(muatan) == "kalimat sah."
+
+
+def test_max_tokens_menampung_reasoning_model(monkeypatch, api_aktif, kon, soal):
+    """Reasoning v4-flash memakan token sebelum konten muncul (terukur:
+    6 soal butuh +-825 reasoning token). max_tokens 200 membuat konten
+    sering kosong dan verifikasi gagal diam-diam."""
+    panggilan = pasang_api(monkeypatch, muatan=respons_chat("kalimat."))
+    llm.bungkus(kon, soal)
+
+    tubuh = json.loads(panggilan[0].data)
+    assert tubuh["max_tokens"] == 2000
+
+
 # ── Cache ──────────────────────────────────────────────────────────────
 
 
