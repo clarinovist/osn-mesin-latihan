@@ -166,8 +166,13 @@ def _ambil(baris, kolom: str, bawaan):
 
 
 def _topik_untuk_level(level: str) -> list[str]:
-    """ID topik yang punya komposisi eksplisit untuk level siswa itu."""
-    return [topik_id for topik_id in daftar_topik() if level in ambil(topik_id).komposisi]
+    """ID topik yang tersedia pada level resmi atau fallback data lama."""
+    level_efektif = level if level in LEVEL else LEVEL_BAWAAN
+    return [
+        topik_id
+        for topik_id in daftar_topik()
+        if level_efektif in ambil(topik_id).komposisi
+    ]
 
 
 def halaman_utama(kon) -> bytes:
@@ -1181,7 +1186,8 @@ class Penangan(BaseHTTPRequestHandler):
                 ).fetchone()
                 if not siswa:
                     return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
-                if pilihan_topik not in _topik_untuk_level(siswa["tingkat"]):
+                level = siswa["tingkat"] if siswa["tingkat"] in LEVEL else LEVEL_BAWAAN
+                if pilihan_topik not in _topik_untuk_level(level):
                     pesan = (
                         f"<h1>Topik belum tersedia untuk level ini</h1>"
                         f"<p><code>{html.escape(pilihan_topik)}</code> tidak tersedia "
@@ -1189,7 +1195,7 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                     return self._kirim(_halaman("Topik belum tersedia", pesan), 400)
                 sesi_id = buat_sesi_seed_baru(
-                    kon, siswa_id, topik=pilihan_topik
+                    kon, siswa_id, level=level, topik=pilihan_topik
                 )
             # Alihkan ke halaman sesinya, bukan menampilkan ulang halaman
             # utama: setelah membuat sesi yang dibutuhkan guru adalah

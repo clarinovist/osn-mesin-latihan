@@ -122,6 +122,29 @@ def test_siswa_p3_tidak_ditawari_dan_tidak_bisa_memilih_aritmetika(server):
     assert "tidak tersedia" in isi
 
 
+def test_siswa_level_teks_lama_tetap_ditawari_dan_bisa_membuat_sesi(server):
+    """Kolom tingkat lama yang bebas teks tetap mendapat fallback pola P3."""
+    with server.buka() as kon:
+        siswa_id = basis.tambah_siswa(kon, "Topik Level Lama", "tingkat-lama")
+        isi = web.halaman_utama(kon).decode()
+    assert 'value="pola-bilangan"' in isi
+    assert 'value="aritmetika-dasar"' not in isi
+
+    kode, isi, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "pola-bilangan"},
+    )
+    assert kode == 200
+    assert "Sesi #" in isi
+    with server.buka() as kon:
+        level = kon.execute(
+            "SELECT level FROM sesi WHERE siswa_id = ? ORDER BY id DESC LIMIT 1",
+            (siswa_id,),
+        ).fetchone()["level"]
+    assert level == "P3"
+
+
 def test_halaman_utama_daftar_sesi_memuat_kolom_topik(db):
     with basis.buka(db) as kon:
         sid = basis.tambah_siswa(kon, "Daftar Bertopik")
