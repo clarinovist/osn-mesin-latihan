@@ -130,6 +130,43 @@ def test_templates_masih_mengekspor_simbol_lama():
     assert callable(templates.deret_aritmetika)
 
 
+# ── Generator sadar-topik (A2) ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize("level", LEVEL)
+def test_buat_lembar_bertopik_eksplisit_identik_dengan_bawaan(level):
+    """Seed sama + topik sama = lembar identik, apa pun cara menyebutnya."""
+    from generator import buat_lembar
+
+    bawaan = buat_lembar(2026, level=level)
+    eksplisit = buat_lembar(2026, level=level, topik="pola-bilangan")
+    assert bawaan.tanda_tangan == eksplisit.tanda_tangan
+
+
+@pytest.mark.parametrize("level", LEVEL)
+def test_buat_soal_bertopik_eksplisit_identik_dengan_bawaan(level):
+    from generator import buat_soal
+
+    bawaan = buat_soal("suku_ke_n", 7, level=level)
+    eksplisit = buat_soal("suku_ke_n", 7, level=level, topik="pola-bilangan")
+    assert bawaan.tanda_tangan == eksplisit.tanda_tangan
+
+
+def test_topik_tak_dikenal_melempar_jelas():
+    """Topik salah ketik adalah bug pemanggil — dilempar dengan daftar
+    topik yang ada, BUKAN jatuh diam-diam ke pola bilangan (beda dengan
+    level, yang sengaja fallback karena data produksi)."""
+    import generator
+    import topik as modul_topik
+
+    with pytest.raises(KeyError, match="geometri-belum-ada"):
+        generator.buat_lembar(1, topik="geometri-belum-ada")
+    with pytest.raises(KeyError, match="geometri-belum-ada"):
+        generator.buat_soal("deret_aritmetika", 1, topik="geometri-belum-ada")
+    with pytest.raises(KeyError, match="pola-bilangan"):
+        modul_topik.ambil("geometri-belum-ada")
+
+
 # ── Aman terhadap urutan impor ─────────────────────────────────────────
 
 
@@ -155,7 +192,9 @@ def test_urutan_impor_apapun_hasil_sama():
             "assert len(templates.REGISTRI) == 16\n"
         ),
         "generator_dulu": (
-            "import generator\nassert len(generator.REGISTRI) == 16\n"
+            "import generator\nimport topik\n"
+            "assert len(topik.registri()) == 16\n"
+            "assert generator.buat_soal('suku_ke_n', 1, level='P6')\n"
         ),
     }
     for nama, isi in skenario.items():

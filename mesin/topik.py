@@ -46,6 +46,9 @@ class Topik:
     judul_bagian: dict[str, str] = field(default_factory=dict)
     catatan_bagian: dict[str, str] = field(default_factory=dict)
     render_badan: Callable[[Soal], str | None] | None = None
+    # template_id + rng + level -> parameter; satu-satunya pemilik aturan
+    # batas angka supaya seed yang sama selalu menghasilkan soal yang sama.
+    parameter_untuk: Callable[..., dict[str, Any]] | None = None
 
     def komposisi_untuk(self, level: str) -> tuple[str, ...]:
         """Urutan template untuk satu lembar di level itu.
