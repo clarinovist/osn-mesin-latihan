@@ -552,11 +552,12 @@ def test_setiap_template_bisa_membedakan_k_dari_h():
     satu; ia hanya muncul setelah penyaringan. Karena itu diperiksa di sini,
     terpusat, untuk semua template sekaligus.
     """
-    from templates import REGISTRI, URUTAN_PER_LEVEL
+    from topik import paket_bawaan
 
+    paket = paket_bawaan()
     tanpa_h: list[str] = []
-    for nama in REGISTRI:
-        level_pemakai = [lv for lv in LEVEL if nama in URUTAN_PER_LEVEL[lv]]
+    for nama in paket.templates:
+        level_pemakai = [lv for lv in LEVEL if nama in paket.komposisi[lv]]
         kode = set()
         for seed in range(1, 60):
             for lv in level_pemakai:
@@ -576,11 +577,12 @@ def test_soal_bermalrule_tunggal_tidak_mendominasi():
     malrule menyusut jadi satu setelah penyaringan dan jalur H tidak pernah
     selamat. Setelah pola diwajibkan 4-6 huruf, angkanya turun ke ~6%.
     """
-    from templates import REGISTRI, URUTAN_PER_LEVEL
+    from topik import paket_bawaan
 
+    paket = paket_bawaan()
     buruk: list[str] = []
-    for nama in REGISTRI:
-        level_pemakai = [lv for lv in LEVEL if nama in URUTAN_PER_LEVEL[lv]]
+    for nama in paket.templates:
+        level_pemakai = [lv for lv in LEVEL if nama in paket.komposisi[lv]]
         tunggal = total = 0
         for seed in range(1, 120):
             for lv in level_pemakai:
@@ -691,8 +693,11 @@ def test_tiap_bagian_yang_terpakai_punya_judul_sendiri():
 
 
 def _tanpa_jalur(nama: str, lv: str, kode_dibutuhkan: set[str]) -> int:
+    from topik import paket_bawaan
+
     jumlah = total = 0
-    level_pemakai = [l for l in LEVEL if nama in URUTAN_PER_LEVEL[l]]
+    paket = paket_bawaan()
+    level_pemakai = [l for l in LEVEL if nama in paket.komposisi[l]]
     if lv not in level_pemakai:
         return 0
     for seed in range(1, 200):
@@ -711,10 +716,10 @@ def test_tiap_template_per_soal_tidak_kehilangan_jalur_k():
     daripada itu: anak yang benar-benar salah konsep di soal itu tercatat
     sebagai salah hitung (B/H), lalu tindak lanjutnya meleset arah.
     """
-    from templates import REGISTRI
+    from topik import paket_bawaan
 
     buruk = []
-    for nama in REGISTRI:
+    for nama in paket_bawaan().templates:
         persen = max(_tanpa_jalur(nama, lv, {"K"}) for lv in LEVEL)
         if persen > 2:
             buruk.append(f"{nama} {persen}%")
@@ -725,11 +730,12 @@ def test_malrule_kolaps_tidak_ada_yang_identik_dengan_kunci():
     """Malrule yang jawabannya == kunci akan dibuang penyaringan, tapi
     kehadirannya di kode menyesatkan pembaca: ia SEolah-olah meng-cover
     miskonsepsi yang sebenarnya tidak pernah terdeteksi."""
-    from templates import REGISTRI
+    from topik import paket_bawaan
 
+    paket = paket_bawaan()
     buruk = []
-    for nama in REGISTRI:
-        level_pemakai = [lv for lv in LEVEL if nama in URUTAN_PER_LEVEL[lv]]
+    for nama in paket.templates:
+        level_pemakai = [lv for lv in LEVEL if nama in paket.komposisi[lv]]
         for seed in range(1, 120):
             for lv in level_pemakai:
                 s = buat_soal(nama, seed, level=lv)

@@ -58,14 +58,15 @@ def test_semua_template_terdaftar_di_urutan_lembar():
     sekarang: tidak ada template yatim (terdaftar tapi tak pernah dipakai),
     dan tidak ada nama di komposisi yang tidak punya implementasi.
     """
-    from templates import URUTAN_PER_LEVEL
+    from topik import paket_bawaan
 
-    terpakai = {t for urutan in URUTAN_PER_LEVEL.values() for t in urutan}
+    paket = paket_bawaan()
+    terpakai = {t for urutan in paket.komposisi.values() for t in urutan}
 
-    yatim = set(REGISTRI) - terpakai
+    yatim = set(paket.templates) - terpakai
     assert not yatim, f"template tidak pernah dipakai di level mana pun: {yatim}"
 
-    hantu = terpakai - set(REGISTRI)
+    hantu = terpakai - set(paket.templates)
     assert not hantu, f"komposisi menyebut template yang tidak ada: {hantu}"
 
 

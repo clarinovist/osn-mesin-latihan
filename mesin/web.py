@@ -165,14 +165,20 @@ def _ambil(baris, kolom: str, bawaan):
     return bawaan if nilai is None else nilai
 
 
+def _topik_untuk_level(level: str) -> list[str]:
+    """ID topik yang punya komposisi eksplisit untuk level siswa itu."""
+    return [topik_id for topik_id in daftar_topik() if level in ambil(topik_id).komposisi]
+
+
 def halaman_utama(kon) -> bytes:
     baris = []
-    # Opsi topik dari registry, dihitung sekali sebelum loop kartu siswa.
-    opsi_topik = "".join(
-        f'<option value="{html.escape(t)}">{html.escape(t)}</option>'
-        for t in daftar_topik()
-    )
+    # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
+    # pada kartu siswa P3 lalu gagal ketika form dikirim.
     for s in basis.daftar_siswa(kon):
+        opsi_topik = "".join(
+            f'<option value="{html.escape(t)}">{html.escape(t)}</option>'
+            for t in _topik_untuk_level(s["tingkat"])
+        )
         sesi = kon.execute(
             """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
                       (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
@@ -427,18 +433,21 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
     daftar_mis = "".join(
         f'<tr><td>{html.escape(m["alasan"] or m["malrule_id"])}</td>'
         f'<td class="tipe">{m["template_id"]}</td>'
+        f'<td class="tipe">{html.escape(m["topik"])}</td>'
         f'<td class="angka">{m["jumlah_sesi"]}</td>'
         f'<td class="tipe">{m["pertama"]} &rarr; {m["terakhir"]}</td></tr>'
         for m in mis
-    ) or ('<tr><td colspan="4" class="kosong">belum ada miskonsepsi '
+    ) or ('<tr><td colspan="5" class="kosong">belum ada miskonsepsi '
           "tercatat</td></tr>")
 
     peta = basis.peta_materi_baru(kon, siswa_id)
     daftar_peta = "".join(
-        f'<tr><td>{p["template_id"]}</td><td class="angka">{p["kali"]}</td>'
+        f'<tr><td>{p["template_id"]}</td>'
+        f'<td class="tipe">{html.escape(p["topik"])}</td>'
+        f'<td class="angka">{p["kali"]}</td>'
         f'<td class="tipe">{p["terakhir"]}</td></tr>'
         for p in peta
-    ) or '<tr><td colspan="3" class="kosong">tidak ada</td></tr>'
+    ) or '<tr><td colspan="4" class="kosong">tidak ada</td></tr>'
 
     return _halaman(
         f"Laporan {siswa['nama']}",
@@ -454,12 +463,12 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
         f"miskonsepsi yang muncul di tiga soal tetap satu baris. Yang muncul "
         f"di lebih dari satu sesi berarti belum tuntas meski angkanya sudah "
         f"diganti.</p><table>"
-        f"<tr><th>Miskonsepsi</th><th>Tipe soal</th><th>Jumlah sesi</th>"
+        f"<tr><th>Miskonsepsi</th><th>Tipe soal</th><th>Topik</th><th>Jumlah sesi</th>"
         f"<th>Rentang</th></tr>{daftar_mis}</table></div>"
         f'<div class="kartu"><h2>Materi yang belum diajarkan</h2>'
         f'<p class="sub">Dari soal yang dicentang "belum pernah lihat". Ini '
         f"peta urutan belajar, bukan daftar kegagalan.</p><table>"
-        f"<tr><th>Tipe soal</th><th>Berapa kali</th><th>Terakhir</th></tr>"
+        f"<tr><th>Tipe soal</th><th>Topik</th><th>Berapa kali</th><th>Terakhir</th></tr>"
         f"{daftar_peta}</table></div>",
     )
 
@@ -1167,6 +1176,18 @@ class Penangan(BaseHTTPRequestHandler):
                 )
                 return self._kirim(_halaman("Topik tidak dikenal", pesan), 400)
             with basis.buka() as kon:
+                siswa = kon.execute(
+                    "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
+                ).fetchone()
+                if not siswa:
+                    return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+                if pilihan_topik not in _topik_untuk_level(siswa["tingkat"]):
+                    pesan = (
+                        f"<h1>Topik belum tersedia untuk level ini</h1>"
+                        f"<p><code>{html.escape(pilihan_topik)}</code> tidak tersedia "
+                        f"untuk level {html.escape(siswa['tingkat'])}.</p>"
+                    )
+                    return self._kirim(_halaman("Topik belum tersedia", pesan), 400)
                 sesi_id = buat_sesi_seed_baru(
                     kon, siswa_id, topik=pilihan_topik
                 )

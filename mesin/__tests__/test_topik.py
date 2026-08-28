@@ -30,7 +30,7 @@ def pb():
 
 
 def test_paket_pola_bilangan_terdaftar(pb):
-    assert topik.daftar_topik() == ["pola-bilangan"]
+    assert topik.daftar_topik() == ["aritmetika-dasar", "pola-bilangan"]
     assert pb.id == "pola-bilangan"
     assert pb.nama == "Pola Bilangan"
     assert pb.judul_lembar == "Latihan Pola Bilangan"
@@ -115,11 +115,13 @@ def test_render_badan_template_lain_menyerahkan_ke_bawaan(pb):
 # ── Kompatibilitas jalur lama lewat templates.py ───────────────────────
 
 
-def test_templates_registri_tetap_gabungan_paket():
+def test_templates_registri_menggabungkan_semua_paket():
     pb = topik.paket_bawaan()
-    assert set(templates.REGISTRI) == set(pb.templates)
-    for tid in templates.REGISTRI:
-        assert templates.REGISTRI[tid] is pb.templates[tid]
+    aritmetika = topik.ambil("aritmetika-dasar")
+    assert set(templates.REGISTRI) == set(pb.templates) | set(aritmetika.templates)
+    for paket in (pb, aritmetika):
+        for tid in paket.templates:
+            assert templates.REGISTRI[tid] is paket.templates[tid]
 
 
 def test_templates_masih_mengekspor_simbol_lama():
@@ -255,19 +257,19 @@ def test_urutan_impor_apapun_hasil_sama():
     skenario = {
         "topik_dulu": (
             "import topik\nimport templates\n"
-            "assert len(templates.REGISTRI) == 16\n"
+            "assert len(templates.REGISTRI) == 19\n"
         ),
         "templates_dulu": (
             "import templates\nimport topik\n"
-            "assert len(templates.REGISTRI) == 16\n"
+            "assert len(templates.REGISTRI) == 19\n"
         ),
         "paket_dulu": (
             "import topik_pola_bilangan\nimport templates\n"
-            "assert len(templates.REGISTRI) == 16\n"
+            "assert len(templates.REGISTRI) == 19\n"
         ),
         "generator_dulu": (
             "import generator\nimport topik\n"
-            "assert len(topik.registri()) == 16\n"
+            "assert len(topik.registri()) == 19\n"
             "assert generator.buat_soal('suku_ke_n', 1, level='P6')\n"
         ),
     }

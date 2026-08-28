@@ -54,14 +54,20 @@ class Topik:
         """Urutan template untuk satu lembar di level itu.
 
         Level tak dikenal jatuh ke level bawaan (P3) — kontrak lama
-        `susun_lembar`, dipertahankan demi data produksi.
+        `susun_lembar`, dipertahankan demi data produksi. Paket yang memang
+        mulai di level lebih tinggi (mis. aritmetika P5/P6) jatuh ke level
+        pertama yang mereka dukung, bukan mencoba mengakses P3 yang tidak
+        mereka miliki.
         """
-        return self.komposisi.get(level, self.komposisi[LEVEL[0]])
+        bawaan = self.komposisi.get(LEVEL[0], next(iter(self.komposisi.values())))
+        return self.komposisi.get(level, bawaan)
 
     def profil_untuk(self, level: str) -> dict[str, Any]:
         """Batas angka untuk level itu; tak dikenal jatuh ke P3 —
-        kontrak lama `generator.profil`, dengan alasan yang sama."""
-        return dict(self.profil.get(level, self.profil[LEVEL[0]]))
+        kontrak lama `generator.profil`, dengan alasan yang sama. Paket yang
+        mulai di level lebih tinggi jatuh ke profil pertama yang tersedia."""
+        bawaan = self.profil.get(LEVEL[0], next(iter(self.profil.values())))
+        return dict(self.profil.get(level, bawaan))
 
     def susun_lembar(self, level: str) -> tuple[str, ...]:
         return self.komposisi_untuk(level)
@@ -77,6 +83,7 @@ class Topik:
 # registry terisi penuh apa pun urutan impor pertama.
 
 PAKET: dict[str, Topik] = {}
+_SUDAH_DIMUAT = False
 
 
 def daftarkan(topik: Topik) -> None:
@@ -89,12 +96,15 @@ def _pastikan_dimuat() -> None:
     """Muat modul paket. Paket mendaftarkan dirinya sendiri saat impor
     (satu mekanisme, bukan dua), jadi di sini cukup impor dan pastikan
     registry tidak kosong."""
-    if PAKET:
+    global _SUDAH_DIMUAT
+    if _SUDAH_DIMUAT:
         return
     import topik_pola_bilangan  # noqa: F401  (mendaftarkan diri saat impor)
+    import topik_aritmetika_dasar  # noqa: F401  (mendaftarkan diri saat impor)
 
     if not PAKET:
         raise RuntimeError("paket topik dimuat tapi tidak mendaftarkan diri")
+    _SUDAH_DIMUAT = True
 
 
 def paket_bawaan() -> Topik:

@@ -16,7 +16,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, replace
 
-from templates import Soal
+from templates import LEVEL, Soal
 from topik import TOPIK_BAWAAN, Topik, ambil
 
 LEVEL_BAWAAN = "P3"
@@ -50,6 +50,16 @@ class Lembar:
         return "|".join(s.tanda_tangan for s in self.soal)
 
 
+def _level_efektif(paket: Topik, level: str) -> str:
+    """Validasi level resmi, atau normalkan teks lama ke level paket pertama."""
+    if level in LEVEL and level not in paket.komposisi:
+        raise ValueError(
+            f"topik {paket.id!r} tidak tersedia untuk level {level!r}; "
+            f"level yang didukung: {sorted(paket.komposisi)}"
+        )
+    return level if level in paket.komposisi else next(iter(paket.komposisi))
+
+
 def buat_lembar(
     seed: int,
     urutan: tuple[str, ...] | None = None,
@@ -65,11 +75,12 @@ def buat_lembar(
     pemanggil, bukan data produksi yang perlu dimaafkan.
     """
     paket = ambil(topik)
+    level_efektif = _level_efektif(paket, level)
     rng = random.Random(seed)
     if urutan is None:
-        urutan = paket.komposisi_untuk(level)
-    soal = tuple(_soal_layak(paket, t, rng, level) for t in urutan)
-    return Lembar(seed=seed, soal=soal, level=level)
+        urutan = paket.komposisi_untuk(level_efektif)
+    soal = tuple(_soal_layak(paket, t, rng, level_efektif) for t in urutan)
+    return Lembar(seed=seed, soal=soal, level=level_efektif)
 
 
 def _soal_layak(
@@ -121,4 +132,7 @@ def buat_soal(
     topik: str = TOPIK_BAWAAN,
 ) -> Soal:
     """Satu soal saja — untuk menambal bank soal per tipe."""
-    return _soal_layak(ambil(topik), template_id, random.Random(seed), level)
+    paket = ambil(topik)
+    return _soal_layak(
+        paket, template_id, random.Random(seed), _level_efektif(paket, level)
+    )
