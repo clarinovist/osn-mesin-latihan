@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -24,6 +25,8 @@ from gaya_cetak import GAYA_CETAK  # noqa: E402
 from gaya_layar import GAYA_LAYAR  # noqa: E402
 from generator import buat_lembar, buat_soal  # noqa: E402
 from render import lembar_penilaian, lembar_soal  # noqa: E402
+from templates import Soal  # noqa: E402
+from topik import paket_bawaan  # noqa: E402
 
 
 def _dom(html: str) -> str:
@@ -77,6 +80,24 @@ def test_kunci_tidak_bocor_di_tampilan_layar():
             assert not terbaca, (
                 f"seed {seed}: ada teks di posisi jawaban: {terbaca!r}"
             )
+
+
+def test_lembar_memakai_renderer_paket_yang_diberikan():
+    """Paket kedua tidak boleh dirender lewat renderer paket bawaan.
+
+    Judul sudah menerima `topik_paket`; badan soal harus menerima paket yang
+    sama. Kalau tidak, topik kedua yang punya diagram/markup khusus tampil
+    sebagai teks biasa meski judul dan bagian sudah benar.
+    """
+    paket = replace(
+        paket_bawaan(),
+        render_badan=lambda _: '<div id="renderer-paket-eksplisit">khusus</div>',
+    )
+    soal = Soal("contoh", {}, "teks biasa", "1")
+
+    html = lembar_soal([soal], topik_paket=paket)
+
+    assert 'id="renderer-paket-eksplisit"' in html
 
 
 def test_gaya_cetak_menjaga_riwayat_gagal_garis_panduan():

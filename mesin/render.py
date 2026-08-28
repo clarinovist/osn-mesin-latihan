@@ -35,11 +35,13 @@ from templates import Soal
 from topik import Topik, paket_bawaan
 
 
-def _badan_soal(soal: Soal) -> str:
+def _badan_soal(soal: Soal, topik_paket: Topik | None = None) -> str:
     """Teks soal + diagram. Paket topik boleh mengambil alih bentuk
     khusus (deret ditebalkan, diagram SVG); sisanya renderer teks bawaan:
     baris pertama jadi badan, sisanya jadi pertanyaan."""
-    khusus = paket_bawaan().render_badan
+    if topik_paket is None:
+        topik_paket = paket_bawaan()
+    khusus = topik_paket.render_badan
     if khusus is not None:
         hasil = khusus(soal)
         if hasil is not None:
@@ -56,7 +58,7 @@ def _badan_soal(soal: Soal) -> str:
     return isi
 
 
-def _kartu_soal(nomor: int, soal: Soal) -> str:
+def _kartu_soal(nomor: int, soal: Soal, topik_paket: Topik | None = None) -> str:
     """Satu kartu soal dengan kotak-kotak diagnostik.
 
     Tinggi kotak 'Caraku' disesuaikan bagian: soal terbalik, tantangan, dan
@@ -87,7 +89,7 @@ def _kartu_soal(nomor: int, soal: Soal) -> str:
     return (
         f'<div class="soal">'
         f'<span class="nomor">{nomor}</span>{bintang}'
-        f"{_badan_soal(soal)}"
+        f"{_badan_soal(soal, topik_paket)}"
         f"{restate}"
         f'<div class="label">Caraku:</div>'
         f'<div class="cara {tinggi}"></div>'
@@ -111,7 +113,7 @@ def _isi_lembar(soal: list[Soal], topik_paket: Topik) -> list[str]:
             if bagian_kini in topik_paket.catatan_bagian:
                 isi.append(f'<div class="catatan-bagian">'
                            f"{topik_paket.catatan_bagian[bagian_kini]}</div>")
-        isi.append(_kartu_soal(i, s))
+        isi.append(_kartu_soal(i, s, topik_paket))
     return isi
 
 
