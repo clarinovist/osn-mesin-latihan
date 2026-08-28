@@ -1,14 +1,21 @@
-"""Kontrak image: setiap modul yang diimpor harus masuk Dockerfile.
+"""Kontrak image: image membawa seluruh paket, bukan daftar manual.
 
 Riwayat 25 Agustus 2026: render.py, gaya_*.py, murid.py, dan llm.py lahir
-tanpa dimasukkan ke COPY Dockerfile. Semua 4282 test lolos di lokal (filenya
-ada), build GitHub Actions juga hijau — lalu deploy gagal sehat karena import
-error DI DALAM container, dan rollback otomatis menyembunyikan penyebabnya.
+tanpa dimasukkan ke COPY Dockerfile. Semua test lolos di lokal (filenya
+ada), build GitHub Actions juga hijau — lalu deploy gagal sehat karena
+import error DI DALAM container, dan rollback otomatis menyembunyikan
+penyebabnya.
 
-Test ini menutup celah itu: modul tingkat aplikasi yang di-COPY wajib mencakup
-seluruh modul lokal yang diimpor oleh titik masuk. Kalau suatu hari ada modul
-baru yang lupa didaftarkan, test ini merah sebelum push, bukan saat situs
-hampir mati.
+Sejak A4 akar masalahnya dihapus: Dockerfile menyalin `*.py` wildcard, jadi
+modul baru otomatis ikut. Dua guard lama (transitif-per-impor dan daftar
+titik masuk) dihapus — keduanya membaca daftar manual yang sudah tidak ada.
+Penegakan kini dua arah:
+
+  - test_copy_dockerfile_paket_utuh_wildcard  — wildcard wajib, daftar
+    manual ditolak (lengkap ataupun tidak);
+  - test_semua_modul_root_yang_diimpor_tersalin_wildcard — seluruh modul
+    lokal yang diimpor titik masuk benar-benar ada sebagai .py di root,
+    sehingga wildcard pasti membawanya.
 """
 
 from __future__ import annotations
@@ -23,14 +30,6 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # Titik masuk & modul inti yang pasti dibutuhkan saat container jalan.
 TITIK_MASUK = ("sajikan.py", "web.py", "periksa_sehat.py")
-
-
-def _modul_di_dockerfile() -> set[str]:
-    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    blok = re.search(r"COPY --chown=osn:osn(.*?)\n\n", dockerfile, flags=re.S)
-    assert blok, "blok COPY tidak ditemukan di Dockerfile"
-    nama = re.findall(r"([a-z_]+\.py)", blok.group(1))
-    return set(nama)
 
 
 def _impor_lokal(blok: str) -> set[str]:
@@ -50,30 +49,41 @@ def _impor_lokal(blok: str) -> set[str]:
     return hasil
 
 
-def test_semua_modul_yang_diimpor_masuk_dockerfile():
-    """Transitif dari titik masuk: satu modul lokal yang hilang dari COPY =
-        container yang crash saat import = deploy gagal sehat."""
-    daftar = _modul_di_dockerfile()
+def test_copy_dockerfile_paket_utuh_wildcard():
+    """Kontrak A4 (keputusan desain #6): daftar COPY manual adalah sumber
+    insiden 25 Aug — modul baru lahir, lupa didaftarkan, semua test lokal
+    hijau, lalu deploy gagal sehat dan rollback menyembunyikan penyebabnya.
+    Daftar manual diganti `COPY *.py`: modul apa pun yang ada di root repo
+    otomatis ada di image. Guard ini merah bila ada yang mengembalikan
+    Dockerfile ke daftar manual (lengkap ataupun tidak)."""
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    blok = re.search(r"COPY --chown=osn:osn(.*?)\n\n", dockerfile, flags=re.S)
+    assert blok, "blok COPY tidak ditemukan di Dockerfile"
+    assert "*.py" in blok.group(1), (
+        "Dockerfile harus menyalin paket utuh lewat 'COPY ... *.py /app/' — "
+        "daftar modul manual adalah sumber insiden deploy 25 Aug"
+    )
+    nama_eksplisit = re.findall(r"([a-z_]+\.py)", blok.group(1))
+    assert not nama_eksplisit, (
+        f"COPY masih menyebut modul manual: {nama_eksplisit} — pakai *.py"
+    )
 
-    # transisi tertutup: telusuri impor sampai habis
+
+def test_semua_modul_root_yang_diimpor_tersalin_wildcard():
+    """Wildcard menyalin semua .py root — pastikan tidak ada modul lokal
+    yang diimpor titik masuk tapi TIDAK berada di root (subfolder/spesifik
+    build): itu yang tetap lolos dari wildcard dan gagal di container."""
     diperiksa: set[str] = set()
-    antre = list(TITIK_MASUK)
+    antre: list[str] = list(TITIK_MASUK)
     while antre:
         berkas = antre.pop()
         if berkas in diperiksa:
             continue
         diperiksa.add(berkas)
+        assert (ROOT / berkas).exists(), f"{berkas} hilang dari root repo"
         for modul in _impor_lokal((ROOT / berkas).read_text(encoding="utf-8")):
-            if modul not in daftar:
-                raise AssertionError(
-                    f"{modul} diimpor {berkas} tapi TIDAK ada di COPY "
-                    "Dockerfile — image akan gagal import saat jalan"
-                )
+            assert (ROOT / modul).exists(), (
+                f"{modul} diimpor {berkas} tapi tidak ada sebagai .py root — "
+                "wildcard COPY tidak akan membawanya"
+            )
             antre.append(modul)
-
-
-def test_titik_masuk_memang_ada_di_daftar():
-    """Titik masuk sendiri juga harus di-COPY — bukan cuma modulnya."""
-    daftar = _modul_di_dockerfile()
-    kurang = [t for t in TITIK_MASUK if t not in daftar]
-    assert not kurang, f"titik masuk tidak di-COPY: {kurang}"

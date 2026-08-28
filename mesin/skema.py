@@ -40,7 +40,9 @@ CREATE TABLE IF NOT EXISTS soal (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     tanda_tangan  TEXT    NOT NULL UNIQUE,
     template_id   TEXT    NOT NULL,
-    parameter     TEXT    NOT NULL,          -- JSON
+    parameter     TEXT    NOT NULL,          -- JSON murni: list tetap list,
+                                               -- tanpa bentuk string per-template
+                                               -- (kontrak A4; restorasi tanpa cabang)
     kunci         TEXT    NOT NULL,
     bagian        TEXT    NOT NULL DEFAULT '',
     tantangan     INTEGER NOT NULL DEFAULT 0,

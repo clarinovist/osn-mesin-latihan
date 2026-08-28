@@ -198,7 +198,10 @@ def _siklus(pola: list[str], posisi: int) -> str:
     return pola[(posisi - 1) % len(pola)]
 
 
-def siklus_huruf(pola: tuple[str, ...], posisi: int) -> Soal:
+def siklus_huruf(pola: list[str] | tuple[str, ...], posisi: int) -> Soal:
+    """`pola` menerima list atau tuple: list adalah bentuk JSON yang
+    tersimpan di bank soal, tuple bentuk dari generator. Restorasi bank
+    tidak boleh butuh konversi khusus per template."""
     n = len(pola)
     jawab = _siklus(list(pola), posisi)
     sisa = posisi % n
@@ -291,7 +294,7 @@ def siklus_huruf(pola: tuple[str, ...], posisi: int) -> Soal:
 
     return Soal(
         "siklus_huruf",
-        {"pola": "".join(pola), "posisi": posisi},
+        {"pola": list(pola), "posisi": posisi},
         teks,
         jawab,
         saring_malrule(jawab, mal),
@@ -365,7 +368,7 @@ def siklus_warna(pola: tuple[str, ...], posisi: int) -> Soal:
 
     return Soal(
         "siklus_warna",
-        {"pola": ",".join(pola), "posisi": posisi},
+        {"pola": list(pola), "posisi": posisi},
         teks,
         jawab,
         saring_malrule(jawab, mal),
@@ -650,7 +653,7 @@ def jumlah_siklus(pola: tuple[int, ...], n_angka: int) -> Soal:
 
     return Soal(
         "jumlah_siklus",
-        {"pola": ",".join(str(x) for x in pola), "n_angka": n_angka},
+        {"pola": list(pola), "n_angka": n_angka},
         teks,
         str(jawab),
         saring_malrule(str(jawab), list(mal)),
@@ -813,7 +816,7 @@ def sisa_bagi_siklus(pola: tuple[str, ...], posisi: int) -> Soal:
 
     return Soal(
         "sisa_bagi_siklus",
-        {"pola": "".join(pola), "posisi": posisi},
+        {"pola": list(pola), "posisi": posisi},
         teks,
         jawab,
         saring_malrule(jawab, mal),

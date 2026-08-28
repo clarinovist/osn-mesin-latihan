@@ -52,9 +52,9 @@ def test_soal_dibangun_ulang_persis_sama(db, seed):
             assert ulang.tanda_tangan == a.tanda_tangan
 
 
-def test_pola_siklus_kembali_jadi_tuple_bukan_string(db):
-    """Pola 'ABBC' kalau tidak dikembalikan jadi tuple akan dibaca per huruf
-    dengan cara yang berbeda dan menghasilkan soal yang salah."""
+def test_pola_siklus_terrestorasi_tanpa_konversi_khusus(db):
+    """Soal siklus direstorasi dari bank tanpa konversi apa pun: parameter
+    tersimpan JSON murni (A4) dan template menerima bentuk itu langsung."""
     with basis.buka(db) as kon:
         sid = basis.tambah_siswa(kon, "Tuple")
         sesi_id = basis.buat_sesi(kon, sid, seed=88)

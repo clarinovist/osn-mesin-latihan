@@ -124,7 +124,7 @@ def test_kunci_siklus_huruf_dengan_enumerasi(seed):
 @pytest.mark.parametrize("seed", SEED_UJI)
 def test_kunci_siklus_warna_dengan_enumerasi(seed):
     s = buat_soal("siklus_warna", seed)
-    pola = s.parameter["pola"].split(",")
+    pola = list(s.parameter["pola"])
     posisi = s.parameter["posisi"]
     rantai = (pola * (posisi // len(pola) + 2))[:posisi]
     assert s.kunci == rantai[-1]
@@ -188,7 +188,7 @@ def test_kunci_siklus_hari_dengan_hitung_kalender(seed):
 def test_kunci_jumlah_siklus_dengan_penjumlahan_lurus(seed):
     """Tulis semua angka lalu jumlahkan — tanpa jalan pintas siklus."""
     s = buat_soal("jumlah_siklus", seed)
-    pola = [int(x) for x in s.parameter["pola"].split(",")]
+    pola = list(s.parameter["pola"])
     n = s.parameter["n_angka"]
     rantai = (pola * (n // len(pola) + 2))[:n]
     assert s.kunci == str(sum(rantai))

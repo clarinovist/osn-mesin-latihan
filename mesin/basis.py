@@ -68,6 +68,12 @@ def siapkan(path: Path | str = BAWAAN) -> None:
             kon.execute(f"DROP VIEW IF EXISTS {nama}")
         migrasi(kon)
         kon.executescript(SKEMA)
+        # Migrasi bentuk parameter (A4): pola string per-template → list
+        # JSON murni. Idempoten dan terverifikasi per baris (kunci lama
+        # wajib cocok) — jalannya di setiap siapkan() aman dan murah.
+        import migrasi_param
+
+        migrasi_param.jalankan(kon)
 
 
 def migrasi(kon: sqlite3.Connection) -> list[str]:

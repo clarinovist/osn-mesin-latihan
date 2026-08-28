@@ -130,17 +130,16 @@ def _soal_dari_baris(baris) -> Soal:
 
     Level diambil dari baris, bukan dari tingkat siswa saat ini: anak yang
     sudah naik ke P5 tetap harus melihat sesi P3-nya tercetak sebagai P3.
+
+    Sejak A4 parameter tersimpan JSON murni (list tetap list) dan template
+    menerima bentuk itu langsung — restorasi TIDAK punya cabang per template.
+    Cabang semacam itu adalah jebakan: template baru dengan parameter
+    berstruktur harus menambah cabang di sini untuk bisa direstorasi, dan
+    yang lupa tidak gagal saat test tapi saat halaman guru menampilkan soal
+    yang salah.
     """
     param = json.loads(baris["parameter"])
-    fungsi = REGISTRI[baris["template_id"]]
-    # parameter tuple disimpan sebagai string; kembalikan ke bentuk semula
-    if baris["template_id"] == "siklus_huruf":
-        param["pola"] = tuple(param["pola"])
-    elif baris["template_id"] == "siklus_warna":
-        param["pola"] = tuple(param["pola"].split(","))
-    elif baris["template_id"] == "jumlah_siklus":
-        param["pola"] = tuple(int(x) for x in param["pola"].split(","))
-    soal = fungsi(**param)
+    soal = REGISTRI[baris["template_id"]](**param)
     soal = replace(soal, level=_ambil(baris, "level", LEVEL_BAWAAN))
 
     # Versi cerita dari LLM (B2), kalau ada. Yang diganti HANYA kalimatnya;

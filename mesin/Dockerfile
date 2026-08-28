@@ -19,17 +19,15 @@ WORKDIR /app
 # Hanya berkas aplikasi. Basis data dan sandi TIDAK ikut masuk image —
 # keduanya datang dari volume saat dijalankan.
 #
-# DAFTAR INI WAJIB DIPERBARUI TIAP ADA MODUL BARU. Pernah terjadi (25 Agustus
-# 2026): render.py & murid.py lahir tapi tidak masuk daftar ini, image terbangun
-# "sukses", deploy gagal sehat karena import error, dan rollback otomatis yang
-# menyelamatkan situs justru menyembunyikan penyebabnya — di lokal semua test
-# hijau karena filenya ada; yang hilang hanya di dalam image.
-COPY --chown=osn:osn templates.py topik.py topik_pola_bilangan.py \
-     generator.py skema.py basis.py \
-     diagnosa.py cetak.py web.py sandi.py sajikan.py buat_lembar.py \
-     siapkan_db.py periksa_sehat.py \
-     render.py gaya_layar.py gaya_cetak.py \
-     murid.py llm.py sesi.py /app/
+# Sejak A4: SELURUH .py root disalin lewat wildcard, bukan daftar manual.
+# Daftar manual pernah menjadi insiden 25 Agustus 2026: render.py & murid.py
+# lahir tapi tidak masuk daftar, image terbangun "sukses", deploy gagal
+# sehat karena import error, dan rollback otomatis yang menyelamatkan situs
+# justru menyembunyikan penyebabnya — di lokal semua test hijau karena
+# filenya ada; yang hilang hanya di dalam image. Dengan wildcard, modul apa
+# pun yang ada di repo otomatis ada di image; guard test_image.py menegakkan
+# kontrak ini dan menolak kembalinya daftar manual.
+COPY --chown=osn:osn *.py /app/
 
 # Basis data & sandi tinggal di volume supaya selamat saat container diganti.
 ENV OSN_BERKAS_SANDI=/data/sandi.json \
