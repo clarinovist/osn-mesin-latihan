@@ -167,6 +167,80 @@ def test_topik_tak_dikenal_melempar_jelas():
         modul_topik.ambil("geometri-belum-ada")
 
 
+# ── sesi.topik nyata (A3) ──────────────────────────────────────────────
+
+
+@pytest.fixture()
+def db(tmp_path):
+    import basis
+
+    p = tmp_path / "uji.db"
+    basis.siapkan(p)
+    with basis.buka(p) as kon:
+        basis.tambah_siswa(kon, "Uji Topik", "P3")
+        yield kon
+
+
+def test_buat_sesi_default_pakai_id_kanonik(db):
+    import basis
+
+    siswa = basis.daftar_siswa(db)[0]
+    sesi_id = basis.buat_sesi(db, siswa["id"], 12345)
+    topik = db.execute(
+        "SELECT topik FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()["topik"]
+    assert topik == "pola-bilangan"
+    # lembar yang dibangkitkan memang dari topik itu
+    assert len(basis.isi_sesi(db, sesi_id)) == 12
+
+
+def test_buat_sesi_menerima_topik_eksplisit(db):
+    import basis
+
+    siswa = basis.daftar_siswa(db)[0]
+    sesi_id = basis.buat_sesi(db, siswa["id"], 12345, topik="pola-bilangan")
+    topik = db.execute(
+        "SELECT topik FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()["topik"]
+    assert topik == "pola-bilangan"
+
+
+def test_ringkasan_memuat_kolom_topik(db):
+    import basis
+
+    siswa = basis.daftar_siswa(db)[0]
+    sesi_id = basis.buat_sesi(db, siswa["id"], 12345)
+    r = db.execute(
+        "SELECT topik FROM ringkasan_sesi WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()
+    assert r["topik"] == "pola-bilangan"
+
+
+def test_buat_sesi_seed_baru_meneruskan_topik(db):
+    import basis
+    import web
+
+    siswa = basis.daftar_siswa(db)[0]
+    sesi_id = web.buat_sesi_seed_baru(db, siswa["id"], topik="pola-bilangan")
+    topik = db.execute(
+        "SELECT topik FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()["topik"]
+    assert topik == "pola-bilangan"
+
+
+def test_nilai_sesi_lama_tetap_terbaca():
+    """Sesi lama menyimpan 'pola bilangan' (spasi, default kolom pra-Fase A)
+    dan bisa saja berisi nilai aneh — keduanya jatuh ke paket bawaan, bukan
+    melempar. Kontrak berbeda dari ambil() yang tegas."""
+    from topik import dari_sesi
+
+    assert dari_sesi("pola bilangan").id == "pola-bilangan"
+    assert dari_sesi(None).id == "pola-bilangan"
+    assert dari_sesi("").id == "pola-bilangan"
+    with pytest.raises(KeyError):
+        topik.ambil("pola bilangan")
+
+
 # ── Aman terhadap urutan impor ─────────────────────────────────────────
 
 

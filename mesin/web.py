@@ -28,6 +28,7 @@ import sesi
 from diagnosa import diagnosa
 from generator import LEVEL_BAWAAN, buat_soal
 from templates import LEVEL, REGISTRI, Soal, level_valid
+from topik import TOPIK_BAWAAN, Topik, ambil, daftar_topik, dari_sesi
 
 GAYA = """
 * { box-sizing: border-box; }
@@ -167,9 +168,14 @@ def _ambil(baris, kolom: str, bawaan):
 
 def halaman_utama(kon) -> bytes:
     baris = []
+    # Opsi topik dari registry, dihitung sekali sebelum loop kartu siswa.
+    opsi_topik = "".join(
+        f'<option value="{html.escape(t)}">{html.escape(t)}</option>'
+        for t in daftar_topik()
+    )
     for s in basis.daftar_siswa(kon):
         sesi = kon.execute(
-            """SELECT s.id, s.tanggal, s.seed, s.level,
+            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
                       (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
                       (SELECT COUNT(*) FROM sesi_soal ss
                          JOIN jawaban j ON j.sesi_soal_id = ss.id
@@ -183,21 +189,23 @@ def halaman_utama(kon) -> bytes:
             f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a></td>'
             f'<td>{r["tanggal"]}</td>'
             f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
+            f'<td class="tipe">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
             f'<td><a href="/lembar/{r["id"]}" target="_blank">soal</a> &middot; '
             f'<a href="/lembar/{r["id"]}/penilaian" target="_blank">kunci</a></td>'
             f'<td class="tipe">seed {r["seed"]}</td></tr>'
             for r in sesi
-        ) or '<tr><td colspan="6" class="kosong">belum ada sesi</td></tr>'
+        ) or '<tr><td colspan="7" class="kosong">belum ada sesi</td></tr>'
 
         baris.append(
             f'<div class="kartu"><h2>{html.escape(s["nama"])} '
             f'<span class="tipe">({s["tingkat"]})</span></h2>'
             f'<p><a href="/laporan/{s["id"]}">Lihat laporan &rarr;</a></p>'
-            f"<table><tr><th>Sesi</th><th>Tanggal</th><th>Level</th>"
+            f"<table><tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th>"
             f"<th>Terisi</th><th>Lembar</th><th></th></tr>{item}</table>"
             f'<form method="post" action="/sesi-baru/{s["id"]}" '
             f'style="margin-top:.7rem">'
+            f'<label>Topik: <select name="topik">{opsi_topik}</select></label> '
             f'<button type="submit">Buat sesi baru untuk '
             f'{html.escape(s["nama"])} ({s["tingkat"]})</button></form></div>'
         )
@@ -261,7 +269,8 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
 
 def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
     info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, w.nama, w.id AS siswa_id
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
+                   w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
     ).fetchone()
@@ -340,7 +349,9 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
-        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; seed {info["seed"]} &middot; '
+        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
+        f'seed {info["seed"]} &middot; '
         f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
         f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
         f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
@@ -404,13 +415,14 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
         f'<tr><td><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
         f'<td>{r["tanggal"]}</td>'
         f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
+        f'<td class="tipe">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
         f'<td class="angka">{r["benar"] or 0}/{r["jumlah_soal"]}</td>'
         f'<td class="angka"><b>{r["k"] or 0}</b></td>'
         f'<td class="angka">{r["b"] or 0}</td><td class="angka">{r["h"] or 0}</td>'
         f'<td class="angka">{r["e"] or 0}</td><td class="angka">{r["t"] or 0}</td>'
         f'<td class="angka">{r["n"] or 0}</td></tr>'
         for r in ring
-    ) or '<tr><td colspan="10" class="kosong">belum ada sesi dinilai</td></tr>'
+    ) or '<tr><td colspan="11" class="kosong">belum ada sesi dinilai</td></tr>'
 
     mis = basis.miskonsepsi_berulang(kon, siswa_id)
     daftar_mis = "".join(
@@ -436,7 +448,7 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
         f'<p class="sub">Yang dipantau adalah <b>jumlah K</b>, bukan skor. '
         f"Anak dengan 9 H skor 3 lebih siap daripada anak dengan 3 K skor 9.</p>"
         f'<div class="kartu"><h2>Tren per sesi</h2><table>'
-        f"<tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Benar</th><th>K</th>"
+        f"<tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th><th>Benar</th><th>K</th>"
         f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr>{tren}</table></div>"
         f'<div class="kartu"><h2>Miskonsepsi yang bertahan</h2>'
         f'<p class="sub">Dihitung per gagasan keliru, bukan per soal. Satu '
@@ -748,7 +760,9 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
     return "", "Aksi tidak dikenal."
 
 
-def buat_sesi_seed_baru(kon, siswa_id: int, level: str | None = None) -> int:
+def buat_sesi_seed_baru(
+    kon, siswa_id: int, level: str | None = None, topik: str | None = None
+) -> int:
     """Sesi baru dengan seed yang belum pernah dipakai siswa ini.
 
     Mengulang seed berarti mengulang soal yang persis sama — anak bisa
@@ -759,12 +773,20 @@ def buat_sesi_seed_baru(kon, siswa_id: int, level: str | None = None) -> int:
     kolom `siswa.tingkat` akhirnya berarti: sebelum ini kolom itu tersimpan
     rapi dan tidak pernah dibaca siapa pun, sehingga mengubahnya jadi P4
     tidak mengubah satu soal pun.
+
+    Topik TIDAK fallback diam-diam: id yang tidak dikenal dilempar sebagai
+    KeyError oleh ambil() — salah ketik id topik adalah bug pemanggil, bukan
+    data produksi yang perlu dimaafkan (kontraknya beda dari level).
     """
     if level is None:
         baris = kon.execute(
             "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
         ).fetchone()
         level = baris["tingkat"] if baris else LEVEL_BAWAAN
+    if topik is None:
+        topik = TOPIK_BAWAAN
+    else:
+        ambil(topik)  # validasi awal: gagal cepat sebelum menyentuh basis data
 
     dipakai = {
         r["seed"]
@@ -775,7 +797,7 @@ def buat_sesi_seed_baru(kon, siswa_id: int, level: str | None = None) -> int:
     for _ in range(500):
         seed = random.randint(1, 9_999_999)
         if seed not in dipakai:
-            return basis.buat_sesi(kon, siswa_id, seed, level=level)
+            return basis.buat_sesi(kon, siswa_id, seed, level=level, topik=topik)
     raise RuntimeError("gagal menemukan seed baru")
 
 
@@ -788,7 +810,7 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
     tertinggal versi lama; seed tidak bisa.
     """
     info = kon.execute(
-        """SELECT s.seed, s.tanggal, w.nama
+        """SELECT s.seed, s.tanggal, s.topik, w.nama
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
     ).fetchone()
@@ -796,6 +818,10 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
         return None
 
     soal = [_soal_dari_baris(b) for b in basis.isi_sesi(kon, sesi_id)]
+    # Judul dari paket topik sesi ini — bukan selalu paket bawaan. Sesi lama
+    # dengan nilai kolom aneh jatuh ke bawaan lewat dari_sesi(), sesuai
+    # kontrak data produksi.
+    paket = dari_sesi(info["topik"])
     # Lembar yang sama, dua tampilan (Fase 3): di web ia dibaca dari layar,
     # jadi dipakai gaya layar — kartu sentuh, tanpa satuan mm. Versi cetak
     # tetap keluar lewat tombol cetak browser (@media print di gaya layar
@@ -804,10 +830,14 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
 
     if untuk_guru:
         isi = cetak.lembar_penilaian(
-            soal, info["nama"], info["tanggal"], info["seed"], gaya=GAYA_LAYAR
+            soal, info["nama"], info["tanggal"], info["seed"],
+            gaya=GAYA_LAYAR, topik_paket=paket,
         )
     else:
-        isi = cetak.lembar_soal(soal, info["nama"], info["tanggal"], gaya=GAYA_LAYAR)
+        isi = cetak.lembar_soal(
+            soal, info["nama"], info["tanggal"], gaya=GAYA_LAYAR,
+            topik_paket=paket,
+        )
     return isi.encode()
 
 
@@ -1120,8 +1150,27 @@ class Penangan(BaseHTTPRequestHandler):
                 siswa_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            data = urllib.parse.parse_qs(
+                self.rfile.read(panjang).decode("utf-8"),
+                keep_blank_values=True,
+            )
+            pilihan_topik = (data.get("topik") or [TOPIK_BAWAAN])[0].strip()
+            if pilihan_topik not in daftar_topik():
+                # Topik asing = salah ketik pemanggil: ditolak jelas, BUKAN
+                # jatuh diam-diam ke pola bilangan. Pesan menyebut daftar
+                # yang sah supaya guru/pemanggil langsung tahu pilihannya.
+                pesan = (
+                    f"<h1>Topik tidak dikenal</h1>"
+                    f"<p><code>{html.escape(pilihan_topik)}</code> tidak "
+                    f"terdaftar. Yang tersedia: "
+                    f"{', '.join(html.escape(t) for t in daftar_topik())}.</p>"
+                )
+                return self._kirim(_halaman("Topik tidak dikenal", pesan), 400)
             with basis.buka() as kon:
-                sesi_id = buat_sesi_seed_baru(kon, siswa_id)
+                sesi_id = buat_sesi_seed_baru(
+                    kon, siswa_id, topik=pilihan_topik
+                )
             # Alihkan ke halaman sesinya, bukan menampilkan ulang halaman
             # utama: setelah membuat sesi yang dibutuhkan guru adalah
             # lembarnya, dan pengalihan mencegah sesi ganda kalau halaman

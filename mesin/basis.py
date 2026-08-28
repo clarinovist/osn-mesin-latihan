@@ -16,6 +16,7 @@ from typing import Iterator
 from generator import LEVEL_BAWAAN, buat_lembar
 from skema import MIGRASI, SKEMA, VIEW_USANG
 from templates import Soal
+from topik import TOPIK_BAWAAN
 
 # Lokasi basis data bisa disetel lewat lingkungan, seperti berkas sandi.
 #
@@ -162,12 +163,12 @@ def buat_sesi(
     kon: sqlite3.Connection,
     siswa_id: int,
     seed: int,
-    topik: str = "pola bilangan",
+    topik: str = TOPIK_BAWAAN,
     tanggal: str | None = None,
     level: str = LEVEL_BAWAAN,
 ) -> int:
     """Bangkitkan lembar dari seed, simpan soalnya ke bank, rangkai jadi sesi."""
-    lembar = buat_lembar(seed, level=level)
+    lembar = buat_lembar(seed, level=level, topik=topik)
 
     if tanggal:
         cur = kon.execute(
@@ -317,6 +318,7 @@ def miskonsepsi_berulang(
     return kon.execute(
         """SELECT d.malrule_id,
                   s.template_id,
+                  se.topik                   AS topik,
                   MAX(d.alasan)              AS alasan,
                   COUNT(*)                   AS kemunculan,
                   COUNT(DISTINCT se.id)      AS jumlah_sesi,
@@ -330,7 +332,7 @@ def miskonsepsi_berulang(
            WHERE se.siswa_id = ?
              AND d.kode_final = 'K'
              AND d.malrule_id IS NOT NULL
-           GROUP BY d.malrule_id, s.template_id
+           GROUP BY d.malrule_id, s.template_id, se.topik
            HAVING COUNT(*) >= ?
            ORDER BY jumlah_sesi DESC, kemunculan DESC""",
         (siswa_id, minimal),
@@ -340,14 +342,15 @@ def miskonsepsi_berulang(
 def peta_materi_baru(kon: sqlite3.Connection, siswa_id: int) -> list[sqlite3.Row]:
     """Tipe soal yang ditandai T — belum pernah diajarkan, bukan kegagalan."""
     return kon.execute(
-        """SELECT s.template_id, COUNT(*) AS kali, MAX(se.tanggal) AS terakhir
+        """SELECT s.template_id, se.topik AS topik,
+                  COUNT(*) AS kali, MAX(se.tanggal) AS terakhir
            FROM diagnosis d
            JOIN jawaban j    ON j.id  = d.jawaban_id
            JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
            JOIN sesi se      ON se.id = ss.sesi_id
            JOIN soal s       ON s.id  = ss.soal_id
            WHERE se.siswa_id = ? AND d.kode_final = 'T'
-           GROUP BY s.template_id
+           GROUP BY s.template_id, se.topik
            ORDER BY kali DESC""",
         (siswa_id,),
     ).fetchall()

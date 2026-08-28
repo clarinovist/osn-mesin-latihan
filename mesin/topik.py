@@ -120,6 +120,20 @@ def daftar_topik() -> list[str]:
     return sorted(PAKET)
 
 
+def dari_sesi(nilai: str | None) -> Topik:
+    """Topik untuk satu baris sesi dari basis data.
+
+    Sesi lama menyimpan 'pola bilangan' (dengan spasi — default kolom
+    sebelum Fase A) dan nilai aneh tidak boleh membuat lembar gagal:
+    keduanya jatuh ke paket bawaan. Kontraknya berbeda dari ambil() yang
+    tegas, dengan alasan yang sama dengan level yang fallback.
+    """
+    _pastikan_dimuat()
+    if nilai in PAKET:
+        return PAKET[nilai]
+    return PAKET[TOPIK_BAWAAN]
+
+
 def registri() -> dict[str, Callable[..., Soal]]:
     """Gabungan template semua paket. Pemanggil lama yang masih mengimpor
     REGISTRI dari templates.py mendapat dict ini lewat jalur kompatibilitas."""

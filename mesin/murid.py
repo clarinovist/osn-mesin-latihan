@@ -21,11 +21,20 @@ import html
 
 from basis import isi_sesi
 from templates import Soal
-from topik import Topik, paket_bawaan
+from topik import Topik, dari_sesi
 
 
 def _escape(t: str) -> str:
     return html.escape(str(t))
+
+
+def _ambil_topik(baris) -> str:
+    """Label topik untuk baris sesi; kolom belum ada / aneh -> bawaan."""
+    try:
+        nilai = baris["topik"]
+    except (IndexError, KeyError):
+        return dari_sesi(None).id
+    return dari_sesi(nilai).id
 
 
 def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
@@ -36,7 +45,7 @@ def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     kunci ke dalamnya, test akan gagal sebelum sampai produksi.
     """
     baris = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, w.nama, w.id AS siswa_id
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id
            WHERE s.id = ? AND s.siswa_id = ?""",
         (sesi_id, siswa_id),
@@ -238,7 +247,7 @@ def halaman_kerja(
     if not info:
         return None
     if topik_paket is None:
-        topik_paket = paket_bawaan()
+        topik_paket = dari_sesi(info.get("topik"))
     daftar = soal_murid(kon, sesi_id, siswa_id)
 
     kartu: list[str] = []
@@ -320,7 +329,7 @@ def halaman_kerja(
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kerjakan — Latihan Pola Bilangan</title>
+<title>Kerjakan — {topik_paket.judul_lembar}</title>
 <style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
   <h1>Halo, {_escape(info['nama'])}</h1>
@@ -352,7 +361,7 @@ def halaman_kerja(
 def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
     """/murid — daftar sesi milik murid ini saja."""
     baris = kon.execute(
-        """SELECT id, tanggal, level,
+        """SELECT id, tanggal, level, topik,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah
            FROM sesi s WHERE s.siswa_id = ?
            ORDER BY s.id DESC""",
@@ -361,7 +370,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
     kartu = "".join(
         f'<a class="soal daftar-sesi" href="/murid/kerjakan/{b["id"]}">'
         f"<b>{_escape(b['tanggal'])}</b> &middot; level {_escape(b['level'])}"
-        f" &middot; {b['jumlah']} soal"
+        f" &middot; {_escape(_ambil_topik(b))} &middot; {b['jumlah']} soal"
         f"</a>"
         for b in baris
     ) or "<p>Belum ada sesi. Minta gurumu membuatkan.</p>"
