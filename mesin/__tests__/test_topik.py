@@ -1,0 +1,168 @@
+"""Kontrak paket topik (Fase A, Task A1).
+
+Paket topik adalah unit mandiri: satu topik membawa template, komposisi
+lembar per level, profil batas angka, judul bagian, dan renderer badan
+khusus miliknya sendiri. Menambah topik baru tidak boleh menyentuh paket
+lain — test ini mengunci kontraknya.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import templates  # noqa: E402
+import topik  # noqa: E402
+from templates import LEVEL  # noqa: E402
+
+
+@pytest.fixture()
+def pb():
+    return topik.paket_bawaan()
+
+
+# ── Registry & identitas paket ─────────────────────────────────────────
+
+
+def test_paket_pola_bilangan_terdaftar(pb):
+    assert topik.daftar_topik() == ["pola-bilangan"]
+    assert pb.id == "pola-bilangan"
+    assert pb.nama == "Pola Bilangan"
+    assert pb.judul_lembar == "Latihan Pola Bilangan"
+    assert pb.judul_penilaian == "Penilaian — Pola Bilangan"
+
+
+def test_paket_membawa_16_template(pb):
+    assert len(pb.templates) == 16
+    for nama in (
+        "deret_aritmetika",
+        "siklus_huruf",
+        "korek_api",
+        "titik_segitiga",
+        "deret_terbalik_geometri",
+        "suku_ke_n",
+        "pola_pecahan",
+        "jumlah_deret",
+    ):
+        assert nama in pb.templates, nama
+
+
+# ── Komposisi lembar per level ─────────────────────────────────────────
+
+
+def test_komposisi_per_level(pb):
+    p3 = pb.komposisi_untuk("P3")
+    assert "suku_ke_n" not in p3  # P3: bisa diselesaikan dengan menulis deret
+    assert len(pb.komposisi_untuk("P4")) == 12
+    assert "pola_pecahan" in pb.komposisi_untuk("P5")
+    assert "jumlah_deret" in pb.komposisi_untuk("P6")
+    # P3 adalah komposisi bawaan
+    assert pb.komposisi_untuk("P3") == pb.komposisi_untuk("XL-tak-dikenal")
+
+
+def test_profil_per_level(pb):
+    assert pb.profil_untuk("P3")["posisi_siklus"] == (15, 40)
+    assert pb.profil_untuk("P6")["posisi_siklus"] == (100, 300)
+    # Level tak dikenal jatuh ke P3 — data produksi tidak boleh membuat
+    # guru gagal membuat sesi (kontrak lama generator.profil).
+    assert pb.profil_untuk("tidak-ada") == pb.profil_untuk("P3")
+
+
+# ── Judul bagian ───────────────────────────────────────────────────────
+
+
+def test_judul_bagian(pb):
+    assert set(pb.judul_bagian) == set("ABCDEF")
+    assert "Pola dalam cerita" in pb.judul_bagian["E"]
+    assert "jalan pintas" in pb.judul_bagian["F"]
+
+
+# ── Renderer badan khusus ──────────────────────────────────────────────
+
+
+def test_render_badan_deret_ditebalkan(pb):
+    soal = pb.templates["deret_aritmetika"](awal=2, beda=3, n_tampil=4, n_minta=2)
+    badan = pb.render_badan(soal)
+    assert 'class="teks deret"' in badan
+    assert 'class="isian"' in badan
+
+
+def test_render_badan_korek_api_menggambar_svg(pb):
+    soal = pb.templates["korek_api"](awal=3, tambah=2, gambar_ke=10)
+    badan = pb.render_badan(soal)
+    assert "<svg" in badan
+    assert "batang korek api" in badan
+
+
+def test_render_badan_titik_segitiga_menggambar_svg(pb):
+    soal = pb.templates["titik_segitiga"](gambar_ke=12)
+    badan = pb.render_badan(soal)
+    assert "<svg" in badan
+
+
+def test_render_badan_template_lain_menyerahkan_ke_bawaan(pb):
+    """Soal tanpa bentuk visual khusus pulang None — render.py memakai
+    renderer teks bawaannya."""
+    soal = pb.templates["siklus_huruf"](pola=("A", "B", "B", "C"), posisi=9)
+    assert pb.render_badan(soal) is None
+
+
+# ── Kompatibilitas jalur lama lewat templates.py ───────────────────────
+
+
+def test_templates_registri_tetap_gabungan_paket():
+    pb = topik.paket_bawaan()
+    assert set(templates.REGISTRI) == set(pb.templates)
+    for tid in templates.REGISTRI:
+        assert templates.REGISTRI[tid] is pb.templates[tid]
+
+
+def test_templates_masih_mengekspor_simbol_lama():
+    assert templates.URUTAN_LEMBAR == templates.URUTAN_PER_LEVEL["P3"]
+    assert templates.susun_lembar("P4") == templates.URUTAN_PER_LEVEL["P4"]
+    assert templates.susun_lembar("aneh") == templates.URUTAN_LEMBAR
+    # fungsi template ikut diekspor (dipakai test_llm & pemanggil lama)
+    assert callable(templates.deret_aritmetika)
+
+
+# ── Aman terhadap urutan impor ─────────────────────────────────────────
+
+
+def test_urutan_impor_apapun_hasil_sama():
+    """Modul-modul ini saling berkenalan lewat impor malas; urutan impor
+    pertama (topik dulu, templates dulu, atau paket dulu) tidak boleh
+    mengubah isi."""
+    prolog = (
+        "import sys; sys.path.insert(0, "
+        f"{str(Path(__file__).resolve().parent.parent)!r})\n"
+    )
+    skenario = {
+        "topik_dulu": (
+            "import topik\nimport templates\n"
+            "assert len(templates.REGISTRI) == 16\n"
+        ),
+        "templates_dulu": (
+            "import templates\nimport topik\n"
+            "assert len(templates.REGISTRI) == 16\n"
+        ),
+        "paket_dulu": (
+            "import topik_pola_bilangan\nimport templates\n"
+            "assert len(templates.REGISTRI) == 16\n"
+        ),
+        "generator_dulu": (
+            "import generator\nassert len(generator.REGISTRI) == 16\n"
+        ),
+    }
+    for nama, isi in skenario.items():
+        hasil = subprocess.run(
+            [sys.executable, "-c", prolog + isi],
+            capture_output=True,
+            text=True,
+            cwd=str(Path(__file__).resolve().parent.parent),
+        )
+        assert hasil.returncode == 0, f"{nama}: {hasil.stderr}"

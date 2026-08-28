@@ -138,14 +138,18 @@ def test_diagram_digambar_sebagai_svg_bukan_ascii():
 def test_svg_korek_api_jumlah_batangnya_benar():
     """Label pada gambar harus cocok dengan pola 3, 5, 7 — kalau tidak,
     anak melihat gambar yang bertentangan dengan soalnya."""
-    svg = cetak._svg_korek(3, 3, 2)
+    from topik_pola_bilangan import _svg_korek
+
+    svg = _svg_korek(3, 3, 2)
     assert "Gbr 1 — 3" in svg
     assert "Gbr 2 — 5" in svg
     assert "Gbr 3 — 7" in svg
 
 
 def test_svg_titik_segitiga_jumlahnya_benar():
-    svg = cetak._svg_titik(4)
+    from topik_pola_bilangan import _svg_titik
+
+    svg = _svg_titik(4)
     for n, jml in ((1, 1), (2, 3), (3, 6), (4, 10)):
         assert f"Gbr {n} — {jml}" in svg
     # 1+3+6+10 = 20 titik

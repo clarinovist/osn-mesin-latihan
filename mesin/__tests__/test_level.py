@@ -17,9 +17,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import basis  # noqa: E402
 import web  # noqa: E402
-from generator import PROFIL_LEVEL, buat_lembar, buat_soal, profil  # noqa: E402
+from generator import buat_lembar, buat_soal, profil  # noqa: E402
 from skema import MIGRASI  # noqa: E402
 from templates import LEVEL, URUTAN_PER_LEVEL, level_valid, susun_lembar  # noqa: E402
+from topik_pola_bilangan import PROFIL_LEVEL  # noqa: E402
 
 SEED_UJI = list(range(1, 61))
 
@@ -662,11 +663,13 @@ def test_tiap_bagian_yang_terpakai_punya_judul_sendiri():
     """Judul fallback "Bagian F" polos berarti anak tidak diberi tahu apa
     yang berubah — dan Bagian F adalah satu-satunya bagian yang menuntut
     cara kerja berbeda."""
-    from cetak import JUDUL_BAGIAN
+    from topik import paket_bawaan
+
+    judul_bagian = paket_bawaan().judul_bagian
 
     for lv in LEVEL:
         for s in buat_lembar(7, level=lv).soal:
-            assert s.bagian in JUDUL_BAGIAN, f"{lv}: bagian {s.bagian} tanpa judul"
+            assert s.bagian in judul_bagian, f"{lv}: bagian {s.bagian} tanpa judul"
 
 
 # -- Malrule yang kolaps secara matematis ---------------------------------

@@ -20,8 +20,8 @@ from __future__ import annotations
 import html
 
 from basis import isi_sesi
-from render import CATATAN_BAGIAN, JUDUL_BAGIAN
 from templates import Soal
+from topik import Topik, paket_bawaan
 
 
 def _escape(t: str) -> str:
@@ -230,12 +230,15 @@ h1 { font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: #16213e; }
 
 
 def halaman_kerja(
-    kon, siswa_id: int, sesi_id: int, tersimpan: int = 0
+    kon, siswa_id: int, sesi_id: int, tersimpan: int = 0,
+    topik_paket: Topik | None = None,
 ) -> bytes | None:
     """Lembar interaktif murid: baca soal, tulis caraku + jawaban."""
     info = sesi_murid(kon, siswa_id, sesi_id)
     if not info:
         return None
+    if topik_paket is None:
+        topik_paket = paket_bawaan()
     daftar = soal_murid(kon, sesi_id, siswa_id)
 
     kartu: list[str] = []
@@ -243,12 +246,14 @@ def halaman_kerja(
     for s in daftar:
         if s["bagian"] != bagian_kini:
             bagian_kini = s["bagian"]
-            judul = JUDUL_BAGIAN.get(bagian_kini, f"Bagian {bagian_kini}")
+            judul = topik_paket.judul_bagian.get(
+                bagian_kini, f"Bagian {bagian_kini}"
+            )
             kartu.append(f'<div class="bagian">{judul}</div>')
-            if bagian_kini in CATATAN_BAGIAN:
+            if bagian_kini in topik_paket.catatan_bagian:
                 kartu.append(
                     f'<div class="catatan-bagian">'
-                    f"{CATATAN_BAGIAN[bagian_kini]}</div>"
+                    f"{topik_paket.catatan_bagian[bagian_kini]}</div>"
                 )
         t = s["terjawab"] or {}
         restate = ""

@@ -24,7 +24,8 @@ WORKDIR /app
 # "sukses", deploy gagal sehat karena import error, dan rollback otomatis yang
 # menyelamatkan situs justru menyembunyikan penyebabnya — di lokal semua test
 # hijau karena filenya ada; yang hilang hanya di dalam image.
-COPY --chown=osn:osn templates.py generator.py skema.py basis.py \
+COPY --chown=osn:osn templates.py topik.py topik_pola_bilangan.py \
+     generator.py skema.py basis.py \
      diagnosa.py cetak.py web.py sandi.py sajikan.py buat_lembar.py \
      siapkan_db.py periksa_sehat.py \
      render.py gaya_layar.py gaya_cetak.py \

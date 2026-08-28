@@ -15,7 +15,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, replace
 
-from templates import HARI, LEVEL, REGISTRI, URUTAN_LEMBAR, Soal, susun_lembar
+from templates import HARI, REGISTRI, URUTAN_LEMBAR, Soal, susun_lembar
 
 WARNA = ("merah", "kuning", "hijau", "biru", "putih", "ungu")
 HURUF = ("A", "B", "C", "D")
@@ -26,106 +26,18 @@ HURUF_PANJANG = ("A", "B", "C", "D", "E", "F")
 
 LEVEL_BAWAAN = "P3"
 
-# Pengali batas angka per level.
-#
-# HANYA menggeser besar angka, TIDAK menaikkan level yang sebenarnya.
-# Lembar penilaian 20 Agustus sudah menuliskannya: "di P4 angkanya jadi
-# ke-100 dan cara manual berhenti bekerja". Menaikkan posisi dari 20 ke 100
-# pada template yang sama membuat anak menulis lebih lama, bukan berpikir
-# lebih dalam.
-#
-# Kenaikan level yang sesungguhnya datang dari template yang menuntut rumus
-# suku ke-n (lihat URUTAN_PER_LEVEL) — tabel ini hanya memastikan angkanya
-# tidak terasa kekanak-kanakan di level atas.
-PROFIL_LEVEL: dict[str, dict] = {
-    "P3": {
-        "posisi_suku_n": (25, 30, 40),
-        "posisi_sisa_bagi": (40, 70),
-        "penyebut_pecahan": (4, 5, 6),
-        "n_jumlah_deret": (8, 10),
-        "n_tampil_geometri": (3, 4),
-        "posisi_terbalik_geometri": (4, 6, 3, 4),
-        "beda_aritmetika": (3, 4, 5, 6, 7),
-        "n_minta": 2,
-        "rasio_geometri": (2, 2, 2, 3, 3, 4),
-        "kenaikan_bertingkat": (1, 2, 3),
-        "posisi_siklus": (15, 40),
-        "posisi_warna": (20, 45),
-        "gambar_korek": (8, 20),
-        "gambar_titik": (6, 12),
-        "posisi_terbalik": (10, 16),
-        "tambah_hari": (16, 20, 23, 30, 40, 50, 100),
-        "n_angka_kelipatan": (5, 12),
-    },
-    "P4": {
-        "posisi_suku_n": (50, 60, 75, 100),
-        "posisi_sisa_bagi": (80, 150),
-        "penyebut_pecahan": (5, 6, 7, 8),
-        "n_jumlah_deret": (10, 12, 15),
-        "n_tampil_geometri": (4, 5),
-        "posisi_terbalik_geometri": (6, 8, 4, 5),
-        "beda_aritmetika": (6, 7, 8, 9, 11, 12),
-        "n_minta": 2,
-        "rasio_geometri": (2, 2, 3, 3, 4),
-        "kenaikan_bertingkat": (2, 3, 4),
-        "posisi_siklus": (30, 80),
-        "posisi_warna": (40, 90),
-        "gambar_korek": (15, 40),
-        "gambar_titik": (8, 16),
-        "posisi_terbalik": (12, 22),
-        "tambah_hari": (45, 60, 75, 90, 100, 120, 150),
-        "n_angka_kelipatan": (8, 20),
-    },
-    "P5": {
-        "posisi_suku_n": (100, 120, 150, 200),
-        "posisi_sisa_bagi": (150, 300),
-        "penyebut_pecahan": (7, 8, 9, 10, 12),
-        "n_jumlah_deret": (15, 20, 25),
-        "n_tampil_geometri": (5, 6),
-        "posisi_terbalik_geometri": (8, 10, 5, 6),
-        "beda_aritmetika": (9, 11, 12, 13, 14, 15, 16),
-        "n_minta": 3,
-        "rasio_geometri": (2, 3, 3, 4, 5),
-        "kenaikan_bertingkat": (3, 4, 5),
-        "posisi_siklus": (60, 150),
-        "posisi_warna": (75, 180),
-        "gambar_korek": (25, 60),
-        "gambar_titik": (10, 20),
-        "posisi_terbalik": (15, 30),
-        "tambah_hari": (100, 150, 200, 250, 300, 365),
-        "n_angka_kelipatan": (12, 30),
-    },
-    "P6": {
-        "posisi_suku_n": (150, 200, 250, 300, 500),
-        "posisi_sisa_bagi": (300, 700),
-        "penyebut_pecahan": (9, 10, 11, 12, 15),
-        "n_jumlah_deret": (20, 25, 30, 40),
-        "n_tampil_geometri": (6, 7),
-        "posisi_terbalik_geometri": (10, 12, 6, 7),
-        "beda_aritmetika": (12, 13, 14, 15, 16, 17, 18, 19, 21),
-        "n_minta": 3,
-        "rasio_geometri": (3, 4, 5, 6),
-        "kenaikan_bertingkat": (4, 5, 6, 7),
-        "posisi_siklus": (100, 300),
-        "posisi_warna": (120, 350),
-        "gambar_korek": (40, 100),
-        "gambar_titik": (12, 25),
-        "posisi_terbalik": (20, 40),
-        "tambah_hari": (200, 300, 365, 500, 730, 1000),
-        "n_angka_kelipatan": (20, 50),
-    },
-}
-
 
 def profil(level: str) -> dict:
-    """Batas angka untuk satu level. Level tak dikenal jatuh ke bawaan.
+    """Batas angka untuk satu level — milik paket topik sejak Fase A.
 
-    Sengaja tidak melempar: `siswa.tingkat` adalah kolom teks bebas yang
-    sudah terisi di basis data produksi, dan satu nilai aneh di situ tidak
-    boleh membuat guru gagal membuat sesi. Yang salah levelnya lebih baik
-    daripada yang tidak ada lembarnya.
+    Kontrak lama dipertahankan: level tak dikenal jatuh ke P3 (bukan
+    exception), karena `siswa.tingkat` adalah kolom teks bebas yang sudah
+    terisi di basis data produksi. Yang salah levelnya lebih baik daripada
+    yang tidak ada lembarnya.
     """
-    return PROFIL_LEVEL.get(level, PROFIL_LEVEL[LEVEL_BAWAAN])
+    from topik import paket_bawaan
+
+    return paket_bawaan().profil_untuk(level)
 
 
 @dataclass(frozen=True)

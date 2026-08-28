@@ -32,96 +32,19 @@ import json
 from gaya_cetak import GAYA_CETAK
 from gaya_layar import GAYA_LAYAR
 from templates import Soal
-
-
-def _svg_korek(n_tampil: int, awal: int, tambah: int) -> str:
-    """Gambar tiga bangun pertama pola korek api sebagai SVG.
-
-    Jumlah titik zig-zag untuk n segitiga berbagi sisi adalah n+2, bukan n+1.
-    Nilai batang dihitung ulang di sini dan dipakai sebagai label — kalau
-    rumus di template berubah, ketidakcocokannya langsung kelihatan.
-    """
-    potong = []
-    x0 = 6
-    for i in range(3):
-        n = i + 1
-        half, y0, y1 = 20, 44, 14
-        P = [(x0 + j * half, y0 if j % 2 == 0 else y1) for j in range(n + 2)]
-        zig = "M " + " L ".join(f"{x} {y}" for x, y in P)
-        bawah, atas = P[0::2], P[1::2]
-        seg = [zig]
-        for arr in (bawah, atas):
-            seg += [
-                f"M {a[0]} {a[1]} L {b[0]} {b[1]}" for a, b in zip(arr, arr[1:])
-            ]
-        jml = awal + tambah * i
-        potong.append(
-            f'<path d="{" ".join(seg)}" stroke="#000" stroke-width="1.6" '
-            f'fill="none" stroke-linejoin="round"/>'
-            f'<text x="{x0 + (n * half) / 2}" y="58" font-size="8.5" '
-            f'text-anchor="middle">Gbr {n} — {jml}</text>'
-        )
-        x0 += (n + 1) * half + 22
-    return (
-        f'<svg viewBox="0 0 {x0} 64" width="100%" height="64" '
-        f'xmlns="http://www.w3.org/2000/svg">{"".join(potong)}</svg>'
-    )
-
-
-def _svg_titik(n_tampil: int = 4) -> str:
-    """Susunan titik segitiga: 1, 3, 6, 10."""
-    potong, x0 = [], 10
-    for n in range(1, n_tampil + 1):
-        lebar = n * 13
-        for baris in range(n):
-            for kolom in range(baris + 1):
-                cx = x0 + lebar / 2 - (baris * 13) / 2 + kolom * 13
-                cy = 10 + baris * 12
-                potong.append(f'<circle cx="{cx:.1f}" cy="{cy}" r="3.4" fill="#000"/>')
-        jml = n * (n + 1) // 2
-        potong.append(
-            f'<text x="{x0 + lebar / 2:.1f}" y="{10 + n_tampil * 12 + 6}" '
-            f'font-size="8.5" text-anchor="middle">Gbr {n} — {jml}</text>'
-        )
-        x0 += lebar + 26
-    tinggi = 10 + n_tampil * 12 + 12
-    return (
-        f'<svg viewBox="0 0 {x0} {tinggi}" width="100%" height="{tinggi}" '
-        f'xmlns="http://www.w3.org/2000/svg">{"".join(potong)}</svg>'
-    )
+from topik import Topik, paket_bawaan
 
 
 def _badan_soal(soal: Soal) -> str:
-    """Teks soal + diagram. Deret ditebalkan supaya mudah dibaca sekilas."""
-    t = soal.template_id
+    """Teks soal + diagram. Paket topik boleh mengambil alih bentuk
+    khusus (deret ditebalkan, diagram SVG); sisanya renderer teks bawaan:
+    baris pertama jadi badan, sisanya jadi pertanyaan."""
+    khusus = paket_bawaan().render_badan
+    if khusus is not None:
+        hasil = khusus(soal)
+        if hasil is not None:
+            return hasil
 
-    if t in ("deret_aritmetika", "deret_aritmetika_turun", "deret_geometri",
-             "deret_bertingkat"):
-        deret = html.escape(soal.teks).replace(
-            "___", '<span class="isian"></span>'
-        )
-        return f'<div class="teks deret">{deret}</div>'
-
-    if t == "korek_api":
-        p = soal.parameter
-        svg = _svg_korek(3, p["awal"], p["tambah"])
-        return (
-            '<div class="teks">Segitiga dibuat dari batang korek api. '
-            "Segitiga yang bersebelahan memakai batang bersama.</div>"
-            f"{svg}"
-            f'<div class="tanya">Gambar ke-<b>{p["gambar_ke"]}</b> '
-            "butuh berapa batang?</div>"
-        )
-
-    if t == "titik_segitiga":
-        return (
-            '<div class="teks">Titik disusun jadi segitiga.</div>'
-            f"{_svg_titik(4)}"
-            f'<div class="tanya">Gambar ke-<b>{soal.parameter["gambar_ke"]}</b> '
-            "punya berapa titik?</div>"
-        )
-
-    # sisanya: teks biasa, baris pertama jadi badan, sisanya jadi pertanyaan
     baris = [b for b in soal.teks.split("\n") if b.strip()]
     if len(baris) == 1:
         return f'<div class="teks">{html.escape(baris[0])}</div>'
@@ -175,40 +98,19 @@ def _kartu_soal(nomor: int, soal: Soal) -> str:
     )
 
 
-JUDUL_BAGIAN = {
-    "A": "Bagian A — Lanjutkan polanya",
-    "B": "Bagian B — Pola berulang",
-    "C": "Bagian C — Pola gambar",
-    "D": "Bagian D — Pola dibalik",
-    "E": "Bagian E — Pola dalam cerita",
-    "F": "Bagian F — Cari jalan pintasnya",
-}
+def _isi_lembar(soal: list[Soal], topik_paket: Topik) -> list[str]:
+    """Kartu-kartu soal + judul bagian, urut sesuai komposisi lembar.
 
-CATATAN_BAGIAN = {
-    "D": "Baca pelan-pelan. Yang ditanya di bagian ini <b>berbeda</b> "
-         "dari Bagian A.",
-    # Anak P3-P4 terbiasa menulis deretnya satu per satu sampai ketemu, dan
-    # itu memang cara yang sah di Bagian A-E. Di sini angkanya sengaja dibuat
-    # terlalu jauh untuk itu. Tanpa kalimat ini sebagian anak akan mencoba
-    # menulis 250 suku, kehabisan waktu, lalu mengosongkan sisa lembarnya —
-    # dan yang tercatat jadi "tidak bisa", padahal masalahnya cuma belum
-    # tahu boleh mencari jalan pintas.
-    "F": "Angkanya terlalu besar untuk ditulis satu per satu. "
-         "Coba cari <b>caranya</b>, bukan tulis semuanya.",
-}
-
-
-def _isi_lembar(soal: list[Soal]) -> list[str]:
-    """Kartu-kartu soal + judul bagian, urut sesuai komposisi lembar."""
+    Judul dan catatan bagian milik paket topik — bukan milik renderer."""
     isi, bagian_kini = [], None
     for i, s in enumerate(soal, start=1):
         if s.bagian != bagian_kini:
             bagian_kini = s.bagian
-            judul = JUDUL_BAGIAN.get(bagian_kini, f"Bagian {bagian_kini}")
+            judul = topik_paket.judul_bagian.get(bagian_kini, f"Bagian {bagian_kini}")
             isi.append(f'<div class="bagian">{judul}</div>')
-            if bagian_kini in CATATAN_BAGIAN:
+            if bagian_kini in topik_paket.catatan_bagian:
                 isi.append(f'<div class="catatan-bagian">'
-                           f"{CATATAN_BAGIAN[bagian_kini]}</div>")
+                           f"{topik_paket.catatan_bagian[bagian_kini]}</div>")
         isi.append(_kartu_soal(i, s))
     return isi
 
@@ -218,20 +120,24 @@ def lembar_soal(
     nama: str = "",
     tanggal: str = "",
     gaya: str | None = None,
+    topik_paket: Topik | None = None,
 ) -> str:
     """HTML lembar anak. Tidak memuat kunci — dijaga oleh test.
 
     gaya: CSS mentah. Default GAYA_CETAK supaya pemanggil lama (cetak CLI,
     PDF via browser) tetap menghasilkan kertas yang sama persis; web
     (web.py) memanggil dengan GAYA_LAYAR.
+    topik_paket: judul dari paket topik; None berarti paket bawaan.
     """
     css = GAYA_CETAK if gaya is None else gaya
+    if topik_paket is None:
+        topik_paket = paket_bawaan()
     return f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Latihan Pola Bilangan</title><style>{css}</style></head><body>
+<title>{html.escape(topik_paket.judul_lembar)}</title><style>{css}</style></head><body>
 <div class="wrap">
-<h1>Latihan Pola Bilangan</h1>
+<h1>{html.escape(topik_paket.judul_lembar)}</h1>
 <div class="identitas">
   <span>Nama: <span class="garis">{html.escape(nama)}</span></span>
   <span>Tanggal: <span class="garis pendek">{html.escape(tanggal)}</span></span>
@@ -247,7 +153,7 @@ def lembar_soal(
   <b>bukan</b> salah — itu menandakan soalnya memang baru, dan itu berguna.</p>
   <p>Tidak apa-apa ada yang kosong. Jangan menebak asal.</p>
 </div>
-{"".join(_isi_lembar(soal))}
+{"".join(_isi_lembar(soal, topik_paket))}
 <div class="akhir"><b>Sudah selesai?</b> Cek sekali lagi: apakah setiap kotak
 "Caraku" ada isinya? Kalau ada jawaban yang kamu tulis tanpa cara, tulis dulu
 caranya sekarang.</div>
@@ -261,6 +167,7 @@ def lembar_penilaian(
     tanggal: str = "",
     seed: int | None = None,
     gaya: str | None = None,
+    topik_paket: Topik | None = None,
 ) -> str:
     """HTML lembar guru: kunci + tabel malrule + rekap."""
     baris = []
@@ -295,12 +202,14 @@ def lembar_penilaian(
     )
 
     css = GAYA_CETAK if gaya is None else gaya
+    if topik_paket is None:
+        topik_paket = paket_bawaan()
     return f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Penilaian — Pola Bilangan</title><style>{css}</style></head><body>
+<title>{html.escape(topik_paket.judul_penilaian)}</title><style>{css}</style></head><body>
 <div class="wrap">
-<h1>Lembar Penilaian — Pola Bilangan</h1>
+<h1>Lembar {html.escape(topik_paket.judul_penilaian)}</h1>
 <div class="identitas">
   <span>Nama: <b>{html.escape(nama) or "______"}</b></span>
   <span>Tanggal: <b>{html.escape(tanggal) or "______"}</b></span>

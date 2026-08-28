@@ -21,12 +21,8 @@ memastikan berkas anak tidak mengandung kunci.
 """
 
 from render import (  # noqa: F401
-    JUDUL_BAGIAN,
-    CATATAN_BAGIAN,
     _badan_soal,
     _kartu_soal,
-    _svg_korek,
-    _svg_titik,
     lembar_penilaian,
     lembar_soal,
     tulis,
