@@ -101,6 +101,11 @@ button.tombol-putih {{
   background: {T.LATAR_KARTU_SEKUNDER}; padding: .15rem .5rem;
   border-radius: {T.RADIUS_PIL}; margin-left: .3rem;
 }}
+.badge-mode {{
+  font-size: .78rem; font-weight: 700; color: {T.AKSEN_MURID_KORAL};
+  background: {T.LATAR_TERSIMPAN}; border: 1px solid {T.BORDER_TERSIMPAN};
+  padding: .12rem .5rem; border-radius: {T.RADIUS_PIL}; white-space: nowrap;
+}}
 .siswa-kepala a {{ font-size: .85rem; white-space: nowrap; }}
 .kosong-hint-guru {{
   border: 1.5px dashed {T.BORDER_HALUS}; text-align: center;

@@ -282,6 +282,11 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
   border-radius: {T.RADIUS_PIL}; white-space: nowrap;
   position: absolute; transform: translate(-2.2rem, -1.8rem);
 }}
+.badge-latihan {{
+  font-size: 0.7rem; font-weight: 700; color: {T.AKSEN_MURID_UTAMA};
+  background: {T.LATAR_KARTU_SEKUNDER}; padding: 0.15rem 0.4rem;
+  border-radius: {T.RADIUS_PIL}; white-space: nowrap; margin-left: 0.25rem;
+}}
 .kosong-hint {{
   border: 1.5px dashed #ccd3dd; border-radius: {T.RADIUS_KARTU};
   padding: 1.5rem; text-align: center; color: {T.TEKS_SUBTLE};
@@ -589,7 +594,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
     hari_ini = date.today().isoformat()
 
     baris = kon.execute(
-        """SELECT id, tanggal, level, topik,
+        """SELECT id, tanggal, level, topik, mode,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah
            FROM sesi s WHERE s.siswa_id = ?
            ORDER BY s.id DESC""",
@@ -601,13 +606,19 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
         warna = _WARNA_ICON[i % len(_WARNA_ICON)]
         baru = b["tanggal"] == hari_ini
         badge_baru = '<span class="badge-baru">baru</span>' if baru else ""
+        # Tag "latihan" untuk sesi Latihan Cepat (drill) — biar anak tahu
+        # sesi ini bukan diagnosa penuh.
+        tag_latihan = (
+            '<span class="badge-latihan">latihan</span>'
+            if b["mode"] == "drill" else ""
+        )
         kartu.append(
             f'<a class="kartu-sesi" href="/murid/kerjakan/{b["id"]}">'
             f'<span class="ikon-sesi" style="background:{warna}"></span>'
             f'<span class="isi-sesi">'
             f'<span class="tanggal-sesi">{_escape(b["tanggal"])}</span>'
             f'<span class="meta-sesi">level {_escape(b["level"])} '
-            f"&middot; {_escape(_ambil_topik(b))}</span>"
+            f"&middot; {_escape(_ambil_topik(b))} {tag_latihan}</span>"
             f"</span>"
             f'<span class="badge-soal">{b["jumlah"]} soal</span>'
             f'<span class="chevron-sesi">{badge_baru}</span>'

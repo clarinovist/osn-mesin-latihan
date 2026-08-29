@@ -253,7 +253,7 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
 
 def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
     info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
                    w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
@@ -330,6 +330,14 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
 
+    # Badge mode sesi (Latihan Cepat / drill). CSS guru memuat kata
+    # "Latihan Cepat" di komentar, jadi badge-nya harus marker kelas.
+    badge_mode = (
+        '<span class="badge-mode">Latihan Cepat</span>'
+        if _ambil(info, "mode", "diagnostik") == "drill"
+        else ""
+    )
+
     return _halaman(
         f"Sesi #{sesi_id}",
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
@@ -337,7 +345,8 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
-        f'seed {info["seed"]} &middot; '
+        f'seed {info["seed"]} {badge_mode} '
+        f'&middot; '
         f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
         f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
         f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'

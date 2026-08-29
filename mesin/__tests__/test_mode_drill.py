@@ -351,3 +351,42 @@ def test_diagnostik_jawaban_benar_tanpa_cara_tetap_N(db):
     assert b["benar"] == 0
     assert b["kode_final"] == "N"
 
+
+# ── 1.6 Label mode di guru + kartu sesi murid ─────────────────────────
+
+
+def test_halaman_sesi_guru_menampilkan_badge_latihan_cepat(db):
+    """Badge drill dicek lewat marker kelas — CSS guru memuat teks
+    'Latihan Cepat' di komentar, jadi string global tidak bisa dipakai."""
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakBadge", 7, mode="drill")
+        html = web.halaman_sesi(kon, sesi_id).decode()
+    assert 'class="badge-mode"' in html
+
+
+def test_halaman_sesi_guru_diagnostik_tanpa_badge_drill(db):
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakBadgeDiag", 7)
+        html = web.halaman_sesi(kon, sesi_id).decode()
+    assert 'class="badge-mode"' not in html
+
+
+def test_kartu_sesi_murid_menampilkan_tag_latihan(db):
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakKartu", 7, mode="drill")
+        nama = kon.execute(
+            "SELECT nama FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()["nama"]
+        html = murid.halaman_daftar_sesi(kon, sid, nama).decode()
+    assert 'class="badge-latihan"' in html
+
+
+def test_kartu_sesi_murid_diagnostik_tanpa_tag_latihan(db):
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakKartuDiag", 7)
+        nama = kon.execute(
+            "SELECT nama FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()["nama"]
+        html = murid.halaman_daftar_sesi(kon, sid, nama).decode()
+    assert 'class="badge-latihan"' not in html
+
