@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import basis  # noqa: E402
 import murid  # noqa: E402
 import web  # noqa: E402
-from uji_http import SANDI_GURU, ServerUji  # noqa: E402
+from uji_http import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
 
 @pytest.fixture()
@@ -389,4 +389,47 @@ def test_kartu_sesi_murid_diagnostik_tanpa_tag_latihan(db):
         ).fetchone()["nama"]
         html = murid.halaman_daftar_sesi(kon, sid, nama).decode()
     assert 'class="badge-latihan"' not in html
+
+
+# ── 1.7 E2E HTTP: drill alur penuh ──────────────────────────────────
+
+
+def test_http_drill_alur_penuh_tanpa_kode_N(server):
+    """Guru buat sesi drill -> murid jawab tanpa cara (via HP) ->
+    guru buka halaman sesi -> tidak ada kode N (menebak)."""
+    with server.buka() as kon:
+        siswa_id = basis.tambah_siswa(kon, "feby")  # nama == akun murid uji
+
+    # Guru buat sesi drill via POST
+    server.minta(
+        f"/sesi-baru/{siswa_id}", auth=("guru", SANDI_GURU),
+        data={"topik": "pola-bilangan", "mode": "drill",
+              "timer_mode": "sesi", "durasi_menit": "15"},
+    )
+    with server.buka() as kon:
+        sesi_id = kon.execute(
+            "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC LIMIT 1",
+            (siswa_id,),
+        ).fetchone()["id"]
+        kunci = basis.isi_sesi(kon, sesi_id)[0]["kunci"]
+        ssid = basis.isi_sesi(kon, sesi_id)[0]["sesi_soal_id"]
+
+    # Murid jawab via HP (tanpa cara, persis yang dikirim browser)
+    kode, _, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data={f"jwb_{ssid}": kunci},
+    )
+    assert kode == 200
+
+    # Guru buka halaman sesi: harus BENAR, bukan N
+    kode, isi, _ = server.minta(
+        f"/sesi/{sesi_id}", auth=("guru", SANDI_GURU)
+    )
+    assert kode == 200
+    assert '<span class="kode benar">BENAR</span>' in isi, (
+        "guru melihat N padahal anak drill jawab benar tanpa cara"
+    )
+    # Tidak ada kode N untuk soal ini
+    assert 'class="kode N"' not in isi
 
