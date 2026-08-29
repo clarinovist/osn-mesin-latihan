@@ -223,3 +223,66 @@ def test_http_buat_sesi_timer_mode_asing_ditolak(server):
     assert kode == 400
     assert "timer" in html.lower()
 
+
+# ── 1.4 Halaman kerja murid — mode drill + timer ─────────────────────
+
+
+def _buat(kon, nama: str, seed: int, **kw) -> tuple[int, int]:
+    sid = basis.tambah_siswa(kon, nama)
+    sesi_id = basis.buat_sesi(kon, sid, seed=seed, **kw)
+    return sid, sesi_id
+
+
+def test_halaman_kerja_drill_tanpa_caraku(db):
+    """Drill: tanpa Caraku, tanpa restate; Jawabanku + centang tetap ada.
+
+    Marker dicek di BADAN halaman (label/name), bukan string global —
+    CSS_MURID memuat komentar "Caraku" dan kelas .pilih-cara yang selalu
+    ada di berkas CSS, jadi cek 'name=...' dan label persis.
+    """
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakDrill", 7, mode="drill")
+        html = murid.halaman_kerja(kon, sid, sesi_id).decode()
+    assert "Caraku — pilih dulu" not in html      # label pill tidak ada
+    assert 'name="pilih_' not in html             # radio pill tidak ada
+    assert 'name="cara_' not in html              # textarea cara tidak ada
+    assert 'name="restate_' not in html           # restate tidak ada
+    assert 'name="jwb_' in html                   # Jawabanku tetap
+    assert "belum pernah lihat" in html           # centang tetap
+
+
+def test_halaman_kerja_diagnostik_masih_punya_caraku(db):
+    """Diagnosa (default): pill Caraku + textarea tetap ada."""
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakDiag", 7)
+        html = murid.halaman_kerja(kon, sid, sesi_id).decode()
+    assert "Caraku — pilih dulu" in html
+    assert 'name="pilih_' in html
+    assert 'name="cara_' in html
+    assert 'id="timer-strip"' not in html  # Diagnosa tanpa timer
+
+
+def test_halaman_kerja_drill_timer_per_sesi_tampil(db):
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(
+            kon, "AnakDrillSesi", 7, mode="drill",
+            timer_mode="sesi", durasi_menit=10,
+        )
+        html = murid.halaman_kerja(kon, sid, sesi_id).decode()
+    assert 'id="timer-strip"' in html
+    assert "Sisa waktu" in html
+    assert "10:00" in html
+
+
+def test_halaman_kerja_drill_timer_per_soal_internal(db):
+    """Per-soal: tidak ada countdown tampil, tapi kartu punya penanda + JS."""
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(
+            kon, "AnakDrillSoal", 7, mode="drill",
+            timer_mode="soal", durasi_menit=5,
+        )
+        html = murid.halaman_kerja(kon, sid, sesi_id).decode()
+    assert "Sisa waktu" not in html             # internal, tak dimunculkan
+    assert 'class="soal-timer-note"' in html    # penanda per kartu
+    assert "setInterval" in html                # ada JS timer
+

@@ -18,6 +18,7 @@ perantara ketikan.
 from __future__ import annotations
 
 import html
+import json
 
 import design_tokens as T
 from basis import isi_sesi
@@ -46,7 +47,9 @@ def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     kunci ke dalamnya, test akan gagal sebelum sampai produksi.
     """
     baris = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, w.nama, w.id AS siswa_id
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
+                  s.mode, s.timer_mode, s.durasi_menit, s.timer_auto,
+                  w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id
            WHERE s.id = ? AND s.siswa_id = ?""",
         (sesi_id, siswa_id),
@@ -224,6 +227,19 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
   font-size: .98rem;
 }}
 
+/* ── Timer Latihan Cepat ── */
+.timer-strip {{
+  position: sticky; top: 0; z-index: 5;
+  background: {T.AKSEN_MURID_UTAMA}; color: #fff;
+  padding: .55rem .9rem; border-radius: {T.RADIUS_SEDANG};
+  margin-bottom: .8rem; font-size: .98rem; font-weight: 600; text-align: center;
+}}
+.timer-strip b {{ font-size: 1.15rem; }}
+.timer-strip.habis {{ background: {T.AKSEN_MURID_KORAL}; }}
+.soal-timer-note {{
+  margin-top: .5rem; font-size: .85rem; color: {T.AKSEN_MURID_KORAL};
+}}
+
 /* ── halaman daftar sesi (/murid) ── */
 .owl-mascot {{ flex: none; width: 40px; height: 40px; }}
 .sub-judul {{
@@ -305,7 +321,14 @@ def halaman_kerja(
     kon, siswa_id: int, sesi_id: int, tersimpan: int = 0,
     topik_paket: Topik | None = None,
 ) -> bytes | None:
-    """Lembar interaktif murid: baca soal, tulis caraku + jawaban."""
+    """Lembar interaktif murid: baca soal, tulis caraku + jawaban.
+
+    Dua mode sesi (29 Aug 2026):
+      - diagnostik (default): kartu penuh — restate + pill "Caraku" + kotak tulis.
+      - drill (Latihan Cepat): kartu ringan — hanya Jawabanku + centang
+        "belum pernah lihat". Timer per-sesi (tampil jalan) atau per-soal
+        (internal, tak ditampilkan), dengan perilaku peringatan / auto-lock.
+    """
     import ikon
 
     info = sesi_murid(kon, siswa_id, sesi_id)
@@ -314,6 +337,11 @@ def halaman_kerja(
     if topik_paket is None:
         topik_paket = dari_sesi(info.get("topik"))
     daftar = soal_murid(kon, sesi_id, siswa_id)
+
+    drill = info.get("mode", "diagnostik") == "drill"
+    timer_mode = info.get("timer_mode", "tanpa") or "tanpa"
+    durasi_menit = int(info.get("durasi_menit") or 15)
+    timer_auto = 1 if info.get("timer_auto") else 0
 
     kartu: list[str] = []
     bagian_kini = None
@@ -330,15 +358,42 @@ def halaman_kerja(
                     f"{topik_paket.catatan_bagian[bagian_kini]}</div>"
                 )
         t = s["terjawab"] or {}
+        ssid = s["sesi_soal_id"]
+        belum = " checked" if t.get("belum_pernah") else ""
+
+        if drill:
+            catatan_soal = ""
+            if timer_mode == "soal":
+                catatan_soal = (
+                    '<div class="soal-timer-note" style="display:none">'
+                    "Waktu untuk soal ini habis — lanjut ke soal berikutnya.</div>"
+                )
+            kartu.append(f"""
+<div class="soal soal-murid">
+  <span class="nomor">{s['nomor']}</span>
+  {'<span class="bintang">★</span>' if s['tantangan'] else ''}
+  {_badan_teks(s['teks'])}
+  <div class="baris-jawab">
+    <span>Jawabanku:</span>
+    <input type="text" name="jwb_{ssid}"
+           value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
+  </div>
+  <label class="centang-baris">
+    <input type="checkbox" name="blm_{ssid}"{belum} style="width:1.3rem;height:1.3rem">
+    belum pernah lihat soal seperti ini
+  </label>
+  {catatan_soal}
+</div>""")
+            continue
+
         restate = ""
         if s["minta_restatement"]:
             nilai = _escape(t.get("restatement", ""))
             restate = (
                 '<label class="label">Soal ini mintanya apa? '
                 "(tulis pakai kalimatmu sendiri)</label>"
-                f'<textarea name="restate_{s["sesi_soal_id"]}">{nilai}</textarea>'
+                f'<textarea name="restate_{ssid}">{nilai}</textarea>'
             )
-        belum = " checked" if t.get("belum_pernah") else ""
 
         # Pilihan cepat "Caraku". Kalau jawaban tersimpan berupa pilihan,
         # tandai yang terpilih supaya anak melihat isiannya kembali.
@@ -351,7 +406,6 @@ def halaman_kerja(
             pilihan_kini = pilihan_kini.strip()
             teks_cara = teks_cara.strip()
 
-        ssid = s["sesi_soal_id"]
         tombol = "".join(
             f'<label class="pilih-cara">'
             f'<input type="radio" name="pilih_{ssid}" value="{kode}"'
@@ -391,6 +445,101 @@ def halaman_kerja(
             f"masuk. Boleh lanjut, atau tutup halaman ini.</div>"
         )
 
+    if drill:
+        petunjuk = (
+            "<p><b>Cara mengerjakan — baca dulu:</b></p>"
+            "<p>Kerjakan sebisamu, tulis jawaban di kotak <b>Jawabanku</b>."
+            + (" Perhatikan waktunya." if timer_mode == "sesi" else "")
+            + "</p>"
+            "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
+            "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
+            "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
+            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+        )
+    else:
+        petunjuk = (
+            "<p><b>Cara mengerjakan — baca dulu:</b></p>"
+            "<p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan "
+            "caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>"
+            "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
+            "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
+            "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
+            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+        )
+
+    # Timer Latihan Cepat. Per-sesi: strip countdown yang tampil jalan (sticky
+    # di atas). Per-soal: internal — tidak ada angka yang tampil, tiap kartu
+    # punya catatan yang muncul kalau waktunya habis.
+    strip = ""
+    if drill and timer_mode == "sesi":
+        strip = (
+            '<div class="timer-strip hanya-layar" id="timer-strip">'
+            "Sisa waktu: <b id=\"timer-tampil\">"
+            f"{durasi_menit:02d}:00</b>"
+            '<span id="timer-pesan" style="display:none">'
+            " — waktu habis, kerjakan sebisanya dan simpan</span></div>"
+        )
+
+    skrip = ""
+    if drill and timer_mode in ("sesi", "soal"):
+        skrip = f"""
+<script>
+(function(){{
+  var MODE = {json.dumps(timer_mode)};
+  var DETIK = {durasi_menit * 60};
+  var AUTO = {1 if timer_auto else 0};
+  var mulai = Date.now();
+  function fmt(s){{ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }}
+  if (MODE === "sesi") {{
+    var strip = document.getElementById("timer-strip");
+    var tampil = document.getElementById("timer-tampil");
+    function tick(){{
+      var sisa = DETIK - Math.floor((Date.now()-mulai)/1000);
+      if (sisa <= 0) {{
+        sisa = 0;
+        if (AUTO) {{
+          var f = document.querySelector("form");
+          if (f) {{ f.submit(); }}
+          return;
+        }}
+        var p = document.getElementById("timer-pesan");
+        if (p) p.style.display = "";
+        if (strip) strip.className = "timer-strip habis";
+      }}
+      if (tampil) tampil.textContent = fmt(sisa);
+    }}
+    tick();
+    setInterval(tick, 1000);
+  }} else if (MODE === "soal") {{
+    var kartu = document.querySelectorAll(".soal");
+    var mulaiSoal = {{}};
+    document.addEventListener("focusin", function(ev){{
+      var k = ev.target.closest ? ev.target.closest(".soal") : null;
+      if (!k) return;
+      var i = Array.prototype.indexOf.call(kartu, k);
+      if (i >= 0 && !(i in mulaiSoal)) mulaiSoal[i] = Date.now();
+    }});
+    function tick(){{
+      var t = Date.now();
+      kartu.forEach(function(k, i){{
+        if (!(i in mulaiSoal)) return;
+        var sisa = DETIK - Math.floor((t - mulaiSoal[i])/1000);
+        if (sisa > 0) return;
+        if (AUTO) {{
+          k.querySelectorAll("input, textarea, button").forEach(function(inp){{
+            inp.disabled = true;
+          }});
+        }}
+        var n = k.querySelector(".soal-timer-note");
+        if (n) n.style.display = "";
+      }});
+    }}
+    setInterval(tick, 1000);
+  }}
+}})();
+</script>
+"""
+
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -404,18 +553,14 @@ def halaman_kerja(
   <a class="btn secondary hanya-layar" href="/murid">Sesi lain</a>
 </div>
 <p class="meta-sesi-line">{_escape(info['tanggal'])} &middot; level {_escape(info['level'])}
- &middot; {len(daftar)} soal</p>
+ &middot; {len(daftar)} soal
+ {'&middot; Latihan Cepat' if drill else ''}</p>
+{strip}
 {kabar}
 <div class="petunjuk petunjuk-ikon">
   <img src="{ikon.BOHLAM}" alt="" class="ikon-petunjuk" width="20" height="20">
   <div>
-    <p><b>Cara mengerjakan — baca dulu:</b></p>
-    <p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan
-    caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>
-    <p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu
-    <b>bukan</b> salah — itu berguna untuk gurumu.</p>
-    <p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai,
-    tekan <b>Simpan jawabanku</b> di paling bawah.</p>
+    {petunjuk}
   </div>
 </div>
 <form method="post" action="/murid/kerjakan/{sesi_id}">
@@ -423,6 +568,7 @@ def halaman_kerja(
 <div class="simpan-strip hanya-layar"><button type="submit" class="btn">Simpan jawabanku</button></div>
 </form>
 <form method="post" action="/keluar" class="hanya-layar" style="margin-top:1rem"><button class="btn secondary" type="submit">Keluar</button></form>
+{skrip}
 </div></body></html>"""
     return isi.encode()
 
