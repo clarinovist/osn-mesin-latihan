@@ -38,10 +38,12 @@ from templates import Soal
 ENV_BASE_URL = "DEEPSEEK_BASE_URL"
 ENV_API_KEY = "DEEPSEEK_API_KEY"
 ENV_MODEL = "DEEPSEEK_MODEL"
+ENV_VISION_MODEL = "DEEPSEEK_VISION_MODEL"
 ENV_SALDO_MIN = "DEEPSEEK_SALDO_MIN"
 
 BASE_URL_BAWAAN = "https://api.deepseek.com"
 MODEL_BAWAAN = "deepseek-chat"
+VISION_MODEL_BAWAAN = "deepseek-v4-flash-vision-exp"
 
 # Request singkat: soal dibungkus saat lembar disusun, menggantung lebih
 # dari ini lebih baik dibuang daripada membuat murid menunggu.
@@ -53,6 +55,11 @@ BATAS_WAKTU_DETIK = 20
 # diam-diam. Cerita 1 kalimat tetap pendek — kelebihan kuota tidak
 # berarti teks lebih panjang, dan cache membuat biaya dibayar sekali.
 MAX_TOKENS = 2000
+
+# Vision (lampiran foto): deepseek-v4-flash-vision-exp juga reasoning model
+# — terukur 718 reasoning token untuk 6 soal. 3000 menyisakan ruang untuk
+# lembar 12 soal + JSON hasil.
+MAX_TOKENS_VISION = 3000
 
 # Naikkan versi ini kalau prompt berubah — kunci cache ikut berubah,
 # jadi kalimat lama tidak dipakai ulang untuk soal berprompt baru.
@@ -287,6 +294,170 @@ def _panggil(pesan: list[dict[str, str]]) -> str | None:
         # HTTPError turunan URLError; socket.timeout turunan OSError;
         # JSON rusak tertangani parse_respons, ValueError sisa pengaman.
         return None
+
+
+# ── Vision — baca lembar foto (Fase 2, lampiran) ──────────────────────
+#
+# Peran vision SANGAT mirip peran cerita: Python tetap pemegang kebenaran.
+# AI vision HANYA membaca foto lembar yang sudah diisi anak dan mengusulkan
+# {nomor, jawaban, caraku} per soal — guru WAJIB konfirmasi sebelum data
+# masuk. Garis yang tidak boleh dilanggar: jawaban yang keluar dari model
+# TIDAK pernah langsung jadi data; ia hanya bahan di halaman konfirmasi.
+
+
+def konfigurasi_vision() -> dict[str, str]:
+    """Konfigurasi model vision — key sama, model berbeda dari cerita."""
+    cfg = konfigurasi()
+    return {
+        "base_url": cfg["base_url"],
+        "api_key": cfg["api_key"],
+        "model": os.environ.get(ENV_VISION_MODEL, VISION_MODEL_BAWAAN),
+    }
+
+
+def parse_ekstraksi(konten: str) -> list[dict] | None:
+    """Ubah konten model (mungkin dibungkus ```json) jadi daftar hasil.
+
+    Format yang diterima:
+      {"soal": [{"nomor": 1, "jawaban": "10", "caraku": "tambah 2"}, ...]}
+
+    Apa pun yang menyimpang -> None, bukan exception. Dua garis kebenaran:
+      - nomor wajib bilangan bulat >= 1;
+      - jawaban/caraku wajib string (boleh kosong — anak melewati soal).
+    """
+    bersih = konten.strip()
+    # Lepas fence ```json ... ```
+    if bersih.startswith("```"):
+        baris = bersih.splitlines()
+        if baris and baris[0].strip().startswith("```"):
+            baris = baris[1:]
+        if baris and baris[-1].strip().startswith("```"):
+            baris = baris[:-1]
+        bersih = "\n".join(baris).strip()
+    mulai, akhir = bersih.find("{"), bersih.rfind("}")
+    if mulai == -1 or akhir <= mulai:
+        return None
+    try:
+        data = json.loads(bersih[mulai : akhir + 1])
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    daftar = data.get("soal")
+    if not isinstance(daftar, list) or not daftar:
+        return None
+    keluar: list[dict] = []
+    for butir in daftar:
+        if not isinstance(butir, dict):
+            return None
+        try:
+            nilai_nomor = butir.get("nomor")
+            if nilai_nomor is None:
+                return None
+            nomor = int(nilai_nomor)
+            jawaban = str(butir.get("jawaban") or "").strip()
+            caraku = str(butir.get("caraku") or "").strip()
+        except (TypeError, ValueError):
+            return None
+        if nomor < 1:
+            return None
+        keluar.append({"nomor": nomor, "jawaban": jawaban, "caraku": caraku})
+    return keluar
+
+
+def verifikasi_ekstraksi(hasil: list[dict], jumlah_soal: int) -> bool:
+    """Hasil hanya sah kalau nomornya 1..N lengkap, tanpa nomor asing.
+
+    Nomor asing (99) atau hilang (hanya 1..5 dari 6) berarti model tidak
+    benar-benar membaca lembar — hasilnya tidak layak ditampilkan ke guru.
+    Isi jawaban TIDAK diverifikasi di sini: guru yang menilai di halaman
+    konfirmasi.
+    """
+    if not hasil:
+        return False
+    nomor = {h["nomor"] for h in hasil}
+    return nomor == set(range(1, jumlah_soal + 1))
+
+
+def ekstrak_lembar(soal_konteks: list[str], gambar_b64: str) -> list[dict] | None:
+    """Baca satu foto lembar -> daftar {nomor, jawaban, caraku} per soal.
+
+    Gagal-diam (pola seluruh modul): tanpa key / network error / parse gagal
+    / verifikasi gagal -> None, pemanggil menampilkan pesan "tidak terbaca".
+
+    `soal_konteks` adalah teks tiap soal (berurutan 1..N) — dikirim ke model
+    supaya ia memetakan jawaban ke nomor yang benar dan tidak mengarang soal.
+    """
+    cfg = konfigurasi_vision()
+    if not cfg["api_key"]:
+        return None
+
+    daftar_soal = "\n".join(
+        f"{i + 1}. {teks}" for i, teks in enumerate(soal_konteks)
+    )
+    prompt = (
+        "Berikut daftar soal di lembar ini:\n"
+        f"{daftar_soal}\n\n"
+        "Baca FOTO lembar yang sudah diisi anak. Untuk SETIAP nomor 1.."
+        f"{len(soal_konteks)}:\n"
+        "- jawaban: angka yang anak tulis di kotak Jawabanku (kalau kosong, \"\").\n"
+        "- caraku: teks di kotak Caraku. Coretan tak terbaca tulis \"?\"; "
+        "kotak kosong tulis \"\".\n"
+        'Keluarkan HANYA JSON: {"soal": [{"nomor": 1, "jawaban": "...", '
+        '"caraku": "..."}]} tanpa penjelasan.'
+    )
+    pesan = [
+        {
+            "role": "system",
+            "content": (
+                "Kamu membaca lembar jawaban matematika anak SD dari foto. "
+                "Jawab hanya JSON, tanpa penjelasan."
+            ),
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{gambar_b64}"
+                    },
+                },
+                {"type": "text", "text": prompt},
+            ],
+        },
+    ]
+    tubuh = json.dumps(
+        {
+            "model": cfg["model"],
+            "messages": pesan,
+            "temperature": 0,
+            "max_tokens": MAX_TOKENS_VISION,
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        cfg["base_url"] + "/chat/completions",
+        data=tubuh,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {cfg['api_key']}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(
+            req, timeout=BATAS_WAKTU_DETIK * 4
+        ) as resp:
+            konten = parse_respons(resp.read())
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    if konten is None:
+        return None
+    hasil = parse_ekstraksi(konten)
+    if hasil is None or not verifikasi_ekstraksi(hasil, len(soal_konteks)):
+        return None
+    return hasil
 
 
 # ── Gerbang biaya (opsional) ───────────────────────────────────────────
