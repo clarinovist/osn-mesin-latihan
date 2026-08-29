@@ -286,3 +286,68 @@ def test_halaman_kerja_drill_timer_per_soal_internal(db):
     assert 'class="soal-timer-note"' in html    # penanda per kartu
     assert "setInterval" in html                # ada JS timer
 
+
+# ── 1.5 Diagnosis drill — suntikan cara sintetis, tidak pernah N ──────
+
+
+def _simpan_sebagai_murid(kon, siswa_id, sesi_id, nomor: int, isi: dict):
+    """Kirim form persis seperti HP anak: kunci field pakai sesi_soal_id."""
+    baris = next(
+        b for b in basis.isi_sesi(kon, sesi_id) if b["nomor"] == nomor
+    )
+    ssid = baris["sesi_soal_id"]
+    data = {k.replace("<ssid>", str(ssid)): v for k, v in isi.items()}
+    hasil = murid.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
+    if hasil:
+        web.diagnosa_murid(kon, sesi_id)
+    return hasil
+
+
+def _baris_soal(kon, sesi_id, nomor: int):
+    return next(
+        b for b in basis.isi_sesi(kon, sesi_id) if b["nomor"] == nomor
+    )
+
+
+def test_drill_jawaban_benar_tanpa_cara_tidak_dinilai_menebak(db):
+    """Kunci diagnosa drill: jawaban benar tanpa Caraku -> benar, BUKAN N."""
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakDrillBenar", 7, mode="drill")
+        kunci = _baris_soal(kon, sesi_id, 1)["kunci"]
+        _simpan_sebagai_murid(
+            kon, sid, sesi_id, 1, {"jwb_<ssid>": kunci}
+        )
+        b = _baris_soal(kon, sesi_id, 1)
+    assert b["benar"] == 1
+    assert b["kode_final"] is None          # bukan N
+    assert b["cara"] == ""                  # storage tetap bersih
+
+
+def test_drill_salah_cocok_malrule_tetap_dapat_kode(db):
+    """Jawaban salah yang cocok malrule -> kode malrule (K/H/E), bukan N."""
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakDrillMal", 7, mode="drill")
+        for b in basis.isi_sesi(kon, sesi_id):
+            mal = basis.malrule_soal(kon, b["soal_id"])
+            if mal:
+                _simpan_sebagai_murid(
+                    kon, sid, sesi_id, b["nomor"], {"jwb_<ssid>": mal[0]["jawaban"]}
+                )
+                hasil = _baris_soal(kon, sesi_id, b["nomor"])
+                assert hasil["kode_final"] == mal[0]["kode"]
+                assert hasil["kode_final"] != "N"
+                break
+        else:
+            pytest.fail("seed 7 tidak punya malrule untuk diuji")
+
+
+def test_diagnostik_jawaban_benar_tanpa_cara_tetap_N(db):
+    """Mode Diagnosa: aturan lama TIDAK berubah — benar tanpa cara = N."""
+    with basis.buka(db) as kon:
+        sid, sesi_id = _buat(kon, "AnakDiagN", 7)  # default diagnostik
+        kunci = _baris_soal(kon, sesi_id, 1)["kunci"]
+        _simpan_sebagai_murid(kon, sid, sesi_id, 1, {"jwb_<ssid>": kunci})
+        b = _baris_soal(kon, sesi_id, 1)
+    assert b["benar"] == 0
+    assert b["kode_final"] == "N"
+

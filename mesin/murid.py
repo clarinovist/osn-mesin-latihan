@@ -731,6 +731,14 @@ PILIHAN_CARA: tuple[tuple[str, str], ...] = (
 
 AWALAN_PILIHAN = "[pilihan] "
 
+# Tanda cara SINTETIS untuk sesi Latihan Cepat (drill). Anak drill tidak
+# diminta menulis Caraku, jadi cara='' di storage — tetapi aturan diagnosa
+# "ada jawaban tanpa kotak Caraku = N (menebak)" akan salah menuduh anak
+# drill menebak. Suntikan ini dipakai SAAT PEMANGGILAN di web.diagnosa_murid
+# (tidak pernah disimpan ke DB) supaya diagnosis drill menghasilkan
+# benar/malrule biasa tanpa pernah N.
+AWALAN_DRILL = "[drill] "
+
 
 def label_pilihan(kode: str) -> str:
     """Label yang dibaca guru untuk sebuah kode pilihan."""

@@ -409,6 +409,20 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
     (soal yang anak lewati) tidak dibuat — aturan yang sama dengan guru.
     """
     jumlah = 0
+    # Mode sesi: drill (Latihan Cepat) tidak meminta Caraku, jadi diagnosis
+    # memakai cara sintetis supaya aturan "jawaban tanpa cara = N (menebak)"
+    # tidak salah menuduh. Storage tetap cara='' — lihat murid.AWALAN_DRILL.
+    import murid  # impor terlambat: web.py tidak boleh mengimpor murid di atas
+
+    baris_mode = kon.execute(
+        "SELECT mode FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()
+    drill = bool(baris_mode and baris_mode["mode"] == "drill")
+
+    def _cara(b) -> str:
+        cara = b["cara"] or ""
+        return murid.AWALAN_DRILL + cara if drill else cara
+
     for b in basis.isi_sesi(kon, sesi_id):
         if b["jawaban_id"] is None:
             continue  # anak melewati soal ini: biarkan tanpa baris
@@ -416,7 +430,7 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
             # Segarkan usulan mesin saja; vonis guru tidak disentuh.
             soal = _soal_dari_baris(b)
             u = diagnosa(
-                b["kunci"], b["jawaban"] or "", b["cara"] or "",
+                b["kunci"], b["jawaban"] or "", _cara(b),
                 b["restatement"] or "", bool(b["belum_pernah"]),
                 basis.malrule_soal(kon, b["soal_id"]),
                 soal.minta_restatement,
@@ -429,7 +443,7 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
             continue
         soal = _soal_dari_baris(b)
         u = diagnosa(
-            b["kunci"], b["jawaban"] or "", b["cara"] or "",
+            b["kunci"], b["jawaban"] or "", _cara(b),
             b["restatement"] or "", bool(b["belum_pernah"]),
             basis.malrule_soal(kon, b["soal_id"]),
             soal.minta_restatement,
