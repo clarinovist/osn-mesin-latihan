@@ -42,6 +42,21 @@ h1 {{ font-size: 14pt; margin: 0 0 1mm; }}
 .petunjuk p {{ margin: 0 0 1.5mm; }}
 .petunjuk p:last-child {{ margin-bottom: 0; }}
 
+/* Header banner (mockup lembar) — versi cetak hemat tinta: garis saja,
+   tanpa blok teal/koral solid. */
+.mesin-banner {{
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1.5pt solid {T.TEKS_JUDUL}; padding-bottom: 1.5mm; margin-bottom: 2.5mm;
+  font-size: 10pt;
+}}
+.mesin-banner .nama-app {{ font-weight: bold; }}
+.mesin-banner .meta-sesi {{ color: #333; }}
+.banner-kunci {{ border-bottom-style: double; }}
+.kunci-headline {{
+  font-size: 13pt; font-weight: bold; text-align: center;
+  border: 1.2pt solid #000; padding: 1.5mm; margin-bottom: 3mm;
+}}
+
 .bagian {{
   font-size: 11pt; font-weight: bold; margin: 4mm 0 2mm;
   border-bottom: 1.5pt solid #000; padding-bottom: 1mm;

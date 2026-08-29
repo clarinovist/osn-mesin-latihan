@@ -58,6 +58,17 @@ _CHEVRON_KANAN = (
     "</svg>"
 )
 
+_GEMBOK = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" '
+    'viewBox="0 0 44 44" fill="none">'
+    '<circle cx="22" cy="22" r="20" fill="#e4eef4"/>'
+    '<rect x="14" y="20" width="16" height="13" rx="3" fill="#0FA3A3"/>'
+    '<path d="M17 20 V16 C17 12 19 10 22 10 C25 10 27 12 27 16 V20" '
+    'stroke="#0FA3A3" stroke-width="2.5" fill="none"/>'
+    '<circle cx="22" cy="26" r="2" fill="#fff"/>'
+    "</svg>"
+)
+
 
 def _data_uri(svg: str) -> str:
     """Bungkus SVG jadi data-URI yang aman untuk CSS background-image."""
@@ -67,3 +78,4 @@ def _data_uri(svg: str) -> str:
 OWL = _data_uri(_OWL)
 BOHLAM = _data_uri(_BOHLAM)
 CHEVRON_KANAN = _data_uri(_CHEVRON_KANAN)
+GEMBOK = _data_uri(_GEMBOK)

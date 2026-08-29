@@ -23,85 +23,14 @@ from http.server import BaseHTTPRequestHandler
 
 import basis
 import cetak
+import design_tokens as T
 import sandi
 import sesi
 from diagnosa import diagnosa
+from gaya_guru import GAYA_GURU as GAYA
 from generator import LEVEL_BAWAAN, buat_soal
 from templates import LEVEL, REGISTRI, Soal, level_valid
 from topik import TOPIK_BAWAAN, Topik, ambil, daftar_topik, dari_sesi
-
-GAYA = """
-* { box-sizing: border-box; }
-body {
-  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-  margin: 0; padding: 1.2rem; background: #f4f4f6; color: #16161a;
-  font-size: 15px; line-height: 1.5;
-}
-.bungkus { max-width: 940px; margin: 0 auto; }
-h1 { font-size: 1.5rem; margin: 0 0 .3rem; }
-h2 { font-size: 1.15rem; margin: 1.6rem 0 .6rem; }
-a { color: #1a4fd6; }
-.sub { color: #666; font-size: .9rem; margin-bottom: 1.2rem; }
-.kartu {
-  background: #fff; border: 1px solid #d8d8de; border-radius: 8px;
-  padding: .9rem 1rem; margin-bottom: .8rem;
-}
-.soal-kartu { border-left: 4px solid #c8c8d0; }
-.soal-kartu.sudah { border-left-color: #2e9e5b; }
-.soal-kartu.perlu { border-left-color: #d68a1a; }
-.nomor { font-weight: 700; margin-right: .4rem; }
-.tipe { color: #777; font-size: .82rem; }
-.teks-soal {
-  background: #fafafc; border: 1px solid #e6e6ec; border-radius: 5px;
-  padding: .5rem .7rem; margin: .5rem 0; white-space: pre-wrap;
-  font-size: .93rem;
-}
-.kunci { font-weight: 700; color: #1a6b3a; }
-label { display: block; font-size: .84rem; color: #555; margin: .5rem 0 .15rem; }
-input[type=text], input[type=password], textarea, select {
-  width: 100%; padding: .45rem .55rem; border: 1px solid #bfbfc9;
-  border-radius: 5px; font-size: .95rem; font-family: inherit;
-}
-textarea { min-height: 3.2rem; resize: vertical; }
-.baris { display: flex; gap: .8rem; flex-wrap: wrap; }
-.baris > * { flex: 1; min-width: 190px; }
-.centang { display: flex; align-items: center; gap: .4rem; margin-top: .5rem;
-  font-size: .88rem; }
-.centang input { width: auto; }
-button {
-  background: #1a4fd6; color: #fff; border: 0; border-radius: 6px;
-  padding: .65rem 1.3rem; font-size: 1rem; cursor: pointer;
-}
-button:hover { background: #1540ad; }
-.kode {
-  display: inline-block; min-width: 1.5rem; text-align: center;
-  font-weight: 700; border-radius: 4px; padding: .1rem .45rem;
-  font-size: .85rem; color: #fff;
-}
-.kode.K { background: #c2352b; }
-.kode.B { background: #d68a1a; }
-.kode.H { background: #2f7ec4; }
-.kode.E { background: #7a5bbd; }
-.kode.T { background: #5b8f6d; }
-.kode.N { background: #77777f; }
-.kode.benar { background: #2e9e5b; }
-.usulan {
-  background: #f0f4ff; border: 1px solid #c9d8ff; border-radius: 5px;
-  padding: .45rem .6rem; margin-top: .5rem; font-size: .87rem;
-}
-.usulan.ragu { background: #fff7e8; border-color: #f0d9a8; }
-table { width: 100%; border-collapse: collapse; background: #fff; }
-th, td { border: 1px solid #dcdce4; padding: .45rem .6rem; text-align: left;
-  font-size: .9rem; }
-th { background: #eeeef3; }
-.angka { text-align: right; font-variant-numeric: tabular-nums; }
-.kosong { color: #888; font-style: italic; }
-.pesan {
-  background: #e6f6ec; border: 1px solid #a8dcbd; border-radius: 6px;
-  padding: .7rem .9rem; margin-bottom: 1rem;
-}
-.jejak { font-size: .85rem; margin-bottom: 1rem; }
-"""
 
 KODE_PILIHAN = [
     ("", "— pilih —"),
@@ -199,35 +128,51 @@ def halaman_utama(kon) -> bytes:
             f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a></td>'
             f'<td>{r["tanggal"]}</td>'
             f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
-            f'<td class="tipe">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
+            f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
             f'<td><a href="/lembar/{r["id"]}" target="_blank">soal</a> &middot; '
-            f'<a href="/lembar/{r["id"]}/penilaian" target="_blank">kunci</a></td>'
-            f'<td class="tipe">seed {r["seed"]}</td></tr>'
+            f'<a href="/lembar/{r["id"]}/penilaian" target="_blank">kunci</a></td></tr>'
             for r in sesi
-        ) or '<tr><td colspan="7" class="kosong">belum ada sesi</td></tr>'
+        ) or '<tr><td colspan="6" class="kosong">belum ada sesi</td></tr>'
 
         baris.append(
-            f'<div class="kartu"><h2>{html.escape(s["nama"])} '
-            f'<span class="tipe">({s["tingkat"]})</span></h2>'
-            f'<p><a href="/laporan/{s["id"]}">Lihat laporan &rarr;</a></p>'
-            f"<table><tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th>"
-            f"<th>Terisi</th><th>Lembar</th><th></th></tr>{item}</table>"
+            f'<div class="kartu kartu-siswa">'
+            f'<div class="siswa-kepala">'
+            f'<h2>{html.escape(s["nama"])}'
+            f'<span class="badge-tingkat">({s["tingkat"]})</span></h2>'
+            f'<a class="btn" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
+            f"</div>"
+            f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
+            f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Lembar</th></tr>"
+            f"{item}</table></div>"
             f'<form method="post" action="/sesi-baru/{s["id"]}" '
-            f'style="margin-top:.7rem">'
-            f'<label>Topik: <select name="topik">{opsi_topik}</select></label> '
-            f'<button type="submit">Buat sesi baru untuk '
-            f'{html.escape(s["nama"])} ({s["tingkat"]})</button></form></div>'
+            f'class="baris" style="margin-top:.9rem">'
+            f'<div><label>Topik</label>'
+            f'<select name="topik">{opsi_topik}</select></div>'
+            f'<div style="display:flex;align-items:flex-end">'
+            f'<button type="submit" class="tombol-coral" style="width:100%">'
+            f"Buat sesi baru</button></div></form>"
+            f"</div>"
         )
+
+    isi_utama = "".join(baris) or (
+        '<div class="kartu kosong-hint-guru">Belum ada siswa. '
+        '<a href="/akun">Buat siswa</a> dari halaman Akun &amp; Siswa.</div>'
+    )
 
     return _halaman(
         "Mesin Latihan",
-        "<h1>Mesin Latihan Pola Bilangan</h1>"
-        '<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
-        'untuk melihat tren. &middot; <a href="/akun">Akun &amp; siswa</a> &middot; '
-        '<form method="post" action="/keluar" style="display:inline"><button type="submit" '
-        'style="padding:.2rem .6rem;font-size:.85rem;background:#777">Keluar</button></form></p>'
-        + "".join(baris),
+        f'<div class="topbar">'
+        f'<span class="brand">Mesin Latihan</span>'
+        f'<nav class="topbar-navigasi">'
+        f'<a href="/akun">Akun &amp; Siswa</a>'
+        f'<form method="post" action="/keluar" style="margin:0">'
+        f'<button type="submit" class="tombol-kecil tombol-putih">Keluar</button>'
+        f"</form></nav></div>"
+        f"<h1>Mesin Latihan Pola Bilangan</h1>"
+        f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
+        f"untuk melihat tren.</p>"
+        f'<div class="grid-utama">{isi_utama}</div>',
     )
 
 
@@ -268,11 +213,12 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
         tombol = (
             f'<form method="post" action="/cerita/{sesi_id}" '
             f'style="margin-top:.6rem">'
-            f'<button type="submit">Buat variasi cerita</button></form>'
+            f'<button type="submit" class="tombol-amber" '
+            f'style="margin-top:0">Variasi cerita &nbsp;✨</button></form>'
         )
 
     return (
-        f'<div class="kartu"><h2>Variasi cerita</h2>'
+        f'<div class="kartu kartu-variasi"><h2>Variasi cerita ✨</h2>'
         f'<p class="sub">{catatan}</p>{tombol}</div>'
     )
 
@@ -328,8 +274,10 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
 
         kartu.append(f"""
 <div class="kartu soal-kartu {kelas}">
-  <span class="nomor">{b["nomor"]}.</span>{lencana}
-  <span class="tipe">{b["template_id"]}</span>
+  <div class="kartu-kepala">
+    <span class="nomor">{b["nomor"]}</span>{lencana}
+    <span class="tipe">{b["template_id"]}</span>
+  </div>
   <div class="teks-soal">{html.escape(soal.teks)}</div>
   <div>Kunci: <span class="kunci">{html.escape(b["kunci"])}</span></div>
   {restate}
@@ -369,7 +317,8 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f"{_tombol_cerita(kon, sesi_id)}"
         f'<form method="post" action="/sesi/{sesi_id}">'
         f'{"".join(kartu)}'
-        f'<button type="submit">Simpan &amp; diagnosis</button></form>',
+        f'<div class="simpan-strip"><button type="submit">'
+        f"Simpan &amp; diagnosis</button></div></form>",
     )
 
 
@@ -466,12 +415,112 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
     return jumlah
 
 
+def _chart_tren(ring) -> str:
+    """SVG line chart % benar per sesi (mockup guru-laporan).
+
+    ring diurutkan DESC oleh basis.ringkasan; dibalik supaya sumbu x
+    berjalan kronologis (sesi terbaru di kanan). Kalau kurang dari 2 titik
+    tidak digambar — satu titik tidak bisa disebut tren.
+    """
+    if len(ring) < 2:
+        return ""
+    TEAL, GRID, AXIS = T.STATUS_KUAT, T.CHART_GRID, T.CHART_AXIS
+    urut = list(reversed(ring))
+    LEBAR, TINGGI = 540, 240
+    PAD_X, PAD_Y, PAD_B = 40, 16, 40
+    n = len(urut)
+    def x(i):  # posisi titik ke-i
+        return PAD_X + i * (LEBAR - PAD_X - 12) / max(1, n - 1)
+    def y(persen):  # 0..100 -> koordinat (SVG y ke bawah)
+        return PAD_Y + (100 - persen) * (TINGGI - PAD_Y - PAD_B) / 100
+    pts = []
+    for i, r in enumerate(urut):
+        jml = r["jumlah_soal"] or 0
+        psen = (r["benar"] or 0) / jml * 100 if jml else 0
+        pts.append(round(x(i), 1))
+        pts.append(round(y(psen), 1))
+    poly = " ".join(",".join(str(p) for p in pts[i:i+2]) for i in range(0, len(pts), 2))
+    titik = "".join(
+        f'<circle cx="{(pts[i])}" cy="{pts[i+1]}" r="4" fill="{TEAL}"/>'
+        for i in range(0, len(pts), 2)
+    )
+    grid = "".join(
+        f'<line x1="{PAD_X}" y1="{y(p)}" x2="{LEBAR-12}" y2="{y(p)}" '
+        f'stroke="{GRID}" stroke-width="1" stroke-dasharray="4 4"/>'
+        f'<text x="{PAD_X-6}" y="{y(p)+4}" text-anchor="end" '
+        f'font-size="11" fill="{AXIS}">{p}</text>'
+        for p in (25, 50, 75, 100)
+    )
+    xlab = "".join(
+        f'<text x="{x(i)}" y="{TINGGI-16}" text-anchor="middle" '
+        f'font-size="11" fill="{AXIS}">#{urut[i]["sesi_id"]}</text>'
+        for i in range(n)
+    )
+    return (
+        f'<svg viewBox="0 0 {LEBAR} {TINGGI}" role="img" '
+        f'aria-label="Tren persentase benar per sesi">'
+        f"{grid}{poly and ''}"
+        f'<polyline points="{poly}" fill="none" stroke="{TEAL}" '
+        f'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
+        f"{titik}{xlab}"
+        f'<line x1="{PAD_X}" y1="{y(0)}" x2="{LEBAR-12}" y2="{y(0)}" '
+        f'stroke="{AXIS}" stroke-width="1"/>'
+        f'<text x="{LEBAR-12}" y="{PAD_Y-2}" text-anchor="end" font-size="11" '
+        f'fill="{AXIS}">% benar</text>'
+        f"</svg>"
+    )
+
+
+def _topik_terlemah(ring) -> str:
+    """Topik dengan jumlah K terbanyak di ringkasan. Data nyata, bukan tebakan."""
+    agregat: dict[str, int] = {}
+    for r in ring:
+        t = _ambil(r, "topik", TOPIK_BAWAAN) or TOPIK_BAWAAN
+        agregat[t] = agregat.get(t, 0) + (r["k"] or 0)
+    if not agregat or not any(agregat.values()):
+        return "tidak ada"
+    return max(agregat, key=agregat.get)
+
+
+def _daftar_diagnosis(mis, peta) -> str:
+    """Daftar diagnosis dengan dot warna (mockup guru-laporan).
+
+    Sumber data nyata: miskonsepsi_berulang (kode K -> titik coral,
+    'salah konsep') dan peta_materi_baru (kode T -> titik amber,
+    'belum diajarkan'). Tidak ada data yang dikarang: kuat (teal) hanya
+    muncul kalau tidak ada miskonsepsi sama sekali.
+    """
+    item = []
+    for m in mis:
+        item.append(
+            f'<li><span class="dot salah"></span>'
+            f'<span><b>{html.escape(m["alasan"] or m["malrule_id"])}</b> — '
+            f"salah konsep ({m['jumlah_sesi']} sesi)</span></li>"
+        )
+    for p in peta:
+        item.append(
+            f'<li><span class="dot lemah"></span>'
+            f'<span><b>{html.escape(p["template_id"])}</b> — belum diajarkan '
+            f'({p["kali"]}×)</span></li>'
+        )
+    if not item:
+        return ('<li><span class="dot kuat"></span>'
+                '<span>Belum ada miskonsepsi tercatat — pola kuat.</span></li>')
+    return "".join(item)
+
+
 def halaman_laporan(kon, siswa_id: int) -> bytes:
     siswa = kon.execute("SELECT * FROM siswa WHERE id = ?", (siswa_id,)).fetchone()
     if not siswa:
         return _halaman("Tidak ada", "<h1>Siswa tidak ditemukan</h1>")
 
     ring = basis.ringkasan(kon, siswa_id)
+    total_sesi = len(ring)
+    benar_sum = sum(r["benar"] or 0 for r in ring)
+    soal_sum = sum(r["jumlah_soal"] or 0 for r in ring)
+    persen = round(benar_sum / soal_sum * 100) if soal_sum else 0
+    topik_lemah = _topik_terlemah(ring)
+
     tren = "".join(
         f'<tr><td><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
         f'<td>{r["tanggal"]}</td>'
@@ -505,15 +554,36 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
         for p in peta
     ) or '<tr><td colspan="4" class="kosong">tidak ada</td></tr>'
 
+    chart = _chart_tren(ring)
+    blok_chart = chart or (
+        '<p class="sub">Belum cukup data untuk menggambar tren — '
+        "butuh minimal 2 sesi.</p>"
+    )
+
     return _halaman(
         f"Laporan {siswa['nama']}",
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1>Laporan — {html.escape(siswa["nama"])}</h1>'
         f'<p class="sub">Yang dipantau adalah <b>jumlah K</b>, bukan skor. '
         f"Anak dengan 9 H skor 3 lebih siap daripada anak dengan 3 K skor 9.</p>"
-        f'<div class="kartu"><h2>Tren per sesi</h2><table>'
+        f'<div class="kartu-stat">'
+        f'<div class="stat"><div class="angka-besar">{total_sesi}</div>'
+        f'<div class="stat-label">sesi</div></div>'
+        f'<div class="stat"><div class="angka-besar">{persen}%</div>'
+        f'<div class="stat-label">benar</div></div>'
+        f'<div class="stat"><div class="stat-nilai-utama">'
+        f"{html.escape(topik_lemah)}</div>"
+        f'<div class="stat-label">topik terlemah</div></div>'
+        f"</div>"
+        f'<div class="layout-laporan">'
+        f'<div class="kartu"><h2>Perkembangan % benar per sesi</h2>'
+        f"{blok_chart}</div>"
+        f'<div class="kartu"><h2>Diagnosis</h2>'
+        f'<ul class="diagnosis-lis">{_daftar_diagnosis(mis, peta)}</ul></div>'
+        f"</div>"
+        f'<div class="tabel-wrap"><div class="kartu"><h2>Tren per sesi</h2><table>'
         f"<tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th><th>Benar</th><th>K</th>"
-        f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr>{tren}</table></div>"
+        f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr>{tren}</table></div></div>"
         f'<div class="kartu"><h2>Miskonsepsi yang bertahan</h2>'
         f'<p class="sub">Dihitung per gagasan keliru, bukan per soal. Satu '
         f"miskonsepsi yang muncul di tiga soal tetap satu baris. Yang muncul "
@@ -550,22 +620,24 @@ def _kartu_akun_murid(kon) -> str:
             nama_esc = html.escape(nama)
             sid = _murid.siswa_dari_akun(kon, nama)
             if sid is None:
-                status = '<span style="color:#c2352b">belum terhubung ke siswa</span>'
+                status = '<span class="status-buruk">belum terhubung ke siswa</span>'
             else:
-                status = '<span style="color:#2e9e5b">terhubung</span>'
+                status = '<span class="status-ok">terhubung</span>'
             baris += (
                 f"<tr><td>{nama_esc}</td><td>{status}</td><td>"
+                f'<div class="baris-aksi">'
                 f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center">'
                 f'<input type="hidden" name="aksi" value="akun_murid_hapus">'
                 f'<input type="hidden" name="nama" value="{nama_esc}">'
-                f'<button type="submit" style="padding:.3rem .6rem;font-size:.8rem;background:#c2352b">Hapus</button>'
+                f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus</button>'
                 f"</form> "
                 f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center;margin-left:.4rem">'
                 f'<input type="hidden" name="aksi" value="akun_murid_sandi">'
                 f'<input type="hidden" name="nama" value="{nama_esc}">'
                 f'<input type="password" name="baru" placeholder="sandi baru" required style="width:130px;padding:.3rem .5rem;font-size:.85rem">'
-                f'<button type="submit" style="padding:.3rem .6rem;font-size:.8rem">Setel sandi baru</button>'
+                f'<button type="submit" class="tombol-kecil">Setel sandi baru</button>'
                 f"</form>"
+                f"</div>"
                 f"</td></tr>"
             )
     else:
@@ -638,10 +710,7 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
     if galat:
-        kabar += (
-            f'<div class="pesan" style="background:#fdecea;border-color:#f5b5ae">'
-            f"{html.escape(galat)}</div>"
-        )
+        kabar += f'<div class="pesan galat">{html.escape(galat)}</div>'
 
     d = sandi.muat_sandi()
     if not d:
@@ -657,7 +726,10 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f"<h1>Akun &amp; pengaturan</h1>"
         f"{kabar}"
-        f'<div class="kartu"><h2>Ganti sandi</h2>'
+        f'<div class="layout-akun">'
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">🔑</span>'
+        f"<h2>Ganti sandi</h2></div>"
         f'<p class="sub">Pengguna saat ini: <b>{pengguna}</b>. Setelah diganti, '
         f"masuk lagi dengan sandi baru.</p>"
         f'<form method="post" action="/akun">'
@@ -668,11 +740,16 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<input type="password" name="baru" autocomplete="new-password" required>'
         f"<label>Ulangi sandi baru</label>"
         f'<input type="password" name="ulang" autocomplete="new-password" required>'
-        f'<p style="margin-top:.8rem"><button type="submit">Ganti sandi</button></p>'
+        f'<p style="margin-top:.8rem">'
+        f'<button type="submit" class="tombol-sekunder">Ganti sandi</button></p>'
         f"</form></div>"
-        f'<div class="kartu"><h2>Siswa</h2>'
-        f"<table><tr><th>Nama</th><th>Tingkat</th><th>Sesi</th></tr>"
-        f"{daftar}</table>"
+        f"{_kartu_akun_murid(kon)}"
+        f"</div>"
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">📚</span>'
+        f"<h2>Siswa</h2></div>"
+        f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Tingkat</th>'
+        f"<th>Sesi</th></tr>{daftar}</table></div>"
         f'<form method="post" action="/akun" style="margin-top:.9rem">'
         f'<input type="hidden" name="aksi" value="siswa">'
         f'<div class="baris">'
@@ -688,9 +765,11 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<p class="sub" style="margin-top:.5rem">Pakai nama panggilan atau '
         f"inisial, bukan nama lengkap — mengurangi dampak bila basis data ini "
         f"bocor.</p>"
-        f'<button type="submit">Tambah siswa</button></form></div>'
-        f'{_kartu_akun_murid(kon)}'
-        f'<div class="kartu"><h2>Catatan</h2>'
+        f'<button type="submit" class="tombol-coral">Tambah siswa</button>'
+        f"</form></div>"
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu amber">💡</span>'
+        f"<h2>Catatan</h2></div>"
         f'<p class="sub">Siswa sengaja tidak bisa dihapus dari sini. Menghapus '
         f"siswa ikut menghapus seluruh sesi, jawaban, dan diagnosisnya — "
         f"riwayat yang tidak bisa dibangun ulang. Kalau seorang anak berhenti, "
@@ -1089,15 +1168,33 @@ class Penangan(BaseHTTPRequestHandler):
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
     def _halaman_masuk(self, galat: str = "") -> bytes:
-        kabar = f'<div class="pesan" style="background:#fdecea;border-color:#f5b5ae">{html.escape(galat)}</div>' if galat else ""
+        import ikon
+
+        kabar = (
+            f'<div class="pesan galat">{html.escape(galat)}</div>' if galat else ""
+        )
         return _halaman(
             "Masuk",
-            f"<h1>Masuk</h1>{kabar}"
-            '<div class="kartu"><form method="post" action="/masuk">'
-            '<label>Nama</label><input type="text" name="nama" autocomplete="username" required>'
-            '<label>Sandi</label><input type="password" name="sandi" autocomplete="current-password" required>'
-            '<p style="margin-top:.9rem"><button type="submit">Masuk</button></p>'
-            "</form></div>",
+            f'<div class="layout-masuk">'
+            f'<div class="masuk-kiri">'
+            f'<img src="{ikon.OWL}" alt="Burung hantu lulusan" width="200" height="200">'
+            f"<h1>Mesin Latihan</h1>"
+            f"<p>Latihan soal pola bilangan untuk SD</p>"
+            f"</div>"
+            f'<div class="masuk-kanan">'
+            f'<div class="kartu kartu-masuk">'
+            f'<img src="{ikon.GEMBOK}" alt="" class="ikon-gembok" width="44" height="44">'
+            f"{kabar}"
+            f'<form method="post" action="/masuk">'
+            f'<label>Nama</label>'
+            f'<input type="text" name="nama" autocomplete="username" required>'
+            f'<label>Sandi</label>'
+            f'<input type="password" name="sandi" autocomplete="current-password" required>'
+            f'<button type="submit">Masuk</button>'
+            f"</form>"
+            f'<p class="sub" style="text-align:center;margin-top:.8rem">'
+            f"Pakai kata sandi yang diberikan</p>"
+            f"</div></div></div>",
         )
 
     def _handle_masuk(self, data: dict) -> None:

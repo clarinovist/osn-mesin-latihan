@@ -6,12 +6,15 @@ Sumber tunggal untuk semua nilai visual aplikasi. Implementasi ada di
 Mockup UI/UX (9 halaman) ada di `desain-ui/`. Generator: `gen_guru.py`
 (gpt-image-2 via chenzk.top).
 
-## Dua palet, dua konteks
+## Satu palet hangat (restyle 29 Agu 2026)
 
-Aplikasi punya dua palet yang hidup berdampingan — bukan karena malas
-menyatukan, tapi karena guru dan murid butuh emosi berbeda:
+Sejak restyle, seluruh permukaan — guru, murid, dan lembar cetak — memakai
+SATU palet hangat dari mockup. Keputusan ini diambil karena mockup guru
+(guru-*.png) semuanya dibangkitkan dengan palet yang sama dengan murid
+(cream + teal + coral + amber), sehingga memisahkan dua palet justru
+membuat halaman guru tidak cocok dengan desain yang sudah disetujui.
 
-### Palet INTI (permukaan guru)
+### Palet INTI (biru tua #16213e + abu #f0f1f4)
 
 Dipakai di: dashboard, sesi, laporan, akun, lembar cetak (5 mockup guru).
 
@@ -32,21 +35,27 @@ Dipakai di: dashboard, sesi, laporan, akun, lembar cetak (5 mockup guru).
 Filosofi: biru tua (#16213e) sebagai warna otoritas — guru butuh konsentrasi,
 bukan semangat. Netral, terbaca lama, tidak melelahkan mata.
 
-### Palet MURID (permukaan murid)
+> CATATAN (29 Agu 2026): token di atas masih ada untuk kompatibilitas dan
+> sebagai warna judul/teks/garis cetak, TETAPI bukan lagi palet latar default.
+> Foto yang benar: lihat bagian "Palet MURID" di bawah — semua halaman kini
+> berlatar LATAR_MURID (cream). Biru tua tersisa sebagai TEKS_JUDUL.
 
-Dipakai di: /murid, /murid/kerjakan (2 mockup murid).
+### Palet MURID (permukaan semua halaman)
+
+Dipakai di: /murid, /murid/kerjakan (2 mockup murid) DAN semua halaman guru
++ lembar cetak. Ini palet latar default seluruh aplikasi sejak restyle.
 
 | Token | Nilai | Konteks |
 |-------|-------|---------|
-| LATAR_MURID | #FFF8EE | Cream hangat — badan halaman |
+| LATAR_MURID | #FFF8EE | Cream hangat — badan halaman (guru & murid) |
 | AKSEN_MURID_UTAMA | #0FA3A3 | Teal — primary action, nomor badge |
-| AKSEN_MURID_KORAL | #FF6B5B | Coral — tombol simpan, highlight |
-| AKSEN_MURID_AMBER | #FFB020 | Amber — star/challenge |
-| LATAR_KARTU_MURID | #fff | Kartu soal murid |
+| AKSEN_MURID_KORAL | #FF6B5B | Coral — tombol simpan/CTA, headline kunci |
+| AKSEN_MURID_AMBER | #FFB020 | Amber — star/challenge, tombol variasi cerita |
+| LATAR_KARTU_MURID | #fff | Kartu soal |
 
-Filosofi: hangat dan cerah untuk anak SD. Teal sebagai aksen utama (bukan
-biru tua) karena lebih ramah dan menos intimidating. Coral untuk CTA simpan
-supaya menonjol dari teal.
+Filosofi: hangat dan cerah untuk anak SD — dan, sesuai mockup, juga yang
+dipakai permukaan guru. Teal sebagai aksen utama (bukan biru tua) karena lebih
+ramah dan menos intimidating. Coral untuk CTA supaya menonjol dari teal.
 
 ### Status (diagnosis)
 
@@ -158,19 +167,29 @@ Aturan:
 - Jangan hardcode hex literal di file CSS — selalu rujuk token.
 - Token baru tambahkan ke `design_tokens.py` + catat di dokumen ini.
 
+File CSS per permukaan (semuanya `import design_tokens as T`):
+- `gaya_guru.py` → 5 halaman layar guru (masuk, dashboard, sesi, laporan, akun)
+- `gaya_layar.py` → lembar yang dibaca di browser/HP (anak & guru)
+- `gaya_cetak.py` → lembar kertas A4 (satuan mm/pt, hemat tinta: garis saja)
+- `murid.py` (CSS_MURID) → halaman murid
+
 ## Mockup reference
 
-| File | Halaman | Viewport |
-|------|---------|----------|
-| murid-sesiku.png | /murid — daftar sesi | Mobile |
-| murid-kerjakan.png | /murid/kerjakan — halaman kerja | Mobile |
-| guru-masuk.png | /masuk — login | Desktop |
-| guru-dashboard.png | / — dashboard utama | Desktop |
-| guru-sesi.png | /sesi/<id> — detail sesi | Desktop |
-| guru-laporan.png | /laporan/<id> — laporan + tren | Desktop |
-| guru-akun.png | /akun — kelola akun & siswa | Desktop |
-| guru-lembar-soal.png | /lembar/<id> — soal cetak | A4 |
-| guru-lembar-kunci.png | /lembar/<id>/penilaian — kunci cetak | A4 |
+| File | Halaman | Viewport | Implementasi |
+|------|---------|----------|--------------|
+| murid-sesiku.png | /murid — daftar sesi | Mobile | murid.py |
+| murid-kerjakan.png | /murid/kerjakan — halaman kerja | Mobile | murid.py |
+| guru-masuk.png | /masuk — login | Desktop | web.py + gaya_guru.py |
+| guru-dashboard.png | / — dashboard utama | Desktop | web.py + gaya_guru.py |
+| guru-sesi.png | /sesi/<id> — detail sesi | Desktop | web.py + gaya_guru.py |
+| guru-laporan.png | /laporan/<id> — laporan + tren | Desktop | web.py + gaya_guru.py |
+| guru-akun.png | /akun — kelola akun & siswa | Desktop | web.py + gaya_guru.py |
+| guru-lembar-soal.png | /lembar/<id> — soal cetak | A4 | render.py + gaya_* |
+| guru-lembar-kunci.png | /lembar/<id>/penilaian — kunci cetak | A4 | render.py + gaya_* |
+
+Kontrak penting: implementasi lembar anak (`/lembar/<id>`) TIDAK boleh memuat
+kunci; lembar kunci (`/lembar/<id>/penilaian`) justru memuat semuanya. Keduanya
+hanya beda satu ruas URL — dijaga `__tests__/test_web_lembar.py`.
 
 ## Workflow: halaman baru
 

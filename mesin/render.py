@@ -139,6 +139,10 @@ def lembar_soal(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(topik_paket.judul_lembar)}</title><style>{css}</style></head><body>
 <div class="wrap">
+<div class="mesin-banner">
+  <span class="nama-app">Mesin Latihan</span>
+  <span class="meta-sesi">{html.escape(nama)} &middot; {len(soal)} soal</span>
+</div>
 <h1>{html.escape(topik_paket.judul_lembar)}</h1>
 <div class="identitas">
   <span>Nama: <span class="garis">{html.escape(nama)}</span></span>
@@ -211,6 +215,11 @@ def lembar_penilaian(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(topik_paket.judul_penilaian)}</title><style>{css}</style></head><body>
 <div class="wrap">
+<div class="mesin-banner banner-kunci">
+  <span class="nama-app">Mesin Latihan</span>
+  <span class="meta-sesi">{html.escape(nama)} &middot; {len(soal)} soal</span>
+</div>
+<div class="kunci-headline">Kunci — Rahasia Guru</div>
 <h1>Lembar {html.escape(topik_paket.judul_penilaian)}</h1>
 <div class="identitas">
   <span>Nama: <b>{html.escape(nama) or "______"}</b></span>

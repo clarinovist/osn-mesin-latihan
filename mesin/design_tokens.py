@@ -1,22 +1,16 @@
 """Design tokens — sumber tunggal untuk semua nilai visual aplikasi.
 
-Dipakai oleh gaya_layar.py, gaya_cetak.py, dan murid.py (CSS_MURID).
-Tujuan: konsistensi antar-viewport (layar sentuh, cetak A4, dashboard guru)
-tanpa duplikasi nilai. Ubah di sini, efek ke semua permukaan.
+Dipakai oleh gaya_layar.py, gaya_cetak.py, gaya_guru.py, dan murid.py
+(CSS_MURID). Tujuan: konsistensi antar-viewport (layar sentuh, cetak A4,
+dashboard guru) tanpa duplikasi nilai. Ubah di sini, efek ke semua permukaan.
 
 == Palet ==
 
-Ada dua paet yang hidup berdampingan:
-
-  1. Palet INTI (biru tua #16213e + abu #f0f1f4) — sudah dipakai sejak Fase 3
-     untuk semua permukaan guru: dashboard, sesi, laporan, akun, lembar cetak.
-     5 mockup guru (guru-*) memakai palet ini.
-
-  2. Palet MURID (cream #FFF8EE + teal #0FA3A3 + coral #FF6B5B + amber #FFB020)
-     — dari mockup murid (murid-*). Lebih ramah anak, lebih hangat.
-
-Keduanya tidak menyatu karena guru dan murid punya konteks emosi berbeda:
-guru butuh konsentrasi (biru tua, netral), murid butuh semangat (hangat, cerah).
+Sejak restyle 29 Agu 2026 seluruh permukaan (guru, murid, lembar) memakai
+SATU palet hangat dari mockup — cream #FFF8EE + teal #0FA3A3 + coral
+#FF6B5B + amber #FFB020. Yang dulu disebut "palet INTI" (biru tua #16213e +
+abu) kini hanya tersisa sebagai warna judul/teks (TEKS_JUDUL, BORDER_KUAT)
+dan garis cetak; latar semua halaman adalah LATAR_MURID.
 
 == Mockup ==
 
@@ -27,6 +21,9 @@ guru butuh konsentrasi (biru tua, netral), murid butuh semangat (hangat, cerah).
   - guru-lembar-soal.png, guru-lembar-kunci.png (A4 portrait)
 
 Script generator: desain-ui/gen_guru.py (gpt-image-2 via chenzk.top).
+
+Permukaan guru diimplementasi di gaya_guru.py (5 halaman layar); lembar di
+gaya_layar.py (browser) + gaya_cetak.py (kertas A4); murid di murid.py.
 """
 
 # ─────────────────────────────────────────────────────────────────────
@@ -56,10 +53,39 @@ LATAR_TERSIMPAN = "#e8f6ec"
 BORDER_TERSIMPAN = "#9ed4b0"
 TEKS_TERSIMPAN = "#14532d"
 
+# Teks kontras di atas aksen (butuh teks putih di atas teal/coral/amber)
+TEKS_PUTIH = "#ffffff"
+
+# Galat (pesan error) — netral merah lembut
+LATAR_GALAT = "#fdecea"
+BORDER_GALAT = "#f5b5ae"
+TEKS_GALAT = "#93352b"
+
 # Status Dashboard (mockup guru-laporan)
 STATUS_KUAT = "#0FA3A3"          # teal
 STATUS_LEMAH = "#FFB020"        # amber
 STATUS_SALAH = "#FF6B5B"        # coral
+
+# Kode diagnosis — warna pill di halaman sesi guru (mockup guru-sesi).
+# Mengikuti STATUS_* supaya satu rasa: kuat=teal, lemah=amber, salah=coral.
+KODE_BENAR_BG = "#e6f6ec"
+KODE_BENAR_TEKS = "#157347"
+KODE_SALAH_KONSEP_BG = "#fdecea"   # K
+KODE_SALAH_KONSEP_TEKS = "#c2352b"
+KODE_SALAH_BACA_BG = "#fdf3e0"     # B
+KODE_SALAH_BACA_TEKS = "#a4700f"
+KODE_SALAH_HITUNG_BG = "#e8f0fc"   # H
+KODE_SALAH_HITUNG_TEKS = "#2c60ad"
+KODE_SALAH_TULIS_BG = "#f0ecfb"    # E
+KODE_SALAH_TULIS_TEKS = "#6a4bb0"
+KODE_BELUM_LIAT_BG = "#eaf4ef"     # T
+KODE_BELUM_LIAT_TEKS = "#3f7d57"
+KODE_MENEBAK_BG = "#efeff1"        # N
+KODE_MENEBAK_TEKS = "#5b5b63"
+
+# Chart tren (mockup guru-laporan) — SVG
+CHART_GRID = "#e2e6ef"
+CHART_AXIS = "#8a91a3"
 
 # ─────────────────────────────────────────────────────────────────────
 # Palet MURID (permukaan murid: /murid, /murid/kerjakan)
