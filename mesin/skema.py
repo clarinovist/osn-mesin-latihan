@@ -85,6 +85,10 @@ CREATE TABLE IF NOT EXISTS sesi (
     seed      INTEGER NOT NULL,
     topik     TEXT    NOT NULL DEFAULT 'pola-bilangan',
     level     TEXT    NOT NULL DEFAULT 'P3',
+    mode      TEXT    NOT NULL DEFAULT 'diagnostik',
+    timer_mode    TEXT    NOT NULL DEFAULT 'tanpa',
+    durasi_menit  INTEGER NOT NULL DEFAULT 15,
+    timer_auto    INTEGER NOT NULL DEFAULT 0,
     tanggal   TEXT    NOT NULL DEFAULT (date('now', '+7 hours')),
     mulai     TEXT,
     selesai   TEXT,
@@ -180,6 +184,13 @@ MIGRASI: list[tuple[str, str, str]] = [
     ("soal", "level", "ALTER TABLE soal ADD COLUMN level TEXT NOT NULL DEFAULT 'P3'"),
     ("sesi", "level", "ALTER TABLE sesi ADD COLUMN level TEXT NOT NULL DEFAULT 'P3'"),
     ("soal", "cerita", "ALTER TABLE soal ADD COLUMN cerita TEXT NOT NULL DEFAULT ''"),
+    # Mode sesi (29 Aug 2026): 'diagnostik' (default) | 'drill' (Latihan Cepat).
+    ("sesi", "mode", "ALTER TABLE sesi ADD COLUMN mode TEXT NOT NULL DEFAULT 'diagnostik'"),
+    # Timer untuk Latihan Cepat: 'tanpa'|'sesi'|'soal', durasi menit (default
+    # 15), timer_auto 0 = peringatan saja / 1 = auto-submit & kunci.
+    ("sesi", "timer_mode", "ALTER TABLE sesi ADD COLUMN timer_mode TEXT NOT NULL DEFAULT 'tanpa'"),
+    ("sesi", "durasi_menit", "ALTER TABLE sesi ADD COLUMN durasi_menit INTEGER NOT NULL DEFAULT 15"),
+    ("sesi", "timer_auto", "ALTER TABLE sesi ADD COLUMN timer_auto INTEGER NOT NULL DEFAULT 0"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.
