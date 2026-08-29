@@ -145,13 +145,31 @@ def halaman_utama(kon) -> bytes:
             f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
             f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Lembar</th></tr>"
             f"{item}</table></div>"
-            f'<form method="post" action="/sesi-baru/{s["id"]}" '
-            f'class="baris" style="margin-top:.9rem">'
-            f'<div><label>Topik</label>'
-            f'<select name="topik">{opsi_topik}</select></div>'
-            f'<div style="display:flex;align-items:flex-end">'
-            f'<button type="submit" class="tombol-coral" style="width:100%">'
-            f"Buat sesi baru</button></div></form>"
+            f'<form method="post" action="/sesi-baru/{s["id"]}" '\
+                        f'class="baris" style="margin-top:.9rem">'\
+                        f'<div><label>Topik</label>'\
+                        f'<select name="topik">{opsi_topik}</select></div>'\
+                        f'<div><label>Mode</label>'\
+                        f'<div class="mode-pilih">'\
+                        f'<label class="mode-opsi"><input type="radio" name="mode" '\
+                        f'value="diagnostik" checked> Diagnosa</label>'\
+                        f'<label class="mode-opsi"><input type="radio" name="mode" '\
+                        f'value="drill"> Latihan Cepat</label>'\
+                        f'</div></div>'\
+                        f'<div class="pengaturan-timer" style="display:none">'\
+                        f'<label>Durasi '\
+                        f'<input type="number" name="durasi_menit" value="15" '\
+                        f'min="1" max="180" style="width:4.5rem"> menit</label>'\
+                        f'<label class="mode-opsi"><input type="radio" name="timer_mode" '\
+                        f'value="sesi" checked> per sesi (tampil)</label>'\
+                        f'<label class="mode-opsi"><input type="radio" name="timer_mode" '\
+                        f'value="soal"> per soal (internal)</label>'\
+                        f'<label class="mode-opsi"><input type="checkbox" '\
+                        f'name="timer_auto" value="1"> auto-submit</label>'\
+                        f'</div>'\
+                        f'<div style="display:flex;align-items:flex-end">'\
+                        f'<button type="submit" class="tombol-coral" style="width:100%">'\
+                        f"Buat sesi baru</button></div></form>"
             f"</div>"
         )
 
@@ -172,7 +190,17 @@ def halaman_utama(kon) -> bytes:
         f"<h1>Mesin Latihan Pola Bilangan</h1>"
         f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
         f"untuk melihat tren.</p>"
-        f'<div class="grid-utama">{isi_utama}</div>',
+        f'<div class="grid-utama">{isi_utama}</div>'
+        f'<script>'
+        f'(function(){{'
+        f'var r=document.querySelectorAll(\'input[name="mode"]\');'
+        f'for(var i=0;i<r.length;i++){{'
+        f'r[i].addEventListener("change",function(){{'
+        f'var t=this.closest("form").querySelector(".pengaturan-timer");'
+        f'if(t)t.style.display=this.value==="drill"?"":"none";'
+        f'}});}}'
+        f'}})()'
+        f'</script>',
     )
 
 
@@ -1362,8 +1390,39 @@ class Penangan(BaseHTTPRequestHandler):
                         f"untuk level {html.escape(siswa['tingkat'])}.</p>"
                     )
                     return self._kirim(_halaman("Topik belum tersedia", pesan), 400)
+                pilihan_mode = (data.get("mode") or ["diagnostik"])[0].strip()
+                if pilihan_mode not in ("diagnostik", "drill"):
+                    pesan = (
+                        f"<h1>Mode tidak dikenal</h1>"
+                        f"<p><code>{html.escape(pilihan_mode)}</code> tidak terdaftar. "
+                        f"Yang tersedia: diagnostik (Diagnosa), drill (Latihan Cepat).</p>"
+                    )
+                    return self._kirim(_halaman("Mode tidak dikenal", pesan), 400)
+                timer_mode, durasi_menit, timer_auto = "tanpa", 15, 0
+                if pilihan_mode == "drill":
+                    timer_mode = (data.get("timer_mode") or ["sesi"])[0].strip()
+                    if timer_mode not in ("sesi", "soal"):
+                        pesan = (
+                            f"<h1>Timer tidak dikenal</h1>"
+                            f"<p><code>{html.escape(timer_mode)}</code> tidak terdaftar. "
+                            f"Yang tersedia: sesi (per sesi, tampil jalan), "
+                            f"soal (per soal, internal).</p>"
+                        )
+                        return self._kirim(_halaman("Timer tidak dikenal", pesan), 400)
+                    nilai_durasi = (data.get("durasi_menit") or [""])[0].strip()
+                    if not nilai_durasi.isdigit() or not 1 <= int(nilai_durasi) <= 180:
+                        pesan = (
+                            "<h1>Durasi tidak wajar</h1>"
+                            f"<p>Durasi Latihan Cepat harus angka 1–180 menit "
+                            f"(terima: {html.escape(nilai_durasi or '(kosong)')}).</p>"
+                        )
+                        return self._kirim(_halaman("Durasi tidak wajar", pesan), 400)
+                    durasi_menit = int(nilai_durasi)
+                    timer_auto = 1 if (data.get("timer_auto") or ["0"])[0] == "1" else 0
                 sesi_id = buat_sesi_seed_baru(
-                    kon, siswa_id, level=level, topik=pilihan_topik
+                    kon, siswa_id, level=level, topik=pilihan_topik,
+                    mode=pilihan_mode, timer_mode=timer_mode,
+                    durasi_menit=durasi_menit, timer_auto=timer_auto,
                 )
             # Alihkan ke halaman sesinya, bukan menampilkan ulang halaman
             # utama: setelah membuat sesi yang dibutuhkan guru adalah

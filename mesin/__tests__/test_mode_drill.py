@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import basis  # noqa: E402
 import murid  # noqa: E402
 import web  # noqa: E402
+from uji_http import SANDI_GURU, ServerUji  # noqa: E402
 
 
 @pytest.fixture()
@@ -137,4 +138,88 @@ def test_buat_sesi_seed_baru_drill_via_web(db):
         assert baris["timer_mode"] == "soal"
         assert baris["durasi_menit"] == 5
         assert baris["timer_auto"] == 0
+
+
+# ── 1.3 Form guru + rute /sesi-baru ──────────────────────────────────
+
+
+def test_form_buat_sesi_memuat_pilihan_mode_dan_timer(db):
+    """Halaman utama guru: radio Diagnosa/Latihan Cepat + timer fields."""
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "AnakUji")
+        html = web.halaman_utama(kon).decode()
+        assert 'name="mode"' in html
+        assert 'value="diagnostik"' in html
+        assert 'value="drill"' in html
+        assert 'name="durasi_menit"' in html
+        assert 'name="timer_mode"' in html
+        assert 'name="timer_auto"' in html
+
+
+@pytest.fixture()
+def server(tmp_path, monkeypatch):
+    s = ServerUji(tmp_path, monkeypatch)
+    yield s
+    s.berhenti()
+
+
+def test_http_buat_sesi_drill_dengan_timer(server):
+    """POST /sesi-baru/<id> dengan mode=drill + timer -> sesi drill."""
+    db = server.db
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "AnakUji")
+        sid = kon.execute("SELECT id FROM siswa WHERE nama = 'AnakUji'").fetchone()[0]
+    kode, html, _ = server.minta(
+        f"/sesi-baru/{sid}",
+        auth=("guru", SANDI_GURU),
+        data={
+            "topik": "pola-bilangan", "mode": "drill",
+            "timer_mode": "sesi", "durasi_menit": "10", "timer_auto": "1",
+        },
+    )
+    # urllib follow redirect 303 -> 200 (halaman sesi)
+    assert kode == 200, f"expected 200 (303 redirect followed), got {kode}"
+    assert "Sesi #" in html
+    with basis.buka(db) as kon:
+        baris = kon.execute(
+            "SELECT mode, timer_mode, durasi_menit, timer_auto FROM sesi"
+        ).fetchone()
+        assert baris is not None
+        assert baris["mode"] == "drill"
+        assert baris["timer_mode"] == "sesi"
+        assert baris["durasi_menit"] == 10
+        assert baris["timer_auto"] == 1
+
+
+def test_http_buat_sesi_mode_asing_ditolak(server):
+    """Mode asing -> 400 dengan pesan jelas."""
+    db = server.db
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "AnakUji")
+        sid = kon.execute("SELECT id FROM siswa WHERE nama = 'AnakUji'").fetchone()[0]
+    kode, html, _ = server.minta(
+        f"/sesi-baru/{sid}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "pola-bilangan", "mode": "aneh"},
+    )
+    assert kode == 400
+    assert "Mode" in html or "mode" in html
+
+
+def test_http_buat_sesi_timer_mode_asing_ditolak(server):
+    """Timer mode asing -> 400."""
+    db = server.db
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "AnakUji")
+        sid = kon.execute("SELECT id FROM siswa WHERE nama = 'AnakUji'").fetchone()[0]
+    kode, html, _ = server.minta(
+        f"/sesi-baru/{sid}",
+        auth=("guru", SANDI_GURU),
+        data={
+            "topik": "pola-bilangan", "mode": "drill",
+            "timer_mode": "aneh", "durasi_menit": "10",
+        },
+    )
+    assert kode == 400
+    assert "timer" in html.lower()
 

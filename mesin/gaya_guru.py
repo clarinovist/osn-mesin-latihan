@@ -134,6 +134,18 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .baris {{ display: flex; gap: .8rem; flex-wrap: wrap; }}
 .baris > * {{ flex: 1; min-width: 180px; }}
 
+/* ── Pilihan mode & timer saat buat sesi (Latihan Cepat) ───────────── */
+.mode-pilih {{ display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .2rem; }}
+.mode-opsi {{ display: flex; align-items: center; gap: .4rem; font-size: .88rem;
+  color: {T.TEKS_UTAMA}; margin: 0; }}
+.mode-opsi input {{ width: auto; margin: 0; }}
+.pengaturan-timer {{
+  border: 1.5px dashed {T.BORDER_HALUS}; border-radius: {T.RADIUS_KECIL};
+  padding: .55rem .7rem; background: {T.LATAR_KARTU_MURID};
+}}
+.pengaturan-timer label {{ margin: .2rem 0; }}
+.pengaturan-timer input[type=number] {{ padding: .3rem .45rem; }}
+
 /* ── Halaman sesi: kartu soal (mockup guru-sesi) ───────────────────── */
 .peta {{ margin-bottom: 1rem; }}
 .soal-kartu {{ border-left: 4px solid {T.BORDER_HALUS}; }}
