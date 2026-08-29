@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import html
 
+import design_tokens as T
 from basis import isi_sesi
 from templates import Soal
 from topik import Topik, dari_sesi
@@ -110,16 +111,16 @@ def _badan_teks(teks: str) -> str:
     )
 
 
-CSS_MURID = """
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 16px; line-height: 1.55; color: #111; margin: 0;
-  background: #f0f1f4;
-}
-.wrap { max-width: 46rem; margin: 0 auto; padding: 1rem 0.9rem 3rem; }
-h1 { font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: #16213e; }
+CSS_MURID = f"""
+* {{ box-sizing: border-box; }}
+html {{ -webkit-text-size-adjust: 100%; }}
+body {{
+  font-family: {T.FONT_LAYAR};
+  font-size: {T.UKURAN_BADAN_LAYAR}; line-height: {T.LINE_HEIGHT}; color: {T.TEKS_UTAMA}; margin: 0;
+  background: {T.LATAR_MURID};
+}}
+.wrap {{ max-width: {T.LEBAR_KONTEN}; margin: 0 auto; padding: {T.SP_4} 0.9rem 3rem; }}
+h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA}; }}
 
 /* Gaya dasar di atas adalah separuh dari perbaikan tampilan berantakan:
    halaman ini dulu hanya memuat gaya khusus murid, sementara markupnya
@@ -128,113 +129,113 @@ h1 { font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: #16213e; }
    Kelas dasar sengaja disalin dari gaya_layar.py, bukan diimpor, supaya
    halaman murid tetap satu berkas CSS yang bisa dibaca utuh. */
 
-.murid-header { display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; }
-.murid-header h1 { margin: 0; flex: 1; }
-.btn {
+.murid-header {{ display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; }}
+.murid-header h1 {{ margin: 0; flex: 1; }}
+.btn {{
   display: inline-block; padding: .7rem 1.2rem; border-radius: 9px;
-  border: none; background: #16213e; color: #fff; font-size: 1rem;
+  border: none; background: {T.AKSEN_MURID_UTAMA}; color: #fff; font-size: 1rem;
   text-decoration: none; cursor: pointer;
-}
-.btn.secondary { background: #eef1f6; color: #16213e; border: 1px solid #ccd3dd; }
+}}
+.btn.secondary {{ background: #eef1f6; color: {T.TEKS_JUDUL}; border: 1px solid #ccd3dd; }}
 
-.petunjuk {
-  background: #eef3fb; border: 1px solid #c4d3ea; border-radius: 10px;
+.petunjuk {{
+  background: {T.LATAR_KARTU_SEKUNDER}; border: 1px solid {T.BORDER_INTERAKTIF}; border-radius: {T.RADIUS_SEDANG};
   padding: 0.9rem 1rem; margin-bottom: 1.2rem; font-size: 0.95rem;
-}
-.petunjuk p { margin: 0 0 0.6rem; }
-.petunjuk p:last-child { margin-bottom: 0; }
+}}
+.petunjuk p {{ margin: 0 0 0.6rem; }}
+.petunjuk p:last-child {{ margin-bottom: 0; }}
 
-.bagian {
-  font-size: 1.05rem; font-weight: 700; color: #16213e;
+.bagian {{
+  font-size: 1.05rem; font-weight: 700; color: {T.TEKS_JUDUL};
   margin: 1.6rem 0 0.7rem; padding-bottom: 0.35rem;
-  border-bottom: 2px solid #16213e;
-}
-.catatan-bagian {
-  background: #fff7e6; border: 1px solid #ecd9a8; border-radius: 8px;
+  border-bottom: 2px solid {T.TEKS_JUDUL};
+}}
+.catatan-bagian {{
+  background: {T.LATAR_CATATAN}; border: 1px solid {T.BORDER_CATATAN}; border-radius: {T.RADIUS_KECIL};
   padding: 0.55rem 0.8rem; margin: -0.2rem 0 0.8rem; font-size: 0.92rem;
-}
+}}
 
-.soal {
-  background: #fff; border: 1px solid #d5d8de; border-radius: 12px;
+.soal {{
+  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS}; border-radius: {T.RADIUS_KARTU};
   padding: 1rem; margin-bottom: 1rem;
-}
-.nomor {
+}}
+.nomor {{
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 2rem; height: 2rem; font-weight: 700;
-  border: 2px solid #16213e; border-radius: 50%;
+  border: 2px solid {T.AKSEN_MURID_UTAMA}; border-radius: {T.RADIUS_BULAT};
   margin-right: 0.55rem; font-size: 0.95rem;
-}
-.bintang { font-weight: 700; color: #b8860b; }
+}}
+.bintang {{ font-weight: 700; color: {T.AKSEN_MURID_AMBER}; }}
 
 /* Pertanyaan utama adalah yang paling penting di kartu, jadi ia harus
    paling menonjol. Dulu badan soal dan pertanyaan berukuran sama persis —
    anak membaca ulang semua kalimat untuk mencari apa yang ditanya. */
-.teks { display: block; margin-top: 0.4rem; }
-.tanya {
+.teks {{ display: block; margin-top: 0.4rem; }}
+.tanya {{
   display: block; font-size: 1.12rem; font-weight: 700;
-  margin-top: 0.6rem; color: #16213e;
-}
+  margin-top: 0.6rem; color: {T.TEKS_JUDUL};
+}}
 
-.label { display: block; font-size: 0.85rem; color: #555; margin: 0.8rem 0 0.35rem; }
+.label {{ display: block; font-size: 0.85rem; color: {T.TEKS_SUBTLE}; margin: 0.8rem 0 0.35rem; }}
 
-.daftar-sesi { display: block; color: inherit; text-decoration: none; }
-.daftar-sesi:hover { border-color: #16213e; }
+.daftar-sesi {{ display: block; color: inherit; text-decoration: none; }}
+.daftar-sesi:hover {{ border-color: {T.TEKS_JUDUL}; }}
 
-.soal-murid textarea {
+.soal-murid textarea {{
   width: 100%; min-height: 84px; border: 1.5px dashed #99a;
-  border-radius: 8px; padding: .6rem; font-size: 1rem; font-family: inherit;
+  border-radius: {T.RADIUS_KECIL}; padding: .6rem; font-size: 1rem; font-family: inherit;
   background: #fafafc;
-}
-.soal-murid input[type=text] {
+}}
+.soal-murid input[type=text] {{
   font-size: 1.15rem; padding: .55rem .7rem; border: 2px solid #333;
-  border-radius: 8px; min-width: 7rem;
-}
-.baris-jawab { display: flex; align-items: baseline; gap: .6rem; margin-top: .7rem; }
-.centang-baris {
+  border-radius: {T.RADIUS_KECIL}; min-width: 7rem;
+}}
+.baris-jawab {{ display: flex; align-items: baseline; gap: .6rem; margin-top: .7rem; }}
+.centang-baris {{
   display: flex; align-items: center; gap: .5rem; margin-top: .7rem;
   font-size: .95rem; color: #444;
-}
-.simpan-strip { position: sticky; bottom: 0; padding: .8rem 0; background: #f0f1f4; }
-.simpan-strip .btn { width: 100%; font-size: 1.1rem; padding: .95rem; }
+}}
+.simpan-strip {{ position: sticky; bottom: 0; padding: .8rem 0; background: {T.LATAR_MURID}; }}
+.simpan-strip .btn {{ width: 100%; font-size: 1.1rem; padding: .95rem; background: {T.AKSEN_MURID_KORAL}; }}
 
 /* Pilihan cepat "Caraku" — target sentuh penuh, bukan lingkaran radio kecil.
    Seluruh kotak bisa di-tap; anak tidak perlu membidik titik 20px. */
-.pilih-cara-grup {
+.pilih-cara-grup {{
   display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem;
-}
-.pilih-cara {
+}}
+.pilih-cara {{
   display: flex; align-items: center; gap: .45rem;
-  border: 1.5px solid #ccd3dd; border-radius: 999px;
-  padding: .55rem .9rem; min-height: 44px;
-  background: #fff; cursor: pointer; font-size: .95rem;
-}
-.pilih-cara input { width: 1.2rem; height: 1.2rem; flex: none; }
+  border: 1.5px solid #ccd3dd; border-radius: {T.RADIUS_PIL};
+  padding: .55rem .9rem; min-height: {T.TARGET_SENTUH};
+  background: {T.LATAR_KARTU_MURID}; cursor: pointer; font-size: .95rem;
+}}
+.pilih-cara input {{ width: 1.2rem; height: 1.2rem; flex: none; }}
 /* :has() didukung Safari 15.4+ dan Chrome 105+; kalau peramban lebih tua,
    yang hilang hanya penandaan warna — radio-nya tetap berfungsi. */
-.pilih-cara:has(input:checked) {
-  border-color: #16213e; background: #eef3fb; font-weight: 600;
-}
+.pilih-cara:has(input:checked) {{
+  border-color: {T.AKSEN_MURID_UTAMA}; background: {T.LATAR_KARTU_SEKUNDER}; font-weight: 600;
+}}
 
 /* Konfirmasi setelah simpan. Tanpa ini anak tidak tahu jawabannya masuk,
    lalu menekan tombol berulang kali atau mengira kerjanya hilang. */
-.tersimpan {
-  background: #e8f6ec; border: 1px solid #9ed4b0; color: #14532d;
-  border-radius: 10px; padding: .8rem 1rem; margin-bottom: 1rem;
+.tersimpan {{
+  background: {T.LATAR_TERSIMPAN}; border: 1px solid {T.BORDER_TERSIMPAN}; color: {T.TEKS_TERSIMPAN};
+  border-radius: {T.RADIUS_SEDANG}; padding: .8rem 1rem; margin-bottom: 1rem;
   font-size: .98rem;
-}
+}}
 
-@media print {
+@media print {{
   /* Tombol "Cetak / PDF" di kepala halaman memicu window.print(); di sini
      halaman menurunkan dirinya ke kertas: kontrol hilang, kartu jadi kotak
      hitam-putih, soal tidak terpotong antarhalaman. Di dialog cetak, murid
      memilih "Simpan sebagai PDF" — tidak perlu berkas PDF terpisah. */
-  body { background: #fff; font-size: 10.5pt; }
-  .wrap { max-width: none; padding: 0; }
-  .hanya-layar { display: none; }
-  .soal, .petunjuk { border-color: #000; border-radius: 0; }
-  .soal { break-inside: avoid; }
-  .bagian { break-after: avoid; }
-}
+  body {{ background: #fff; font-size: {T.UKURAN_BADAN_CETAK}; }}
+  .wrap {{ max-width: none; padding: 0; }}
+  .hanya-layar {{ display: none; }}
+  .soal, .petunjuk {{ border-color: #000; border-radius: 0; }}
+  .soal {{ break-inside: avoid; }}
+  .bagian {{ break-after: avoid; }}
+}}
 """
 
 
