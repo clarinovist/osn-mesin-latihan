@@ -138,6 +138,20 @@ CREATE TABLE IF NOT EXISTS diagnosis (
     didiagnosis   TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
 );
 
+-- Lampiran foto lembar (Fase 2): foto hasil kerja anak di kertas,
+-- dianalisa AI vision, lalu dikonfirmasi guru sebelum masuk laporan.
+CREATE TABLE IF NOT EXISTS lampiran (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    sesi_id     INTEGER NOT NULL REFERENCES sesi(id) ON DELETE CASCADE,
+    nama_berkas TEXT    NOT NULL,
+    mime        TEXT    NOT NULL DEFAULT 'image/jpeg',
+    hasil_json  TEXT    NOT NULL DEFAULT '',
+    status      TEXT    NOT NULL DEFAULT 'baru'
+        CHECK (status IN ('baru', 'diterapkan')),
+    dibuat      TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
+);
+CREATE INDEX IF NOT EXISTS idx_lampiran_sesi ON lampiran(sesi_id);
+
 -- Ringkasan per sesi supaya laporan tidak perlu menghitung ulang tiap buka.
 CREATE VIEW IF NOT EXISTS ringkasan_sesi AS
 SELECT

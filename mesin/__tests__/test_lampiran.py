@@ -166,3 +166,52 @@ def test_ekstrak_jawaban_kosong_diterima(monkeypatch, api_aktif):
     hasil = llm.ekstrak_lembar(["soal 1", "soal 2"], GAMBAR_UJI)
     assert hasil is not None
     assert hasil[0]["jawaban"] == ""
+
+
+# ── 2.2 Tabel lampiran + fungsi basis ─────────────────────────────────
+
+
+def test_siapkan_membuat_tabel_lampiran(db):
+    with basis.buka(db) as kon:
+        baris = kon.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='lampiran'"
+        ).fetchone()
+        assert baris is not None
+
+
+def test_simpan_dan_daftar_lampiran(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        lid = basis.simpan_lampiran(
+            kon, sesi_id, "lembar-1.jpg", mime="image/jpeg",
+            hasil_json='{"soal": []}',
+        )
+        daftar = basis.daftar_lampiran(kon, sesi_id)
+        satu = basis.ambil_lampiran(kon, lid)
+    assert len(daftar) == 1
+    assert daftar[0]["status"] == "baru"
+    assert satu["nama_berkas"] == "lembar-1.jpg"
+    assert satu["mime"] == "image/jpeg"
+    assert json.loads(satu["hasil_json"]) == {"soal": []}
+
+
+def test_tandai_lampiran_diterapkan(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakLamp2")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
+        basis.tandai_lampiran(kon, lid, "diterapkan")
+        satu = basis.ambil_lampiran(kon, lid)
+    assert satu["status"] == "diterapkan"
+
+
+def test_hapus_sesi_membersihkan_lampiran(db):
+    """Lampiran ikut terhapus saat sesi dihapus (ON DELETE CASCADE)."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakLamp3")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
+        kon.execute("DELETE FROM sesi WHERE id = ?", (sesi_id,))
+        sisa = kon.execute("SELECT COUNT(*) AS n FROM lampiran").fetchone()
+    assert sisa["n"] == 0
