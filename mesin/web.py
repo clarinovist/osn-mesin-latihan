@@ -339,6 +339,35 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         else ""
     )
 
+    # Lampiran foto lembar (Fase 2): form upload + daftar foto yang sudah ada.
+    # Upload menjalankan ekstraksi AI, hasilnya dikonfirmasi guru di halaman
+    # /lampiran/<id> sebelum masuk jawaban.
+    baris_lampiran = []
+    for lamp in basis.daftar_lampiran(kon, sesi_id):
+        status_cls = "benar" if lamp["status"] == "diterapkan" else "N"
+        baris_lampiran.append(
+            f'<li><a href="/lampiran/{lamp["id"]}">'
+            f'{html.escape(lamp["nama_berkas"])}</a> '
+            f'<span class="kode {status_cls}">{lamp["status"]}</span> '
+            f'<span class="waktu">{html.escape(lamp["dibuat"])}</span></li>'
+        )
+    daftar = (
+        f'<ul class="daftar-lampiran">{"".join(baris_lampiran)}</ul>'
+        if baris_lampiran
+        else '<p class="sub">Belum ada foto lembar.</p>'
+    )
+    blok_lampiran = (
+        '<div class="kartu blok-lampiran">'
+        "<h2>Lampiran — foto lembar</h2>"
+        f"{daftar}"
+        f'<form method="post" action="/lampiran/{sesi_id}" '
+        'enctype="multipart/form-data">'
+        "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
+        '<input type="file" name="foto" accept="image/jpeg,image/png">'
+        '<button type="submit">Upload foto</button>'
+        "</form></div>"
+    )
+
     return _halaman(
         f"Sesi #{sesi_id}",
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
@@ -353,6 +382,7 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
         f"{kabar}"
         f"{_tombol_cerita(kon, sesi_id)}"
+        f"{blok_lampiran}"
         f'<form method="post" action="/sesi/{sesi_id}">'
         f'{"".join(kartu)}'
         f'<div class="simpan-strip"><button type="submit">'
