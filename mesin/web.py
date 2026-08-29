@@ -415,6 +415,57 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
     return f"{diubah} soal tersimpan dan didiagnosis."
 
 
+def diagnosa_murid(kon, sesi_id: int) -> int:
+    """Jalankan diagnosis atas semua jawaban SESI ini yang belum dinilai.
+
+    Dipanggil otomatis setiap kali anak menyimpan dari HP, supaya guru yang
+    membuka halaman sesi langsung melihat BENAR/kode — bukan deretan "?"
+    oranye yang menunggu diklik dulu.
+
+    Satu palang yang membuat ini aman: baris diagnosis yang `manual=1`
+    (keputusan guru) DILEWATI, bukan dihitung ulang. Mesin boleh menyegarkan
+    usulannya di kode_usulan, tapi kode_final dan benar milik guru tetap.
+    Tanpa itu, sekali anak memperbarui jawaban dari HP, penilaian guru
+    terhapus senyap — kegagalan paling mahal jenisnya.
+
+    Mengembalikan jumlah soal yang baru didiagnosis. Baris tanpa jawaban
+    (soal yang anak lewati) tidak dibuat — aturan yang sama dengan guru.
+    """
+    jumlah = 0
+    for b in basis.isi_sesi(kon, sesi_id):
+        if b["jawaban_id"] is None:
+            continue  # anak melewati soal ini: biarkan tanpa baris
+        if b["manual"] == 1:
+            # Segarkan usulan mesin saja; vonis guru tidak disentuh.
+            soal = _soal_dari_baris(b)
+            u = diagnosa(
+                b["kunci"], b["jawaban"] or "", b["cara"] or "",
+                b["restatement"] or "", bool(b["belum_pernah"]),
+                basis.malrule_soal(kon, b["soal_id"]),
+                soal.minta_restatement,
+            )
+            kon.execute(
+                """UPDATE diagnosis SET kode_usulan = ?, alasan = ?
+                   WHERE jawaban_id = ?""",
+                (u.kode, u.alasan, b["jawaban_id"]),
+            )
+            continue
+        soal = _soal_dari_baris(b)
+        u = diagnosa(
+            b["kunci"], b["jawaban"] or "", b["cara"] or "",
+            b["restatement"] or "", bool(b["belum_pernah"]),
+            basis.malrule_soal(kon, b["soal_id"]),
+            soal.minta_restatement,
+        )
+        basis.simpan_diagnosis(
+            kon, b["jawaban_id"],
+            benar=u.benar, kode_usulan=u.kode, kode_final=u.kode,
+            malrule_id=u.malrule_id, alasan=u.alasan, manual=False,
+        )
+        jumlah += 1
+    return jumlah
+
+
 def halaman_laporan(kon, siswa_id: int) -> bytes:
     siswa = kon.execute("SELECT * FROM siswa WHERE id = ?", (siswa_id,)).fetchone()
     if not siswa:
@@ -1097,6 +1148,12 @@ class Penangan(BaseHTTPRequestHandler):
                     if siswa_id is not None
                     else None
                 )
+                # Diagnosis otomatis: jawaban baru dari HP langsung dinilai
+                # mesin (usulan). Keputusan manual guru tidak pernah
+                # ditimpa — lihat web.diagnosa_murid. Guru membuka halaman
+                # sesi dan membaca hasil, bukan menekan tombol dulu.
+                if hasil:
+                    diagnosa_murid(kon, sesi_id)
             if hasil is None:
                 return self._kirim(
                     _halaman("403", "<h1>Bukan sesimu</h1>"), 403
