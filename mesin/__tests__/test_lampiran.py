@@ -10,6 +10,7 @@ Tiga lapis yang diuji:
 from __future__ import annotations
 
 import json
+import time
 import sqlite3
 import sys
 import urllib.error
@@ -20,6 +21,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import basis  # noqa: E402
+import lampiran  # noqa: E402
 import llm  # noqa: E402
 import web  # noqa: E402
 from uji_http import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
@@ -323,3 +325,117 @@ def test_http_serve_berkas_lampiran(server, monkeypatch):
     assert kode == 200
     assert header.get("Content-Type", "").startswith("image/jpeg")
     assert isi == b"\xff\xd8\xff\xe0FAKEJPEG"
+
+
+# ── 2.4 Konfirmasi guru + terapkan ────────────────────────────────────
+
+
+def test_halaman_konfirmasi_menampilkan_foto_dan_usulan(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakKonf")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        hasil = {"soal": [{"nomor": 1, "jawaban": "10", "caraku": "tambah 2"}]}
+        lid = basis.simpan_lampiran(
+            kon, sesi_id, "lembar-1.jpg",
+            hasil_json=json.dumps(hasil),
+        )
+        html = lampiran.halaman_konfirmasi(kon, lid).decode()
+    assert 'name="jwb_' in html
+    assert 'value="10"' in html           # usulan AI terlihat
+    assert 'value="tambah 2"' in html
+    assert "/lampiran/berkas/" in html    # foto ditampilkan
+
+
+def test_halaman_konfirmasi_lampiran_tanpa_hasil(db):
+    """AI gagal baca: halaman tetap tampil, input kosong, guru isi manual."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakKonf2")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg", hasil_json="")
+        html = lampiran.halaman_konfirmasi(kon, lid).decode()
+    assert 'name="jwb_' in html
+    assert 'value=""' in html
+
+
+def test_halaman_konfirmasi_lampiran_asing_404(db):
+    with basis.buka(db) as kon:
+        assert lampiran.halaman_konfirmasi(kon, 999) is None
+
+
+def test_terapkan_menulis_jawaban_dan_menjalankan_diagnosa(db):
+    """Terapkan: jawaban masuk lewat jalur resmi + diagnosis otomatis."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakTerap")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7, mode="drill")
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
+        kunci = basis.isi_sesi(kon, sesi_id)[0]["kunci"]
+        ssid = basis.isi_sesi(kon, sesi_id)[0]["sesi_soal_id"]
+
+        jumlah, pesan = lampiran.terapkan(
+            kon, lid,
+            {f"jwb_{ssid}": kunci, f"cara_{ssid}": "tambah 2"},
+        )
+        b = basis.isi_sesi(kon, sesi_id)[0]
+        lamp = basis.ambil_lampiran(kon, lid)
+    assert jumlah == 1
+    assert "1 soal" in pesan
+    assert b["benar"] == 1          # diagnosa jalan (drill, benar)
+    assert lamp["status"] == "diterapkan"
+
+
+def test_terapkan_jawaban_salah_dapat_kode_malrule(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakTerap2")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7, mode="drill")
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
+        for b in basis.isi_sesi(kon, sesi_id):
+            mal = basis.malrule_soal(kon, b["soal_id"])
+            if mal:
+                jumlah, _ = lampiran.terapkan(
+                    kon, lid,
+                    {f"jwb_{b['sesi_soal_id']}": mal[0]["jawaban"]},
+                )
+                hasil = next(
+                    x for x in basis.isi_sesi(kon, sesi_id)
+                    if x["nomor"] == b["nomor"]
+                )
+                break
+        else:
+            pytest.fail("seed 7 tidak punya malrule")
+    assert jumlah == 1
+    assert hasil["kode_final"] == mal[0]["kode"]  # K/H/E, bukan N
+    assert hasil["kode_final"] != "N"
+
+
+def test_http_terapkan_lewat_form(server):
+    """POST /lampiran/<id>/terapkan lewat HTTP nyata.
+
+    Verifikasi utama lewat RESPONS halaman (pesan jumlah soal). Pembacaan
+    DB diberi polling singkat: thread server menutup koneksi setelah
+    commit; di beberapa mesin pembacaan pertama test bisa bersaing dengan
+    penutupan itu (deterministik terlihat sebagai rows lama)."""
+    with server.buka() as kon:
+        sid = basis.tambah_siswa(kon, "feby")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7, mode="drill")
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
+        kunci = basis.isi_sesi(kon, sesi_id)[0]["kunci"]
+        ssid = basis.isi_sesi(kon, sesi_id)[0]["sesi_soal_id"]
+    kode, isi, _ = server.minta(
+        f"/lampiran/{lid}/terapkan",
+        auth=("guru", SANDI_GURU),
+        data={f"jwb_{ssid}": kunci, f"cara_{ssid}": "lihat pola"},
+    )
+    assert kode == 200
+    assert "1 soal dari foto masuk" in isi, "halaman tidak mengonfirmasi penerapan"
+
+    # DB: tunggu hingga baris jawaban terlihat (maks 2 detik).
+    batas = time.time() + 2.0
+    while time.time() < batas:
+        with server.buka() as kon:
+            b = basis.isi_sesi(kon, sesi_id)[0]
+            lamp = basis.ambil_lampiran(kon, lid)
+        if b["benar"] == 1 and lamp["status"] == "diterapkan":
+            break
+        time.sleep(0.05)
+    assert b["benar"] == 1
+    assert lamp["status"] == "diterapkan"
