@@ -224,6 +224,68 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
   font-size: .98rem;
 }}
 
+/* ── halaman daftar sesi (/murid) ── */
+.owl-mascot {{ flex: none; width: 40px; height: 40px; }}
+.sub-judul {{
+  font-size: 0.95rem; color: {T.TEKS_SUBTLE}; margin: -0.5rem 0 1.2rem;
+}}
+.keluar-form {{ margin: 0 0 1.2rem; }}
+.keluar-form .btn {{ padding: .4rem 1rem; font-size: 0.85rem; }}
+
+.daftar-sesi-grup {{ display: flex; flex-direction: column; gap: 0.7rem; }}
+
+.kartu-sesi {{
+  display: flex; align-items: center; gap: 0.8rem;
+  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
+  border-radius: {T.RADIUS_KARTU}; padding: 0.8rem 1rem;
+  text-decoration: none; color: {T.TEKS_UTAMA};
+  transition: border-color 0.15s, box-shadow 0.15s;
+}}
+.kartu-sesi:hover {{
+  border-color: {T.AKSEN_MURID_UTAMA};
+  box-shadow: 0 2px 8px rgba(15,163,163,0.12);
+}}
+.ikon-sesi {{
+  flex: none; width: 2.5rem; height: 2.5rem; border-radius: {T.RADIUS_BULAT};
+}}
+.isi-sesi {{ display: flex; flex-direction: column; flex: 1; min-width: 0; }}
+.tanggal-sesi {{ font-weight: 700; font-size: 1rem; color: {T.TEKS_JUDUL}; }}
+.meta-sesi {{ font-size: 0.85rem; color: {T.TEKS_SUBTLE}; }}
+.badge-soal {{
+  flex: none; font-size: 0.8rem; font-weight: 600;
+  background: {T.LATAR_KARTU_SEKUNDER}; color: {T.AKSEN_MURID_UTAMA};
+  padding: 0.25rem 0.6rem; border-radius: {T.RADIUS_PIL};
+}}
+.chevron-sesi {{
+  flex: none; display: flex; align-items: center; gap: 0.4rem;
+  width: 16px; height: 16px;
+}}
+.badge-baru {{
+  font-size: 0.7rem; font-weight: 700; color: #fff;
+  background: {T.AKSEN_MURID_KORAL}; padding: 0.15rem 0.4rem;
+  border-radius: {T.RADIUS_PIL}; white-space: nowrap;
+  position: absolute; transform: translate(-2.2rem, -1.8rem);
+}}
+.kosong-hint {{
+  border: 1.5px dashed #ccd3dd; border-radius: {T.RADIUS_KARTU};
+  padding: 1.5rem; text-align: center; color: {T.TEKS_SUBTLE};
+  font-size: 0.95rem;
+}}
+
+/* ── halaman kerja (/murid/kerjakan) ── */
+.meta-sesi-line {{ font-size: 0.85rem; color: {T.TEKS_SUBTLE}; margin-bottom: 1rem; }}
+.petunjuk-ikon {{ display: flex; gap: 0.7rem; align-items: flex-start; }}
+.ikon-petunjuk {{ flex: none; margin-top: 0.15rem; }}
+.petunjuk-ikon > div {{ flex: 1; }}
+
+/* Pilihan "Caraku" — 2 kolom rapi di layar lebar, 1 kolom di sempit */
+.pilih-cara-grup {{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: .8rem;
+}}
+@media (max-width: 30rem) {{
+  .pilih-cara-grup {{ grid-template-columns: 1fr; }}
+}}
+
 @media print {{
   /* Tombol "Cetak / PDF" di kepala halaman memicu window.print(); di sini
      halaman menurunkan dirinya ke kertas: kontrol hilang, kartu jadi kotak
@@ -244,6 +306,8 @@ def halaman_kerja(
     topik_paket: Topik | None = None,
 ) -> bytes | None:
     """Lembar interaktif murid: baca soal, tulis caraku + jawaban."""
+    import ikon
+
     info = sesi_murid(kon, siswa_id, sesi_id)
     if not info:
         return None
@@ -333,22 +397,26 @@ def halaman_kerja(
 <title>Kerjakan — {topik_paket.judul_lembar}</title>
 <style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
+  <img src="{ikon.OWL}" alt="" class="owl-mascot" width="36" height="36">
   <h1>Halo, {_escape(info['nama'])}</h1>
   <button class="btn secondary hanya-layar" type="button"
           onclick="window.print()">Cetak / PDF</button>
   <a class="btn secondary hanya-layar" href="/murid">Sesi lain</a>
 </div>
-<p>{_escape(info['tanggal'])} &middot; level {_escape(info['level'])}
+<p class="meta-sesi-line">{_escape(info['tanggal'])} &middot; level {_escape(info['level'])}
  &middot; {len(daftar)} soal</p>
 {kabar}
-<div class="petunjuk">
-  <p><b>Cara mengerjakan — baca dulu:</b></p>
-  <p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan
-  caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>
-  <p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu
-  <b>bukan</b> salah — itu berguna untuk gurumu.</p>
-  <p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai,
-  tekan <b>Simpan jawabanku</b> di paling bawah.</p>
+<div class="petunjuk petunjuk-ikon">
+  <img src="{ikon.BOHLAM}" alt="" class="ikon-petunjuk" width="20" height="20">
+  <div>
+    <p><b>Cara mengerjakan — baca dulu:</b></p>
+    <p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan
+    caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>
+    <p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu
+    <b>bukan</b> salah — itu berguna untuk gurumu.</p>
+    <p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai,
+    tekan <b>Simpan jawabanku</b> di paling bawah.</p>
+  </div>
 </div>
 <form method="post" action="/murid/kerjakan/{sesi_id}">
 {"".join(kartu)}
@@ -360,7 +428,20 @@ def halaman_kerja(
 
 
 def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
-    """/murid — daftar sesi milik murid ini saja."""
+    """Halaman /murid — daftar sesi milik murid ini saja.
+
+    Kartu sesi dirancang seperti mockup (murid-sesiku.png): icon lingkaran
+    berwarna di kiri, tanggal + level/topik di tengah, badge pill "N soal"
+    + chevron kanan. Sesuat yang baru dibuat (tanggal hari ini) dapat badge
+    "baru".
+    """
+    import ikon
+
+    _WARNA_ICON = ["#0FA3A3", "#FF6B5B", "#FFB020", "#8B5CF6"]
+    from datetime import date
+
+    hari_ini = date.today().isoformat()
+
     baris = kon.execute(
         """SELECT id, tanggal, level, topik,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah
@@ -368,20 +449,42 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
            ORDER BY s.id DESC""",
         (siswa_id,),
     ).fetchall()
-    kartu = "".join(
-        f'<a class="soal daftar-sesi" href="/murid/kerjakan/{b["id"]}">'
-        f"<b>{_escape(b['tanggal'])}</b> &middot; level {_escape(b['level'])}"
-        f" &middot; {_escape(_ambil_topik(b))} &middot; {b['jumlah']} soal"
-        f"</a>"
-        for b in baris
-    ) or "<p>Belum ada sesi. Minta gurumu membuatkan.</p>"
+
+    kartu = []
+    for i, b in enumerate(baris):
+        warna = _WARNA_ICON[i % len(_WARNA_ICON)]
+        baru = b["tanggal"] == hari_ini
+        badge_baru = '<span class="badge-baru">baru</span>' if baru else ""
+        kartu.append(
+            f'<a class="kartu-sesi" href="/murid/kerjakan/{b["id"]}">'
+            f'<span class="ikon-sesi" style="background:{warna}"></span>'
+            f'<span class="isi-sesi">'
+            f'<span class="tanggal-sesi">{_escape(b["tanggal"])}</span>'
+            f'<span class="meta-sesi">level {_escape(b["level"])} '
+            f"&middot; {_escape(_ambil_topik(b))}</span>"
+            f"</span>"
+            f'<span class="badge-soal">{b["jumlah"]} soal</span>'
+            f'<span class="chevron-sesi">{badge_baru}</span>'
+            "</a>"
+        )
+
+    kartu_html = "\n".join(kartu) or (
+        '<div class="kosong-hint">Belum ada sesi. Minta gurumu membuatkan.</div>'
+    )
+
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sesiku</title><style>{CSS_MURID}</style></head><body><div class="wrap">
-<h1>Halo, {_escape(nama)}</h1>
-<form method="post" action="/keluar" style="margin:.6rem 0"><button class="btn secondary" type="submit">Keluar</button></form>
-{kartu}
+<div class="murid-header">
+  <img src="{ikon.OWL}" alt="" class="owl-mascot" width="40" height="40">
+  <h1>Halo, {_escape(nama)}!</h1>
+</div>
+<p class="sub-judul">Pilih sesi untuk mulai latihan</p>
+<form method="post" action="/keluar" class="keluar-form"><button class="btn secondary" type="submit">Keluar</button></form>
+<div class="daftar-sesi-grup">
+{kartu_html}
+</div>
 </div></body></html>"""
     return isi.encode()
 
