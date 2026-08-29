@@ -74,12 +74,14 @@ class ServerUji:
         data: dict | None = None,
         cookie: str | None = None,
         method: str | None = None,
-    ) -> tuple[int, str, dict]:
+        biner: bool = False,
+    ) -> tuple[int, str | bytes, dict]:
         """Satu permintaan HTTP -> (kode, isi_str, header_respons).
 
         data dict -> form-encoded POST. auth -> Basic header. cookie -> nilai
         mentah untuk header Cookie (tanpa 'osn_sesi=' — itu ditambahkan di sini
         bila diberikan sebagai string token; boleh juga string penuh).
+        biner=True -> isi dikembalikan sebagai bytes (untuk rute berkas).
         """
         isi = None
         metode = method
@@ -98,6 +100,16 @@ class ServerUji:
             req.add_header("Cookie", cookie)
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
-                return r.status, r.read().decode("utf-8"), dict(r.headers)
+                mentah = r.read()
+                return (
+                    r.status,
+                    mentah if biner else mentah.decode("utf-8"),
+                    dict(r.headers),
+                )
         except urllib.error.HTTPError as e:
-            return e.code, e.read().decode("utf-8"), dict(e.headers)
+            mentah = e.read()
+            return (
+                e.code,
+                mentah if biner else mentah.decode("utf-8", "replace"),
+                dict(e.headers),
+            )

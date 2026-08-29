@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler
 import basis
 import cetak
 import design_tokens as T
+import lampiran as lampiran_mod
 import sandi
 import sesi
 from diagnosa import diagnosa
@@ -1137,6 +1138,27 @@ class Penangan(BaseHTTPRequestHandler):
         self.wfile.write(pesan)
         return False
 
+    def _kirim_berkas_lampiran(self, kon, lampiran_id: int) -> None:
+        """Kirim isi berkas foto lampiran (hanya guru, hanya milik sesi)."""
+        lamp = basis.ambil_lampiran(kon, lampiran_id)
+        if not lamp:
+            return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+        berkas = (
+            lampiran_mod.direktori_lampiran()
+            / str(lamp["sesi_id"])
+            / lamp["nama_berkas"]
+        )
+        try:
+            isi = berkas.read_bytes()
+        except OSError:
+            return self._kirim(_halaman("404", "<h1>Berkas hilang</h1>"), 404)
+        self.send_response(200)
+        self.send_header("Content-Type", lamp["mime"])
+        self.send_header("Content-Length", str(len(isi)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(isi)
+
     def do_GET(self) -> None:  # noqa: N802
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
         if jalur == "/masuk":
@@ -1160,6 +1182,16 @@ class Penangan(BaseHTTPRequestHandler):
             with basis.buka() as kon:
                 if jalur == "/":
                     return self._kirim(halaman_utama(kon))
+                if jalur.startswith("/lampiran/berkas/"):
+                    return self._kirim_berkas_lampiran(
+                        kon, int(jalur.rsplit("/", 1)[1])
+                    )
+                if jalur.startswith("/lampiran/"):
+                    isi = lampiran_mod.halaman_konfirmasi(
+                        kon, int(jalur.split("/")[2])
+                    )
+                    if isi:
+                        return self._kirim(isi)
                 if jalur.startswith("/sesi/"):
                     return self._kirim(halaman_sesi(kon, int(jalur.split("/")[2])))
                 if jalur.startswith("/laporan/"):
@@ -1453,6 +1485,61 @@ class Penangan(BaseHTTPRequestHandler):
             # di-muat ulang.
             self.send_response(303)
             self.send_header("Location", f"/sesi/{sesi_id}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        if jalur.startswith("/lampiran/"):
+            bagian = jalur.split("/")
+            try:
+                angka = int(bagian[2])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+
+            if len(bagian) >= 4 and bagian[3] == "terapkan":
+                # Konfirmasi guru: tulis jawaban hasil koreksi ke jalur resmi.
+                panjang = int(self.headers.get("Content-Length", 0) or 0)
+                mentah = self.rfile.read(panjang).decode("utf-8")
+                data = {
+                    k: v[0]
+                    for k, v in urllib.parse.parse_qs(
+                        mentah, keep_blank_values=True
+                    ).items()
+                }
+                with basis.buka() as kon:
+                    jumlah, pesan = lampiran_mod.terapkan(kon, angka, data)
+                    isi = lampiran_mod.halaman_konfirmasi(kon, angka, pesan)
+                    if isi is None:
+                        return self._kirim(
+                            _halaman("404", "<h1>Lampiran hilang</h1>"), 404
+                        )
+                    return self._kirim(isi)
+
+            # Upload foto (multipart) -> ekstraksi -> halaman konfirmasi.
+            content_type = self.headers.get("Content-Type", "")
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            if panjang > lampiran_mod.BATAS_UKURAN * 2:
+                return self._kirim(
+                    _halaman("Terlalu besar", "<h1>Upload terlalu besar</h1>"), 400
+                )
+            tubuh = self.rfile.read(panjang)
+            with basis.buka() as kon:
+                if not kon.execute(
+                    "SELECT 1 FROM sesi WHERE id = ?", (angka,)
+                ).fetchone():
+                    return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+                lid, pesan = lampiran_mod.proses_upload(
+                    kon, angka, content_type, tubuh
+                )
+            if lid is None:
+                # Gagal validasi (bukan gambar, terlalu besar, kosong):
+                # 400 dengan pesan jelas — bukan 200 menyamarkan kegagalan.
+                return self._kirim(
+                    _halaman("Upload ditolak", f"<h1>Upload ditolak</h1><p>{html.escape(pesan)}</p>"),
+                    400,
+                )
+            self.send_response(303)
+            self.send_header("Location", f"/lampiran/{lid}")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return

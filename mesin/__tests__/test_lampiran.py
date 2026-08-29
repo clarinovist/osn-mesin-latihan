@@ -215,3 +215,111 @@ def test_hapus_sesi_membersihkan_lampiran(db):
         kon.execute("DELETE FROM sesi WHERE id = ?", (sesi_id,))
         sisa = kon.execute("SELECT COUNT(*) AS n FROM lampiran").fetchone()
     assert sisa["n"] == 0
+
+
+# ── 2.3 Upload multipart + serve berkas ───────────────────────────────
+
+
+@pytest.fixture()
+def server(tmp_path, monkeypatch):
+    s = ServerUji(tmp_path, monkeypatch)
+    yield s
+    s.berhenti()
+
+
+def minta_multipart(server, jalur, auth, nama_berkas, mime, isi, nama_field="foto"):
+    """POST multipart/form-data lewat socket — pola ServerUji.minta."""
+    import base64
+    import urllib.error
+    import urllib.request
+
+    boundary = "----UjiBoundaryOSN"
+    tubuh = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{nama_field}"; '
+        f'filename="{nama_berkas}"\r\n'
+        f"Content-Type: {mime}\r\n\r\n"
+    ).encode() + isi + f"\r\n--{boundary}--\r\n".encode()
+    req = urllib.request.Request(
+        server.alamat + jalur, data=tubuh, method="POST",
+    )
+    req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+    token = base64.b64encode(f"{auth[0]}:{auth[1]}".encode()).decode()
+    req.add_header("Authorization", f"Basic {token}")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status, r.read().decode("utf-8"), dict(r.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8"), dict(e.headers)
+
+
+def test_http_upload_lampiran_mulai_ekstraksi(server, monkeypatch):
+    """POST /lampiran/<sesi> + foto -> ekstraksi dipanggil + row tersimpan."""
+    hasil_ai = [
+        {"nomor": 1, "jawaban": "10", "caraku": "tambah 2"},
+        {"nomor": 2, "jawaban": "9", "caraku": "?"},
+    ]
+    tertangkap: list = []
+    monkeypatch.setattr(
+        llm, "ekstrak_lembar",
+        lambda soal_konteks, b64: (
+            tertangkap.append((soal_konteks, b64)) or hasil_ai
+        ),
+    )
+    with server.buka() as kon:
+        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7, mode="drill")
+        jumlah_soal = len(basis.isi_sesi(kon, sesi_id))
+
+    kode, _, _ = minta_multipart(
+        server, f"/lampiran/{sesi_id}",
+        ("guru", SANDI_GURU), "lembar.jpg", "image/jpeg",
+        b"\xff\xd8\xff\xe0" + b"0" * 100,
+    )
+    # urllib follow redirect ke halaman konfirmasi
+    assert kode == 200
+    assert len(tertangkap) == 1
+    konteks, b64 = tertangkap[0]
+    assert len(konteks) == jumlah_soal
+    assert b64  # base64 terkirim
+    with server.buka() as kon:
+        lampiran = basis.daftar_lampiran(kon, sesi_id)
+        assert len(lampiran) == 1
+        hasil = json.loads(lampiran[0]["hasil_json"])["soal"]
+        assert hasil[0]["jawaban"] == "10"
+
+
+def test_http_upload_bukan_gambar_ditolak(server):
+    """MIME bukan gambar -> 400, tanpa menyentuh AI."""
+    with server.buka() as kon:
+        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+    kode, html, _ = minta_multipart(
+        server, f"/lampiran/{sesi_id}",
+        ("guru", SANDI_GURU), "lembar.exe", "application/x-msdownload",
+        b"MZ\x90\x00",
+    )
+    assert kode == 400
+    with server.buka() as kon:
+        assert len(basis.daftar_lampiran(kon, sesi_id)) == 0
+
+
+def test_http_serve_berkas_lampiran(server, monkeypatch):
+    """GET /lampiran/berkas/<id> mengirim file dengan mime benar."""
+    import lampiran
+
+    direktori_root = server.db.parent / "lampiran-uji"
+    monkeypatch.setenv("OSN_DIREKTORI_LAMPIRAN", str(direktori_root))
+    with server.buka() as kon:
+        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
+        direktori = direktori_root / str(sesi_id)
+        direktori.mkdir(parents=True, exist_ok=True)
+        (direktori / "lembar-1.jpg").write_bytes(b"\xff\xd8\xff\xe0FAKEJPEG")
+    kode, isi, header = server.minta(
+        f"/lampiran/berkas/{lid}", auth=("guru", SANDI_GURU), biner=True
+    )
+    assert kode == 200
+    assert header.get("Content-Type", "").startswith("image/jpeg")
+    assert isi == b"\xff\xd8\xff\xe0FAKEJPEG"
