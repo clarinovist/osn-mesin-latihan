@@ -357,6 +357,31 @@ def test_halaman_konfirmasi_lampiran_tanpa_hasil(db):
     assert 'value=""' in html
 
 
+def test_halaman_konfirmasi_menampilkan_jawaban_lama_anak(db):
+    """Anti-dobel (rencana E): anak sudah jawab online -> jawaban lama tampil
+    di halaman konfirmasi, guru yang putuskan (default: foto menimpa)."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakDobel")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        ssid = basis.isi_sesi(kon, sesi_id)[0]["sesi_soal_id"]
+        basis.simpan_jawaban(kon, ssid, jawaban="7", cara="hitung jari")
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg", hasil_json="")
+        html = lampiran.halaman_konfirmasi(kon, lid).decode()
+    assert '<div class="jawaban-lama">' in html
+    assert "<b>Jawaban lama:</b> 7" in html
+    assert "caraku: hitung jari" in html
+
+
+def test_halaman_konfirmasi_tanpa_jawaban_lama_tanpa_blok(db):
+    """Belum ada jawaban online: blok jawaban-lama tidak muncul."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakBersih")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg", hasil_json="")
+        html = lampiran.halaman_konfirmasi(kon, lid).decode()
+    assert "jawaban-lama" not in html
+
+
 def test_halaman_konfirmasi_lampiran_asing_404(db):
     with basis.buka(db) as kon:
         assert lampiran.halaman_konfirmasi(kon, 999) is None

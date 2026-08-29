@@ -188,6 +188,8 @@ def _soal_konteks(kon, sesi_id: int) -> list[dict]:
                 "sesi_soal_id": b["sesi_soal_id"],
                 "teks": soal.teks,
                 "kunci": b["kunci"],
+                "jawaban_lama": b["jawaban"] or "",
+                "cara_lama": b["cara"] or "",
             }
         )
     return keluar
@@ -230,6 +232,22 @@ def terapkan(kon, lampiran_id: int, data: dict) -> tuple[int, str]:
     return jumlah, f"{jumlah} soal dari foto masuk dan didiagnosis."
 
 
+def _blok_jawaban_lama(s: dict) -> str:
+    """Anti-dobel (rencana E): jawaban online lama anak tampil agar guru bisa
+    membandingkan dengan bacaan AI sebelum menekan Terapkan. Kosong = blok
+    tidak muncul sama sekali."""
+    if not (s.get("jawaban_lama") or s.get("cara_lama")):
+        return ""
+    bagian = [f'<div class="jawaban-lama"><b>Jawaban lama:</b> '
+              f'{html.escape(s["jawaban_lama"] or "-")}']
+    if s.get("cara_lama"):
+        bagian.append(f' &middot; caraku: {html.escape(s["cara_lama"])}')
+    bagian.append(
+        " (Terapkan akan menimpa — koreksi dulu kalau foto lebih akurat)</div>"
+    )
+    return "".join(bagian)
+
+
 def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
     """Foto + usulan AI per soal + form koreksi + tombol Terapkan."""
     lampiran = basis.ambil_lampiran(kon, lampiran_id)
@@ -259,6 +277,7 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
   <div class="kartu-kepala"><span class="nomor">{s['nomor']}</span>
     <span class="tipe">{html.escape(s['teks'][:80])}</span>
     <span class="kunci">kunci: {html.escape(s['kunci'])}</span>{tanda}</div>
+  {_blok_jawaban_lama(s)}
   <div class="baris">
     <div><label>Jawaban (bacaan AI)</label>
       <input type="text" name="jwb_{s['sesi_soal_id']}" value="{jwb_u}"></div>
