@@ -172,20 +172,47 @@ def buat_sesi(
     topik: str = TOPIK_BAWAAN,
     tanggal: str | None = None,
     level: str = LEVEL_BAWAAN,
+    mode: str = "diagnostik",
+    timer_mode: str = "tanpa",
+    durasi_menit: int = 15,
+    timer_auto: int = 0,
 ) -> int:
-    """Bangkitkan lembar dari seed, simpan soalnya ke bank, rangkai jadi sesi."""
+    """Bangkitkan lembar dari seed, simpan soalnya ke bank, rangkai jadi sesi.
+
+    `mode`: 'diagnostik' (default) | 'drill' (Latihan Cepat). Timer hanya
+    bermakna untuk drill; sesi diagnostik harus `timer_mode='tanpa'` — nilai
+    asing ditolak cepat, bukan disimpan diam-diam.
+    """
+    MODE_SAH = ("diagnostik", "drill")
+    TIMER_SAH = ("tanpa", "sesi", "soal")
+    if mode not in MODE_SAH:
+        raise ValueError(f"mode tidak dikenal: {mode!r} (sah: {', '.join(MODE_SAH)})")
+    if timer_mode not in TIMER_SAH:
+        raise ValueError(
+            f"timer_mode tidak dikenal: {timer_mode!r} (sah: {', '.join(TIMER_SAH)})"
+        )
+    if mode == "diagnostik":
+        timer_mode, durasi_menit, timer_auto = "tanpa", 15, 0
+    if not isinstance(durasi_menit, int) or not 1 <= durasi_menit <= 180:
+        raise ValueError(f"durasi_menit tidak wajar: {durasi_menit!r}")
+
     lembar = buat_lembar(seed, level=level, topik=topik)
 
     if tanggal:
         cur = kon.execute(
-            """INSERT INTO sesi (siswa_id, seed, topik, level, tanggal)
-               VALUES (?, ?, ?, ?, ?)""",
-            (siswa_id, seed, topik, level, tanggal),
+            """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                                 timer_mode, durasi_menit, timer_auto, tanggal)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (siswa_id, seed, topik, level, mode,
+             timer_mode, durasi_menit, timer_auto, tanggal),
         )
     else:
         cur = kon.execute(
-            "INSERT INTO sesi (siswa_id, seed, topik, level) VALUES (?, ?, ?, ?)",
-            (siswa_id, seed, topik, level),
+            """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                                 timer_mode, durasi_menit, timer_auto)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (siswa_id, seed, topik, level, mode,
+             timer_mode, durasi_menit, timer_auto),
         )
     sesi_id = int(cur.lastrowid)
 

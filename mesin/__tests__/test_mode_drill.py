@@ -86,3 +86,55 @@ def test_migrasi_menambah_mode_dan_timer_pada_db_lama(tmp_path):
         assert baris["timer_mode"] == "tanpa"
         assert baris["durasi_menit"] == 15
         assert baris["timer_auto"] == 0
+
+
+# ── 1.2 buat_sesi / buat_sesi_seed_baru terima mode + timer ──────────
+
+
+def test_buat_sesi_drill_dengan_timer_tersimpan(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Uji")
+        sesi_id = basis.buat_sesi(
+            kon, sid, seed=7, mode="drill",
+            timer_mode="sesi", durasi_menit=10, timer_auto=1,
+        )
+        baris = kon.execute(
+            "SELECT mode, timer_mode, durasi_menit, timer_auto FROM sesi WHERE id = ?",
+            (sesi_id,),
+        ).fetchone()
+        assert baris["mode"] == "drill"
+        assert baris["timer_mode"] == "sesi"
+        assert baris["durasi_menit"] == 10
+        assert baris["timer_auto"] == 1
+
+
+def test_buat_sesi_mode_asing_ditolak(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Uji")
+        with pytest.raises(ValueError):
+            basis.buat_sesi(kon, sid, seed=7, mode="aneh")
+
+
+def test_buat_sesi_timer_mode_asing_ditolak(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Uji")
+        with pytest.raises(ValueError):
+            basis.buat_sesi(kon, sid, seed=7, mode="drill", timer_mode="aneh")
+
+
+def test_buat_sesi_seed_baru_drill_via_web(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Uji")
+        sesi_id = web.buat_sesi_seed_baru(
+            kon, sid, mode="drill", timer_mode="soal",
+            durasi_menit=5, timer_auto=0,
+        )
+        baris = kon.execute(
+            "SELECT mode, timer_mode, durasi_menit, timer_auto FROM sesi WHERE id = ?",
+            (sesi_id,),
+        ).fetchone()
+        assert baris["mode"] == "drill"
+        assert baris["timer_mode"] == "soal"
+        assert baris["durasi_menit"] == 5
+        assert baris["timer_auto"] == 0
+

@@ -904,7 +904,14 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
 
 
 def buat_sesi_seed_baru(
-    kon, siswa_id: int, level: str | None = None, topik: str | None = None
+    kon,
+    siswa_id: int,
+    level: str | None = None,
+    topik: str | None = None,
+    mode: str = "diagnostik",
+    timer_mode: str = "tanpa",
+    durasi_menit: int = 15,
+    timer_auto: int = 0,
 ) -> int:
     """Sesi baru dengan seed yang belum pernah dipakai siswa ini.
 
@@ -920,6 +927,9 @@ def buat_sesi_seed_baru(
     Topik TIDAK fallback diam-diam: id yang tidak dikenal dilempar sebagai
     KeyError oleh ambil() — salah ketik id topik adalah bug pemanggil, bukan
     data produksi yang perlu dimaafkan (kontraknya beda dari level).
+
+    `mode` dan `timer_*` diteruskan ke basis.buat_sesi; nilai asing ditolak
+    di sana (ValueError) — pemanggil wajib validasi sebelum menyentuh DB.
     """
     if level is None:
         baris = kon.execute(
@@ -940,7 +950,11 @@ def buat_sesi_seed_baru(
     for _ in range(500):
         seed = random.randint(1, 9_999_999)
         if seed not in dipakai:
-            return basis.buat_sesi(kon, siswa_id, seed, level=level, topik=topik)
+            return basis.buat_sesi(
+                kon, siswa_id, seed, level=level, topik=topik, mode=mode,
+                timer_mode=timer_mode, durasi_menit=durasi_menit,
+                timer_auto=timer_auto,
+            )
     raise RuntimeError("gagal menemukan seed baru")
 
 
