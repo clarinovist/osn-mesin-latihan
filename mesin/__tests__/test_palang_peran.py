@@ -31,7 +31,9 @@ def server(tmp_path, monkeypatch):
 
 
 RUTE_GURU_GET = [
-    "/",
+    # "/" TIDAK masuk daftar: sejak launch publik, / adalah landing publik
+    # untuk anonim & murid (dashboard guru hanya untuk sesi guru — dijaga
+    # test_publik.py). Palang yang dijaga di sini = rute berisi data anak.
     "/akun",
     "/sesi/{sesi}",
     "/laporan/{sesi}",
@@ -105,12 +107,14 @@ def test_murid_rutenya_sendiri_tetap_jalan(server):
     assert kode == 200
 
 
-def test_tanpa_kredensial_tetap_401(server):
+def test_tanpa_kredensial_rute_guru_tetap_401(server):
+    """Palang pindah ke rute data; / kini landing publik (200)."""
     s, sesi_id, _ = server
-    assert s.minta("/")[0] == 401
+    assert s.minta("/")[0] == 200  # landing, bukan 401
     assert s.minta(f"/sesi/{sesi_id}")[0] == 401
+    assert s.minta("/akun")[0] == 401
 
 
-def test_sandi_salah_tetap_401(server):
-    s, _, _ = server
-    assert s.minta("/", auth=("guru", "sandalah-yang-salah"))[0] == 401
+def test_sandi_salah_rute_guru_tetap_401(server):
+    s, sesi_id, _ = server
+    assert s.minta(f"/sesi/{sesi_id}", auth=("guru", "sandalah-yang-salah"))[0] == 401

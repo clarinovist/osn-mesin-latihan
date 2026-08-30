@@ -1,23 +1,26 @@
 """Pemeriksaan kesehatan container.
 
-Yang dianggap SEHAT: server menjawab 401 tanpa kredensial. Itu membuktikan
-dua hal sekaligus — prosesnya hidup, dan palang sandinya aktif.
+Sejak launch publik, / adalah landing publik (200). Rute yang membuktikan
+palang sekaligus kehidupan proses kini /akun — rute data guru yang wajib
+401 tanpa kredensial.
+
+Yang dianggap SEHAT: server menjawab 401 tanpa kredensial di /akun. Itu
+membuktikan dua hal sekaligus — prosesnya hidup, dan palang sandinya aktif.
 
 Yang dianggap SAKIT:
   - tidak menjawab sama sekali (proses mati / menggantung)
-  - menjawab 200 tanpa diminta sandi
+  - menjawab 200 tanpa diminta sandi (palang tidak aktif)
 
 Kasus kedua penting: kalau berkas sandi hilang dari volume, aplikasi akan
-tetap jalan tapi terbuka tanpa palang. Tanpa pemeriksaan ini, container
-terlihat "sehat" sementara data anak bisa dibaca siapa saja. Lebih baik
-container ditandai tidak sehat dan terlihat, daripada diam-diam terbuka.
+tetap jalan tapi rute data terbuka tanpa palang. Tanpa pemeriksaan ini,
+container terlihat "sehat" sementara data anak bisa dibaca siapa saja.
 """
 
 import sys
 import urllib.error
 import urllib.request
 
-ALAMAT = "http://127.0.0.1:8724/"
+ALAMAT = "http://127.0.0.1:8724/akun"
 
 
 def main() -> int:

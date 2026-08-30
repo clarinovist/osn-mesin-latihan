@@ -98,6 +98,14 @@ AKSEN_MURID_AMBER = "#FFB020"   # amber — star/challenge
 LATAR_KARTU_MURID = "#fff"
 
 # ─────────────────────────────────────────────────────────────────────
+# Identitas produk — SUMBER TUNGGAL nama & tagline (launch publik).
+# Ganti nama di sini, efek ke semua permukaan (landing, login, dashboard).
+# ─────────────────────────────────────────────────────────────────────
+
+NAMA_PRODUK = "Caraku"
+TAGLINE = "Latih. Tulis caramu. Ketahui letak salahmu."
+
+# ─────────────────────────────────────────────────────────────────────
 # Tipografi
 # ─────────────────────────────────────────────────────────────────────
 

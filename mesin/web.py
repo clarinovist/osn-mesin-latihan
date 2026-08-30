@@ -180,15 +180,15 @@ def halaman_utama(kon) -> bytes:
     )
 
     return _halaman(
-        "Mesin Latihan",
+        T.NAMA_PRODUK,
         f'<div class="topbar">'
-        f'<span class="brand">Mesin Latihan</span>'
+        f'<span class="brand">{T.NAMA_PRODUK}</span>'
         f'<nav class="topbar-navigasi">'
         f'<a href="/akun">Akun &amp; Siswa</a>'
         f'<form method="post" action="/keluar" style="margin:0">'
         f'<button type="submit" class="tombol-kecil tombol-putih">Keluar</button>'
         f"</form></nav></div>"
-        f"<h1>Mesin Latihan Pola Bilangan</h1>"
+        f"<h1>{T.NAMA_PRODUK} — Latihan Matematika SD</h1>"
         f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
         f"untuk melihat tren.</p>"
         f'<div class="grid-utama">{isi_utama}</div>'
@@ -1198,6 +1198,20 @@ class Penangan(BaseHTTPRequestHandler):
                 galat = q["galat"][0]
             # hilangkan sesi lain di URL supaya tidak membingungkan
             return self._kirim(self._halaman_masuk(galat=galat))
+        if jalur == "/":
+            # Launch publik: / adalah landing untuk yang belum masuk.
+            # Guru dengan sesi valid tetap dapat dashboard. Murid & anonim
+            # -> landing (bukan 401) — dashboard guru bukan rahasia sekuat
+            # data anak, tapi tetap tidak boleh ditampilkan ke murid.
+            if self._peran_saya() == "guru":
+                try:
+                    with basis.buka() as kon:
+                        return self._kirim(halaman_utama(kon))
+                except Exception:
+                    pass  # DB bermasalah -> landing saja, jangan 500 mentah
+            from landing import halaman_landing
+
+            return self._kirim(halaman_landing())
         if jalur == "/murid" or jalur.startswith("/murid/"):
             try:
                 with basis.buka() as kon:
@@ -1301,12 +1315,12 @@ class Penangan(BaseHTTPRequestHandler):
             f'<div class="pesan galat">{html.escape(galat)}</div>' if galat else ""
         )
         return _halaman(
-            "Masuk",
+            T.NAMA_PRODUK,
             f'<div class="layout-masuk">'
             f'<div class="masuk-kiri">'
             f'<img src="{ikon.OWL}" alt="Burung hantu lulusan" width="200" height="200">'
-            f"<h1>Mesin Latihan</h1>"
-            f"<p>Latihan soal pola bilangan untuk SD</p>"
+            f"<h1>{T.NAMA_PRODUK}</h1>"
+            f"<p>{T.TAGLINE}</p>"
             f"</div>"
             f'<div class="masuk-kanan">'
             f'<div class="kartu kartu-masuk">'
