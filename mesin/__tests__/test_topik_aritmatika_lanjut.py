@@ -86,3 +86,53 @@ def test_judul_bagian_aritmatika_lanjut():
         "C": "Bagian C — Kerja sama",
         "D": "Bagian D — Persen",
     }
+
+
+# ── Template #1-#2 konversi & kecepatan — Task 4.2 ────────────────────
+
+KELOMPOK_KONVERSI = ("satuan_konversi", "kecepatan_jarak_waktu")
+
+
+def test_satuan_konversi_kunci():
+    """#1: konversi sesuai arah (× atau ÷ faktor)."""
+    from topik_aritmatika_lanjut import satuan_konversi as fn
+
+    for seed in range(1, 120):
+        s = buat_soal("satuan_konversi", seed, level="P5", topik="aritmatika-lanjut")
+        p = s.parameter
+        faktor = {
+            "km_ke_m": 1000, "m_ke_km": 1000,
+            "jam_ke_menit": 60, "menit_ke_jam": 60,
+            "kg_ke_g": 1000, "g_ke_kg": 1000,
+            "liter_ke_ml": 1000, "ml_ke_liter": 1000,
+        }[p["varian"]]
+        kiri = p["varian"].endswith(("_m", "_menit", "_g", "_ml"))
+        expected = p["nilai"] * faktor if kiri else p["nilai"] // faktor
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_kecepatan_kunci():
+    """#2: v=s/t, s=v·t, t=s/v — tiga arah."""
+    for seed in range(1, 120):
+        s = buat_soal("kecepatan_jarak_waktu", seed, level="P5", topik="aritmatika-lanjut")
+        p = s.parameter
+        if p["varian"] == "cari_v":
+            expected = p["s"] // p["t"]
+        elif p["varian"] == "cari_s":
+            expected = p["v"] * p["t"]
+        else:
+            expected = p["s"] // p["v"]
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_KONVERSI)
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_kelompok_konversi_sweep(template_id, level):
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="aritmatika-lanjut")
+        assert s.malrule, f"{template_id}@{level}/{seed} kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}
