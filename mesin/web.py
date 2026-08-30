@@ -45,6 +45,18 @@ KODE_PILIHAN = [
     ("N", "N — menebak"),
 ]
 
+PETA_SECTION_AKUN = {
+    # Aksi POST /akun -> section tempat hasilnya ditampilkan, supaya
+    # pengguna kembali ke tempat formnya, bukan melompat ke bawaan.
+    "sandi": "akun",
+    "siswa": "siswa",
+    "anak_baru": "siswa",
+    "tingkat": "siswa",
+    "akun_murid_tambah": "akun-murid",
+    "akun_murid_hapus": "akun-murid",
+    "akun_murid_sandi": "akun-murid",
+}
+
 
 def _halaman(
     judul: str, isi: str, ident: tuple[str, str] | None = None
@@ -974,22 +986,27 @@ def halaman_akun(
     galat: str = "",
     pengguna: str | None = None,
     peran: str = "guru",
+    section: str = "akun",
 ) -> bytes:
-    """Kelola sandi dan daftar siswa.
+    """Kelola sandi dan daftar siswa — sidebar + section, tanpa JS.
+
+    Satu halaman, tiga section via ?section=: "akun" (ganti sandi),
+    "siswa" (daftar anak + form tambah), "akun-murid" (akun latihan anak).
+    Nilai tak dikenal jatuh ke "akun". Admin hanya punya section "akun" —
+    data keluarga lain bukan ranahnya (baca-semua-tulis-tidak).
 
     `pengguna`/`peran` berasal dari sesi: guru melihat & mengelola
-    keluarganya saja, admin semua. Panggilan langsung tanpa `pengguna`
-    (mode lokal, test) melihat semuanya — perilaku lama.
+    keluarganya saja. Panggilan langsung tanpa `pengguna` (mode lokal,
+    test) melihat semuanya — perilaku lama.
 
     Sandi bisa diganti dari sini supaya sandi acak hasil deploy tidak jadi
-    satu-satunya yang pernah ada — sandi yang tidak bisa diganti cenderung
-    berakhir ditulis di tempat yang tidak aman.
-
-    Siswa bisa dinonaktifkan, bukan dihapus: menghapus siswa akan ikut
-    menghapus seluruh sesi, jawaban, dan diagnosisnya lewat ON DELETE
-    CASCADE. Riwayat diagnosis adalah hasil kerja berbulan-bulan dan tidak
-    bisa dibangun ulang.
+    satu-satunya yang pernah ada. Siswa sengaja tidak bisa dihapus dari
+    sini — penjelasannya ada di kartu Catatan, section siswa.
     """
+    admin = peran == "admin"
+    if admin or section not in ("akun", "siswa", "akun-murid"):
+        # Admin cuma punya satu section; nilai asing dari URL jatuh ke bawaan.
+        section = "akun"
     daftar = "".join(
         f'<tr><td>{html.escape(s["nama"])}</td>'
         f'<td><form method="post" action="/akun" style="display:flex;gap:.4rem">'
@@ -1025,12 +1042,7 @@ def halaman_akun(
         else:
             pengguna_tampil = html.escape(d["pengguna"])
 
-    return _halaman(
-        "Akun",
-        f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
-        f"<h1>Akun &amp; pengaturan</h1>"
-        f"{kabar}"
-        f'<div class="layout-akun">'
+    kartu_sandi = (
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">🔑</span>'
         f"<h2>Ganti sandi</h2></div>"
@@ -1047,8 +1059,8 @@ def halaman_akun(
         f'<p style="margin-top:.8rem">'
         f'<button type="submit" class="tombol-sekunder">Ganti sandi</button></p>'
         f"</form></div>"
-        f"{_kartu_akun_murid(kon, pengguna, peran)}"
-        f"</div>"
+    )
+    kartu_siswa = (
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">📚</span>'
         f"<h2>Siswa</h2></div>"
@@ -1071,6 +1083,8 @@ def halaman_akun(
         f"bocor.</p>"
         f'<button type="submit" class="tombol-coral">Tambah siswa</button>'
         f"</form></div>"
+    )
+    kartu_anak = (
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">🧒</span>'
         f"<h2>Tambah anak + akun latihannya</h2></div>"
@@ -1100,6 +1114,8 @@ def halaman_akun(
         f"</label></p>"
         f'<button type="submit" class="tombol-coral">Buat anak &amp; akunnya</button>'
         f"</form></div>"
+    )
+    kartu_catatan = (
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu amber">💡</span>'
         f"<h2>Catatan</h2></div>"
@@ -1108,7 +1124,39 @@ def halaman_akun(
         f"riwayat yang tidak bisa dibangun ulang. Kalau seorang anak berhenti, "
         f"biarkan saja datanya; ia tidak mengganggu apa pun.</p>"
         f'<p class="sub">Cadangan basis data ditarik otomatis ke Mac tiap '
-        f"malam pukul 22:00.</p></div>",
+        f"malam pukul 22:00.</p></div>"
+    )
+
+    if section == "siswa":
+        isi_section = kartu_siswa + kartu_anak + kartu_catatan
+    elif section == "akun-murid":
+        isi_section = _kartu_akun_murid(kon, pengguna, peran)
+    else:
+        isi_section = kartu_sandi
+
+    item = [
+        ("akun", "Akun saya"),
+        ("siswa", "Siswa"),
+        ("akun-murid", "Akun latihan"),
+    ]
+    if admin:
+        item = item[:1]
+    nav = "".join(
+        f'<a href="/akun?section={sid}"'
+        + (' class="aktif"' if sid == section else "")
+        + f">{label}</a>"
+        for sid, label in item
+    )
+
+    return _halaman(
+        "Akun",
+        f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
+        f"<h1>Akun &amp; pengaturan</h1>"
+        f"{kabar}"
+        f'<div class="layout-samping">'
+        f'<nav class="nav-samping">{nav}</nav>'
+        f"<div>{isi_section}</div>"
+        f"</div>",
         ident=(pengguna or "guru", peran),
     )
 
@@ -1839,11 +1887,15 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                 if jalur == "/akun":
                     ident = self._identitas()
+                    q = urllib.parse.parse_qs(
+                        urllib.parse.urlparse(self.path).query
+                    )
                     return self._kirim(
                         halaman_akun(
                             kon,
                             pengguna=ident[0] if ident else None,
                             peran=ident[1] if ident else "guru",
+                            section=(q.get("section") or ["akun"])[0],
                         )
                     )
                 if jalur.startswith("/lembar/"):
@@ -2136,8 +2188,14 @@ class Penangan(BaseHTTPRequestHandler):
                 return self._tolak_admin()
             with basis.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna, peran)
+                section = data.get("section") or PETA_SECTION_AKUN.get(
+                    data.get("aksi", ""), "akun"
+                )
                 return self._kirim(
-                    halaman_akun(kon, pesan, galat, pengguna=pengguna, peran=peran)
+                    halaman_akun(
+                        kon, pesan, galat,
+                        pengguna=pengguna, peran=peran, section=section,
+                    )
                 )
 
         if jalur == "/admin":

@@ -167,7 +167,7 @@ def test_halaman_akun_menampilkan_siswa_dan_jumlah_sesi(siap):
         sid = basis.tambah_siswa(kon, "Andi")
         basis.buat_sesi(kon, sid, seed=1)
         basis.buat_sesi(kon, sid, seed=2)
-        h = web.halaman_akun(kon).decode()
+        h = web.halaman_akun(kon, section="siswa").decode()
 
     assert "Andi" in h
     assert ">2<" in h  # jumlah sesi
@@ -176,7 +176,7 @@ def test_halaman_akun_menampilkan_siswa_dan_jumlah_sesi(siap):
 def test_halaman_akun_menjelaskan_kenapa_siswa_tidak_bisa_dihapus(siap):
     """Ketiadaan tombol hapus harus dijelaskan, bukan dibiarkan jadi teka-teki."""
     with basis.buka(siap) as kon:
-        h = web.halaman_akun(kon).decode()
+        h = web.halaman_akun(kon, section="siswa").decode()
     assert "tidak bisa dihapus" in h.lower()
     assert "riwayat" in h.lower()
 
@@ -186,7 +186,7 @@ def test_pesan_galat_di_escape(siap):
     with basis.buka(siap) as kon:
         web.proses_akun(kon, {"aksi": "siswa", "nama": "<b>X</b>"}, "guru")
         _, galat = web.proses_akun(kon, {"aksi": "siswa", "nama": "<b>X</b>"}, "guru")
-        h = web.halaman_akun(kon, "", galat).decode()
+        h = web.halaman_akun(kon, "", galat, section="siswa").decode()
 
     assert "<b>X</b>" not in h
     assert "&lt;b&gt;" in h
@@ -199,7 +199,7 @@ def test_kartu_akun_murid_tampil_dan_memuat_nama(siap):
     with basis.buka(siap) as kon:
         basis.tambah_siswa(kon, "Sinta")
         sandi.tambah_akun("Sinta", "rahasia-sinta-123", "murid")
-        h = web.halaman_akun(kon).decode()
+        h = web.halaman_akun(kon, section="akun-murid").decode()
     assert "Akun murid" in h
     assert "Sinta" in h
 
@@ -208,7 +208,7 @@ def test_akun_tidak_cocok_ditandai_belum_terhubung(siap):
     with basis.buka(siap) as kon:
         basis.tambah_siswa(kon, "Andi")
         sandi.tambah_akun("Hantu", "rahasia-hantu-123", "murid")
-        h = web.halaman_akun(kon).decode()
+        h = web.halaman_akun(kon, section="akun-murid").decode()
     assert "Hantu" in h
     assert "belum terhubung ke siswa" in h.lower()
 
@@ -286,7 +286,7 @@ def test_sandi_murid_tidak_muncul_di_html(siap):
         web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Gina", "sandi": rahasia,
         }, "guru")
-        h = web.halaman_akun(kon).decode()
+        h = web.halaman_akun(kon, section="akun-murid").decode()
     assert rahasia not in h
     assert rahasia not in sandi.BERKAS_SANDI.read_text() or rahasia not in h  # hash, bukan teks
     # pastikan berkas sandi di disk tidak bocor ke HTML (cek kunci/garam juga tidak ada)
@@ -302,9 +302,75 @@ def test_sandi_murid_tidak_muncul_di_html(siap):
         basis.tambah_siswa(kon, "<b>Hacker</b>")
         # akun murid dengan nama yang sama — harus di-escape di HTML
         sandi.tambah_akun("<b>Hacker</b>", "rahasia-hacker-123", "murid")
-        h2 = web.halaman_akun(kon).decode()
+        h2 = web.halaman_akun(kon, section="akun-murid").decode()
     assert "<b>Hacker</b>" not in h2
     assert "&lt;b&gt;Hacker&lt;/b&gt;" in h2
+
+
+# ── Sidebar + section (plan 2026-08-30) ───────────────────────────────
+
+
+def test_section_bawaan_akun_dengan_navigasi_samping(siap):
+    with basis.buka(siap) as kon:
+        h = web.halaman_akun(kon).decode()
+    assert "Ganti sandi" in h
+    assert "nav-samping" in h
+    assert 'href="/akun?section=siswa"' in h
+    assert 'href="/akun?section=akun-murid"' in h
+    assert "Tambah siswa" not in h, "section lain bocor ke section akun"
+    assert "Akun murid" not in h
+
+
+def test_section_siswa_memuat_daftar_dan_form(siap):
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Andi")
+        h = web.halaman_akun(kon, section="siswa").decode()
+    assert "Andi" in h
+    assert "Tambah siswa" in h
+    assert "Tambah anak" in h
+    assert "Ganti sandi" not in h
+    assert "Akun murid" not in h
+
+
+def test_section_akun_murid_memuat_kartunya(siap):
+    with basis.buka(siap) as kon:
+        h = web.halaman_akun(kon, section="akun-murid").decode()
+    assert "Akun murid" in h
+    assert "Ganti sandi" not in h
+    assert "Tambah siswa" not in h
+
+
+def test_section_tak_dikenal_jatuh_ke_akun(siap):
+    with basis.buka(siap) as kon:
+        h = web.halaman_akun(kon, section="hxhx").decode()
+    assert "Ganti sandi" in h
+    assert "Tambah siswa" not in h
+
+
+def test_admin_hanya_section_akun(siap):
+    with basis.buka(siap) as kon:
+        h = web.halaman_akun(kon, pengguna="pengelola", peran="admin").decode()
+        h2 = web.halaman_akun(
+            kon, pengguna="pengelola", peran="admin", section="siswa"
+        ).decode()
+    assert "Ganti sandi" in h
+    # Sidebar admin satu item; link "Ganti sandi" topbar ikut muncul,
+    # jadi yang dicek adalah KETIDAKHADIRAN pintu keluarga.
+    assert 'href="/akun?section=siswa"' not in h
+    assert 'href="/akun?section=akun-murid"' not in h
+    assert "Tambah siswa" not in h2, "section siswa bocor ke admin"
+    assert "Ganti sandi" in h2
+
+
+def test_peta_aksi_ke_section_lengkap():
+    """Tiap aksi POST /akun harus punya section tujuan — hasil aksi tampil
+    di tempat formnya, bukan melompat ke section bawaan."""
+    for aksi in ("sandi", "siswa", "anak_baru", "tingkat",
+                 "akun_murid_tambah", "akun_murid_hapus", "akun_murid_sandi"):
+        assert aksi in web.PETA_SECTION_AKUN, f"aksi {aksi} tak dipetakan"
+    assert web.PETA_SECTION_AKUN["siswa"] == "siswa"
+    assert web.PETA_SECTION_AKUN["akun_murid_tambah"] == "akun-murid"
+    assert web.PETA_SECTION_AKUN["sandi"] == "akun"
 
 
 def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):

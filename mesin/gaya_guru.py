@@ -306,8 +306,6 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .dot.salah {{ background: {T.STATUS_SALAH}; }}
 
 /* ── Halaman akun (mockup guru-akun) ───────────────────────────────── */
-.layout-akun {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }}
-@media (max-width: 46rem) {{ .layout-akun {{ grid-template-columns: 1fr; }} }}
 .kartu-judul {{
   display: flex; align-items: center; gap: .6rem; margin: 0 0 .7rem;
 }}

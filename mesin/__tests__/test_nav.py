@@ -78,3 +78,18 @@ def test_css_menu_pengguna_tersedia():
 
     for kelas in ("menu-pengguna", "menu-isi", "menu-pisah"):
         assert f".{kelas}" in gaya_guru.GAYA_GURU
+
+
+def test_aksi_akun_kembali_ke_section_asal(server):
+    """POST /akun tanpa field section: peta aksi->section menentukan di
+    section mana hasilnya tampil — aksi siswa kembali ke section siswa."""
+    s, _, _ = server
+    kode, isi, _ = s.minta(
+        "/akun",
+        auth=("ortu-a", SANDI_A),
+        data={"aksi": "siswa", "nama": "Rara", "tingkat": "P3"},
+    )
+    assert kode == 200
+    assert "Rara" in isi, "pesan sukses tidak tampil"
+    assert "Tambah siswa" in isi, "hasil aksi tidak kembali ke section siswa"
+    assert "Ganti sandi" not in isi
