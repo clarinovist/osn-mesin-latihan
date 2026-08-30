@@ -578,6 +578,91 @@ def halaman_kerja(
     return isi.encode()
 
 
+def semua_terisi(kon, siswa_id: int, sesi_id: int) -> bool:
+    """True bila SEMUA soal sesi ini sudah punya isian.
+
+    Sebuah soal dianggap terisi kalau ada baris jawaban dengan setidaknya
+    satu kolom tidak kosong (jawaban, cara, restate, atau belum_pernah).
+    Definisi ini KONSISTEN dengan simpan_jawaban_murid yang hanya menyimpan
+    soal bila (jawaban or cara or restate or belum).
+
+    Kalau sesi bukan milik murid → False (palang).
+    """
+    if not sesi_murid(kon, siswa_id, sesi_id):
+        return False
+    ada_kosong = kon.execute(
+        """SELECT COUNT(*) FROM sesi_soal ss
+           WHERE ss.sesi_id = ?
+             AND NOT EXISTS (
+               SELECT 1 FROM jawaban j WHERE j.sesi_soal_id = ss.id
+                 AND (TRIM(IFNULL(j.jawaban,'')) <> ''
+                      OR TRIM(IFNULL(j.cara,'')) <> ''
+                      OR TRIM(IFNULL(j.restatement,'')) <> ''
+                      OR j.belum_pernah = 1)
+             )""",
+        (sesi_id,),
+    ).fetchone()[0]
+    return ada_kosong == 0
+
+
+def halaman_selesai(kon, siswa_id: int, sesi_id: int) -> bytes | None:
+    """Halaman konfirmasi setelah murid selesai mengerjakan semua soal.
+
+    Muncul setelah POST simpan mendeteksi semua soal terisi. Tidak
+    mengandung kunci/malrule/diagnosa — palang terjaga.
+
+    Mengembalikan None kalau sesi bukan milik murid ini (404).
+    """
+    import ikon
+
+    info = sesi_murid(kon, siswa_id, sesi_id)
+    if not info:
+        return None
+    from topik import dari_sesi
+
+    topik_paket = dari_sesi(info.get("topik"))
+    total = kon.execute(
+        "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()[0]
+
+    isi = f"""<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Selesai — {topik_paket.judul_lembar}</title>
+<style>{CSS_MURID}</style></head><body><div class="wrap">
+<div class="murid-header">
+  <img src="{ikon.OWL}" alt="" class="owl-mascot" width="40" height="40">
+  <h1>Halo, {_escape(info['nama'])}!</h1>
+</div>
+<div class="kartu-selesai" style="background:{T.LATAR_KARTU_MURID};border:1px solid {T.BORDER_HALUS};border-radius:{T.RADIUS_KARTU};text-align:center;padding:2rem 1.5rem;margin-top:1rem">
+  <div style="font-size:3rem;line-height:1;margin-bottom:.5rem">🎉</div>
+  <h2 style="margin:0 0 .5rem;color:{T.AKSEN_MURID_UTAMA}">Selesai!</h2>
+  <p style="font-size:1.1rem;margin:.5rem 0 1.5rem;overflow-wrap:anywhere">
+    Semua jawabanmu sudah masuk. Gurumu bisa melihatnya sekarang.
+  </p>
+  <div class="perincian-selesai" style="display:inline-block;text-align:left;background:{T.LATAR_KARTU_SEKUNDER};border-radius:{T.RADIUS_SEDANG};padding:.8rem 1.2rem;margin-bottom:1.5rem">
+    <table style="border-collapse:collapse">
+      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Tanggal</td>
+          <td style="padding:.2rem 0">{_escape(info['tanggal'])}</td></tr>
+      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Level</td>
+          <td style="padding:.2rem 0">{_escape(info['level'])}</td></tr>
+      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Jumlah soal</td>
+          <td style="padding:.2rem 0">{total}</td></tr>
+    </table>
+  </div>
+  <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
+    <a href="/murid" class="btn" style="background:{T.AKSEN_MURID_UTAMA};color:{T.TEKS_PUTIH};text-decoration:none;padding:.7rem 1.5rem;border-radius:{T.RADIUS_SEDANG}">
+      Kembali ke daftar sesi
+    </a>
+    <form method="post" action="/keluar" style="margin:0">
+      <button class="btn secondary" type="submit">Keluar</button>
+    </form>
+  </div>
+</div>
+</div></body></html>"""
+    return isi.encode()
+
+
 def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
     """Halaman /murid — daftar sesi milik murid ini saja.
 

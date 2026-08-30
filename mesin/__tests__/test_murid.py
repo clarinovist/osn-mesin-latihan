@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import basis  # noqa: E402
 import murid  # noqa: E402
 import sandi  # noqa: E402
+from uji_http import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
 
 KOLOM_TERLARANG = {"kunci", "malrule_id", "kode_usulan", "kode_final", "alasan"}
@@ -350,3 +351,150 @@ def test_semua_pilihan_muncul_di_halaman(db_terjaga):
     for kode, label in murid.PILIHAN_CARA:
         assert f'value="{kode}"' in html, f"pilihan {kode} hilang"
         assert label in html, f"label {label!r} hilang"
+
+
+# ── Halaman Selesai (setelah semua soal terisi) ─────────────────────────
+
+
+def test_semua_terisi_false_saat_kosong(db_terjaga):
+    """Belum ada satu jawaban pun → belum selesai."""
+    with basis.buka(db_terjaga) as kon:
+        sid = basis.tambah_siswa(kon, "AnakSelesai")
+        ses = basis.buat_sesi(kon, sid, seed=42)
+        assert murid.semua_terisi(kon, sid, ses) is False
+
+
+def test_semua_terisi_false_saat_sebagian(db_dengan_sesi):
+    """Satu soal terisi dari 12 → masih ada yang kosong, belum selesai."""
+    db, siswa_id, sesi_id = db_dengan_sesi
+    with basis.buka(db) as kon:
+        ssid = murid.soal_murid(kon, sesi_id, siswa_id)[0]["sesi_soal_id"]
+        murid.simpan_jawaban_murid(kon, siswa_id, sesi_id, {f"jwb_{ssid}": "24"})
+        assert murid.semua_terisi(kon, siswa_id, sesi_id) is False
+
+
+def test_semua_terisi_true_saat_semua_soal_terisi(db_terjaga):
+    """Semua soal sesi diisi (jawaban minimal) → selesai = True."""
+    with basis.buka(db_terjaga) as kon:
+        sid = basis.tambah_siswa(kon, "AnakSelesai")
+        ses = basis.buat_sesi(kon, sid, seed=42)
+        daftar = murid.soal_murid(kon, ses, sid)
+        data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
+        murid.simpan_jawaban_murid(kon, sid, ses, data)
+        assert murid.semua_terisi(kon, sid, ses) is True
+
+
+def test_semua_terisi_false_untuk_sesi_orang_lain(db_terjaga):
+    """Sesi anak lain tidak boleh dianggap selesai oleh murid ini —
+    konsisten dengan simpan_jawaban_murid yang menolak sesi orang lain."""
+    with basis.buka(db_terjaga) as kon:
+        sid_a = basis.tambah_siswa(kon, "AnakA")
+        sid_b = basis.tambah_siswa(kon, "AnakB")
+        ses_a = basis.buat_sesi(kon, sid_a, seed=42)
+        assert murid.semua_terisi(kon, sid_b, ses_a) is False
+
+
+def test_halaman_selesai_muncul_untuk_sesi_miliknya(db_dengan_sesi):
+    """Halaman selesai render untuk murid yang punya sesi itu."""
+    db, siswa_id, sesi_id = db_dengan_sesi
+    with basis.buka(db) as kon:
+        daftar = murid.soal_murid(kon, sesi_id, siswa_id)
+        data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
+        murid.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
+        html = murid.halaman_selesai(kon, siswa_id, sesi_id).decode()
+    assert "Selesai" in html
+    assert "Simpan jawabanku" not in html, (
+        "halaman selesai tidak boleh menyuruh anak menyimpan lagi"
+    )
+    assert 'name="jwb_' not in html, (
+        "halaman selesai tidak boleh memuat form jawaban"
+    )
+
+
+def test_halaman_selesai_none_untuk_sesi_orang_lain(db_terjaga):
+    """Murid lain tidak boleh membuka halaman selesai sesi orang lain."""
+    with basis.buka(db_terjaga) as kon:
+        sid_a = basis.tambah_siswa(kon, "AnakA")
+        sid_b = basis.tambah_siswa(kon, "AnakB")
+        ses_a = basis.buat_sesi(kon, sid_a, seed=42)
+        assert murid.halaman_selesai(kon, sid_b, ses_a) is None
+
+
+def test_halaman_selesai_palang_bersih(db_terjaga):
+    """Halaman selesai tidak boleh membocorkan kunci/malrule/diagnosa —
+    diuji lewat fixture palang yang meledak pada kolom terlarang."""
+    with basis.buka(db_terjaga) as kon:
+        sid = basis.tambah_siswa(kon, "AnakSelesai")
+        ses = basis.buat_sesi(kon, sid, seed=42)
+        daftar = murid.soal_murid(kon, ses, sid)
+        data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
+        murid.simpan_jawaban_murid(kon, sid, ses, data)
+        html = murid.halaman_selesai(kon, sid, ses).decode()
+    for kata in ("kunci", "malrule", "diagnosa", "jawaban_benar"):
+        assert kata.lower() not in html.lower()
+
+
+# ── E2E HTTP: alur simpan → selesai ───────────────────────────────────
+
+
+@pytest.fixture()
+def server(tmp_path, monkeypatch):
+    s = ServerUji(tmp_path, monkeypatch)
+    yield s
+    s.berhenti()
+
+
+def _bikin_sesi_untuk_feby(server) -> int:
+    """Guru buat sesi untuk 'feby' (akun murid uji) → kembalikan sesi_id."""
+    with server.buka() as kon:
+        siswa_id = basis.tambah_siswa(kon, "feby")
+    server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "pola-bilangan"},
+    )
+    with server.buka() as kon:
+        return kon.execute(
+            "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC LIMIT 1",
+            (siswa_id,),
+        ).fetchone()["id"]
+
+
+def test_http_simpan_semua_soal_diarahkan_ke_halaman_selesai(server):
+    """Murid mengisi SEMUA soal → setelah POST diarahkan ke halaman selesai,
+    bukan kembali ke lembar kerja dengan banner tersimpan."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        daftar = basis.isi_sesi(kon, sesi_id)
+        data = {f"jwb_{b['sesi_soal_id']}": "1" for b in daftar}
+
+    kode, isi, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=data,
+    )
+    assert kode == 200
+    assert "Selesai" in isi, "semua soal terisi harus diarahkan ke halaman selesai"
+    assert "Tersimpan" not in isi, (
+        "halaman selesai tidak boleh menampilkan banner tersimpan"
+    )
+
+
+def test_http_simpan_sebagian_tetap_di_lembar_dengan_banner(server):
+    """Murid mengisi SEBAGIAN soal → kembali ke lembar + banner tersimpan,
+    supaya bisa lanjut mengerjakan sisanya."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        daftar = basis.isi_sesi(kon, sesi_id)
+        satu = {f"jwb_{daftar[0]['sesi_soal_id']}": "24"}
+
+    kode, isi, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=satu,
+    )
+    assert kode == 200
+    assert "Tersimpan" in isi, "simpan sebagian harus tetap menampilkan banner"
+    assert "Selesai" not in isi, (
+        "belum semua soal terisi — jangan arahkan ke halaman selesai"
+    )

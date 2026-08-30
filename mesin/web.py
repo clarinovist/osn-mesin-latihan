@@ -1354,6 +1354,18 @@ class Penangan(BaseHTTPRequestHandler):
         if jalur == "/murid":
             return self._kirim(murid.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
         bagian = jalur.split("/")
+        # /murid/selesai/<id> — konfirmasi setelah semua soal terisi
+        if len(bagian) >= 3 and bagian[2] == "selesai":
+            try:
+                sesi_id = int(bagian[3])
+            except (ValueError, IndexError):
+                sesi_id = -1
+            isi = murid.halaman_selesai(kon, siswa_id, sesi_id)
+            if isi is None:
+                return self._kirim(
+                    _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
+                )
+            return self._kirim(isi)
         # /murid/kerjakan/<id>
         if len(bagian) >= 3 and bagian[2] == "kerjakan":
             # Jumlah tersimpan datang dari pengalihan setelah POST. Nilainya
@@ -1497,12 +1509,25 @@ class Penangan(BaseHTTPRequestHandler):
                 # mesin (usulan). Keputusan manual guru tidak pernah
                 # ditimpa — lihat web.diagnosa_murid. Guru membuka halaman
                 # sesi dan membaca hasil, bukan menekan tombol dulu.
+                selesai = False
                 if hasil:
                     diagnosa_murid(kon, sesi_id)
+                    # Semua soal sudah terisi → arahkan ke halaman Selesai,
+                    # bukan kembali ke lembar yang sama. Anak yang masih
+                    # setengah jalan tetap kembali ke lembar + banner
+                    # tersimpan supaya bisa lanjut mengerjakan.
+                    if siswa_id is not None:
+                        selesai = murid.semua_terisi(kon, siswa_id, sesi_id)
             if hasil is None:
                 return self._kirim(
                     _halaman("403", "<h1>Bukan sesimu</h1>"), 403
                 )
+            if selesai:
+                self.send_response(303)
+                self.send_header("Location", f"/murid/selesai/{sesi_id}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             # Balik ke lembar kerja yang sama lewat 303 + parameter jumlah,
             # bukan menampilkan halaman langsung: pengalihan mencegah
             # pengiriman ganda kalau anak menekan muat-ulang.
