@@ -135,9 +135,84 @@ def prima_faktorisasi(n: int) -> Soal:
     )
 
 
+def kpk_dua_bilangan(a: int, b: int) -> Soal:
+    """KPK dari a dan b = a·b / gcd(a,b)."""
+    kunci = a * b // math.gcd(a, b)
+    mal = [
+        Malrule(
+            "kpk.dikali",
+            str(a * b),
+            "K",
+            f"mengalikan {a}×{b} — lupa membagi dengan FPB {math.gcd(a, b)}",
+        ),
+        Malrule(
+            "kpk.tertukar_fpb",
+            str(math.gcd(a, b)),
+            "K",
+            f"menjawab FPB {math.gcd(a, b)} padahal yang diminta KPK",
+        ),
+        Malrule(
+            "kpk.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan KPK benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = f"Berapa KPK dari {a} dan {b}?"
+    return Soal(
+        "kpk_dua_bilangan",
+        {"a": a, "b": b},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
+def fpb_kpk_hubungan(a: int, b: int) -> Soal:
+    """FPB × KPK dari a dan b = a × b (identitas)."""
+    kunci = a * b
+    kpk = a * b // math.gcd(a, b)
+    mal = [
+        Malrule(
+            "hubungan.hanya_fpb",
+            str(math.gcd(a, b)),
+            "K",
+            f"menjawab FPB {math.gcd(a, b)} — hasil kali FPB×KPK tidak dihitung",
+        ),
+        Malrule(
+            "hubungan.hanya_kpk",
+            str(kpk),
+            "K",
+            f"menjawab KPK {kpk} — hasil kali FPB×KPK tidak dihitung",
+        ),
+        Malrule(
+            "hubungan.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan a×b benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Berapa hasil kali FPB dan KPK dari {a} dan {b}?"
+    )
+    return Soal(
+        "fpb_kpk_hubungan",
+        {"a": a, "b": b},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
 REGISTRI_TOPIK = {
     "keterbagian": keterbagian,
     "prima_faktorisasi": prima_faktorisasi,
+    "kpk_dua_bilangan": kpk_dua_bilangan,
+    "fpb_kpk_hubungan": fpb_kpk_hubungan,
 }
 
 KOMPOSISI = {
@@ -207,6 +282,12 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         if level == "P5":
             return {"n": rng.randint(12, 2000)}
         return {"n": rng.randint(12, 5000)}
+    if template_id in ("kpk_dua_bilangan", "fpb_kpk_hubungan"):
+        # a,b dengan gcd >= 2 supaya KPK beda dari a×b; a!=b.
+        a, b = rng.randint(6, 200), rng.randint(6, 200)
+        while a == b or math.gcd(a, b) < 2:
+            a, b = rng.randint(6, 200), rng.randint(6, 200)
+        return {"a": a, "b": b}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 

@@ -148,3 +148,60 @@ def test_keterbagian_sweep_tanpa_malrule_kosong():
             s = buat_soal("keterbagian", seed, level=level, topik="teori-bilangan")
             assert s.malrule, f"keterbagian@{level}/{seed} kosong"
             assert {"K", "H"} <= {m.kode for m in s.malrule}
+
+
+# ── Template #3-#4 KPK & FPB — Task 3.3 ───────────────────────────────
+
+KELOMPOK_KPK = ("kpk_dua_bilangan", "fpb_kpk_hubungan")
+
+
+def test_kpk_dua_bilangan_kunci():
+    """#3: KPK dari a dan b = lcm(a,b)."""
+    s = buat_soal("kpk_dua_bilangan", 7, level="P5", topik="teori-bilangan")
+    p = s.parameter
+    expected = p["a"] * p["b"] // math.gcd(p["a"], p["b"])
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_kpk_malrule_konsep():
+    """#3: a×b (K), gcd (K), kurang_satu (H)."""
+    s = buat_soal("kpk_dua_bilangan", 11, level="P5", topik="teori-bilangan")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["kpk.dikali"] == str(p["a"] * p["b"])
+    assert jawaban["kpk.tertukar_fpb"] == str(math.gcd(p["a"], p["b"]))
+    assert jawaban["kpk.kurang_satu"] == str(p["a"] * p["b"] // math.gcd(p["a"], p["b"]) - 1)
+
+
+def test_fpb_kpk_hubungan():
+    """#4: FPB × KPK dari a dan b = a×b."""
+    s = buat_soal("fpb_kpk_hubungan", 7, level="P6", topik="teori-bilangan")
+    p = s.parameter
+    expected = p["a"] * p["b"]
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_fpb_kpk_malrule_konsep():
+    """#4: hanya_fpb (K), hanya_kpk (K), kurang_satu (H)."""
+    s = buat_soal("fpb_kpk_hubungan", 11, level="P6", topik="teori-bilangan")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["hubungan.hanya_fpb"] == str(math.gcd(p["a"], p["b"]))
+    assert jawaban["hubungan.hanya_kpk"] == str(p["a"] * p["b"] // math.gcd(p["a"], p["b"]))
+    assert jawaban["hubungan.kurang_satu"] == str(p["a"] * p["b"] - 1)
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_KPK)
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_kelompok_kpk_sweep(template_id, level):
+    """Tiap soal KPK/FPB punya K dan H."""
+    if template_id == "fpb_kpk_hubungan" and level == "P5":
+        return  # #4 hanya P6
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="teori-bilangan")
+        assert s.malrule, f"{template_id}@{level}/{seed} kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}
