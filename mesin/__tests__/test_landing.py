@@ -14,7 +14,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import design_tokens as T  # noqa: E402
-from landing import halaman_daftar, halaman_landing  # noqa: E402
+import web  # noqa: E402
+from landing import halaman_daftar, halaman_kebijakan, halaman_landing  # noqa: E402
 
 
 def _html(func, *a, **kw) -> str:
@@ -71,3 +72,30 @@ def test_landing_hero_single_cta():
     h = _html(halaman_landing)
     assert "Mulai — daftar sekarang" in h
     assert 'class="tombol-putih"' not in h
+
+
+# ─────────────────── halaman_kebijakan ───────────────────
+
+def test_kebijakan_tautan_sumber_aktif():
+    """Tiga sumber menaut /kebijakan-privasi: footer landing, consent
+    /daftar, dan consent anak-baru (web.py). Halaman tujuannya wajib ada."""
+    assert 'href="/kebijakan-privasi"' in _html(halaman_landing)
+    assert 'href="/kebijakan-privasi"' in _html(halaman_daftar)
+    sumber = Path(web.__file__).read_text(encoding="utf-8")
+    assert 'href="/kebijakan-privasi"' in sumber
+
+
+def test_kebijakan_halaman_statis_lengkap():
+    h = _html(halaman_kebijakan)
+    assert "<h1>Kebijakan Privasi</h1>" in h
+    assert '<a class="brand" href="/">' in h  # brand = link beranda
+    assert h.count('href="/masuk"') == 1
+    for bagian in ("Data yang dikumpulkan", "Data anak", "Siapa yang bisa melihat",
+                   "Data yang tidak dikumpulkan", "penghapusan data"):
+        assert bagian in h, f"bagian {bagian} hilang"
+
+
+def test_kebijakan_sebut_laporan_pihak_ketiga():
+    """Keterbukaan jujur: variasi cerita mengirim teks soal ke layanan AI."""
+    h = _html(halaman_kebijakan)
+    assert "layanan AI" in h

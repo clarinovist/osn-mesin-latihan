@@ -1791,6 +1791,12 @@ class Penangan(BaseHTTPRequestHandler):
             from landing import halaman_daftar
 
             return self._kirim(halaman_daftar())
+        if jalur == "/kebijakan-privasi":
+            # Publik: tujuan checkbox persetujuan di /daftar & form anak,
+            # dan footer landing. Statis, tanpa membaca basis data.
+            from landing import halaman_kebijakan
+
+            return self._kirim(halaman_kebijakan())
         if jalur == "/murid" or jalur.startswith("/murid/"):
             try:
                 with basis.buka() as kon:

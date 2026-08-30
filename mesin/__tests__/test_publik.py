@@ -106,3 +106,24 @@ def test_murid_tetap_401_di_root(server):
     assert kode == 200
     assert T.NAMA_PRODUK in isi
     assert "Buat sesi baru" not in isi  # elemen khas dashboard guru
+
+
+# ───────────────── kebijakan privasi (publik) ─────────────────
+
+def test_kebijakan_privasi_200_tanpa_sesi(server):
+    """Tautan consent /daftar & footer landing tak boleh 404 lagi."""
+    s, _ = server
+    kode, isi, _ = s.minta("/kebijakan-privasi")
+    assert kode == 200
+    assert "Kebijakan Privasi" in isi
+    assert 'href="/masuk"' in isi  # satu pintu masuk, konsisten landing
+
+
+def test_kebijakan_privasi_bocor_data_tidak_boleh(server):
+    """Halaman statis: tanpa nama siswa/DB, sama untuk semua pengunjung.
+    (Id sesi sengaja tidak dites — angka kecil selalu ada di CSS/teks.)"""
+    s, _ = server
+    _, isi_anon, _ = s.minta("/kebijakan-privasi")
+    _, isi_guru, _ = s.minta("/kebijakan-privasi", auth=("guru", SANDI_GURU))
+    assert isi_anon == isi_guru, "halaman harus statis"
+    assert "Putri" not in isi_anon  # nama siswa fixture tidak bocor

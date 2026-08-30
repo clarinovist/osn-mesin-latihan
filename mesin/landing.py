@@ -77,6 +77,75 @@ guru, atau les privat. Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
     return _halaman_publik(f"Daftar — {T.NAMA_PRODUK}", isi)
 
 
+def halaman_kebijakan() -> bytes:
+    """Kebijakan privasi publik — tujuan tiga tautan persetujuan
+    (footer landing, checkbox /daftar, checkbox anak-baru di web.py).
+
+    Statis: tidak membaca basis data sama sekali, identik untuk semua
+    pengunjung. Isinya mengikuti perilaku aplikasi yang SEBENARNYA —
+    termasuk pengiriman foto lembar ke layanan AI — bukan janji yang
+    belum diimplementasi.
+    """
+    n = html.escape(T.NAMA_PRODUK)
+    isi = f"""
+<div class="topbar"><a class="brand" href="/">{n}</a>
+<nav class="topbar-navigasi"><a href="/masuk">Masuk</a></nav></div>
+
+<section class="kartu" style="max-width:46rem;margin:2rem auto">
+<h1>Kebijakan Privasi</h1>
+<p class="sub">Ringkas dan jujur, tanpa bahasa hukum.
+Terakhir diperbarui 30 Agustus 2026.</p>
+
+<h2>Data yang dikumpulkan</h2>
+<ul>
+<li>Nama akun orang tua/guru dan kata sandinya (disimpan sebagai hash).</li>
+<li>Nama panggilan anak dan tingkat sekolahnya (P3–P6).</li>
+<li>Hasil latihan: jawaban anak, kode diagnosis kesalahan
+(K/B/H/E/T/N), dan catatan guru.</li>
+<li>Foto lembar jawaban — hanya jika kamu mengunggahnya sebagai
+lampiran.</li>
+</ul>
+
+<h2>Data anak</h2>
+<p>Akun anak hanya bisa dibuat oleh orang tua/guru dari dalam aplikasi —
+anak tidak pernah mendaftar sendiri. Anak hanya melihat sesi latihannya
+sendiri di halaman murid; tidak ada obrolan atau kontak antar-anak.</p>
+
+<h2>Layanan AI pihak ketiga</h2>
+<p>Fitur <b>variasi cerita</b> mengirim kalimat soal (tanpa nama anak,
+tanpa kunci jawaban) ke layanan AI untuk ditulis ulang menjadi soal
+bercerita. Fitur <b>lampiran foto</b> mengirim foto lembar yang sudah
+diisi anak ke layanan AI agar jawabannya bisa dibaca otomatis — foto itu
+bisa memuat tulisan tangan anak. Selain dua fitur ini, tidak ada data
+yang keluar dari server.</p>
+
+<h2>Siapa yang bisa melihat</h2>
+<ul>
+<li>Data satu keluarga hanya terlihat oleh akun keluarga itu sendiri.</li>
+<li>Akun pengelola server dapat membuka laporan untuk keperluan
+dukungan, tetapi tidak bisa mengubah data anak.</li>
+<li>Tidak ada pihak lain: tanpa iklan, tanpa pelacak, tanpa analitik.</li>
+</ul>
+
+<h2>Data yang tidak dikumpulkan</h2>
+<ul>
+<li>Tidak ada email, nomor telepon, atau alamat.</li>
+<li>Tidak ada cookie pelacak atau analitik pihak ketiga.</li>
+<li>Cukup tulis nama panggilan anak — jangan nama lengkap atau data
+pribadi lainnya.</li>
+</ul>
+
+<h2>Penyimpanan &amp; penghapusan data</h2>
+<p>Semua data tersimpan dalam satu basis data di server pengelola —
+bukan layanan cloud pihak ketiga. Dari aplikasi, kamu bisa menghapus
+sesi latihan dan akun login anak kapan saja. Untuk penghapusan yang
+lebih besar (seluruh data keluarga), hubungi pengelola server yang
+memberimu akun.</p>
+</section>
+"""
+    return _halaman_publik(f"Kebijakan Privasi — {T.NAMA_PRODUK}", isi)
+
+
 def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
