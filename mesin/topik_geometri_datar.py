@@ -296,10 +296,259 @@ def sudut_luar_segitiga(a: int, b: int) -> Soal:
     )
 
 
+def keliling_luas_datar(
+    varian: str, p: int, l: int | None = None, K: int | None = None
+) -> Soal:
+    """Keliling 2(p+l) maju, atau balik arah: dari K cari luas p·(K/2−p).
+
+    Balik arah adalah sumber kesalahan utama (anak membaca soal ulang),
+    jadi varian itu wajib `minta_restatement`. Malrule membedakan tukar
+    rumus (K) dari lupa bagi dua (K/H) dan salah hitung (H).
+    """
+    if varian == "keliling":
+        kunci = 2 * (p + l)
+        mal = [
+            Malrule(
+                "datar.tukar_luas",
+                str(p * l),
+                "K",
+                "menghitung luas padahal yang diminta keliling (rumus tertukar)",
+            ),
+            Malrule(
+                "datar.lupa_kali_dua",
+                str(p + l),
+                "K",
+                "hanya menjumlahkan dua sisi, keliling = 2×(panjang+lebar)",
+            ),
+            Malrule(
+                "datar.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "kelilingnya benar, penjumlahannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Persegi panjang panjangnya {p} cm dan lebarnya {l} cm. "
+            f"Berapa kelilingnya?"
+        )
+        param = {"varian": varian, "p": p, "l": l}
+    else:
+        kunci = p * (K // 2 - p)
+        mal = [
+            Malrule(
+                "datar.balik_lupa_bagi_dua",
+                str(p * (K - p)),
+                "K",
+                "keliling dibagi dua dilupakan — panjang+lebar dianggap sama dengan keliling",
+            ),
+            Malrule(
+                "datar.balik_jawab_panjang",
+                str(K // 2 - p),
+                "B",
+                "sudah mencari lebar, tapi luasnya tidak dihitung",
+            ),
+            Malrule(
+                "datar.balik_kurang_satu",
+                str(kunci - 1),
+                "H",
+                "langkahnya benar, perkalian luasnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Keliling persegi panjang {K} cm dan panjangnya {p} cm. "
+            f"Berapa luas persegi panjang itu?"
+        )
+        param = {"varian": varian, "p": p, "K": K}
+    return Soal(
+        "keliling_luas_datar",
+        param,
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
+def luas_segitiga_jajargenjang(varian: str, a: int, t: int, s: int) -> Soal:
+    """½·a·t (segitiga) atau a·t (jajargenjang); tinggi TEGAK, bukan sisi miring.
+
+    Sisi miring `s` sengaja ada di teks: malrule "pakai sisi miring sebagai
+    tinggi" membedakan anak yang paham tinggi tegak dari yang tidak.
+    """
+    if varian == "segitiga":
+        kunci = a * t // 2
+        mal = [
+            Malrule(
+                "segitiga.lupa_setengah",
+                str(a * t),
+                "K",
+                "alas dikali tinggi tanpa dibagi dua",
+            ),
+            Malrule(
+                "segitiga.pakai_sisi_miring",
+                str(a * s // 2),
+                "K",
+                "memakai sisi miring sebagai tinggi padahal tinggi harus tegak",
+            ),
+            Malrule(
+                "segitiga.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "rumus ½·a·t benar, perkaliannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Segitiga alasnya {a} cm, tingginya {t} cm, dan sisi miringnya "
+            f"{s} cm. Berapa luas segitiga itu?"
+        )
+        param = {"varian": varian, "a": a, "t": t, "s": s}
+    else:
+        kunci = a * t
+        mal = [
+            Malrule(
+                "jajargenjang.pakai_sisi_miring",
+                str(a * s),
+                "K",
+                "memakai sisi miring sebagai tinggi padahal tinggi harus tegak lurus",
+            ),
+            Malrule(
+                "jajargenjang.pakai_setengah",
+                str(a * t // 2),
+                "K",
+                "memakai rumus segitiga ½·a·t padahal jajargenjang tanpa ½",
+            ),
+            Malrule(
+                "jajargenjang.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "rumus a·t benar, perkaliannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Jajargenjang alasnya {a} cm, tingginya {t} cm, dan sisi "
+            f"miringnya {s} cm. Berapa luas jajargenjang itu?"
+        )
+        param = {"varian": varian, "a": a, "t": t, "s": s}
+    return Soal(
+        "luas_segitiga_jajargenjang",
+        param,
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
+def luas_segiempat_lain(varian: str, **nilai: int) -> Soal:
+    """Trapesium ½(a+b)t, ketupat/layang ½·d1·d2, atau balik arah cari diagonal.
+
+    Plan #6: (a+b)t lupa ½ (K), jumlah diagonal d1+d2 (K), lupa bagi 2 saat
+    balik arah (H). Semua kunci bilangan bulat (jumlah sisi/diagonal genap).
+    """
+    if varian == "trapesium":
+        a, b, t = nilai["a"], nilai["b"], nilai["t"]
+        kunci = (a + b) * t // 2
+        mal = [
+            Malrule(
+                "segiempat.trapesium_lupa_setengah",
+                str((a + b) * t),
+                "K",
+                "(jumlah sisi sejajar) × tinggi tanpa dibagi dua",
+            ),
+            Malrule(
+                "segiempat.trapesium_jawab_sisi",
+                str(a + b),
+                "B",
+                "menjawab jumlah dua sisi sejajar, bukan luas trapesium",
+            ),
+            Malrule(
+                "segiempat.trapesium_kurang_satu",
+                str(kunci - 1),
+                "H",
+                "rumus ½(a+b)t benar, perkaliannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Trapesium sisi sejajarnya {a} cm dan {b} cm, tingginya {t} cm. "
+            f"Berapa luas trapesium itu?"
+        )
+        param = {"varian": varian, "a": a, "b": b, "t": t}
+    elif varian == "ketupat_layang":
+        d1, d2 = nilai["d1"], nilai["d2"]
+        kunci = d1 * d2 // 2
+        mal = [
+            Malrule(
+                "segiempat.jumlah_diagonal",
+                str(d1 + d2),
+                "K",
+                "menjumlahkan dua diagonal padahal luas = ½ × d1 × d2",
+            ),
+            Malrule(
+                "segiempat.lupa_setengah",
+                str(d1 * d2),
+                "K",
+                "dua diagonal dikalikan tanpa dibagi dua",
+            ),
+            Malrule(
+                "segiempat.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "rumus ½·d1·d2 benar, perkaliannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Belah ketupat diagonalnya {d1} cm dan {d2} cm. "
+            f"Berapa luasnya?"
+        )
+        param = {"varian": varian, "d1": d1, "d2": d2}
+    else:
+        luas, d1 = nilai["L"], nilai["d1"]
+        kunci = 2 * luas // d1
+        mal = [
+            Malrule(
+                "segiempat.balik_lupa_bagi_dua",
+                str(luas // d1),
+                "K",
+                "membalik rumus tanpa mengalikan dua — lupa luas = ½ × d1 × d2",
+            ),
+            Malrule(
+                "segiempat.balik_jawab_d1",
+                str(d1),
+                "B",
+                "menjawab diagonal yang sudah diketahui, bukan yang dicari",
+            ),
+            Malrule(
+                "segiempat.balik_kurang_satu",
+                str(kunci - 1),
+                "H",
+                "rumus balik benar, pembagiannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Luas belah ketupat {luas} cm² dan salah satu diagonalnya "
+            f"{d1} cm. Berapa panjang diagonal yang lain?"
+        )
+        param = {"varian": varian, "L": luas, "d1": d1}
+    return Soal(
+        "luas_segiempat_lain",
+        param,
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
 REGISTRI_TOPIK = {
     "sudut_pelurus_berpenyiku": sudut_pelurus_berpenyiku,
     "jumlah_sudut_segitiga": jumlah_sudut_segitiga,
     "sudut_luar_segitiga": sudut_luar_segitiga,
+    "keliling_luas_datar": keliling_luas_datar,
+    "luas_segitiga_jajargenjang": luas_segitiga_jajargenjang,
+    "luas_segiempat_lain": luas_segiempat_lain,
 }
 
 KOMPOSISI = {
@@ -412,6 +661,52 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             a = rng.randint(30, 89)
             b = rng.randint(20, a - 1)
         return {"a": a, "b": b}
+    if template_id == "keliling_luas_datar":
+        if rng.random() < 0.5:
+            # maju: keliling 2(p+l). Hindari p*l == 2(p+l) (3x6, 4x4, 6x3)
+            # supaya malrule tukar_luas tidak bertabrakan dengan kunci.
+            p, l = rng.randint(3, 40), rng.randint(3, 40)
+            while p * l == 2 * (p + l) or p == l == 2:
+                p, l = rng.randint(3, 40), rng.randint(3, 40)
+            return {"varian": "keliling", "p": p, "l": l}
+        # balik arah: dari K cari luas. l = K/2 - p >= 2, jadi K >= 2(p+2).
+        p = rng.randint(3, 30)
+        l = rng.randint(2, 25)
+        K = 2 * (p + l)
+        return {"varian": "balik_luas", "p": p, "K": K}
+    if template_id == "luas_segitiga_jajargenjang":
+        # a genap supaya a*t/2 dan a*s/2 bilangan bulat. s > t (sisi miring
+        # lebih panjang dari tinggi) dan s != 2t supaya lupa_setengah (a*t)
+        # != pakai_sisi_miring (a*s/2) untuk varian segitiga.
+        a = rng.choice([x for x in range(4, 41, 2)])
+        t = rng.randint(3, 20)
+        s = rng.randint(t + 1, 2 * t - 1)
+        return {"varian": rng.choice(("segitiga", "jajargenjang")), "a": a, "t": t, "s": s}
+    if template_id == "luas_segiempat_lain":
+        varian = rng.choice(("trapesium", "ketupat_layang", "balik_diagonal"))
+        if varian == "trapesium":
+            # (a+b) genap supaya (a+b)*t/2 bulat; t >= 3 supaya malrule
+            # jawab_sisi (a+b) != kunci; a != b supaya sisi sejajar beda.
+            a, b = rng.randint(4, 30), rng.randint(4, 30)
+            while (a + b) % 2 or a == b:
+                a, b = rng.randint(4, 30), rng.randint(4, 30)
+            return {"varian": varian, "a": a, "b": b, "t": rng.randint(3, 15)}
+        if varian == "ketupat_layang":
+            # d1,d2 genap supaya d1*d2/2 bulat; d1 != d2 supaya jumlah_diagonal
+            # != lupa_setengah... cek: d1+d2 != d1*d2/2 untuk d1,d2 >= 4.
+            d1 = rng.choice([x for x in range(4, 41, 2)])
+            d2 = rng.choice([x for x in range(4, 41, 2)])
+            while d1 == d2:
+                d2 = rng.choice([x for x in range(4, 41, 2)])
+            return {"varian": varian, "d1": d1, "d2": d2}
+        # balik arah: cari d2 = 2L/d1. L = d1*d2/2 dengan d1,d2 genap; L//d1
+        # harus != kunci (kunci = 2L//d1 = d2) dan != d1 (malrule jawab_d1).
+        d1 = rng.choice([x for x in range(4, 41, 2)])
+        d2 = rng.choice([x for x in range(4, 41, 2)])
+        while d1 == d2:
+            d2 = rng.choice([x for x in range(4, 41, 2)])
+        L = d1 * d2 // 2
+        return {"varian": varian, "L": L, "d1": d1}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
