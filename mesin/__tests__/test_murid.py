@@ -190,8 +190,9 @@ def test_nama_ganda_ditolak(tmp_path):
 
 def test_peran_aneh_ditolak(tmp_path):
     p = tmp_path / "sandi.json"
+    # "admin" kini peran sah (multi-keluarga); contoh peran asing diganti.
     with pytest.raises(ValueError):
-        sandi.tambah_akun("hantu", "s3", "admin", path=p)
+        sandi.tambah_akun("hantu", "s3", "bos", path=p)
 
 
 # ── Halaman HTML murid bersih dari jejak jawaban ───────────────────────

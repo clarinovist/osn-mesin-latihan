@@ -196,14 +196,22 @@ def wajib_sandi() -> bool:
 #
 # Bentuk baru (multi-akun):
 #   {"akun": [{"pengguna": "guru", "peran": "guru", ...hash...},
-#             {"pengguna": "feby",  "peran": "murid", ...hash...}]}
+#             {"pengguna": "feby",  "peran": "murid", ...hash...,
+#              "siswa_id": 7}]}
+#
+# Tiga peran (multi-keluarga):
+#   admin = pengelola produk, melihat semua keluarga;
+#   guru  = orang tua, hanya melihat siswa ber-`pemilik` namanya;
+#   murid = anak, terikat ke satu siswa lewat `siswa_id` (multi-keluarga
+#           memutus kaitan nama-akun == nama-siswa: nama tampilan boleh
+#           dobel antar keluarga, nama login tetap unik global).
 #
 # Migrasi satu-arah terjadi saat muat: bentuk lama dibaca sebagai satu akun
 # ber-peran "guru". Tidak pernah ditulis balik otomatis — penulisan hanya
 # lewat simpan_akun() yang selalu menulis bentuk baru.
 
 
-PERAN = ("guru", "murid")
+PERAN = ("admin", "guru", "murid")
 
 
 def _normalisasi(data: dict | None) -> list[dict]:
@@ -266,21 +274,56 @@ def peran_dari(
 
 
 def tambah_akun(
-    pengguna: str, sandi_baru: str, peran: str, path: Path | None = None
+    pengguna: str,
+    sandi_baru: str,
+    peran: str,
+    path: Path | None = None,
+    siswa_id: int | None = None,
 ) -> Path:
     """Tambah akun baru. Nama ganda ditolak — duplikat nama membuat
-    pencarian ambigu dan itu risiko keamanan, bukan sekadar rapi."""
+    pencarian ambigu dan itu risiko keamanan, bukan sekadar rapi.
+
+    Untuk akun murid, `siswa_id` mengikat akun ke baris tabel `siswa`
+    secara eksplisit; tanpa itu, tautan jatuh ke pencocokan nama lama.
+    """
     if peran not in PERAN:
         raise ValueError(f"peran tidak dikenal: {peran}")
     akun = muat_akun(path)
     for a in akun:
         if a["pengguna"].strip().lower() == pengguna.strip().lower():
             raise ValueError(f"nama pengguna sudah dipakai: {pengguna}")
-    akun.append({"pengguna": pengguna, "peran": peran, **buat_hash(sandi_baru)})
+    baru: dict = {"pengguna": pengguna, "peran": peran, **buat_hash(sandi_baru)}
+    if siswa_id is not None:
+        baru["siswa_id"] = int(siswa_id)
+    akun.append(baru)
     p = path or BERKAS_SANDI
     p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
     p.chmod(0o600)
     return p
+
+
+def pastikan_admin(path: Path | None = None) -> str | None:
+    """Pastikan ada tepat satu penjaga tertinggi, kembalikan namanya.
+
+    Kalau sudah ada akun ber-peran "admin", tidak ada yang diubah. Kalau
+    belum, akun GURU PERTAMA dipromosikan — ini bootstrap deterministik
+    untuk pemasangan lama: pemilik produk tak perlu mengubah berkas sandi
+    lewat tangan. Berkas hanya berisi murid: kembalikan None, jangan
+    menebak. Tanpa berkas sandi (mode lokal) pun None — palang memang
+    belum aktif.
+    """
+    akun = muat_akun(path)
+    for a in akun:
+        if a.get("peran", "guru") == "admin":
+            return a["pengguna"]
+    for a in akun:
+        if a.get("peran", "guru") == "guru":
+            a["peran"] = "admin"
+            p = path or BERKAS_SANDI
+            p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
+            p.chmod(0o600)
+            return a["pengguna"]
+    return None
 
 
 def hapus_akun(pengguna: str, path: Path | None = None) -> bool:

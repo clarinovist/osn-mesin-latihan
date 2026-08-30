@@ -103,3 +103,59 @@ def test_sandi_boleh_mengandung_titik_dua():
     """Hanya titik dua PERTAMA yang memisahkan; sisanya bagian dari sandi."""
     b = base64.b64encode(b"guru:sandi:dengan:titik").decode()
     assert sandi.dari_header(f"Basic {b}") == ("guru", "sandi:dengan:titik")
+
+
+# ── Role admin & tautan siswa akun murid (multi-keluarga) ───────────────
+
+
+def test_peran_meliputi_admin():
+    assert sandi.PERAN == ("admin", "guru", "murid")
+
+
+def test_tambah_akun_murid_membawa_siswa_id(berkas):
+    sandi.tambah_akun("feby", "sandi-anak-123", "murid", berkas, siswa_id=7)
+    a = sandi.cari_akun("feby", berkas)
+    assert a["siswa_id"] == 7
+
+
+def test_tambah_akun_tanpa_siswa_id_tak_membawa_kunci(berkas):
+    sandi.tambah_akun("guru", "sandi-guru-1234", "guru", berkas)
+    a = sandi.cari_akun("guru", berkas)
+    assert "siswa_id" not in a
+
+
+def test_tambah_akun_admin_sah(berkas):
+    sandi.tambah_akun("pengelola", "sandi-guru-1234", "admin", berkas)
+    assert sandi.cari_akun("pengelola", berkas)["peran"] == "admin"
+    assert sandi.periksa_peran("pengelola", "sandi-guru-1234", "admin", berkas)
+
+
+def test_pastikan_admin_mempromosikan_guru_pertama(berkas):
+    sandi.tambah_akun("ortu-a", "sandi-guru-1234", "guru", berkas)
+    sandi.tambah_akun("feby", "sandi-anak-123", "murid", berkas)
+    nama = sandi.pastikan_admin(berkas)
+    assert nama == "ortu-a"
+    akun = sandi.muat_akun(berkas)
+    assert [a["peran"] for a in akun] == ["admin", "murid"]
+
+
+def test_pastikan_admin_idempoten(berkas):
+    sandi.tambah_akun("ortu-a", "sandi-guru-1234", "guru", berkas)
+    sandi.tambah_akun("ortu-b", "sandi-guru-1234", "guru", berkas)
+    assert sandi.pastikan_admin(berkas) == "ortu-a"
+    assert sandi.pastikan_admin(berkas) == "ortu-a"
+    n = sum(1 for a in sandi.muat_akun(berkas) if a.get("peran") == "admin")
+    assert n == 1
+
+
+def test_pastikan_admin_tanpa_guru_mengembalikan_none(berkas):
+    sandi.tambah_akun("feby", "sandi-anak-123", "murid", berkas)
+    assert sandi.pastikan_admin(berkas) is None
+    # berkas tak berubah
+    assert sandi.cari_akun("feby", berkas)["peran"] == "murid"
+
+
+def test_pastikan_admin_bila_sudah_ada(berkas):
+    sandi.tambah_akun("pengelola", "sandi-guru-1234", "admin", berkas)
+    sandi.tambah_akun("ortu-a", "sandi-guru-1234", "guru", berkas)
+    assert sandi.pastikan_admin(berkas) == "pengelola"
