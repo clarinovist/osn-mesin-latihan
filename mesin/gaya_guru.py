@@ -86,6 +86,19 @@ button.tombol-putih {{
 .topbar-navigasi a {{ color: {T.TEKS_SUBTLE}; text-decoration: none; font-size: .9rem; }}
 .topbar-navigasi a:hover {{ color: {T.AKSEN_MURID_UTAMA}; }}
 .topbar-navigasi form {{ margin: 0; }}
+.badge-peran {{
+  display: inline-block; padding: .12rem .55rem; border-radius: {T.RADIUS_PIL};
+  font-size: .7rem; font-weight: 700; letter-spacing: .02em;
+  vertical-align: middle;
+}}
+.badge-peran-admin {{ background: {T.BADGE_ADMIN_BG}; color: {T.BADGE_ADMIN_TEKS}; }}
+.badge-peran-guru {{ background: {T.BADGE_GURU_BG}; color: {T.BADGE_GURU_TEKS}; }}
+.badge-keluarga {{
+  display: inline-block; margin-left: .45rem; padding: .1rem .5rem;
+  border-radius: {T.RADIUS_PIL}; font-size: .72rem; font-weight: 600;
+  background: {T.LATAR_KARTU_SEKUNDER}; color: {T.TEKS_JUDUL};
+  border: 1px solid {T.BORDER_INTERAKTIF};
+}}
 
 /* ── Dashboard: kartu siswa side-by-side (mockup guru-dashboard) ───── */
 .grid-utama {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }}

@@ -66,6 +66,13 @@ STATUS_KUAT = "#0FA3A3"          # teal
 STATUS_LEMAH = "#FFB020"        # amber
 STATUS_SALAH = "#FF6B5B"        # coral
 
+# Badge peran topbar (multi-keluarga): Pengelola amber, Orang Tua teal —
+# warna status yang sama supaya tetap satu rasa visual.
+BADGE_ADMIN_BG = "#FFB020"
+BADGE_ADMIN_TEKS = "#5b430a"
+BADGE_GURU_BG = "#0FA3A3"
+BADGE_GURU_TEKS = TEKS_PUTIH
+
 # Kode diagnosis — warna pill di halaman sesi guru (mockup guru-sesi).
 # Mengikuti STATUS_* supaya satu rasa: kuat=teal, lemah=amber, salah=coral.
 KODE_BENAR_BG = "#e6f6ec"

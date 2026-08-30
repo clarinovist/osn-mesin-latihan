@@ -1280,6 +1280,84 @@ def proses_akun(
     return "", "Aksi tidak dikenal."
 
 
+def halaman_admin(kon, pesan: str = "", galat: str = "") -> bytes:
+    """Panel pengelola (peran admin): daftar keluarga + buat akun orang tua.
+
+    Hanya peran admin yang sampai sini — penjaganya ada di router. Isinya
+    sengaja ringkas: admin bukan pengganti guru, hanya pengawas dan pembuat
+    akun. Detail anak tetap dibuka lewat dashboard, tempat admin melihat
+    semua keluarga sekaligus.
+    """
+    keluarga = []
+    for a in sandi.muat_akun():
+        if a.get("peran", "guru") not in ("guru", "admin"):
+            continue
+        nama = a["pengguna"]
+        anak = basis.daftar_siswa(kon, nama)
+        daftar_anak = (
+            ", ".join(html.escape(s["nama"]) for s in anak)
+            or '<span class="kosong">belum ada anak</span>'
+        )
+        terakhir = kon.execute(
+            """SELECT MAX(s.tanggal) AS t FROM sesi s
+               JOIN siswa w ON w.id = s.siswa_id WHERE w.pemilik = ?""",
+            (nama,),
+        ).fetchone()["t"] or "—"
+        peran_label = "Pengelola" if a.get("peran") == "admin" else "Orang Tua"
+        keluarga.append(
+            f"<tr><td>{html.escape(nama)}</td>"
+            f"<td>{peran_label}</td>"
+            f'<td class="angka">{len(anak)}</td>'
+            f"<td>{daftar_anak}</td>"
+            f"<td>{terakhir}</td></tr>"
+        )
+    tabel = (
+        "<table><tr><th>Akun</th><th>Peran</th><th>Jumlah anak</th>"
+        f"<th>Nama anak</th><th>Sesi terakhir</th></tr>{''.join(keluarga)}</table>"
+    )
+
+    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
+    if galat:
+        kabar += f'<div class="pesan galat">{html.escape(galat)}</div>'
+
+    return _halaman(
+        "Panel Pengelola",
+        f'<div class="topbar">'
+        f'<span class="brand">{T.NAMA_PRODUK} {_badge_peran("admin")}</span>'
+        f'<nav class="topbar-navigasi">'
+        f'<a href="/">Dashboard</a>'
+        f'<form method="post" action="/keluar" style="margin:0">'
+        f'<button type="submit" class="tombol-kecil tombol-putih">Keluar</button>'
+        f"</form></nav></div>"
+        f"<h1>Panel Pengelola</h1>"
+        f'{kabar}'
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">🏡</span>'
+        f"<h2>Keluarga</h2></div>"
+        f"{tabel}"
+        f"</div>"
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">➕</span>'
+        f"<h2>Buat akun orang tua</h2></div>"
+        f'<form method="post" action="/admin">'
+        f'<input type="hidden" name="aksi" value="guru_baru">'
+        f'<div class="baris">'
+        f'<div><label>Nama akun</label>'
+        f'<input type="text" name="pengguna" autocomplete="off" required></div>'
+        f"<div><label>Kata sandi (minimal 12 karakter)</label>"
+        f'<input type="password" name="sandi" autocomplete="new-password" '
+        f'required minlength="12"></div>'
+        f"</div>"
+        f'<p style="margin-top:.8rem">'
+        f'<button type="submit" class="tombol-coral">Buat akun</button></p>'
+        f"</form>"
+        f'<p class="sub">Orang tua juga bisa mendaftar sendiri di '
+        f'<a href="/daftar">/daftar</a> — setelah isolasi, pendaftar baru '
+        f"tidak melihat data keluarga mana pun.</p>"
+        f"</div>",
+    )
+
+
 def buat_sesi_seed_baru(
     kon,
     siswa_id: int,
@@ -1564,6 +1642,23 @@ class Penangan(BaseHTTPRequestHandler):
             try:
                 with basis.buka() as kon:
                     return self._rute_murid_get(kon, jalur, self.path)
+            except (ValueError, IndexError):
+                pass
+            self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+            return
+        if jalur == "/admin":
+            if self._peran_saya() != "admin":
+                return self._kirim(
+                    _halaman(
+                        "Perlu masuk",
+                        "<h1>Halaman pengelola</h1>"
+                        "<p>Hanya akun pengelola yang boleh membuka halaman ini.</p>",
+                    ),
+                    401,
+                )
+            try:
+                with basis.buka() as kon:
+                    return self._kirim(halaman_admin(kon))
             except (ValueError, IndexError):
                 pass
             self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
@@ -1909,6 +2004,41 @@ class Penangan(BaseHTTPRequestHandler):
                 return self._kirim(
                     halaman_akun(kon, pesan, galat, pengguna=pengguna, peran=peran)
                 )
+
+        if jalur == "/admin":
+            if self._peran_saya() != "admin":
+                return self._kirim(
+                    _halaman("Perlu masuk", "<h1>Halaman pengelola</h1>"), 401
+                )
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            mentah = self.rfile.read(panjang).decode("utf-8")
+            data = {
+                k: v[0]
+                for k, v in urllib.parse.parse_qs(
+                    mentah, keep_blank_values=True
+                ).items()
+            }
+            pesan, galat = "", ""
+            if data.get("aksi") == "guru_baru":
+                nama = (data.get("pengguna") or "").strip()
+                pw = data.get("sandi") or ""
+                if not nama:
+                    galat = "Nama akun tidak boleh kosong."
+                elif len(pw) < 12:
+                    galat = "Kata sandi minimal 12 karakter."
+                else:
+                    try:
+                        sandi.tambah_akun(nama, pw, "guru")
+                        pesan = (
+                            f"Akun orang tua {nama} dibuat. Orang tua bisa "
+                            f"masuk lewat /masuk."
+                        )
+                    except ValueError as e:
+                        galat = str(e)
+            else:
+                galat = "Aksi tidak dikenal."
+            with basis.buka() as kon:
+                return self._kirim(halaman_admin(kon, pesan, galat))
 
         if jalur.startswith("/cerita/"):
             import llm
