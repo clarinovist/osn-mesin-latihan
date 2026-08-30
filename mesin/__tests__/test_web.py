@@ -231,3 +231,69 @@ def test_nama_siswa_di_html_di_escape(db):
         h = web.halaman_utama(kon).decode()
     assert "<script>x</script>" not in h
     assert "&lt;script&gt;" in h
+
+
+# ── Dashboard: skor, mode, durasi, tanpa kolom lembar ───────────────────
+
+
+def test_dashboard_menampilkan_skor_benar(db):
+    """Kolom Benar = jumlah soal terdiagnosis benar / total soal sesi.
+
+    Skenarionya sengaja dibuat beda dari kolom Terisi (3 terisi, 2 benar)
+    supaya angka yang ditemukan benar-benar kolom Benar, bukan Terisi.
+    """
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Skor")
+        sesi_id = basis.buat_sesi(kon, sid, seed=5)
+        isi = basis.isi_sesi(kon, sesi_id)
+        data = _isi(
+            kon, sesi_id,
+            {1: isi[0]["kunci"], 2: isi[1]["kunci"], 3: "pasti salah"},
+            {3: {"kode": "H"}},  # guru paksa salah hitung
+        )
+        web.simpan_sesi(kon, sesi_id, data)
+        h = web.halaman_utama(kon).decode()
+    assert ">3/12<" in h, "Terisi harus 3/12"
+    assert ">2/12<" in h, "Benar harus 2/12"
+
+
+def test_dashboard_tanpa_kolom_lembar(db):
+    """Lembar soal/kunci cukup satu pintu: dari halaman sesi. Dashboard
+    yang menampilkan keduanya terasa redundant."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Lembar")
+        sesi_id = basis.buat_sesi(kon, sid, seed=5)
+        h = web.halaman_utama(kon).decode()
+        hs = web.halaman_sesi(kon, sesi_id).decode()
+    assert 'href="/lembar/' not in h
+    assert 'href="/lembar/' in hs
+
+
+def test_dashboard_badge_mode_hanya_untuk_drill(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "ModeDrill")
+        basis.buat_sesi(kon, sid, seed=5, mode="drill")
+        basis.buat_sesi(kon, sid, seed=6)  # diagnostik
+        h = web.halaman_utama(kon).decode()
+    assert h.count('class="badge-mode"') == 1
+
+
+def test_dashboard_menampilkan_durasi_sesi_selesai(db):
+    """Waktu = selesai − mulai (mm:ss), hanya bila keduanya tercatat."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Durasi")
+        basis.buat_sesi(kon, sid, seed=5)
+        kon.execute(
+            "UPDATE sesi SET mulai = '2026-08-30 10:00:00', "
+            "selesai = '2026-08-30 10:12:30'"
+        )
+        h = web.halaman_utama(kon).decode()
+    assert "12:30" in h
+
+
+def test_dashboard_tanpa_waktu_menampilkan_strip(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "TanpaWaktu")
+        basis.buat_sesi(kon, sid, seed=5)
+        h = web.halaman_utama(kon).decode()
+    assert ">12:30<" not in h

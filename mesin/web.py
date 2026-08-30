@@ -19,6 +19,7 @@ import json
 import random
 import urllib.parse
 from dataclasses import replace
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler
 
 import basis
@@ -105,6 +106,41 @@ def _topik_untuk_level(level: str) -> list[str]:
     ]
 
 
+def _badge_mode(baris) -> str:
+    """Badge 'Latihan Cepat' untuk sesi drill; kosong untuk diagnostik.
+
+    CSS guru memuat kata "Latihan Cepat" di komentar, jadi badge-nya
+    harus marker kelas, bukan teks yang dicari mentah.
+    """
+    if _ambil(baris, "mode", "diagnostik") == "drill":
+        return '<span class="badge-mode">Latihan Cepat</span>'
+    return ""
+
+
+def _fmt_durasi(mulai, selesai) -> str:
+    """Durasi pengerjaan mm:ss dari kolom mulai/selesai sesi.
+
+    Keduanya harus terisi — sesi yang belum selesai jujur tampil '—',
+    bukan durasi setengah jalan yang menyesatkan. Sesi yang dicatat
+    lewat kertas tidak punya keduanya dan memang tidak bisa diukur.
+    """
+    BENTUK = "%Y-%m-%d %H:%M:%S"
+    if not mulai or not selesai:
+        return "&mdash;"
+    try:
+        detik = int(
+            (
+                datetime.strptime(str(selesai), BENTUK)
+                - datetime.strptime(str(mulai), BENTUK)
+            ).total_seconds()
+        )
+    except ValueError:
+        return "&mdash;"
+    if detik <= 0:
+        return "&mdash;"
+    return f"{detik // 60}:{detik % 60:02d}"
+
+
 def halaman_utama(kon, pesan: str = "") -> bytes:
     baris = []
     # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
@@ -115,26 +151,32 @@ def halaman_utama(kon, pesan: str = "") -> bytes:
             for t in _topik_untuk_level(s["tingkat"])
         )
         sesi = kon.execute(
-            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
+            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                      s.mulai, s.selesai,
                       (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
                       (SELECT COUNT(*) FROM sesi_soal ss
-                         JOIN jawaban j ON j.sesi_soal_id = ss.id
-                        WHERE ss.sesi_id = s.id) AS terisi
+                       JOIN jawaban j ON j.sesi_soal_id = ss.id
+                       WHERE ss.sesi_id = s.id) AS terisi,
+                      (SELECT COUNT(*) FROM sesi_soal ss
+                       JOIN jawaban j ON j.sesi_soal_id = ss.id
+                       JOIN diagnosis d ON d.jawaban_id = j.id
+                       WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
                FROM sesi s WHERE s.siswa_id = ?
                ORDER BY s.tanggal DESC, s.id DESC""",
             (s["id"],),
         ).fetchall()
 
         item = "".join(
-            f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a></td>'
+            f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
+            f'{_badge_mode(r)}</td>'
             f'<td>{r["tanggal"]}</td>'
             f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
             f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
-            f'<td><a href="/lembar/{r["id"]}" target="_blank">soal</a> &middot; '
-            f'<a href="/lembar/{r["id"]}/penilaian" target="_blank">kunci</a></td></tr>'
+            f'<td class="angka">{r["benar"]}/{r["n"]}</td>'
+            f'<td class="angka">{_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None))}</td></tr>'
             for r in sesi
-        ) or '<tr><td colspan="6" class="kosong">belum ada sesi</td></tr>'
+        ) or '<tr><td colspan="7" class="kosong">belum ada sesi</td></tr>'
 
         baris.append(
             f'<div class="kartu kartu-siswa">'
@@ -144,7 +186,8 @@ def halaman_utama(kon, pesan: str = "") -> bytes:
             f'<a class="btn" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
             f"</div>"
             f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
-            f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Lembar</th></tr>"
+            f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Benar</th>"
+            f"<th>Waktu</th></tr>"
             f"{item}</table></div>"
             f'<form method="post" action="/sesi-baru/{s["id"]}" '\
                         f'class="baris" style="margin-top:.9rem">'\
@@ -386,13 +429,10 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
 
-    # Badge mode sesi (Latihan Cepat / drill). CSS guru memuat kata
-    # "Latihan Cepat" di komentar, jadi badge-nya harus marker kelas.
-    badge_mode = (
-        '<span class="badge-mode">Latihan Cepat</span>'
-        if _ambil(info, "mode", "diagnostik") == "drill"
-        else ""
-    )
+    # Badge mode sesi (Latihan Cepat / drill) — helper yang sama dengan
+    # dashboard; CSS guru memuat kata "Latihan Cepat" di komentar, jadi
+    # badge-nya harus marker kelas.
+    badge_mode = _badge_mode(info)
 
     # Lampiran foto lembar (Fase 2): form upload + daftar foto yang sudah ada.
     # Upload menjalankan ekstraksi AI, hasilnya dikonfirmasi guru di halaman
