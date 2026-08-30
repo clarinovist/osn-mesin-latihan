@@ -244,7 +244,7 @@ def test_sesi_baru_memakai_tingkat_siswa(db):
 
 def test_menaikkan_tingkat_tidak_mengubah_sesi_lama(db):
     """Riwayat tidak boleh berubah surut saat anak naik level."""
-    sid = basis.tambah_siswa(db, "Riwayat", "P3")
+    sid = basis.tambah_siswa(db, "Riwayat", "P3", pemilik="guru")
     lama = web.buat_sesi_seed_baru(db, sid)
 
     pesan, galat = web.proses_akun(

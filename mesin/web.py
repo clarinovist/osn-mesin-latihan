@@ -807,19 +807,27 @@ def halaman_laporan(kon, siswa_id: int) -> bytes:
     )
 
 
-def _kartu_akun_murid(kon) -> str:
+def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> str:
     """Kartu akun murid di halaman akun.
 
     Pola persis kartu Siswa: tabel + form di bawahnya. Daftar akun diambil
     dari sandi.muat_akun() yang disaring peran == murid. Tiap akun dicek
     kecocokannya dengan tabel siswa lewat murid.siswa_dari_akun; kalau tidak
     cocok ditandai jelas "belum terhubung ke siswa" supaya guru tahu kenapa
-    anak tidak bisa masuk.
+    anak tidak bisa masuk. Guru hanya melihat & mengelola akun keluarganya;
+    panggilan langsung tanpa `pengguna` (mode lokal / test) melihat semua.
     """
     import murid as _murid
 
-    daftar_siswa = basis.daftar_siswa(kon)
+    filter_siswa = None if (peran == "admin" or pengguna is None) else pengguna
+    daftar_siswa = basis.daftar_siswa(kon, filter_siswa)
     akun_murid = [a for a in sandi.muat_akun() if a.get("peran") == "murid"]
+    if pengguna is not None and peran != "admin":
+        akun_murid = [
+            a
+            for a in akun_murid
+            if _akun_murid_milik(kon, pengguna, peran, a["pengguna"])
+        ]
 
     if akun_murid:
         baris = ""
@@ -853,13 +861,13 @@ def _kartu_akun_murid(kon) -> str:
 
     if daftar_siswa:
         opsi = "".join(
-            f'<option value="{html.escape(s["nama"])}">{html.escape(s["nama"])}</option>'
+            f'<option value="{s["id"]}">{html.escape(s["nama"])}</option>'
             for s in daftar_siswa
         )
-        pilih = f'<select name="nama" required><option value="">— pilih siswa —</option>{opsi}</select>'
+        pilih = f'<select name="siswa_id" required><option value="">— pilih siswa —</option>{opsi}</select>'
         dis = ""
     else:
-        pilih = '<select name="nama" disabled><option>belum ada siswa</option></select>'
+        pilih = '<select name="siswa_id" disabled><option>belum ada siswa</option></select>'
         dis = " disabled"
 
     tambah = (
@@ -868,9 +876,12 @@ def _kartu_akun_murid(kon) -> str:
         f'<div class="baris">'
         f"<div><label>Siswa</label>"
         f"{pilih}</div>"
+        f"<div><label>Nama untuk masuk</label>"
+        f'<input type="text" name="nama_akun" placeholder="mis. bima-santoso" required></div>'
+        f"</div>"
         f'<div><label>Sandi baru (minimal 8 karakter)</label>'
         f'<input type="password" name="sandi" placeholder="sandi untuk murid" required minlength="8">'
-        f"</div></div>"
+        f"</div>"
         f'<p style="margin-top:.6rem"><button type="submit"{dis}>Tambah akun murid</button></p>'
         f"</form>"
     )
@@ -878,15 +889,26 @@ def _kartu_akun_murid(kon) -> str:
     return (
         f'<div class="kartu"><h2>Akun murid</h2>'
         f"<p class=\"sub\">Akun murid dipakai anak untuk masuk ke /murid. "
-        f"Nama akun harus sama persis dengan nama siswa — kalau tidak, anak tidak bisa masuk meski sandi benar.</p>"
+        f"Nama untuk masuk harus unik di seluruh aplikasi — kalau sudah "
+        f"dipakai keluarga lain, pakai variasi lain (mis. tambah nama belakang).</p>"
         f"<table><tr><th>Nama</th><th>Status</th><th>Aksi</th></tr>{baris}</table>"
         f"{tambah}"
         f"</div>"
     )
 
 
-def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
+def halaman_akun(
+    kon,
+    pesan: str = "",
+    galat: str = "",
+    pengguna: str | None = None,
+    peran: str = "guru",
+) -> bytes:
     """Kelola sandi dan daftar siswa.
+
+    `pengguna`/`peran` berasal dari sesi: guru melihat & mengelola
+    keluarganya saja, admin semua. Panggilan langsung tanpa `pengguna`
+    (mode lokal, test) melihat semuanya — perilaku lama.
 
     Sandi bisa diganti dari sini supaya sandi acak hasil deploy tidak jadi
     satu-satunya yang pernah ada — sandi yang tidak bisa diganti cenderung
@@ -913,21 +935,24 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<td class="angka">'
         f'{kon.execute("SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (s["id"],)).fetchone()["n"]}'
         f"</td></tr>"
-        for s in basis.daftar_siswa(kon)
+        for s in basis.daftar_siswa(kon, None if peran == "admin" else pengguna)
     )
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
     if galat:
         kabar += f'<div class="pesan galat">{html.escape(galat)}</div>'
 
-    d = sandi.muat_sandi()
-    if not d:
-        pengguna = "(belum disetel)"
-    elif "akun" in d:
-        g = next((a for a in d["akun"] if a.get("peran") == "guru"), None)
-        pengguna = html.escape(g["pengguna"]) if g else "(belum disetel)"
+    if pengguna is not None:
+        pengguna_tampil = html.escape(pengguna)
     else:
-        pengguna = html.escape(d["pengguna"])
+        d = sandi.muat_sandi()
+        if not d:
+            pengguna_tampil = "(belum disetel)"
+        elif "akun" in d:
+            g = next((a for a in d["akun"] if a.get("peran") in ("guru", "admin")), None)
+            pengguna_tampil = html.escape(g["pengguna"]) if g else "(belum disetel)"
+        else:
+            pengguna_tampil = html.escape(d["pengguna"])
 
     return _halaman(
         "Akun",
@@ -938,7 +963,7 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">🔑</span>'
         f"<h2>Ganti sandi</h2></div>"
-        f'<p class="sub">Pengguna saat ini: <b>{pengguna}</b>. Setelah diganti, '
+        f'<p class="sub">Pengguna saat ini: <b>{pengguna_tampil}</b>. Setelah diganti, '
         f"masuk lagi dengan sandi baru.</p>"
         f'<form method="post" action="/akun">'
         f'<input type="hidden" name="aksi" value="sandi">'
@@ -951,7 +976,7 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<p style="margin-top:.8rem">'
         f'<button type="submit" class="tombol-sekunder">Ganti sandi</button></p>'
         f"</form></div>"
-        f"{_kartu_akun_murid(kon)}"
+        f"{_kartu_akun_murid(kon, pengguna, peran)}"
         f"</div>"
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">📚</span>'
@@ -1016,7 +1041,30 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
     )
 
 
-def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
+def _akun_murid_milik(kon, pengguna: str, peran: str, nama: str) -> bool:
+    """Apakah akun murid `nama` boleh dikelola oleh pengguna ini?
+
+    Admin boleh semua. Guru hanya akun murid yang terikat ke siswa
+    miliknya — lewat siswa_id eksplisit, atau (akun warisan) lewat nama
+    siswa ber-pemilik dirinya.
+    """
+    if peran == "admin":
+        return True
+    a = sandi.cari_akun(nama)
+    if not a or a.get("peran") != "murid":
+        return False
+    if a.get("siswa_id") is not None:
+        return basis.siswa_milik(kon, int(a["siswa_id"]), pengguna)
+    baris = kon.execute(
+        "SELECT 1 FROM siswa WHERE nama = ? COLLATE NOCASE AND pemilik = ?",
+        (nama, pengguna),
+    ).fetchone()
+    return baris is not None
+
+
+def proses_akun(
+    kon, data: dict, pengguna_kini: str, peran: str = "guru"
+) -> tuple[str, str]:
     """Jalankan aksi halaman akun. Mengembalikan (pesan, galat).
 
     Sandi lama SELALU diverifikasi ulang, walaupun pengguna sudah lolos
@@ -1024,6 +1072,10 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
     dan mengirimkannya otomatis, jadi tanpa pemeriksaan ini siapa pun yang
     menemukan laptop dalam keadaan terbuka bisa mengganti sandi tanpa tahu
     yang lama.
+
+    Multi-keluarga: siswa yang dibuat tercatat ber-pemilik pengguna_kini,
+    dan aksi ber-id (tingkat, akun murid) hanya menyentuh milik sendiri —
+    admin bebas, dengan `peran="admin"`.
     """
     aksi = data.get("aksi", "")
 
@@ -1060,13 +1112,16 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
         # dan guru mengira anaknya dapat soal P4 padahal tidak.
         if not level_valid(tingkat):
             return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
+        # Duplikat diperiksa PER KELUARGA: dua keluarga boleh sama-sama
+        # punya "Bima", tapi satu keluarga tidak.
         sudah = kon.execute(
-            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?)", (nama,)
+            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?) AND pemilik = ?",
+            (nama, pengguna_kini),
         ).fetchone()
         if sudah:
-            return "", f"Siswa bernama {nama} sudah ada."
+            return "", f"Siswa bernama {nama} sudah ada di keluargamu."
 
-        basis.tambah_siswa(kon, nama, tingkat)
+        basis.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
         return f"Siswa {nama} ditambahkan ({tingkat}).", ""
 
     if aksi == "anak_baru":
@@ -1089,14 +1144,25 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
         if len(sandi_anak) < 8:
             return "", "Kata sandi anak minimal 8 karakter."
         if kon.execute(
-            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?)", (nama,)
+            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?) AND pemilik = ?",
+            (nama, pengguna_kini),
         ).fetchone():
-            return "", f"Siswa bernama {nama} sudah ada."
+            return "", f"Siswa bernama {nama} sudah ada di keluargamu."
         if sandi.cari_akun(nama) is not None:
             return "", f"Nama {nama} sudah dipakai akun lain. Pakai nama lain."
 
-        basis.tambah_siswa(kon, nama, tingkat)
-        sandi.tambah_akun(nama, sandi_anak, "murid")
+        siswa_id = basis.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
+        try:
+            sandi.tambah_akun(nama, sandi_anak, "murid", siswa_id=siswa_id)
+        except ValueError as e:
+            # Pembuatan akun meledak di tengah: batalkan siswa yang baru
+            # dibuat supaya tidak ada anak yatim tanpa akun.
+            kon.execute(
+                "DELETE FROM siswa WHERE id = ? AND NOT EXISTS "
+                "(SELECT 1 FROM sesi WHERE sesi.siswa_id = siswa.id)",
+                (siswa_id,),
+            )
+            return "", str(e)
         catatan = " (persetujuan orang tua dicatat)" if data.get("persetujuan_ortu") else ""
         return (
             f"Anak {nama} ditambahkan ({tingkat}) beserta akun latihannya{catatan}. "
@@ -1118,7 +1184,10 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
         baris = kon.execute(
             "SELECT nama FROM siswa WHERE id = ?", (siswa_id,)
         ).fetchone()
-        if not baris:
+        if not baris or (
+            peran != "admin"
+            and not basis.siswa_milik(kon, siswa_id, pengguna_kini)
+        ):
             return "", "Siswa tidak dikenal."
         kon.execute(
             "UPDATE siswa SET tingkat = ? WHERE id = ?", (tingkat, siswa_id)
@@ -1130,31 +1199,65 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
         )
 
     if aksi == "akun_murid_tambah":
-        nama = data.get("nama", "").strip()
+        nama_siswa = (data.get("nama") or "").strip()
+        nama_akun = (data.get("nama_akun") or "").strip()
         sandi_baru = data.get("sandi", "")
         # kalau form lama masih mengirim "baru", dukung juga
         if not sandi_baru:
             sandi_baru = data.get("baru", "")
-        if not nama:
-            return "", "Nama tidak boleh kosong."
-        # nama WAJIB sama persis dengan siswa
-        ada = kon.execute(
-            "SELECT 1 FROM siswa WHERE nama = ? COLLATE NOCASE", (nama,)
-        ).fetchone()
-        if not ada:
-            return "", f"Siswa bernama {nama} tidak ditemukan."
+
+        siswa_id = None
+        if data.get("siswa_id"):
+            # Bentuk form baru: pilih siswa dari dropdown milik sendiri,
+            # lalu tentukan nama login-nya (boleh berbeda dari nama siswa).
+            try:
+                siswa_id = int(data["siswa_id"])
+            except ValueError:
+                return "", "Siswa tidak dikenal."
+            if peran != "admin" and not basis.siswa_milik(
+                kon, siswa_id, pengguna_kini
+            ):
+                return "", "Siswa tidak dikenal."
+            baris = kon.execute(
+                "SELECT nama FROM siswa WHERE id = ?", (siswa_id,)
+            ).fetchone()
+            nama_siswa = baris["nama"]
+        elif nama_siswa:
+            # Bentuk lama: nama akun = nama siswa. Pencarian dibatasi ke
+            # keluarga sendiri supaya nama dobel antar keluarga tak ambigu.
+            if peran == "admin":
+                baris = kon.execute(
+                    "SELECT id, nama FROM siswa WHERE nama = ? COLLATE NOCASE",
+                    (nama_siswa,),
+                ).fetchone()
+            else:
+                baris = kon.execute(
+                    "SELECT id, nama FROM siswa "
+                    "WHERE nama = ? COLLATE NOCASE AND pemilik = ?",
+                    (nama_siswa, pengguna_kini),
+                ).fetchone()
+            if not baris:
+                return "", f"Siswa bernama {nama_siswa} tidak ditemukan."
+            siswa_id = int(baris["id"])
+        else:
+            return "", "Pilih siswanya dulu."
+
+        if not nama_akun:
+            nama_akun = nama_siswa
         if len(sandi_baru) < 8:
             return "", "Sandi murid minimal 8 karakter."
         try:
-            sandi.tambah_akun(nama, sandi_baru, "murid")
+            sandi.tambah_akun(nama_akun, sandi_baru, "murid", siswa_id=siswa_id)
         except ValueError as e:
             return "", str(e)
-        return f"Akun murid {nama} ditambahkan.", ""
+        return f"Akun murid {nama_akun} ditambahkan.", ""
 
     if aksi == "akun_murid_hapus":
         nama = data.get("nama", "").strip()
         if not nama:
             return "", "Nama tidak boleh kosong."
+        if not _akun_murid_milik(kon, pengguna_kini, peran, nama):
+            return "", f"Akun {nama} tidak ditemukan."
         ok = sandi.hapus_akun(nama)
         if not ok:
             return "", f"Akun {nama} tidak ditemukan."
@@ -1167,6 +1270,8 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
             return "", "Nama tidak boleh kosong."
         if len(baru) < 8:
             return "", "Sandi murid minimal 8 karakter."
+        if not _akun_murid_milik(kon, pengguna_kini, peran, nama):
+            return "", f"Akun {nama} tidak ditemukan."
         ok = sandi.setel_sandi_murid(nama, baru)
         if not ok:
             return "", f"Akun {nama} tidak ditemukan."
@@ -1509,7 +1614,14 @@ class Penangan(BaseHTTPRequestHandler):
                         )
                     return self._kirim(halaman_laporan(kon, siswa_id))
                 if jalur == "/akun":
-                    return self._kirim(halaman_akun(kon))
+                    ident = self._identitas()
+                    return self._kirim(
+                        halaman_akun(
+                            kon,
+                            pengguna=ident[0] if ident else None,
+                            peran=ident[1] if ident else "guru",
+                        )
+                    )
                 if jalur.startswith("/lembar/"):
                     bagian = jalur.split("/")
                     sesi_id = int(bagian[2])
@@ -1791,9 +1903,12 @@ class Penangan(BaseHTTPRequestHandler):
             }
             ident = self._identitas()
             pengguna = ident[0] if ident else "guru"
+            peran = ident[1] if ident else "guru"
             with basis.buka() as kon:
-                pesan, galat = proses_akun(kon, data, pengguna)
-                return self._kirim(halaman_akun(kon, pesan, galat))
+                pesan, galat = proses_akun(kon, data, pengguna, peran)
+                return self._kirim(
+                    halaman_akun(kon, pesan, galat, pengguna=pengguna, peran=peran)
+                )
 
         if jalur.startswith("/cerita/"):
             import llm

@@ -215,7 +215,7 @@ def test_akun_tidak_cocok_ditandai_belum_terhubung(siap):
 
 def test_tambah_akun_murid_berhasil(siap):
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Budi")
+        basis.tambah_siswa(kon, "Budi", pemilik="guru")
         pesan, galat = web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Budi", "sandi": "rahasia-budi-123",
         }, "guru")
@@ -226,7 +226,7 @@ def test_tambah_akun_murid_berhasil(siap):
 
 def test_tambah_akun_murid_nama_ganda_galat(siap):
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Citra")
+        basis.tambah_siswa(kon, "Citra", pemilik="guru")
         web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Citra", "sandi": "rahasia-citra-123",
         }, "guru")
@@ -240,7 +240,7 @@ def test_tambah_akun_murid_nama_ganda_galat(siap):
 
 def test_tambah_akun_murid_sandi_pendek_ditolak(siap):
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Dina")
+        basis.tambah_siswa(kon, "Dina", pemilik="guru")
         pesan, galat = web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Dina", "sandi": "pendek",
         }, "guru")
@@ -251,7 +251,7 @@ def test_tambah_akun_murid_sandi_pendek_ditolak(siap):
 
 def test_hapus_akun_murid(siap):
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Eka")
+        basis.tambah_siswa(kon, "Eka", pemilik="guru")
         web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Eka", "sandi": "rahasia-eka-12345",
         }, "guru")
@@ -266,7 +266,7 @@ def test_hapus_akun_murid(siap):
 
 def test_setel_sandi_murid(siap):
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Fani")
+        basis.tambah_siswa(kon, "Fani", pemilik="guru")
         web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Fani", "sandi": "lama-fani-12345",
         }, "guru")
@@ -282,7 +282,7 @@ def test_setel_sandi_murid(siap):
 def test_sandi_murid_tidak_muncul_di_html(siap):
     rahasia = "super-rahasia-murid-999"
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Gina")
+        basis.tambah_siswa(kon, "Gina", pemilik="guru")
         web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Gina", "sandi": rahasia,
         }, "guru")
@@ -318,7 +318,7 @@ def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):
     """
     sandi.simpan_sandi("sandi-guru-lama1", "guru")
     with basis.buka(siap) as kon:
-        basis.tambah_siswa(kon, "Feby")
+        basis.tambah_siswa(kon, "Feby", pemilik="guru")
         web.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Feby", "sandi": "rahasia8",
         }, "guru")
@@ -334,3 +334,92 @@ def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):
     assert not sandi.periksa("guru", "sandi-guru-lama1")
     # dan akun murid tidak boleh ikut hilang
     assert sandi.periksa_peran("Feby", "rahasia8", "murid")
+
+
+# ── Multi-keluarga: pemilik & tautan siswa_id ───────────────────────────
+
+
+def test_siswa_baru_ber_pemilik_pembuatnya(siap):
+    with basis.buka(siap) as kon:
+        web.proses_akun(kon, {"aksi": "siswa", "nama": "MilikA", "tingkat": "P3"}, "ortu-a")
+        baris = kon.execute("SELECT pemilik FROM siswa WHERE nama='MilikA'").fetchone()
+    assert baris["pemilik"] == "ortu-a"
+
+
+def test_dobel_nama_antar_keluarga_sah_dalam_keluarga_ditolak(siap):
+    """Dua keluarga boleh sama-sama punya 'Bima'; dalam satu keluarga tetap
+    ditolak tanpa pandang huruf besar-kecil."""
+    with basis.buka(siap) as kon:
+        _, g1 = web.proses_akun(kon, {"aksi": "siswa", "nama": "Bima", "tingkat": "P3"}, "ortu-a")
+        _, g2 = web.proses_akun(kon, {"aksi": "siswa", "nama": "Bima", "tingkat": "P3"}, "ortu-b")
+        _, g3 = web.proses_akun(kon, {"aksi": "siswa", "nama": "BIMA", "tingkat": "P3"}, "ortu-a")
+        n = kon.execute("SELECT COUNT(*) c FROM siswa WHERE nama='Bima'").fetchone()["c"]
+    assert g1 == "" and g2 == ""
+    assert g3 != ""
+    assert n == 2
+
+
+def test_akun_murid_tambah_menyimpan_siswa_id(siap):
+    with basis.buka(siap) as kon:
+        sid = basis.tambah_siswa(kon, "Taut", pemilik="guru")
+        _, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Taut", "sandi": "rahasia-taut-123",
+        }, "guru")
+        akun = sandi.cari_akun("Taut")
+    assert galat == ""
+    assert akun is not None
+    assert akun["siswa_id"] == sid
+
+
+def test_akun_murid_tambah_via_siswa_id_dan_nama_akun_beda(siap):
+    """Bentuk form baru: pilih siswa + nama akun bebas (unik global).
+    Nama tampilan dan nama login tidak harus sama lagi."""
+    with basis.buka(siap) as kon:
+        sid = basis.tambah_siswa(kon, "Bima", pemilik="guru")
+        _, galat = web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "siswa_id": str(sid),
+            "nama_akun": "bima-santoso", "sandi": "rahasia-bima-123",
+        }, "guru")
+        akun = sandi.cari_akun("bima-santoso")
+    assert galat == ""
+    assert akun is not None
+    assert akun["siswa_id"] == sid
+    assert sandi.periksa_peran("bima-santoso", "rahasia-bima-123", "murid")
+
+
+def test_akun_murid_anak_keluarga_lain_tak_bisa_disetel(siap):
+    """Guru keluarga B tidak boleh menyentuh akun murid keluarga A;
+    admin tetap bisa."""
+    with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "AnakA", pemilik="ortu-a")
+        web.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "AnakA", "sandi": "rahasia-anak-1",
+        }, "ortu-a")
+        _, g1 = web.proses_akun(kon, {
+            "aksi": "akun_murid_sandi", "nama": "AnakA", "baru": "diserang-99999",
+        }, "ortu-b")
+        _, g2 = web.proses_akun(kon, {
+            "aksi": "akun_murid_hapus", "nama": "AnakA",
+        }, "ortu-b")
+        _, g3 = web.proses_akun(kon, {
+            "aksi": "akun_murid_sandi", "nama": "AnakA", "baru": "disetel-admin-1",
+        }, "pengelola", "admin")
+    assert g1 != ""
+    assert g2 != ""
+    assert g3 == ""
+    assert sandi.periksa_peran("AnakA", "disetel-admin-1", "murid")
+
+
+def test_tingkat_anak_keluarga_lain_ditolak(siap):
+    with basis.buka(siap) as kon:
+        sid_a = basis.tambah_siswa(kon, "AnakX", pemilik="ortu-a")
+        _, g1 = web.proses_akun(kon, {
+            "aksi": "tingkat", "siswa_id": str(sid_a), "tingkat": "P5",
+        }, "ortu-b")
+        _, g2 = web.proses_akun(kon, {
+            "aksi": "tingkat", "siswa_id": str(sid_a), "tingkat": "P5",
+        }, "pengelola", "admin")
+        baris = kon.execute("SELECT tingkat FROM siswa WHERE id = ?", (sid_a,)).fetchone()
+    assert g1 != ""
+    assert g2 == ""
+    assert baris["tingkat"] == "P5"

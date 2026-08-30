@@ -195,6 +195,32 @@ def test_peran_aneh_ditolak(tmp_path):
         sandi.tambah_akun("hantu", "s3", "bos", path=p)
 
 
+# ── Tautan akun murid → siswa (multi-keluarga) ──────────────────────────
+
+
+def test_siswa_dari_akun_memakai_siswa_id_eksplisit(db, tmp_path, monkeypatch):
+    """Akun dengan siswa_id menang: nama login tak harus sama dengan nama
+    siswa mana pun (dua keluarga boleh punya anak bernama sama)."""
+    berkas = tmp_path / "sandi.json"
+    monkeypatch.setattr(sandi, "BERKAS_SANDI", berkas)
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "AnakLain", pemilik="ortu-a")
+    sandi.tambah_akun("feby2", "sandi-feby-12345", "murid", siswa_id=sid)
+    with basis.buka(db) as kon:
+        assert murid.siswa_dari_akun(kon, "feby2") == sid
+
+
+def test_siswa_dari_akun_fallback_nama_untuk_akun_warisan(db, tmp_path, monkeypatch):
+    """Akun lama tanpa siswa_id tetap terhubung lewat pencocokan nama."""
+    berkas = tmp_path / "sandi.json"
+    monkeypatch.setattr(sandi, "BERKAS_SANDI", berkas)
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "feby")
+    sandi.tambah_akun("feby", "sandi-feby-12345", "murid")
+    with basis.buka(db) as kon:
+        assert murid.siswa_dari_akun(kon, "feby") == sid
+
+
 # ── Halaman HTML murid bersih dari jejak jawaban ───────────────────────
 
 

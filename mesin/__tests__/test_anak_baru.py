@@ -87,3 +87,17 @@ def test_anak_baru_sandi_pendek_ditolak_tanpa_siswa_yatim(db):
     assert galat != ""
     assert db.execute("SELECT COUNT(*) c FROM siswa").fetchone()["c"] == 0
     assert sandi.cari_akun("Aisha") is None
+
+
+# ── Multi-keluarga: pemilik & tautan siswa_id ───────────────────────────
+
+
+def test_anak_baru_membubuhkan_pemilik_dan_siswa_id_akun(db):
+    _, galat = web.proses_akun(db, dict(DATA_LENGKAP), "ortu-a")
+    assert galat == ""
+    baris = db.execute(
+        "SELECT id, pemilik FROM siswa WHERE nama='Aisha'"
+    ).fetchone()
+    assert baris["pemilik"] == "ortu-a"
+    akun = sandi.cari_akun("Aisha")
+    assert akun["siswa_id"] == baris["id"]

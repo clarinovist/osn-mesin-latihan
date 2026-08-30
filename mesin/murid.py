@@ -21,6 +21,7 @@ import html
 import json
 
 import design_tokens as T
+import sandi
 from basis import isi_sesi
 from templates import Soal
 from topik import Topik, dari_sesi
@@ -784,13 +785,20 @@ def simpan_jawaban_murid(kon, siswa_id: int, sesi_id: int, data: dict) -> int | 
     return jumlah
 
 
-# Nama siswa yang terhubung ke akun murid dicari lewat tabel siswa:
-# nama akun == nama siswa. Sengaja begitu supaya guru tidak perlu mengelola
-# pemetaan dua arah — satu nama, dua tempat yang harus cocok.
+# Tautan akun murid → siswa (multi-keluarga). Akun baru membawa `siswa_id`
+# eksplisit di sandi.json — nama tampilan siswa boleh dobel antar keluarga,
+# nama login tetap unik global. Akun warisan tanpa siswa_id jatuh ke
+# pencocokan nama seperti dulu.
 
 
 def siswa_dari_akun(kon, pengguna: str) -> int | None:
-    """ID siswa untuk nama akun murid ini, atau None kalau belum ada."""
+    """ID siswa untuk akun murid ini, atau None kalau belum terhubung."""
+    akun = sandi.cari_akun(pengguna)
+    if akun and akun.get("siswa_id") is not None:
+        baris = kon.execute(
+            "SELECT id FROM siswa WHERE id = ?", (int(akun["siswa_id"]),)
+        ).fetchone()
+        return int(baris["id"]) if baris else None
     baris = kon.execute(
         "SELECT id FROM siswa WHERE nama = ? COLLATE NOCASE", (pengguna.strip(),)
     ).fetchone()
