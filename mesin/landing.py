@@ -32,6 +32,52 @@ def _halaman_publik(judul: str, isi: str) -> bytes:
 <body><div class="bungkus">{isi}</div></body></html>""".encode()
 
 
+def halaman_daftar(
+    pesan: str = "", galat: bool = False, nama: str = ""
+) -> bytes:
+    """Form pendaftaran mandiri pengelola (orang tua / guru / les).
+
+    pesan = teks feedback; galat=True membuatnya dirender sebagai galat.
+    nama = nama yang diketik pengguna (dikembalikan supaya tidak mengetik ulang).
+    """
+    n = html.escape(T.NAMA_PRODUK)
+    kotak = ""
+    if pesan:
+        kelas = "pesan galat" if galat else "pesan tersimpan"
+        kotak = f'<div class="{kelas}">{html.escape(pesan)}</div>'
+
+    isi = f"""
+<div class="topbar"><span class="brand">{n}</span>
+<nav class="topbar-navigasi"><a href="/">Beranda</a>
+<a href="/masuk">Masuk</a></nav></div>
+
+<section class="kartu" style="max-width:26rem;margin:2rem auto">
+<h1>Daftar {n}</h1>
+<p class="sub">Buat akun pengelola — untuk orang tua yang menemani anak,
+guru, atau les privat. Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
+{kotak}
+<form method="post" action="/daftar">
+<label>Nama pengguna</label>
+<input type="text" name="nama" autocomplete="username" required
+ value="{html.escape(nama)}">
+<label>Kata sandi (minimal 8 karakter)</label>
+<input type="password" name="sandi" autocomplete="new-password" required minlength="8">
+<p style="font-size:.9rem">
+ <label style="display:flex;gap:.5rem;align-items:flex-start">
+  <input type="checkbox" name="setuju" value="1" style="margin-top:.25rem">
+  <span>Saya orang tua/wali atau pendidik yang bertanggung jawab, dan saya
+  menyetujui <a href="/kebijakan-privasi">Kebijakan Privasi</a>.</span>
+ </label>
+</p>
+<button type="submit" class="tombol-coral" style="width:100%">Buat akun</button>
+</form>
+<p class="sub" style="text-align:center;margin-top:.8rem">
+Sudah punya akun? <a href="/masuk">Masuk</a></p>
+</section>
+"""
+    return _halaman_publik(f"Daftar — {T.NAMA_PRODUK}", isi)
+
+
 def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)

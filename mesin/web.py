@@ -850,6 +850,35 @@ def halaman_akun(kon, pesan: str = "", galat: str = "") -> bytes:
         f'<button type="submit" class="tombol-coral">Tambah siswa</button>'
         f"</form></div>"
         f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">🧒</span>'
+        f"<h2>Tambah anak + akun latihannya</h2></div>"
+        f'<p class="sub">Satu langkah untuk pengguna baru: buat siswa '
+        f"sekaligus akun yang dipakai anak untuk masuk ke /murid dari HP. "
+        f"Nama siswa dan nama akun otomatis dibuat sama.</p>"
+        f'<form method="post" action="/akun">'
+        f'<input type="hidden" name="aksi" value="anak_baru">'
+        f'<div class="baris">'
+        f'<div><label>Nama anak (nama panggilan)</label>'
+        f'<input type="text" name="nama" placeholder="mis. Aisha" required></div>'
+        f'<div><label>Tingkat</label>'
+        f'<select name="tingkat">'
+        + "".join(
+            f'<option value="{lv}"{" selected" if lv == LEVEL_BAWAAN else ""}>{lv}</option>'
+            for lv in LEVEL
+        )
+        + f"</select></div></div>"
+        f"<label>Kata sandi anak (minimal 8 karakter)</label>"
+        f'<input type="password" name="sandi_anak" autocomplete="new-password" '
+        f'required minlength="8">'
+        f'<p style="font-size:.9rem">'
+        f'<label style="display:flex;gap:.5rem;align-items:flex-start">'
+        f'<input type="checkbox" name="persetujuan_ortu" value="1" style="margin-top:.25rem">'
+        f"<span>Saya orang tua/wali anak ini dan menyetujui "
+        f'<a href="/kebijakan-privasi">Kebijakan Privasi</a> untuk data anak.</span>'
+        f"</label></p>"
+        f'<button type="submit" class="tombol-coral">Buat anak &amp; akunnya</button>'
+        f"</form></div>"
+        f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu amber">💡</span>'
         f"<h2>Catatan</h2></div>"
         f'<p class="sub">Siswa sengaja tidak bisa dihapus dari sini. Menghapus '
@@ -913,6 +942,41 @@ def proses_akun(kon, data: dict, pengguna_kini: str) -> tuple[str, str]:
 
         basis.tambah_siswa(kon, nama, tingkat)
         return f"Siswa {nama} ditambahkan ({tingkat}).", ""
+
+    if aksi == "anak_baru":
+        """Onboarding publik: siswa + akun murid sekaligus (atomic).
+
+        Validasi SEMUA dulu sebelum menulis apa pun — siswa yang dibuat
+        lalu akunnya gagal meninggalkan siswa tanpa akun ("anak yatim")
+        yang hanya bisa dirapikan manual lewat halaman akun.
+        """
+        nama = data.get("nama", "").strip()
+        tingkat = data.get("tingkat", LEVEL_BAWAAN).strip() or LEVEL_BAWAAN
+        sandi_anak = data.get("sandi_anak", "")
+
+        if not nama:
+            return "", "Nama anak tidak boleh kosong."
+        if len(nama) > 40:
+            return "", "Nama terlalu panjang."
+        if not level_valid(tingkat):
+            return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
+        if len(sandi_anak) < 8:
+            return "", "Kata sandi anak minimal 8 karakter."
+        if kon.execute(
+            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?)", (nama,)
+        ).fetchone():
+            return "", f"Siswa bernama {nama} sudah ada."
+        if sandi.cari_akun(nama) is not None:
+            return "", f"Nama {nama} sudah dipakai akun lain. Pakai nama lain."
+
+        basis.tambah_siswa(kon, nama, tingkat)
+        sandi.tambah_akun(nama, sandi_anak, "murid")
+        catatan = " (persetujuan orang tua dicatat)" if data.get("persetujuan_ortu") else ""
+        return (
+            f"Anak {nama} ditambahkan ({tingkat}) beserta akun latihannya{catatan}. "
+            f"Anak masuk lewat /murid dengan nama {nama}.",
+            "",
+        )
 
     if aksi == "tingkat":
         # Menaikkan level anak. Sesi LAMA tidak ikut berubah — levelnya
@@ -1212,6 +1276,10 @@ class Penangan(BaseHTTPRequestHandler):
             from landing import halaman_landing
 
             return self._kirim(halaman_landing())
+        if jalur == "/daftar":
+            from landing import halaman_daftar
+
+            return self._kirim(halaman_daftar())
         if jalur == "/murid" or jalur.startswith("/murid/"):
             try:
                 with basis.buka() as kon:
@@ -1338,6 +1406,45 @@ class Penangan(BaseHTTPRequestHandler):
             f"</div></div></div>",
         )
 
+    def _handle_daftar(self, data: dict) -> None:
+        """Pendaftaran mandiri pengelola (guru les / orang tua).
+
+        Publik tapi tidak ringan hati: nama ganda ditolak (ambigu = risiko
+        keamanan, bukan gaya), sandi minimal 8, dan checkbox persetujuan
+        wajib. Gagal = form kembali dengan pesan, BUKAN akun setengah jadi.
+        """
+        from landing import halaman_daftar
+
+        nama = (data.get("nama") or "").strip()
+        pw = data.get("sandi") or ""
+        ip = self.client_address[0] if self.client_address else "unknown"
+        if sesi.sedang_diblokir(nama, ip):
+            return self._kirim(
+                halaman_daftar("Terlalu banyak percobaan. Coba lagi 15 menit lagi."),
+                galat=True,
+            )
+        galat = None
+        if not nama:
+            galat = "Nama wajib diisi."
+        elif len(pw) < 8:
+            galat = "Kata sandi minimal 8 karakter."
+        elif not data.get("setuju"):
+            galat = "Centang persetujuan Kebijakan Privasi dulu, ya."
+        else:
+            try:
+                sandi.tambah_akun(nama, pw, "guru")
+            except ValueError:
+                galat = f"Nama {nama} sudah dipakai. Pakai nama lain, atau masuk bila memang akunmu."
+        if galat:
+            return self._kirim(halaman_daftar(galat, galat=True, nama=nama))
+
+        token = sesi.buat(nama, "guru")
+        self.send_response(303)
+        self.send_header("Location", "/")
+        self.send_header("Set-Cookie", self._set_cookie(token))
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _handle_masuk(self, data: dict) -> None:
         nama = (data.get("nama") or "").strip()
         pw = data.get("sandi") or ""
@@ -1407,7 +1514,17 @@ class Penangan(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        # login + logout — terbuka, tanpa palang
+        # pendaftaran mandiri + login + logout — terbuka, tanpa palang
+        if jalur == "/daftar":
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            mentah = self.rfile.read(panjang).decode("utf-8") if panjang else ""
+            data = {
+                k: v[0]
+                for k, v in urllib.parse.parse_qs(
+                    mentah, keep_blank_values=True
+                ).items()
+            }
+            return self._handle_daftar(data)
         if jalur == "/masuk":
             panjang = int(self.headers.get("Content-Length", 0) or 0)
             mentah = self.rfile.read(panjang).decode("utf-8") if panjang else ""
