@@ -57,9 +57,11 @@ mesin/*.db-wal
 mesin/*.db-shm
 mesin/cadangan/
 
-# Hash sandi guru. Bukan teks biasa, tapi tetap kredensial — dan berkas ini
-# per-mesin (disetel ulang di tiap tempat aplikasi dipasang).
+# Hash sandi guru & sesi runtime. Sandi bukan teks biasa tapi tetap kredensial;
+# sesi.json memuat token otentikasi aktif. Keduanya per-mesin (disetel ulang
+# di tiap tempat aplikasi dipasang).
 mesin/sandi.json
+mesin/sesi.json
 
 # Rencana kerja memuat detail internal (lihat AGENTS.md project polyflow untuk
 # alasan yang sama): tetap lokal.
