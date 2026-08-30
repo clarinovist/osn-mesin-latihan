@@ -25,6 +25,7 @@ def _halaman_publik(judul: str, isi: str) -> bytes:
         "border-radius:8px;text-decoration:none;font-weight:600;margin:.2rem .4rem .2rem 0}"
         f"a.tombol-coral{{background:{T.AKSEN_MURID_KORAL};color:{T.TEKS_PUTIH}}}"
         f"a.tombol-putih{{background:none;color:{T.STATUS_KUAT};border:1px solid {T.STATUS_KUAT}}}"
+        "a.brand{text-decoration:none}"
     )
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -47,8 +48,8 @@ def halaman_daftar(
         kotak = f'<div class="{kelas}">{html.escape(pesan)}</div>'
 
     isi = f"""
-<div class="topbar"><span class="brand">{n}</span>
-<nav class="topbar-navigasi"><a href="/">Beranda</a>
+<div class="topbar"><a class="brand" href="/">{n}</a>
+<nav class="topbar-navigasi">
 <a href="/masuk">Masuk</a></nav></div>
 
 <section class="kartu" style="max-width:26rem;margin:2rem auto">
@@ -71,8 +72,6 @@ guru, atau les privat. Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
 </p>
 <button type="submit" class="tombol-coral" style="width:100%">Buat akun</button>
 </form>
-<p class="sub" style="text-align:center;margin-top:.8rem">
-Sudah punya akun? <a href="/masuk">Masuk</a></p>
 </section>
 """
     return _halaman_publik(f"Daftar — {T.NAMA_PRODUK}", isi)
@@ -82,7 +81,7 @@ def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
     isi = f"""
-<div class="topbar"><span class="brand">{n}</span>
+<div class="topbar"><a class="brand" href="/">{n}</a>
 <nav class="topbar-navigasi"><a href="/masuk">Masuk</a></nav></div>
 
 <section class="kartu hero-landing">
@@ -93,8 +92,7 @@ def halaman_landing() -> bytes:
   menunjukkan letak kesalahannya — salah baca, salah konsep, salah hitung,
   atau salah tulis. Orang tua dan guru melihat peta belajarnya, bukan
   sekadar nilai.</p>
-  <p><a class="tombol-coral" href="/daftar">Mulai — daftar sekarang</a>
-     <a class="tombol-putih" href="/masuk">Sudah punya akun? Masuk</a></p>
+  <p><a class="tombol-coral" href="/daftar">Mulai — daftar sekarang</a></p>
 </section>
 
 <div class="grid-utama">
@@ -133,8 +131,7 @@ def halaman_landing() -> bytes:
 </div>
 
 <footer class="sub" style="text-align:center;margin-top:1.5rem">
-  <a href="/kebijakan-privasi">Kebijakan Privasi</a> ·
-  <a href="/masuk">Masuk</a>
+  <a href="/kebijakan-privasi">Kebijakan Privasi</a>
 </footer>
 """
     return _halaman_publik(T.NAMA_PRODUK, isi)
