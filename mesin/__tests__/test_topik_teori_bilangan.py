@@ -96,3 +96,55 @@ def test_judul_bagian_teori_bilangan():
         "C": "Bagian C — Sisa & paritas",
         "D": "Bagian D — Pola bilangan",
     }
+
+
+# ── Template #1 keterbagian — Task 3.2 ─────────────────────────────────
+
+
+def test_keterbagian_kunci_adalah_bilangan_yang_habis():
+    """#1: tepat satu dari tiga bilangan habis dibagi d."""
+    for seed in range(1, 120):
+        s = buat_soal("keterbagian", seed, level="P4", topik="teori-bilangan")
+        p = s.parameter
+        pilihan = (p["a"], p["b"], p["c"])
+        habis = [x for x in pilihan if x % p["d"] == 0]
+        assert len(habis) == 1, f"{p=} tidak punya tepat satu kelipatan"
+        assert s.kunci == str(habis[0]), f"{p=}, kunci={s.kunci}"
+        # malrule tak boleh menebak kunci
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_keterbagian_trap_divisor():
+    """#1: K = bilangan yang habis dibagi trap tapi tidak habis dibagi d."""
+    from topik_teori_bilangan import _TRAP
+
+    for seed in range(1, 120):
+        s = buat_soal("keterbagian", seed, level="P5", topik="teori-bilangan")
+        p = s.parameter
+        trap = _TRAP[p["d"]]
+        jawaban = {m.id: m.jawaban for m in s.malrule}
+        if "keterbagian.trap_divisor" in jawaban:
+            num = int(jawaban["keterbagian.trap_divisor"])
+            assert num % trap == 0, f"{p=}: {num} tidak habis dibagi {trap}"
+            assert num % p["d"] != 0, f"{p=}: {num} habis dibagi {p['d']}"
+
+
+def test_keterbagian_level_membedakan_pool_divisor():
+    """d pool P4 tanpa 8/9/11; P5 ada 8,9; P6 ada 11."""
+    terlihat = {"P4": set(), "P5": set(), "P6": set()}
+    for level in ("P4", "P5", "P6"):
+        for seed in range(1, 200):
+            s = buat_soal("keterbagian", seed, level=level, topik="teori-bilangan")
+            terlihat[level].add(s.parameter["d"])
+    assert terlihat["P4"] <= {2, 3, 4, 5, 6}
+    assert 8 in terlihat["P5"] and 9 in terlihat["P5"]
+    assert 11 in terlihat["P6"]
+
+
+def test_keterbagian_sweep_tanpa_malrule_kosong():
+    for level in ("P4", "P5", "P6"):
+        for seed in range(1, 120):
+            s = buat_soal("keterbagian", seed, level=level, topik="teori-bilangan")
+            assert s.malrule, f"keterbagian@{level}/{seed} kosong"
+            assert {"K", "H"} <= {m.kode for m in s.malrule}

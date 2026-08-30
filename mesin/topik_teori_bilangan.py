@@ -31,10 +31,17 @@ def keterbagian(d: int, a: int, b: int, c: int, jawab: int) -> Soal:
 
     Tepat satu dari a,b,c habis dibagi d (dijamin _parameter). Kunci =
     bilangan itu. Malrule: jawab bilangan tak habis (B), jawab bilangan
-    yang habis dibagi trap divisor (K), kurang-1 (H).
+    yang habis dibagi trap divisor (K), kurang-1 (H). Kandidat trap
+    dicari eksplisit — posisinya setelah shuffle tidak bisa diasumsikan.
     """
     pilihan = (a, b, c)
     kunci = str(pilihan[jawab])
+    trap = _TRAP.get(d, d)
+    kandidat_trap = [
+        x for x in pilihan
+        if x != pilihan[jawab] and _habis(x, trap) and not _habis(x, d)
+    ]
+    trap_num = kandidat_trap[0] if kandidat_trap else pilihan[(jawab + 1) % 3]
     mal = [
         Malrule(
             "keterbagian.pilih_tak_habis",
@@ -44,9 +51,9 @@ def keterbagian(d: int, a: int, b: int, c: int, jawab: int) -> Soal:
         ),
         Malrule(
             "keterbagian.trap_divisor",
-            str(pilihan[(jawab + 2) % 3]),
+            str(trap_num),
             "K",
-            f"memilih bilangan yang hanya habis dibagi {_TRAP.get(d, d)} — "
+            f"memilih bilangan yang hanya habis dibagi {trap} — "
             f"aturan pembagian {d} tidak dipakai dengan benar",
         ),
         Malrule(
@@ -188,15 +195,12 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         trap_num = trap * rng.randint(5, 60)
         while _habis(trap_num, d) or trap_num == benar:
             trap_num = trap * rng.randint(5, 60)
-        # bilangan salah: tak habis dibagi d maupun trap
-        salah = benar + rng.choice((1, 2, 3, 7))
+        # bilangan salah: tak habis dibagi d maupun trap (supaya malrule
+        # pilih_tak_habis dan trap_divisor tidak menebak bilangan sama)
+        salah = benar + 1
         while _habis(salah, d) or _habis(salah, trap) or salah == benar:
-            salah += rng.randint(1, 5)
-        # acak posisi kunci
-        pilihan = [benar, trap_num, salah]
-        rng.shuffle(pilihan)
-        jawab = pilihan.index(benar)
-        return {"d": d, "a": pilihan[0], "b": pilihan[1], "c": pilihan[2], "jawab": jawab}
+            salah += 1
+        return {"d": d, "a": benar, "b": salah, "c": trap_num, "jawab": 0}
     if template_id == "prima_faktorisasi":
         # n acak rentang lebar: berapa pun n, faktorisasinya dihitung di
         # template (banyak faktor positif = ∏(eᵢ+1)). P5 lebih kecil.
