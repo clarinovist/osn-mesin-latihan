@@ -72,7 +72,32 @@ def test_aritmatika_lanjut_menolak_level_di_luar_scope():
             buat_soal("satuan_konversi", 7, level=level, topik="aritmatika-lanjut")
 
 
-# Level teks aneh -> P5 diuji di Task 4.5, saat seluruh template sudah ada.
+def test_aritmatika_lanjut_level_teks_aneh_jatuh_ke_p5():
+    """Data tingkat lama yang aneh memakai level pertama paket (P5)."""
+    aneh = buat_lembar(7, level="tingkat-lama", topik="aritmatika-lanjut")
+    p5 = buat_lembar(7, level="P5", topik="aritmatika-lanjut")
+    assert aneh.level == "P5"
+    assert aneh.tanda_tangan == p5.tanda_tangan
+
+
+def test_aritmatika_lanjut_memuat_sebelas_template():
+    """Task 4.5: seluruh 11 template sudah terimplementasi."""
+    paket = _paket()
+    assert len(paket.templates) == 11
+    for nama in (
+        "satuan_konversi",
+        "kecepatan_jarak_waktu",
+        "berpapasan",
+        "menyusul",
+        "debit",
+        "perbandingan_senilai",
+        "perbandingan_berbalik",
+        "kerja_bersama",
+        "persen_diskon",
+        "persen_untung_rugi",
+        "persen_bertingkat",
+    ):
+        assert nama in paket.templates, nama
 
 
 # ── Judul bagian ───────────────────────────────────────────────────────
