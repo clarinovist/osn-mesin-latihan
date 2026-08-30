@@ -295,6 +295,86 @@ def paritas(a: int, n: int) -> Soal:
     )
 
 
+# ── Bagian D — Pola bilangan ───────────────────────────────────────────
+
+
+def angka_satuan_pangkat(a: int, b: int) -> Soal:
+    """Digit satuan a^b lewat siklus (a, a², a³, ... berulang)."""
+    satuan = 1
+    for _ in range(b):
+        satuan = (satuan * a) % 10
+    kunci = satuan
+    # siklus_meleset: anak menghitung b+1 (atau lupa b=1 kasus awal)
+    siklus_meleset = 1
+    for _ in range(b + 1):
+        siklus_meleset = (siklus_meleset * a) % 10
+    mal = [
+        Malrule(
+            "satuan.jawab_a",
+            str(a % 10),
+            "K",
+            f"menjawab digit satuan {a} (pangkatnya tidak dihitung)",
+        ),
+        Malrule(
+            "satuan.siklus_meleset",
+            str(siklus_meleset),
+            "K",
+            "menghitung satu pangkat terlalu banyak/berikutnya",
+        ),
+        Malrule(
+            "satuan.kurang_satu",
+            str((kunci - 1) % 10),
+            "H",
+            "siklus benar, hasil akhirnya meleset satu",
+        ),
+    ]
+    teks = f"Berapa digit satuan dari {a} pangkat {b} ({a}^{b})?"
+    return Soal(
+        "angka_satuan_pangkat",
+        {"a": a, "b": b},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
+def gauss_deret(n: int) -> Soal:
+    """1+2+...+n = n(n+1)/2 (jumlah deret aritmetika)."""
+    kunci = n * (n + 1) // 2
+    mal = [
+        Malrule(
+            "gauss.dikira_ganjil",
+            str(n * n),
+            "K",
+            f"memakai n² (jumlah n ganjil) padahal yang dijumlahkan 1..{n}",
+        ),
+        Malrule(
+            "gauss.lupa_bagi_2",
+            str(n * (n + 1)),
+            "K",
+            "menghitung n×(n+1) tanpa membagi dua",
+        ),
+        Malrule(
+            "gauss.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "rumus benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = f"Berapa jumlah 1 + 2 + 3 + … + {n}?"
+    return Soal(
+        "gauss_deret",
+        {"n": n},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
 REGISTRI_TOPIK = {
     "keterbagian": keterbagian,
     "prima_faktorisasi": prima_faktorisasi,
@@ -302,6 +382,8 @@ REGISTRI_TOPIK = {
     "fpb_kpk_hubungan": fpb_kpk_hubungan,
     "sisa_pembagian": sisa_pembagian,
     "paritas": paritas,
+    "angka_satuan_pangkat": angka_satuan_pangkat,
+    "gauss_deret": gauss_deret,
 }
 
 KOMPOSISI = {
@@ -402,6 +484,21 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         a = rng.randint(1, 15)
         n = rng.randint(2, 20)
         return {"a": a, "n": n}
+    if template_id == "angka_satuan_pangkat":
+        # a dari {2,3,4,7,8,9}: siklus satuan >= 2 (a=5/6 selalu sama,
+        # membuat malrule jawab_a menyamai kunci). Hindari b yang membuat
+        # a^b berdigit satuan = a%10 — nanti jawab_a (K) menebak kunci.
+        # b lebar 2..100 supaya 500 seed tetap >= 200 (filter reject ~1/3).
+        a = rng.choice((2, 3, 4, 7, 8, 9))
+        b = rng.randint(2, 100)
+        satuan = pow(a, b, 10)
+        while satuan == a % 10:
+            b = rng.randint(2, 100)
+            satuan = pow(a, b, 10)
+        return {"a": a, "b": b}
+    if template_id == "gauss_deret":
+        # n lebar 3..300 supaya ruang variasi >= 200 (hasil <= 45150).
+        return {"n": rng.randint(3, 300)}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 

@@ -82,7 +82,29 @@ def test_teori_bilangan_menolak_level_di_luar_scope():
         buat_soal("keterbagian", 7, level="P3", topik="teori-bilangan")
 
 
-# Level teks aneh -> P4 diuji di Task 3.5, saat seluruh template sudah ada.
+def test_teori_bilangan_level_teks_aneh_jatuh_ke_p4():
+    """Data tingkat lama yang aneh memakai level pertama paket (P4)."""
+    aneh = buat_lembar(7, level="tingkat-lama", topik="teori-bilangan")
+    p4 = buat_lembar(7, level="P4", topik="teori-bilangan")
+    assert aneh.level == "P4"
+    assert aneh.tanda_tangan == p4.tanda_tangan
+
+
+def test_teori_bilangan_memuat_delapan_template():
+    """Task 3.5: seluruh 8 template sudah terimplementasi."""
+    paket = _paket()
+    assert len(paket.templates) == 8
+    for nama in (
+        "keterbagian",
+        "prima_faktorisasi",
+        "kpk_dua_bilangan",
+        "fpb_kpk_hubungan",
+        "sisa_pembagian",
+        "paritas",
+        "angka_satuan_pangkat",
+        "gauss_deret",
+    ):
+        assert nama in paket.templates, nama
 
 
 # ── Judul bagian ───────────────────────────────────────────────────────
@@ -259,4 +281,60 @@ def test_kelompok_sisa_sweep(template_id, level):
     for seed in range(1, 120):
         s = buat_soal(template_id, seed, level=level, topik="teori-bilangan")
         assert s.malrule, f"{template_id}@{level}/{seed} kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}
+
+
+# ── Template #7-#8 pola bilangan — Task 3.5 ───────────────────────────
+
+KELOMPOK_POLA = ("angka_satuan_pangkat", "gauss_deret")
+
+
+def test_angka_satuan_pangkat_kunci():
+    """#7: digit satuan a^b lewat siklus (a, a², a³, ... berulang)."""
+    s = buat_soal("angka_satuan_pangkat", 7, level="P6", topik="teori-bilangan")
+    p = s.parameter
+    # brute force: kalikan berulang, ambil digit satuan
+    satuan = 1
+    for _ in range(p["b"]):
+        satuan = (satuan * p["a"]) % 10
+    assert s.kunci == str(satuan), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_angka_satuan_malrule_konsep():
+    """#7: jawab_a (K), siklus_meleset (K), kurang_satu (H)."""
+    s = buat_soal("angka_satuan_pangkat", 11, level="P6", topik="teori-bilangan")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["satuan.jawab_a"] == str(p["a"] % 10)
+    assert "satuan.siklus_meleset" in jawaban
+    assert "satuan.kurang_satu" in jawaban
+
+
+def test_gauss_deret_kunci():
+    """#8: 1+2+...+n = n(n+1)/2."""
+    s = buat_soal("gauss_deret", 7, level="P5", topik="teori-bilangan")
+    p = s.parameter
+    expected = p["n"] * (p["n"] + 1) // 2
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_gauss_deret_malrule_konsep():
+    """#8: dikira_ganjil (K), lupa_bagi_2 (K), kurang_satu (H)."""
+    s = buat_soal("gauss_deret", 11, level="P5", topik="teori-bilangan")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["gauss.dikira_ganjil"] == str(p["n"] ** 2)
+    assert jawaban["gauss.lupa_bagi_2"] == str(p["n"] * (p["n"] + 1))
+    assert jawaban["gauss.kurang_satu"] == str(p["n"] * (p["n"] + 1) // 2 - 1)
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_POLA)
+def test_kelompok_pola_sweep(template_id):
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level="P6", topik="teori-bilangan")
+        assert s.malrule, f"{template_id}/{seed} kosong"
         assert {"K", "H"} <= {m.kode for m in s.malrule}
