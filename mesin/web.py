@@ -1622,6 +1622,10 @@ class Penangan(BaseHTTPRequestHandler):
                 # sesi dan membaca hasil, bukan menekan tombol dulu.
                 selesai = False
                 if hasil:
+                    # Waktu pengerjaan: POST pertama yang mengisi soal =
+                    # mulai; semua terisi = selesai. Keduanya idempoten
+                    # (WHERE IS NULL) — lihat basis.tandai_mulai.
+                    basis.tandai_mulai(kon, sesi_id)
                     diagnosa_murid(kon, sesi_id)
                     # Semua soal sudah terisi → arahkan ke halaman Selesai,
                     # bukan kembali ke lembar yang sama. Anak yang masih
@@ -1629,6 +1633,8 @@ class Penangan(BaseHTTPRequestHandler):
                     # tersimpan supaya bisa lanjut mengerjakan.
                     if siswa_id is not None:
                         selesai = murid.semua_terisi(kon, siswa_id, sesi_id)
+                        if selesai:
+                            basis.tandai_selesai(kon, sesi_id)
             if hasil is None:
                 return self._kirim(
                     _halaman("403", "<h1>Bukan sesimu</h1>"), 403

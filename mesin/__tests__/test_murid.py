@@ -498,3 +498,136 @@ def test_http_simpan_sebagian_tetap_di_lembar_dengan_banner(server):
     assert "Selesai" not in isi, (
         "belum semua soal terisi — jangan arahkan ke halaman selesai"
     )
+
+
+# ── Pencatatan waktu pengerjaan (kolom mulai/selesai sesi) ────────────
+
+
+def test_http_post_pertama_mencatat_mulai(server):
+    """POST jawaban pertama = anak mulai mengerjakan. Selesai tetap kosong
+    sampai SEMUA soal terisi — durasi setengah jalan menyesatkan."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        b = basis.isi_sesi(kon, sesi_id)[0]
+
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data={f"jwb_{b['sesi_soal_id']}": "1"},
+    )
+    with server.buka() as kon:
+        baris = kon.execute(
+            "SELECT mulai, selesai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()
+    assert baris["mulai"] is not None
+    assert baris["selesai"] is None
+
+
+def test_http_post_kedua_tidak_menggeser_mulai(server):
+    """Idempoten lewat HTTP: POST berulang dari HP tidak boleh menggeser
+    mulai, kalau tidak, durasi pengerjaan jadi bohong. Nilai mulai dipaksa
+    ke angka pasti supaya dua POST di detik yang sama pun tetap terdeteksi
+    kalau pelindungnya hilang."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        b = basis.isi_sesi(kon, sesi_id)[0]
+        ssid = b["sesi_soal_id"]
+
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data={f"jwb_{ssid}": "1"},
+    )
+    with server.buka() as kon:
+        kon.execute(
+            "UPDATE sesi SET mulai = '2026-08-01 08:00:00' WHERE id = ?",
+            (sesi_id,),
+        )
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data={f"jwb_{ssid}": "2"},
+    )
+    with server.buka() as kon:
+        mulai = kon.execute(
+            "SELECT mulai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()["mulai"]
+    assert mulai == "2026-08-01 08:00:00", "POST kedua menggeser mulai"
+
+
+def test_tandai_mulai_tidak_menggeser_yang_sudah_ada(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "IdemMulai")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        kon.execute(
+            "UPDATE sesi SET mulai = '2026-08-01 08:00:00' WHERE id = ?",
+            (sesi_id,),
+        )
+        basis.tandai_mulai(kon, sesi_id)
+        m = kon.execute(
+            "SELECT mulai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()["mulai"]
+        basis.tandai_mulai(kon, 99999)  # sesi tak dikenal: no-op, tidak meledak
+    assert m == "2026-08-01 08:00:00"
+
+
+def test_tandai_selesai_tidak_menggeser_yang_sudah_ada(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "IdemSelesai")
+        sesi_id = basis.buat_sesi(kon, sid, seed=7)
+        kon.execute(
+            "UPDATE sesi SET selesai = '2026-08-01 09:00:00' WHERE id = ?",
+            (sesi_id,),
+        )
+        basis.tandai_selesai(kon, sesi_id)
+        s = kon.execute(
+            "SELECT selesai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()["selesai"]
+        basis.tandai_selesai(kon, 99999)
+    assert s == "2026-08-01 09:00:00"
+
+
+def test_http_semua_terisi_mencatat_selesai(server):
+    """Alur penuh: isi semua → mulai dan selesai keduanya tercatat, sehingga
+    dashboard guru bisa menampilkan durasi pengerjaan."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        daftar = basis.isi_sesi(kon, sesi_id)
+        data = {f"jwb_{b['sesi_soal_id']}": "1" for b in daftar}
+
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=data,
+    )
+    with server.buka() as kon:
+        baris = kon.execute(
+            "SELECT mulai, selesai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()
+    assert baris["mulai"] is not None
+    assert baris["selesai"] is not None
+
+
+def test_http_post_ulang_setelah_selesai_tidak_menggeser_selesai(server):
+    """Anak iseng menekan simpan lagi setelah halaman selesai — selesai
+    yang tercatat saat semua soal terisi tetap yang pertama."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        daftar = basis.isi_sesi(kon, sesi_id)
+        data = {f"jwb_{b['sesi_soal_id']}": "1" for b in daftar}
+
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=data,
+    )
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=data,
+    )
+    with server.buka() as kon:
+        baris = kon.execute(
+            "SELECT selesai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()
+    assert baris["selesai"] is not None  # dijaga WHERE selesai IS NULL

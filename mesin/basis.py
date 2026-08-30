@@ -260,6 +260,33 @@ def hapus_sesi(kon: sqlite3.Connection, sesi_id: int) -> bool:
     return cur.rowcount > 0
 
 
+def tandai_mulai(kon: sqlite3.Connection, sesi_id: int) -> None:
+    """Catat waktu mulai pengerjaan (alur murid) — sekali saja.
+
+    Idempoten: POST berulang dari HP tidak boleh menggeser mulai, kalau
+    tidak, durasi pengerjaan jadi bohong. Sesi tak dikenal: no-op, bukan
+    pengecualian — pemanggilnya adalah handler HTTP yang sibuk menyimpan.
+    """
+    kon.execute(
+        """UPDATE sesi SET mulai = datetime('now', '+7 hours')
+           WHERE id = ? AND mulai IS NULL""",
+        (sesi_id,),
+    )
+
+
+def tandai_selesai(kon: sqlite3.Connection, sesi_id: int) -> None:
+    """Catat waktu selesai — dipanggil saat semua soal terisi.
+
+    Dijaga WHERE selesai IS NULL: anak yang menekan simpan lagi setelah
+    halaman selesai tidak boleh menggeser angka durasinya.
+    """
+    kon.execute(
+        """UPDATE sesi SET selesai = datetime('now', '+7 hours')
+           WHERE id = ? AND selesai IS NULL""",
+        (sesi_id,),
+    )
+
+
 def malrule_soal(kon: sqlite3.Connection, soal_id: int) -> list[sqlite3.Row]:
     return kon.execute(
         "SELECT malrule_id, jawaban, kode, alasan FROM malrule WHERE soal_id = ?",
