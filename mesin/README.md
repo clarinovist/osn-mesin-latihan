@@ -87,23 +87,35 @@ tidak bercabang.
 
 Buka **/masuk**, isi nama & sandi. Sesi disimpan sebagai kuki HttpOnly
 (`osn_sesi`, TTL 14 hari, SameSite=Lax, Secure di produksi) — tidak ada
-popup peramban. Keluar lewat tombol **Keluar** (POST /keluar) yang menghapus
-sesi di server dan kuki di peramban. Percobaan masuk yang gagal dibatasi
-5 kali / 15 menit per nama+IP; akun yang tidak ada tetap menjalankan PBKDF2
-umpan (~120 ms) sehingga tidak dapat dibedakan lewat waktu respons.
+popup peramban. Admin diarahkan ke **/admin** setelah masuk; guru ke beranda;
+murid ke halaman kerja. Keluar lewat tombol **Keluar** (POST /keluar) yang
+menghapus sesi di server dan kuki di peramban. Percobaan masuk yang gagal
+dibatasi 5 kali / 15 menit per nama+IP; akun yang tidak ada tetap menjalankan
+PBKDF2 umpan (~120 ms) sehingga tidak dapat dibedakan lewat waktu respons.
 
 ## Akun & siswa
 
-Tautan **"Akun & siswa"** di halaman utama:
+Tautan **"Akun & Siswa"** di menu pengguna (dropdown topbar) membuka
+**/akun** — halaman dengan nav samping (sidebar) dan tiga section via
+`?section=`:
 
-- **Ganti sandi** — minimal 12 karakter, perlu sandi lama. Ganti sandi acak
-  bawaan deploy dengan yang kamu ingat.
-- **Tambah siswa** — tanpa SSH. Pakai nama panggilan atau inisial, bukan
-  nama lengkap. Anak yang kamu buat otomatis jadi milik keluargamu.
+- **akun** — ganti sandi (minimal 12 karakter, perlu sandi lama). Ganti
+  sandi acak bawaan deploy dengan yang kamu ingat.
+- **siswa** — tabel siswa (select tingkat + simpan), form "Tambah anak +
+  akun latihannya", dan form tambah siswa polos. Anak yang kamu buat
+  otomatis jadi milik keluargamu.
+- **akun-murid** — tabel status akun latihan anak, setel sandi, tambah akun
+  murid, hapus akun.
+
+Section tak dikenal jatuh ke "akun". Setelah aksi POST, kamu kembali ke
+section asalnya.
 
 Siswa sengaja tidak bisa dihapus: menghapusnya ikut menghapus seluruh sesi,
 jawaban, dan diagnosisnya. Kalau seorang anak berhenti, biarkan saja
 datanya — tidak mengganggu apa pun.
+
+Admin hanya melihat section **akun** (ganti sandi sendiri); section siswa
+dan akun-murid tidak ditampilkan.
 
 Untuk pemasangan lokal di Mac, daftar awal ada di `SISWA` pada
 `siapkan_db.py` (aman dijalankan ulang).
@@ -113,18 +125,26 @@ Untuk pemasangan lokal di Mac, daftar awal ada di `SISWA` pada
 Aplikasi ini sekarang dipakai beberapa keluarga. Setiap akun di
 `sandi.json` punya salah satu dari tiga peran:
 
-- **admin** — pengelola produk: melihat SEMUA keluarga dan membuatkan akun
-  orang tua di **/admin** (orang lain ditolak di pintu). Admin bukan
-  pengganti guru — dia pengawas dan pembuat akun; detail anak tetap dibuka
-  lewat dashboard, bukan dari panel itu.
+- **admin** — pengelola produk: dashboard khusus di **/admin** berisi
+  ringkasan jumlah keluarga/siswa/sesi, tabel keluarga dengan nama anak
+  sebagai tautan ke `/laporan/<id>` (baca untuk dukungan), dan form buat
+  akun orang tua. Kebijakan **baca-semua-tulis-tidak**: semua halaman
+  baca (laporan, sesi, lembar, lampiran) terbuka, tapi SEMUA aksi tulis
+  data murid ditolak 404 — termasuk sesi baru, simpan/hapus sesi, cerita,
+  upload lampiran, dan proses_akun (kecuali ganti sandi sendiri). Halaman
+  sesi untuk admin tampil hanya-baca (fieldset disabled, tanpa tombol
+  hapus/upload/cerita). Admin bukan pengganti guru — dia pengawas dan
+  pembuat akun.
 - **guru** — orang tua: hanya melihat anak yang jadi miliknya. Keluarga
   lain tidak lewat di matamu — bukan disembunyikan setengah-setengah,
   memang tidak ada di datamu.
 - **murid** — anak: terikat ke satu siswa lewat `siswa_id` di akunnya,
   jadi nama login boleh berbeda dari nama tampilan anak.
 
-Di topbar dashboard ada badge peran: **Pengelola** (admin) atau
-**Orang Tua** (guru).
+Setiap halaman pengelola (guru & admin) punya **topbar dengan menu
+pengguna** — dropdown CSS-only (`<details>`). Guru melihat "Akun & Siswa"
++ "Keluar"; admin melihat "Dashboard admin" + "Ganti sandi" + "Keluar".
+Brand di topbar adalah tautan beranda (`/` untuk guru, `/admin` untuk admin).
 
 Kepemilikan tertulis di kolom `siswa.pemilik` — username orang tuanya.
 Guru membaca `WHERE pemilik = username-nya`; admin tanpa filter. Baris
@@ -168,6 +188,8 @@ seed, jadi selalu sama persis.
 | `render.py` + `gaya_layar.py` + `gaya_cetak.py` | satu sumber render, dua tampilan (layar & cetak) |
 | `buat_lembar.py` | perintah cetak |
 | `web.py` | halaman guru/murid/admin + rute lembar |
+| `landing.py` | halaman publik (daftar, masuk) — brand tautan beranda |
+| `gaya_guru.py` | CSS terpusat untuk halaman pengelola — token dari `design_tokens.py` |
 | `murid.py` | halaman kerja murid — tanpa kunci/malrule/diagnosis (palang test) |
 | `llm.py` | klien DeepSeek untuk variasi cerita — gagal-diam tanpa key |
 | `sesi.py` | sesi cookie (berkas JSON atomik, TTL 14 hari, rate-limit) |
