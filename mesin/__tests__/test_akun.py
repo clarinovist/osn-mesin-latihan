@@ -173,6 +173,36 @@ def test_halaman_akun_menampilkan_siswa_dan_jumlah_sesi(siap):
     assert ">2<" in h  # jumlah sesi
 
 
+def test_tabel_siswa_menampilkan_status_akun_latihan(siap):
+    """Hapus akun latihan tidak menghapus anaknya — status di tabel siswa
+    harus menjelaskan hubungan itu, bukan membiarkannya jadi teka-teki."""
+    with basis.buka(siap) as kon:
+        sid = basis.tambah_siswa(kon, "Tertaut", pemilik="guru")
+        sandi.tambah_akun("taut-login", "rahasia-taut-123", "murid", siswa_id=sid)
+        basis.tambah_siswa(kon, "Telanjang")
+        h = web.halaman_akun(kon, section="siswa").decode()
+    assert "taut-login" in h
+    assert "belum ada login" in h
+
+
+def test_helper_akun_murid_dari_siswa(siap):
+    """Kebalikan siswa_dari_akun: siswa_id eksplisit menang, akun warisan
+    tanpa siswa_id dicocokkan lewat nama, siswa tanpa akun → None."""
+    import murid
+
+    with basis.buka(siap) as kon:
+        sid_taut = basis.tambah_siswa(kon, "Taut", pemilik="guru")
+        sandi.tambah_akun("taut-login", "rahasia-taut-123", "murid", siswa_id=sid_taut)
+        sid_warisan = basis.tambah_siswa(kon, "Warisan")
+        sandi.tambah_akun("Warisan", "rahasia-warisan-1", "murid")
+        sid_kosong = basis.tambah_siswa(kon, "Kosong")
+
+        assert murid.akun_murid_dari_siswa(kon, sid_taut) == "taut-login"
+        assert murid.akun_murid_dari_siswa(kon, sid_warisan) == "Warisan"
+        assert murid.akun_murid_dari_siswa(kon, sid_kosong) is None
+        assert murid.akun_murid_dari_siswa(kon, 999999) is None
+
+
 def test_halaman_akun_menjelaskan_kenapa_siswa_tidak_bisa_dihapus(siap):
     """Ketiadaan tombol hapus harus dijelaskan, bukan dibiarkan jadi teka-teki."""
     with basis.buka(siap) as kon:

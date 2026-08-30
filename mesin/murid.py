@@ -805,6 +805,28 @@ def siswa_dari_akun(kon, pengguna: str) -> int | None:
     return int(baris["id"]) if baris else None
 
 
+def akun_murid_dari_siswa(kon, siswa_id: int) -> str | None:
+    """Nama login akun murid yang terikat ke siswa ini, atau None.
+
+    Kebalikan siswa_dari_akun: siswa_id eksplisit menang, akun warisan
+    tanpa siswa_id dicocokkan lewat nama siswa seperti dulu.
+    """
+    baris = kon.execute(
+        "SELECT nama FROM siswa WHERE id = ?", (int(siswa_id),)
+    ).fetchone()
+    nama = baris["nama"].strip().lower() if baris else None
+    warisan = None
+    for a in sandi.muat_akun():
+        if a.get("peran") != "murid":
+            continue
+        if a.get("siswa_id") is not None:
+            if int(a["siswa_id"]) == int(siswa_id):
+                return a["pengguna"]
+        elif nama and a["pengguna"].strip().lower() == nama:
+            warisan = a["pengguna"]
+    return warisan
+
+
 # Pilihan cepat "Caraku" — dibaca bersama diagnosa.py.
 #
 # Kotak Caraku yang KOSONG membuat diagnosis mati: `diagnosa()` menandai

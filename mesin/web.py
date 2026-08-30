@@ -980,6 +980,20 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
     )
 
 
+def status_akun_latihan(kon, siswa_id: int) -> str:
+    """Sel status akun latihan untuk tabel siswa.
+
+    Nama login bila anaknya sudah punya akun, penanda jelas bila belum —
+    supaya jelas bahwa menghapus akun latihan tidak menghapus anaknya.
+    """
+    import murid as _murid
+
+    nama = _murid.akun_murid_dari_siswa(kon, siswa_id)
+    if nama:
+        return f'<span class="status-ok">{html.escape(nama)}</span>'
+    return '<span class="status-buruk">belum ada login</span>'
+
+
 def halaman_akun(
     kon,
     pesan: str = "",
@@ -1007,6 +1021,7 @@ def halaman_akun(
     if admin or section not in ("akun", "siswa", "akun-murid"):
         # Admin cuma punya satu section; nilai asing dari URL jatuh ke bawaan.
         section = "akun"
+
     daftar = "".join(
         f'<tr><td>{html.escape(s["nama"])}</td>'
         f'<td><form method="post" action="/akun" style="display:flex;gap:.4rem">'
@@ -1022,7 +1037,8 @@ def halaman_akun(
         f"Simpan</button></form></td>"
         f'<td class="angka">'
         f'{kon.execute("SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (s["id"],)).fetchone()["n"]}'
-        f"</td></tr>"
+        f"</td>"
+        f"<td>{status_akun_latihan(kon, s['id'])}</td></tr>"
         for s in basis.daftar_siswa(kon, None if peran == "admin" else pengguna)
     )
 
@@ -1065,7 +1081,7 @@ def halaman_akun(
         f'<div class="kartu-judul"><span class="ikon-kartu">📚</span>'
         f"<h2>Siswa</h2></div>"
         f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Tingkat</th>'
-        f"<th>Sesi</th></tr>{daftar}</table></div>"
+        f"<th>Sesi</th><th>Akun latihan</th></tr>{daftar}</table></div>"
         f'<form method="post" action="/akun" style="margin-top:.9rem">'
         f'<input type="hidden" name="aksi" value="siswa">'
         f'<div class="baris">'
