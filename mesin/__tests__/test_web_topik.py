@@ -106,6 +106,20 @@ def test_halaman_utama_menyediakan_pilihan_topik_dari_registry(db):
     assert 'value="pola-bilangan"' in isi
 
 
+def test_dropdown_menampilkan_nama_paket_bukan_id(db):
+    """Task 1.6: opsi berlabel Paket.nama, value tetap id paket."""
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "Pilih Nama Paket", "P5")
+        isi = web.halaman_utama(kon).decode()
+    # label = nama paket, value = id paket
+    assert '<option value="geometri-datar">Geometri Datar</option>' in isi
+    assert '<option value="pola-bilangan">Pola Bilangan</option>' in isi
+    assert '<option value="aritmetika-dasar">Aritmetika Dasar</option>' in isi
+    # id mentah tidak boleh tampil sebagai label
+    assert ">geometri-datar</option>" not in isi
+    assert ">pola-bilangan</option>" not in isi
+
+
 def test_siswa_p3_tidak_ditawari_dan_tidak_bisa_memilih_aritmetika(server):
     """Topik P5/P6 tidak boleh memicu error server untuk siswa P3."""
     with server.buka() as kon:

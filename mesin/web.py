@@ -111,7 +111,7 @@ def halaman_utama(kon) -> bytes:
     # pada kartu siswa P3 lalu gagal ketika form dikirim.
     for s in basis.daftar_siswa(kon):
         opsi_topik = "".join(
-            f'<option value="{html.escape(t)}">{html.escape(t)}</option>'
+            f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
             for t in _topik_untuk_level(s["tingkat"])
         )
         sesi = kon.execute(
