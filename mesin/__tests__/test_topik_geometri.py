@@ -100,6 +100,33 @@ def test_geometri_menolak_level_di_luar_scope():
         buat_soal("sudut_pelurus_berpenyiku", 7, level="P3", topik="geometri-datar")
 
 
+def test_geometri_level_teks_aneh_jatuh_ke_p4_bukan_p5():
+    """Data tingkat lama yang aneh memakai level pertama paket (P4)."""
+    aneh = buat_lembar(7, level="tingkat-lama", topik="geometri-datar")
+    p4 = buat_lembar(7, level="P4", topik="geometri-datar")
+    assert aneh.level == "P4"
+    assert aneh.tanda_tangan == p4.tanda_tangan
+
+
+def test_geometri_datar_memuat_sepuluh_template():
+    """Task 1.5: seluruh 10 template sudah terimplementasi."""
+    paket = _paket()
+    assert len(paket.templates) == 10
+    for nama in (
+        "sudut_pelurus_berpenyiku",
+        "jumlah_sudut_segitiga",
+        "sudut_luar_segitiga",
+        "keliling_luas_datar",
+        "luas_segitiga_jajargenjang",
+        "luas_segiempat_lain",
+        "lingkaran_keliling_luas",
+        "juring",
+        "luas_arsiran",
+        "perbandingan_ukuran",
+    ):
+        assert nama in paket.templates, nama
+
+
 # Level teks aneh -> P4 diuji di Task 1.5, saat seluruh template sudah
 # ada dan buat_lembar P4 bisa dibangun penuh.
 
@@ -378,6 +405,92 @@ def test_kelompok_lingkaran_sweep_tanpa_malrule_kosong(template_id, level):
     """Tiap soal lingkaran punya K dan H."""
     if template_id == "juring" and level == "P5":
         return  # #8 hanya P6
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="geometri-datar")
+        assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, (
+            f"{template_id}@{level}/{seed}"
+        )
+
+
+# ── Template arsiran & perbandingan ukuran (#9-#10) — Task 1.5 ─────────
+
+KELOMPOK_ARSIRAN = ("luas_arsiran", "perbandingan_ukuran")
+
+
+def test_luas_arsiran_bangun_pembungkus_dikurangi():
+    """#9: luas arsiran = bangun pembungkus − bagian dibuang."""
+    s = buat_soal("luas_arsiran", 7, level="P5", topik="geometri-datar")
+    p = s.parameter
+    assert p["varian"] in ("persegi_titik_tengah", "jalan_pinggir")
+    if p["varian"] == "persegi_titik_tengah":
+        # persegi sisi 2r memuat 4 × ¼ lingkaran (jari-jari r) → luas arsiran
+        # = (2r)² − πr²
+        val = (2 * p["r"]) ** 2 - 22 / 7 * p["r"] ** 2
+        expected = f"{val:.1f}".replace(".", ",") if val % 1 else str(int(val))
+        assert s.kunci == expected
+    else:
+        # jalan pinggir: persegi luar − persegi dalam, lebar jalan × 2
+        val = p["luar"] ** 2 - p["dalam"] ** 2
+        assert s.kunci == str(val)
+    jawaban = [m.jawaban for m in s.malrule]
+    kode = {m.kode for m in s.malrule}
+    assert s.kunci not in jawaban
+    assert len(jawaban) == len(set(jawaban))
+    assert {"K", "H"} <= kode, kode
+
+
+def test_luas_arsiran_malrule_konsep():
+    """#9: π salah pilih (H), d dikira r (K), lebar jalan hanya sekali (K)."""
+    for seed in range(1, 120):
+        s = buat_soal("luas_arsiran", seed, level="P5", topik="geometri-datar")
+        p = s.parameter
+        jawaban = {m.id: m.jawaban for m in s.malrule}
+        if p["varian"] == "jalan_pinggir":
+            assert "arsiran.lebar_hanya_sekali" in jawaban
+            assert "arsiran.kurang_satu" in jawaban
+            return
+    raise AssertionError("tidak ada satu pun soal jalan_pinggir dalam 120 seed")
+
+
+def test_perbandingan_ukuran_skala():
+    """#10: sisi ×k → keliling ×k, luas ×k², volume ×k³ (angka kecil)."""
+    s = buat_soal("perbandingan_ukuran", 7, level="P6", topik="geometri-datar")
+    p = s.parameter
+    assert p["varian"] in ("keliling", "luas", "volume")
+    if p["varian"] == "keliling":
+        assert s.kunci == str(p["k"] * p["ukuran"])
+    elif p["varian"] == "luas":
+        assert s.kunci == str(p["k"] ** 2 * p["ukuran"])
+    else:
+        assert s.kunci == str(p["k"] ** 3 * p["ukuran"])
+    jawaban = [m.jawaban for m in s.malrule]
+    kode = {m.kode for m in s.malrule}
+    assert s.kunci not in jawaban
+    assert len(jawaban) == len(set(jawaban))
+    assert {"K", "H"} <= kode, kode
+
+
+def test_perbandingan_malrule_konsep():
+    """#10: luas ikut ×k (K), tukar k²/k³ (K), kurang-1 (H)."""
+    for seed in range(1, 60):
+        s = buat_soal("perbandingan_ukuran", seed, level="P6", topik="geometri-datar")
+        p = s.parameter
+        jawaban = {m.id: m.jawaban for m in s.malrule}
+        assert "perbandingan.skala_salah" in jawaban
+        assert "perbandingan.kurang_satu" in jawaban
+        if p["varian"] == "luas":
+            assert "perbandingan.tukar_k_pangkat" in jawaban
+            return
+    raise AssertionError("tidak ada satu pun soal luas dalam 60 seed")
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_ARSIRAN)
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_kelompok_arsiran_sweep_tanpa_malrule_kosong(template_id, level):
+    """Tiap soal arsiran/perbandingan punya K dan H."""
+    if template_id == "perbandingan_ukuran" and level == "P5":
+        return  # #10 hanya P6
     for seed in range(1, 120):
         s = buat_soal(template_id, seed, level=level, topik="geometri-datar")
         assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"

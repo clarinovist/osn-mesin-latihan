@@ -706,6 +706,187 @@ def juring(varian: str, s: int, r: int) -> Soal:
     )
 
 
+def luas_arsiran(varian: str, **nilai: int) -> Soal:
+    """Luas arsiran = bangun pembungkus − bagian dibuang.
+
+    Dua varian dalam SATU template (plan #9):
+      - persegi_titik_tengah: persegi sisi 2r memuat 4 × ¼ lingkaran
+        (jari-jari r, berimpit di titik tengah sisi) → (2r)² − πr².
+        r kelipatan 7 → π=22/7 (kunci bulat).
+      - jalan_pinggir: persegi luar − persegi dalam (jalan mengelilingi);
+        lebar jalan = (luar−dalam)/2, dipakai dua kali.
+    """
+    if varian == "persegi_titik_tengah":
+        r = nilai["r"]
+        val = (2 * r) ** 2 - 22 / 7 * r * r
+        kunci = str(int(val))
+        # pakai diameter sebagai jari-jari → bagian dibuang jadi π·(2r)²
+        diam = (2 * r) ** 2 - 22 / 7 * (2 * r) ** 2
+        mal = [
+            Malrule(
+                "arsiran.pakai_diameter",
+                str(int(diam)),
+                "K",
+                "memakai diameter lingkaran sebagai jari-jari — bagian dibuang jadi π·(2r)²",
+            ),
+            Malrule(
+                "arsiran.pakai_pi_314",
+                f"{((2 * r) ** 2 - 3.14 * r * r):.1f}".replace(".", ","),
+                "H",
+                "memakai π=3,14 padahal r kelipatan 7 harus pakai 22/7",
+            ),
+            Malrule(
+                "arsiran.kurang_satu",
+                str(int(val) - 1),
+                "H",
+                "pengurangan luas benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Persegi bersisi {2 * r} cm memuat empat seperempat lingkaran "
+            f"berjari-jari {r} cm di tiap pojok (π = 22/7). "
+            f"Berapa luas daerah yang diarsir?"
+        )
+        param = {"varian": varian, "r": r}
+    else:
+        luar, dalam = nilai["luar"], nilai["dalam"]
+        kunci = str(luar * luar - dalam * dalam)
+        # jalan dihitung sekali (hanya satu sisi) → luas = luar² − (dalam+lebar)²
+        lebar = (luar - dalam) // 2
+        sekali = luar * luar - (dalam + lebar) ** 2
+        mal = [
+            Malrule(
+                "arsiran.lebar_hanya_sekali",
+                str(sekali),
+                "K",
+                "jalan dihitung sekali padahal mengelilingi — lebar jalan harus dipakai di dua sisi",
+            ),
+            Malrule(
+                "arsiran.jawab_selisih_sisi",
+                str(luar - dalam),
+                "B",
+                "menjawab selisih sisi luar dan dalam, bukan luas jalan",
+            ),
+            Malrule(
+                "arsiran.kurang_satu",
+                str(luar * luar - dalam * dalam - 1),
+                "H",
+                "pengurangan luas benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Sebuah jalan mengelilingi taman berbentuk persegi. Bagian luar "
+            f"jalan bersisi {luar} m dan bagian dalam bersisi {dalam} m. "
+            f"Berapa luas jalan itu?"
+        )
+        param = {"varian": varian, "luar": luar, "dalam": dalam}
+    return Soal(
+        "luas_arsiran",
+        param,
+        teks,
+        kunci,
+        saring_malrule(kunci, mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
+def perbandingan_ukuran(varian: str, k: int, ukuran: int) -> Soal:
+    """Sisi ×k → keliling ×k, luas ×k², volume ×k³ (angka kecil).
+
+    Hanya P6. Volume hanya sebagai kontras angka — konten volume penuh ada
+    di paket geometri-ruang (Fase 5). Plan #10: luas ikut ×k (K), tukar
+    k²/k³ (K), kurang-1 (H).
+    """
+    if varian == "keliling":
+        kunci = k * ukuran
+        mal = [
+            Malrule(
+                "perbandingan.skala_salah",
+                str(ukuran),
+                "K",
+                "menjawab ukuran mula-mula, tidak dikalikan skala",
+            ),
+            Malrule(
+                "perbandingan.tukar_pangkat",
+                str(k * k * ukuran),
+                "K",
+                "mengalikan keliling dengan k² padahal keliling hanya ×k",
+            ),
+            Malrule(
+                "perbandingan.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "perkalian skala benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Persegi sisinya diperbesar {k} kali lipat. Keliling semula "
+            f"{ukuran} cm. Berapa kelilingnya sekarang?"
+        )
+    elif varian == "luas":
+        kunci = k * k * ukuran
+        mal = [
+            Malrule(
+                "perbandingan.skala_salah",
+                str(k * ukuran),
+                "K",
+                "luas ikut ×k padahal luas mengikuti k²",
+            ),
+            Malrule(
+                "perbandingan.tukar_k_pangkat",
+                str(k * k * k * ukuran),
+                "K",
+                "memakai k³ untuk luas padahal luas hanya k²",
+            ),
+            Malrule(
+                "perbandingan.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "perkalian skala benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Persegi sisinya diperbesar {k} kali lipat. Luas semula "
+            f"{ukuran} cm². Berapa luasnya sekarang?"
+        )
+    else:
+        kunci = k * k * k * ukuran
+        mal = [
+            Malrule(
+                "perbandingan.skala_salah",
+                str(k * k * ukuran),
+                "K",
+                "volume ikut k² padahal volume mengikuti k³",
+            ),
+            Malrule(
+                "perbandingan.tukar_k_pangkat",
+                str(k * ukuran),
+                "K",
+                "memakai k untuk volume padahal volume mengikuti k³",
+            ),
+            Malrule(
+                "perbandingan.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "perkalian skala benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Kubus rusuknya diperbesar {k} kali lipat. Volume semula "
+            f"{ukuran} cm³. Berapa volumenya sekarang?"
+        )
+    return Soal(
+        "perbandingan_ukuran",
+        {"varian": varian, "k": k, "ukuran": ukuran},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
 REGISTRI_TOPIK = {
     "sudut_pelurus_berpenyiku": sudut_pelurus_berpenyiku,
     "jumlah_sudut_segitiga": jumlah_sudut_segitiga,
@@ -715,6 +896,8 @@ REGISTRI_TOPIK = {
     "luas_segiempat_lain": luas_segiempat_lain,
     "lingkaran_keliling_luas": lingkaran_keliling_luas,
     "juring": juring,
+    "luas_arsiran": luas_arsiran,
+    "perbandingan_ukuran": perbandingan_ukuran,
 }
 
 KOMPOSISI = {
@@ -883,6 +1066,19 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         # s dari himpunan OSN (7 nilai) x r (5..40) x 2 varian = 504 combo.
         r = rng.randint(5, 40)
         return {"varian": rng.choice(("luas_juring", "keliling_juring")), "s": rng.choice((30, 45, 60, 90, 120, 180, 270)), "r": r}
+    if template_id == "luas_arsiran":
+        if rng.random() < 0.3:
+            # persegi_titik_tengah: r kelipatan 7 supaya 22/7 (kunci bulat)
+            r = rng.choice((7, 14, 21, 28, 35))
+            return {"varian": "persegi_titik_tengah", "r": r}
+        # jalan_pinggir: dalam lebar (10..100) x lebar (2,4,...,20) = 910 combo
+        dalam = rng.randint(10, 100)
+        luar = dalam + rng.choice((2, 4, 6, 8, 10, 12, 14, 16, 18, 20))
+        return {"varian": "jalan_pinggir", "luar": luar, "dalam": dalam}
+    if template_id == "perbandingan_ukuran":
+        # k kecil (2,3,4,5) x ukuran lebar (1..30) x 3 varian = 360 combo
+        k = rng.choice((2, 3, 4, 5))
+        return {"varian": rng.choice(("keliling", "luas", "volume")), "k": k, "ukuran": rng.randint(1, 30)}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
