@@ -291,3 +291,96 @@ def test_kelompok_keliling_luas_sweep_tanpa_malrule_kosong(template_id, level):
         assert {"K", "H"} <= {m.kode for m in s.malrule}, (
             f"{template_id}@{level}/{seed}"
         )
+
+
+# ── Template lingkaran (#7-#8) — Task 1.4 ─────────────────────────────
+
+KELOMPOK_LINGKARAN = ("lingkaran_keliling_luas", "juring")
+
+
+def test_lingkaran_keliling_luas_maju():
+    """#7: K=2πr, L=πr²; dua arah, pi 22/7 atau 3,14."""
+    s = buat_soal("lingkaran_keliling_luas", 7, level="P5", topik="geometri-datar")
+    p = s.parameter
+    assert p["varian"] in ("keliling", "luas")
+    if p["r"] % 7 == 0:
+        # 22/7 → bulat
+        expected = str(2 * p["r"] * 22 // 7) if p["varian"] == "keliling" else str(p["r"] ** 2 * 22 // 7)
+        assert s.kunci == expected, f"{p=}, kunci={s.kunci}"
+    else:
+        # 3,14 → desimal 1 angka
+        val = 2 * 3.14 * p["r"] if p["varian"] == "keliling" else 3.14 * p["r"] ** 2
+        expected = f"{val:.1f}".replace(".", ",")
+        assert s.kunci == expected, f"{p=}, kunci={s.kunci}"
+    jawaban = [m.jawaban for m in s.malrule]
+    kode = {m.kode for m in s.malrule}
+    assert s.kunci not in jawaban
+    assert len(jawaban) == len(set(jawaban))
+    assert {"K", "H"} <= kode, kode
+
+
+def test_lingkaran_malrule_konsep():
+    """#7: pakai d di rumus luas (K), K=πr² (K), r/d tertukar (B)."""
+    for seed in range(1, 80):
+        s = buat_soal("lingkaran_keliling_luas", seed, level="P5", topik="geometri-datar")
+        p = s.parameter
+        jawaban = {m.id: m.jawaban for m in s.malrule}
+        if p["varian"] == "keliling":
+            assert "lingkaran.tukar_luas" in jawaban
+            assert "lingkaran.pakai_diameter" in jawaban
+            assert "lingkaran.kurang_satu" in jawaban
+            return
+        if p["varian"] == "luas":
+            assert "lingkaran.pakai_diameter" in jawaban
+            assert "lingkaran.tukar_keliling" in jawaban
+            assert "lingkaran.kurang_satu" in jawaban
+            return
+    raise AssertionError("varian keliling dan luas tidak muncul dalam 80 seed")
+
+
+def test_juring_luas_dan_keliling():
+    """#8: L=(s/360)πr²; keliling = busur + 2r."""
+    s = buat_soal("juring", 7, level="P6", topik="geometri-datar")
+    p = s.parameter
+    assert p["varian"] in ("luas_juring", "keliling_juring")
+    r_pi = 22 / 7 if p["r"] % 7 == 0 else 3.14
+    if p["varian"] == "luas_juring":
+        val = p["s"] / 360 * r_pi * p["r"] ** 2
+        expected = f"{val:.1f}".replace(".", ",") if val % 1 else str(int(val))
+        assert s.kunci == expected
+    else:
+        val = p["s"] / 360 * 2 * r_pi * p["r"] + 2 * p["r"]
+        expected = f"{val:.1f}".replace(".", ",") if val % 1 else str(int(val))
+        assert s.kunci == expected
+    jawaban = [m.jawaban for m in s.malrule]
+    kode = {m.kode for m in s.malrule}
+    assert s.kunci not in jawaban
+    assert len(jawaban) == len(set(jawaban))
+    assert {"K", "H"} <= kode, kode
+
+
+def test_juring_malrule_konsep():
+    """#8: lupa +2r (K), s/180 (K), pakai d (B)."""
+    s = buat_soal("juring", 11, level="P6", topik="geometri-datar")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    if p["varian"] == "luas_juring":
+        assert "juring.lupa_setengah_busur" in jawaban
+        assert "juring.pakai_s_180" in jawaban
+    else:
+        assert "juring.lupa_tambah_2r" in jawaban
+        assert "juring.pakai_diameter" in jawaban
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_LINGKARAN)
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_kelompok_lingkaran_sweep_tanpa_malrule_kosong(template_id, level):
+    """Tiap soal lingkaran punya K dan H."""
+    if template_id == "juring" and level == "P5":
+        return  # #8 hanya P6
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="geometri-datar")
+        assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, (
+            f"{template_id}@{level}/{seed}"
+        )

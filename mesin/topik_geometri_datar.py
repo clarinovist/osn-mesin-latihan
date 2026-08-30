@@ -542,6 +542,170 @@ def luas_segiempat_lain(varian: str, **nilai: int) -> Soal:
     )
 
 
+def lingkaran_keliling_luas(varian: str, r: int) -> Soal:
+    """K=2πr, L=πr²; π=22/7 bila r kelipatan 7, selain itu π=3,14.
+
+    Kunci desimal memakai koma ("153,86") — normalisasi di diagnosa.py
+    mengubah koma ke titik. Semua nilai malrule diformat sama dengan kunci
+    supaya jawaban anak yang salah benar-benar cocok dengan diagnosis.
+    """
+
+    def fmt(val: float) -> str:
+        if val % 1 == 0:
+            return str(int(val))
+        return f"{val:.1f}".replace(".", ",")
+
+    if r % 7 == 0:
+        pi_val = 22 / 7
+    else:
+        pi_val = 3.14
+
+    if varian == "keliling":
+        kunci = fmt(2 * pi_val * r)
+        mal = [
+            Malrule(
+                "lingkaran.tukar_luas",
+                fmt(pi_val * r * r),
+                "K",
+                "menghitung luas πr² padahal yang diminta keliling 2πr",
+            ),
+            Malrule(
+                "lingkaran.pakai_diameter",
+                fmt(2 * pi_val * (2 * r)),
+                "K",
+                "memakai diameter sebagai jari-jari — keliling 2π·(2r) bukan 2πr",
+            ),
+            Malrule(
+                "lingkaran.kurang_satu",
+                fmt(2 * pi_val * r - 1),
+                "H",
+                "langkah benar, hitungan meleset satu",
+            ),
+        ]
+        teks = (
+            f"Lingkaran berjari-jari {r} cm. "
+            f"{'(π = 22/7)' if r % 7 == 0 else '(π = 3,14)'} "
+            f"Berapa kelilingnya?"
+        )
+    else:
+        kunci = fmt(pi_val * r * r)
+        mal = [
+            Malrule(
+                "lingkaran.pakai_diameter",
+                fmt(pi_val * (2 * r) ** 2),
+                "K",
+                "memakai diameter sebagai jari-jari — luas π·(2r)² bukan πr²",
+            ),
+            Malrule(
+                "lingkaran.tukar_keliling",
+                fmt(2 * pi_val * r),
+                "K",
+                "menghitung keliling 2πr padahal yang diminta luas πr²",
+            ),
+            Malrule(
+                "lingkaran.kurang_satu",
+                fmt(pi_val * r * r - 1),
+                "H",
+                "langkah benar, hitungan meleset satu",
+            ),
+        ]
+        teks = (
+            f"Lingkaran berjari-jari {r} cm. "
+            f"{'(π = 22/7)' if r % 7 == 0 else '(π = 3,14)'} "
+            f"Berapa luasnya?"
+        )
+    return Soal(
+        "lingkaran_keliling_luas",
+        {"varian": varian, "r": r},
+        teks,
+        kunci,
+        saring_malrule(kunci, mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
+def juring(varian: str, s: int, r: int) -> Soal:
+    """Luas juring = (s/360)πr²; keliling juring = busur + 2r.
+
+    π=22/7 bila r kelipatan 7, selain itu π=3,14. Hanya level P6
+    (komposisi memuatnya di P6). s derajat sudut pusat dari himpunan
+    {30,45,60,90,120,180,270}.
+    """
+
+    def fmt(val: float) -> str:
+        if val % 1 == 0:
+            return str(int(val))
+        return f"{val:.1f}".replace(".", ",")
+
+    pi_val = 22 / 7 if r % 7 == 0 else 3.14
+
+    if varian == "luas_juring":
+        kunci = fmt(s / 360 * pi_val * r * r)
+        mal = [
+            Malrule(
+                "juring.lupa_setengah_busur",
+                fmt(pi_val * r * r),
+                "K",
+                "menghitung luas lingkaran penuh, bukan luas juring",
+            ),
+            Malrule(
+                "juring.pakai_s_180",
+                fmt(s / 180 * pi_val * r * r),
+                "K",
+                "menggunakan s/180 bukan s/360 — dua kali luas juring sebenarnya",
+            ),
+            Malrule(
+                "juring.kurang_satu",
+                fmt(s / 360 * pi_val * r * r - 1),
+                "H",
+                "langkah benar, hitungan meleset satu",
+            ),
+        ]
+        teks = (
+            f"Juring lingkaran berjari-jari {r} cm dengan sudut pusat {s}°. "
+            f"{'(π = 22/7)' if r % 7 == 0 else '(π = 3,14)'} "
+            f"Berapa luas juring itu?"
+        )
+    else:
+        kunci = fmt(s / 360 * 2 * pi_val * r + 2 * r)
+        busur = s / 360 * 2 * pi_val * r
+        mal = [
+            Malrule(
+                "juring.lupa_tambah_2r",
+                fmt(busur),
+                "K",
+                "hanya menghitung panjang busur, lupa menambah dua kali jari-jari",
+            ),
+            Malrule(
+                "juring.pakai_diameter",
+                fmt(s / 360 * 2 * pi_val * (2 * r)),
+                "K",
+                "memakai diameter sebagai jari-jari pada rumus busur",
+            ),
+            Malrule(
+                "juring.kurang_satu",
+                fmt(s / 360 * 2 * pi_val * r + 2 * r - 1),
+                "H",
+                "langkah benar, hitungan meleset satu",
+            ),
+        ]
+        teks = (
+            f"Juring lingkaran berjari-jari {r} cm dengan sudut pusat {s}°. "
+            f"{'(π = 22/7)' if r % 7 == 0 else '(π = 3,14)'} "
+            f"Berapa keliling juring itu?"
+        )
+    return Soal(
+        "juring",
+        {"varian": varian, "s": s, "r": r},
+        teks,
+        kunci,
+        saring_malrule(kunci, mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
 REGISTRI_TOPIK = {
     "sudut_pelurus_berpenyiku": sudut_pelurus_berpenyiku,
     "jumlah_sudut_segitiga": jumlah_sudut_segitiga,
@@ -549,6 +713,8 @@ REGISTRI_TOPIK = {
     "keliling_luas_datar": keliling_luas_datar,
     "luas_segitiga_jajargenjang": luas_segitiga_jajargenjang,
     "luas_segiempat_lain": luas_segiempat_lain,
+    "lingkaran_keliling_luas": lingkaran_keliling_luas,
+    "juring": juring,
 }
 
 KOMPOSISI = {
@@ -707,6 +873,16 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             d2 = rng.choice([x for x in range(4, 41, 2)])
         L = d1 * d2 // 2
         return {"varian": varian, "L": L, "d1": d1}
+    if template_id == "lingkaran_keliling_luas":
+        # r lebar (5..130) supaya guard variasi >= 200 kombinasi unik
+        # terpenuhi dari 500 seed (r ~126 nilai x 2 varian). r kelipatan 7
+        # otomatis memilih π=22/7 di template; sisanya π=3,14.
+        r = rng.randint(5, 130)
+        return {"varian": rng.choice(("keliling", "luas")), "r": r}
+    if template_id == "juring":
+        # s dari himpunan OSN (7 nilai) x r (5..40) x 2 varian = 504 combo.
+        r = rng.randint(5, 40)
+        return {"varian": rng.choice(("luas_juring", "keliling_juring")), "s": rng.choice((30, 45, 60, 90, 120, 180, 270)), "r": r}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
