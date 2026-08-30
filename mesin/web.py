@@ -52,6 +52,7 @@ PETA_SECTION_AKUN = {
     "siswa": "siswa",
     "anak_baru": "siswa",
     "tingkat": "siswa",
+    "siswa_hapus": "siswa",
     "akun_murid_tambah": "akun-murid",
     "akun_murid_hapus": "akun-murid",
     "akun_murid_sandi": "akun-murid",
@@ -1014,8 +1015,9 @@ def halaman_akun(
     test) melihat semuanya — perilaku lama.
 
     Sandi bisa diganti dari sini supaya sandi acak hasil deploy tidak jadi
-    satu-satunya yang pernah ada. Siswa sengaja tidak bisa dihapus dari
-    sini — penjelasannya ada di kartu Catatan, section siswa.
+    satu-satunya yang pernah ada. Siswa ber-riwayat sengaja tidak bisa
+    dihapus dari sini — penjelasannya ada di kartu Catatan, section
+    siswa; siswa tanpa riwayat boleh dihapus beserta akun latihannya.
     """
     admin = peran == "admin"
     if admin or section not in ("akun", "siswa", "akun-murid"):
@@ -1038,7 +1040,12 @@ def halaman_akun(
         f'<td class="angka">'
         f'{kon.execute("SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (s["id"],)).fetchone()["n"]}'
         f"</td>"
-        f"<td>{status_akun_latihan(kon, s['id'])}</td></tr>"
+        f"<td>{status_akun_latihan(kon, s['id'])}</td>"
+        f'<td><form method="post" action="/akun" style="display:inline-flex">'
+        f'<input type="hidden" name="aksi" value="siswa_hapus">'
+        f'<input type="hidden" name="siswa_id" value="{s["id"]}">'
+        f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus</button>'
+        f"</form></td></tr>"
         for s in basis.daftar_siswa(kon, None if peran == "admin" else pengguna)
     )
 
@@ -1081,7 +1088,7 @@ def halaman_akun(
         f'<div class="kartu-judul"><span class="ikon-kartu">📚</span>'
         f"<h2>Siswa</h2></div>"
         f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Tingkat</th>'
-        f"<th>Sesi</th><th>Akun latihan</th></tr>{daftar}</table></div>"
+        f"<th>Sesi</th><th>Akun latihan</th><th>Aksi</th></tr>{daftar}</table></div>"
         f'<form method="post" action="/akun" style="margin-top:.9rem">'
         f'<input type="hidden" name="aksi" value="siswa">'
         f'<div class="baris">'
@@ -1135,10 +1142,13 @@ def halaman_akun(
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu amber">💡</span>'
         f"<h2>Catatan</h2></div>"
-        f'<p class="sub">Siswa sengaja tidak bisa dihapus dari sini. Menghapus '
-        f"siswa ikut menghapus seluruh sesi, jawaban, dan diagnosisnya — "
-        f"riwayat yang tidak bisa dibangun ulang. Kalau seorang anak berhenti, "
-        f"biarkan saja datanya; ia tidak mengganggu apa pun.</p>"
+        f'<p class="sub">Siswa yang masih punya riwayat sesi sengaja tidak '
+        f"bisa dihapus: menghapusnya ikut memusnahkan seluruh sesi, "
+        f"jawaban, dan diagnosisnya — riwayat yang tidak bisa dibangun "
+        f"ulang. Kalau seorang anak berhenti, biarkan saja datanya; ia "
+        f"tidak mengganggu apa pun.</p>"
+        f'<p class="sub">Siswa tanpa riwayat (salah ketik atau data uji) '
+        f"boleh dihapus — akun latihannya ikut dihapus sekalian.</p>"
         f'<p class="sub">Cadangan basis data ditarik otomatis ke Mac tiap '
         f"malam pukul 22:00.</p></div>"
     )
@@ -1333,6 +1343,42 @@ def proses_akun(
             f"levelnya masing-masing; yang berubah hanya sesi berikutnya.",
             "",
         )
+
+    if aksi == "siswa_hapus":
+        # Pengaman riwayat: menghapus siswa = CASCADE menghapus seluruh
+        # sesi, jawaban, dan diagnosisnya. Yang sudah berriwayat sengaja
+        # tak bisa dihapus; yang kosong (salah ketik / data uji) boleh,
+        # dan akun latihannya ikut dihapus supaya tak ada anak yatim.
+        try:
+            siswa_id = int(data.get("siswa_id", ""))
+        except ValueError:
+            return "", "Siswa tidak dikenal."
+        baris = kon.execute(
+            "SELECT nama FROM siswa WHERE id = ?", (siswa_id,)
+        ).fetchone()
+        if not baris or (
+            peran != "admin"
+            and not basis.siswa_milik(kon, siswa_id, pengguna_kini)
+        ):
+            return "", "Siswa tidak dikenal."
+        nama = baris["nama"]
+        n_sesi = kon.execute(
+            "SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (siswa_id,)
+        ).fetchone()["n"]
+        if n_sesi:
+            return (
+                "",
+                f"{nama} masih punya {n_sesi} sesi. Siswa ber-riwayat "
+                f"sengaja tidak bisa dihapus — sesi, jawaban, dan "
+                f"diagnosisnya tidak bisa dibangun ulang.",
+            )
+        import murid as _murid
+
+        login = _murid.akun_murid_dari_siswa(kon, siswa_id)
+        if login:
+            sandi.hapus_akun(login)
+        kon.execute("DELETE FROM siswa WHERE id = ?", (siswa_id,))
+        return f"Siswa {nama} dihapus beserta akun latihannya.", ""
 
     if aksi == "akun_murid_tambah":
         nama_siswa = (data.get("nama") or "").strip()

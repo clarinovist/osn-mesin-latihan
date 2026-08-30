@@ -203,12 +203,72 @@ def test_helper_akun_murid_dari_siswa(siap):
         assert murid.akun_murid_dari_siswa(kon, 999999) is None
 
 
-def test_halaman_akun_menjelaskan_kenapa_siswa_tidak_bisa_dihapus(siap):
-    """Ketiadaan tombol hapus harus dijelaskan, bukan dibiarkan jadi teka-teki."""
+def test_section_siswa_memuat_hapus_dan_penjelasannya(siap):
+    """Tombol hapus ada, dan aturannya dijelaskan — bukan teka-teki."""
     with basis.buka(siap) as kon:
+        basis.tambah_siswa(kon, "Berhapus", pemilik="guru")
         h = web.halaman_akun(kon, section="siswa").decode()
+    assert 'value="siswa_hapus"' in h
     assert "tidak bisa dihapus" in h.lower()
     assert "riwayat" in h.lower()
+
+
+# ── Hapus siswa: hanya yang tanpa riwayat ───────────────────────────────
+
+
+def test_hapus_siswa_berriwayat_ditolak(siap):
+    """Riwayat sesi/jawaban/diagnosis tidak bisa dibangun ulang — hapus
+    harus gagal jelas, bukan diam-diam memusnahkan data."""
+    with basis.buka(siap) as kon:
+        sid = basis.tambah_siswa(kon, "Berriwayat", pemilik="guru")
+        basis.buat_sesi(kon, sid, seed=1)
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "siswa_hapus", "siswa_id": str(sid),
+        }, "guru")
+        sisa = kon.execute(
+            "SELECT COUNT(*) c FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()["c"]
+    assert not pesan
+    assert "tidak bisa dihapus" in galat.lower()
+    assert "riwayat" in galat.lower()
+    assert sisa == 1
+
+
+def test_hapus_siswa_tanpa_riwayat_beserta_akunnya(siap):
+    """Salah ketik / data uji harus bisa dibersihkan: siswa dan akun
+    latihannya hilang bersama, tanpa menyisakan anak yatim."""
+    with basis.buka(siap) as kon:
+        _, galat = web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "UjiHapus", "tingkat": "P3",
+            "sandi_anak": "sandi-uji-12345",
+        }, "guru")
+        assert galat == ""
+        sid = kon.execute(
+            "SELECT id FROM siswa WHERE nama='UjiHapus'"
+        ).fetchone()["id"]
+        pesan, galat = web.proses_akun(kon, {
+            "aksi": "siswa_hapus", "siswa_id": str(sid),
+        }, "guru")
+        sisa = kon.execute(
+            "SELECT COUNT(*) c FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()["c"]
+    assert not galat, galat
+    assert "dihapus" in pesan.lower()
+    assert sisa == 0
+    assert sandi.cari_akun("UjiHapus") is None
+
+
+def test_hapus_siswa_keluarga_lain_ditolak(siap):
+    with basis.buka(siap) as kon:
+        sid = basis.tambah_siswa(kon, "AnakA", pemilik="ortu-a")
+        _, galat = web.proses_akun(kon, {
+            "aksi": "siswa_hapus", "siswa_id": str(sid),
+        }, "ortu-b")
+        sisa = kon.execute(
+            "SELECT COUNT(*) c FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()["c"]
+    assert "tidak dikenal" in galat.lower()
+    assert sisa == 1
 
 
 def test_pesan_galat_di_escape(siap):
@@ -395,9 +455,10 @@ def test_admin_hanya_section_akun(siap):
 def test_peta_aksi_ke_section_lengkap():
     """Tiap aksi POST /akun harus punya section tujuan — hasil aksi tampil
     di tempat formnya, bukan melompat ke section bawaan."""
-    for aksi in ("sandi", "siswa", "anak_baru", "tingkat",
+    for aksi in ("sandi", "siswa", "siswa_hapus", "anak_baru", "tingkat",
                  "akun_murid_tambah", "akun_murid_hapus", "akun_murid_sandi"):
         assert aksi in web.PETA_SECTION_AKUN, f"aksi {aksi} tak dipetakan"
+    assert web.PETA_SECTION_AKUN["siswa_hapus"] == "siswa"
     assert web.PETA_SECTION_AKUN["siswa"] == "siswa"
     assert web.PETA_SECTION_AKUN["akun_murid_tambah"] == "akun-murid"
     assert web.PETA_SECTION_AKUN["sandi"] == "akun"
