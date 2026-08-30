@@ -19,6 +19,71 @@ def _teks_pecahan(nilai: Fraction) -> str:
     return f"{nilai.numerator}/{nilai.denominator}"
 
 
+def _kandidat_pecahan(penyebut: tuple[int, ...]) -> list[dict[str, int]]:
+    """Semua (n,d) yang menghasilkan soal pecahan dengan diagnosis sehat.
+
+    Syarat yang disaring di sini — hasil positif, hasil tidak bilangan
+    bulat, dan keempat jawaban (kunci + 3 malrule) saling berbeda —
+    menjaga `saring_malrule` tidak membuang satu jalur pun. Kalau sebuah
+    kombinasi parameter membuat K atau H bertabrakan dengan kunci, soal
+    yang dihasilkan kehilangan jalur diagnosis tanpa terlihat dari kode.
+
+    Konteks plan 30 Aug 2026 (Fase 0 Task 0.2): versi lama memilih dari 2
+    kombinasi hardcoded per level sehingga dua anak beda seed bisa dapat
+    soal identik. Sekarang rentangnya lebar dan divalidasi otomatis.
+    """
+    kandidat: list[dict[str, int]] = []
+    for d1 in penyebut:
+        for d2 in penyebut:
+            for d3 in penyebut:
+                if d1 + d2 == d3:
+                    continue  # penyebut malrule "terpisah" jadi nol
+                for n1 in range(1, d1):
+                    for n2 in range(1, d2):
+                        for n3 in range(1, d3):
+                            pertama = Fraction(n1, d1)
+                            kedua = Fraction(n2, d2)
+                            ketiga = Fraction(n3, d3)
+                            hasil = pertama + kedua - ketiga
+                            if hasil <= 0 or hasil.denominator == 1:
+                                continue  # hasil harus positif dan pecahan
+                            terpisah = Fraction(n1 + n2 - n3, d1 + d2 - d3)
+                            satu_unit = Fraction(1, math.lcm(d1, d2, d3))
+                            salah_hitung = hasil - satu_unit
+                            pertama_kedua = pertama + kedua
+                            jawaban = {
+                                _teks_pecahan(hasil),
+                                _teks_pecahan(terpisah),
+                                _teks_pecahan(salah_hitung),
+                                _teks_pecahan(pertama_kedua),
+                            }
+                            if len(jawaban) < 4:
+                                continue  # tabrakan — saring_malrule akan buang
+                            if (
+                                terpisah.denominator == 1
+                                or salah_hitung.denominator == 1
+                            ):
+                                continue  # anak menulis bilangan bulat, bukan pecahan
+                            kandidat.append(
+                                {
+                                    "n1": n1,
+                                    "d1": d1,
+                                    "n2": n2,
+                                    "d2": d2,
+                                    "n3": n3,
+                                    "d3": d3,
+                                }
+                            )
+    return kandidat
+
+
+# Dibangun sekali saat impor, lalu dipilih rng per soal. List tetap
+# deterministik (bukan hasil rng), jadi seed yang sama tetap menghasilkan
+# parameter yang sama persis.
+_KANDIDAT_PECAHAN_P5 = _kandidat_pecahan((2, 3, 4, 6))
+_KANDIDAT_PECAHAN_P6 = _kandidat_pecahan((3, 4, 5, 6, 8))
+
+
 def urutan_operasi_1(a: int, b: int, c: int, d: int, e: int) -> Soal:
     """Penjumlahan dan pengurangan dengan kali/bagi di tengah."""
     jawab = a + b // c * d - e
@@ -177,16 +242,14 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict[str, in
             "e": rng.randint(*batas_e),
         }
     if template_id == "fpb_dua_bilangan":
-        faktor = rng.choice((4, 6, 8, 9, 12) if level == "P5" else (12, 15, 18, 20, 24))
-        x, y = rng.sample((2, 3, 4, 5, 7), 2)
+        faktor = rng.choice(
+            (4, 6, 8, 9, 12, 15, 18) if level == "P5" else (12, 15, 18, 20, 24, 30, 36)
+        )
+        x, y = rng.sample(range(2, 12), 2)
         return {"a": faktor * x, "b": faktor * y}
     if template_id == "pecahan_operasi_campuran":
-        if level == "P5":
-            pilihan = ((2, 3, 3, 4, 1, 2), (1, 2, 2, 3, 1, 4))
-        else:
-            pilihan = ((3, 4, 5, 6, 1, 3), (2, 5, 3, 4, 1, 2))
-        n1, d1, n2, d2, n3, d3 = rng.choice(pilihan)
-        return {"n1": n1, "d1": d1, "n2": n2, "d2": d2, "n3": n3, "d3": d3}
+        kandidat = _KANDIDAT_PECAHAN_P5 if level == "P5" else _KANDIDAT_PECAHAN_P6
+        return dict(rng.choice(kandidat))
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
