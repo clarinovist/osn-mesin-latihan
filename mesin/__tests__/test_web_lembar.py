@@ -147,12 +147,18 @@ def test_dua_siswa_dapat_soal_berbeda(db):
     assert soal_a != soal_b
 
 
-def test_halaman_utama_menautkan_lembar_dan_tombol_sesi_baru(db):
+def test_halaman_utama_tautan_lembar_pindah_ke_halaman_sesi(db):
+    """Lembar soal/kunci cukup satu pintu: dari halaman sesi. Dashboard
+    yang menampilkan keduanya terasa redundant (umpan balik guru,
+    30 Aug 2026) — yang tersisa hanya link sesi + form sesi baru."""
     with basis.buka(db) as kon:
         sid = basis.tambah_siswa(kon, "Tautan")
         sesi_id = basis.buat_sesi(kon, sid, seed=42)
         h = web.halaman_utama(kon).decode()
+        hs = web.halaman_sesi(kon, sesi_id).decode()
 
-    assert f'href="/lembar/{sesi_id}"' in h
-    assert f'href="/lembar/{sesi_id}/penilaian"' in h
+    assert f'href="/lembar/{sesi_id}"' not in h
+    assert f'href="/lembar/{sesi_id}/penilaian"' not in h
+    assert f'href="/lembar/{sesi_id}"' in hs
+    assert f'href="/lembar/{sesi_id}/penilaian"' in hs
     assert f'action="/sesi-baru/{sid}"' in h
