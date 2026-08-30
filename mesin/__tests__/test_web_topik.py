@@ -319,3 +319,88 @@ def test_alur_guru_murid_jawab_laporan_bertopik(server):
     assert kode == 200
     assert "<th>Topik</th>" in isi
     assert "pola-bilangan" in isi
+
+
+# ── E2E geometri-datar (Task 1.7) ─────────────────────────────────────
+
+
+def test_siswa_p5_melihat_geometri_datar_di_dropdown(server):
+    """P5 melihat opsi Geometri Datar di dropdown."""
+    with server.buka() as kon:
+        basis.tambah_siswa(kon, "P5 Geo", "P5")
+        isi = web.halaman_utama(kon).decode()
+    assert 'value="geometri-datar"' in isi
+    assert "Geometri Datar" in isi
+
+
+def test_siswa_p3_tidak_melihat_geometri_datar(server):
+    """P3 tidak melihat opsi Geometri Datar di dropdown."""
+    with server.buka() as kon:
+        basis.tambah_siswa(kon, "P3 Geo", "P3")
+        isi = web.halaman_utama(kon).decode()
+    assert 'value="geometri-datar"' not in isi
+
+
+def test_siswa_p5_bisa_membuat_sesi_geometri_datar(server):
+    """POST /sesi-baru geometri-datar → sesi tersimpan, lembar valid."""
+    with server.buka() as kon:
+        siswa_id = basis.tambah_siswa(kon, "Sesi Geo", "P5")
+
+    kode, isi, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "geometri-datar"},
+    )
+    assert kode == 200
+    assert "Sesi #" in isi
+
+    with server.buka() as kon:
+        sesi = kon.execute(
+            "SELECT id, topik FROM sesi WHERE siswa_id = ? ORDER BY id DESC LIMIT 1",
+            (siswa_id,),
+        ).fetchone()
+        assert sesi["topik"] == "geometri-datar"
+        n_soal = len(basis.isi_sesi(kon, sesi["id"]))
+        # P5 = 10 soal (komposisi tabel plan)
+        assert n_soal == 10, f"P5 geometri punya {n_soal} soal, expected 10"
+
+
+def test_alur_geometri_datar_guru_murid_laporan(server):
+    """Alur penuh geometri lewat socket: dropdown, sesi, murid, laporan."""
+    with server.buka() as kon:
+        siswa_id = basis.tambah_siswa(kon, "feby", "P5")
+
+    # dropdown memuat geometri-datar untuk P5
+    with server.buka() as kon:
+        isi = web.halaman_utama(kon).decode()
+    assert 'value="geometri-datar"' in isi
+
+    # buat sesi geometri
+    kode, isi, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "geometri-datar"},
+    )
+    assert kode == 200
+
+    with server.buka() as kon:
+        sesi_id = kon.execute(
+            "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC LIMIT 1",
+            (siswa_id,),
+        ).fetchone()["id"]
+        # Judul lembar diketik oleh paket
+        lembar = web.halaman_lembar(kon, sesi_id)
+        assert lembar is not None
+        assert "Latihan Geometri Datar" in lembar.decode()
+
+    # halaman murid
+    kode, isi, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}", auth=("feby", SANDI_MURID)
+    )
+    assert kode == 200
+    assert "Latihan Geometri Datar" in isi
+
+    # laporan guru
+    kode, isi, _ = server.minta(f"/laporan/{siswa_id}", auth=("guru", SANDI_GURU))
+    assert kode == 200
+    assert "geometri-datar" in isi
