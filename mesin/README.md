@@ -14,7 +14,8 @@ python3 -m venv .venv
 
 ## Dipakai lewat website (cara utama)
 
-**https://<domain-anda>** — pengguna `guru`.
+**https://<domain-anda>** — akun `guru` (orang tua) atau `admin`
+(pengelola).
 
 Semuanya dari satu tempat, tidak perlu terminal:
 
@@ -98,7 +99,7 @@ Tautan **"Akun & siswa"** di halaman utama:
 - **Ganti sandi** — minimal 12 karakter, perlu sandi lama. Ganti sandi acak
   bawaan deploy dengan yang kamu ingat.
 - **Tambah siswa** — tanpa SSH. Pakai nama panggilan atau inisial, bukan
-  nama lengkap.
+  nama lengkap. Anak yang kamu buat otomatis jadi milik keluargamu.
 
 Siswa sengaja tidak bisa dihapus: menghapusnya ikut menghapus seluruh sesi,
 jawaban, dan diagnosisnya. Kalau seorang anak berhenti, biarkan saja
@@ -106,6 +107,41 @@ datanya — tidak mengganggu apa pun.
 
 Untuk pemasangan lokal di Mac, daftar awal ada di `SISWA` pada
 `siapkan_db.py` (aman dijalankan ulang).
+
+### Tiga peran (multi-keluarga)
+
+Aplikasi ini sekarang dipakai beberapa keluarga. Setiap akun di
+`sandi.json` punya salah satu dari tiga peran:
+
+- **admin** — pengelola produk: melihat SEMUA keluarga dan membuatkan akun
+  orang tua di **/admin** (orang lain ditolak di pintu). Admin bukan
+  pengganti guru — dia pengawas dan pembuat akun; detail anak tetap dibuka
+  lewat dashboard, bukan dari panel itu.
+- **guru** — orang tua: hanya melihat anak yang jadi miliknya. Keluarga
+  lain tidak lewat di matamu — bukan disembunyikan setengah-setengah,
+  memang tidak ada di datamu.
+- **murid** — anak: terikat ke satu siswa lewat `siswa_id` di akunnya,
+  jadi nama login boleh berbeda dari nama tampilan anak.
+
+Di topbar dashboard ada badge peran: **Pengelola** (admin) atau
+**Orang Tua** (guru).
+
+Kepemilikan tertulis di kolom `siswa.pemilik` — username orang tuanya.
+Guru membaca `WHERE pemilik = username-nya`; admin tanpa filter. Baris
+ber-pemilik kosong itu warisan lama dan hanya terlihat admin. Kalau belum
+ada admin, `sajikan.py` saat startup mempromosikan akun guru PERTAMA jadi
+admin lalu membubuhkan namanya ke semua siswa warisan — otomatis,
+idempoten, tanpa menyunting `sandi.json` lewat tangan.
+
+Nama siswa kini unik per keluarga, bukan global: dua keluarga boleh
+sama-sama punya "Bima". Nama akun (login) tetap unik global — kalau
+tabrakan, pakai variasi nama.
+
+Rute guru yang ber-id (sesi, laporan, lembar, lampiran, cerita) menolak
+milik orang lain dengan **404**, bukan 403 — keberadaan id orang lain
+bukan informasi yang boleh bocor. Orang tua baru boleh daftar sendiri di
+**/daftar**; itu tetap terbuka justru karena isolasinya — pendaftar baru
+melihat nol data keluarga mana pun.
 
 ## Cetak ulang lembar yang hilang
 
@@ -131,12 +167,12 @@ seed, jadi selalu sama persis.
 | `cetak.py` | render HTML lembar soal & penilaian |
 | `render.py` + `gaya_layar.py` + `gaya_cetak.py` | satu sumber render, dua tampilan (layar & cetak) |
 | `buat_lembar.py` | perintah cetak |
-| `web.py` | halaman guru & murid + rute lembar |
+| `web.py` | halaman guru/murid/admin + rute lembar |
 | `murid.py` | halaman kerja murid — tanpa kunci/malrule/diagnosis (palang test) |
 | `llm.py` | klien DeepSeek untuk variasi cerita — gagal-diam tanpa key |
 | `sesi.py` | sesi cookie (berkas JSON atomik, TTL 14 hari, rate-limit) |
-| `sandi.py` | palang sandi, akun ber-peran guru/murid |
-| `sajikan.py` | menjalankan server |
+| `sandi.py` | palang sandi, akun ber-peran admin/guru/murid |
+| `sajikan.py` | menjalankan server + bootstrap admin |
 | `cadangkan.sh` | tarik cadangan basis data dari VPS ke Mac |
 | `Dockerfile` | container untuk VPS |
 
@@ -240,3 +276,11 @@ backup sebelum patch: `/root/osn-deploy.bak.<tanggal>`.
 
 - **Data anak tidak masuk git.** `latihan.db` dan `lembar/` diblokir
   .gitignore.
+
+- **Variasi cerita menulis ke bank soal bersama.** Baris `soal` di-share
+  antar keluarga (dedup per tanda tangan), jadi kalau dua keluarga kebetulan
+  dapat sesi ber-seed identik dan salah satunya menekan "variasi cerita",
+  teks kalimat di lembar keluarga lain ikut berubah — angka, kunci, dan
+  diagnosis tidak. Perbaikan yang benar (cerita per `sesi_soal`) butuh
+  migrasi sendiri. Selain itu, POST `/daftar` masih mengungkap keberadaan
+  username yang sudah dipakai — perilaku lama, risikonya enumerasi akun.
