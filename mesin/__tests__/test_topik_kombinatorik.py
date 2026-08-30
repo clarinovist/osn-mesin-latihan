@@ -9,6 +9,7 @@ inklusi-eksklusi).
 
 from __future__ import annotations
 
+import math  # noqa: E402
 import sys
 from pathlib import Path
 
@@ -202,4 +203,88 @@ def test_kelompok_susun_sweep_tanpa_malrule_kosong(template_id, level):
         assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"
         assert {"K", "H"} <= {m.kode for m in s.malrule}, (
             f"{template_id}@{level}/{seed}"
+        )
+
+
+# ── Template permutasi & kombinasi (#5-#7) — Task 2.3 ─────────────────
+
+KELOMPOK_PERMUTASI = ("permutasi_urutan", "permutasi_blok", "kombinasi_pilih")
+
+
+def _enumerasi_permutasi(hingga_n: int, r: int) -> int:
+    """P(n,r) dengan enumerasi (sumber kebenaran)."""
+    import itertools
+
+    return sum(1 for _ in itertools.permutations(range(hingga_n), r))
+
+
+def test_permutasi_urutan_kunci_dan_malrule():
+    """#5: P(n,r) = n!/(n−r)! — urutan penting."""
+    s = buat_soal("permutasi_urutan", 7, level="P6", topik="kombinatorik")
+    p = s.parameter
+    expected = _enumerasi_permutasi(p["n"], p["r"])
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_permutasi_urutan_malrule_konsep():
+    """#5: kombinasi tertukar (K), boleh ulang (K), kurang_satu (H)."""
+    s = buat_soal("permutasi_urutan", 11, level="P6", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["permutasi.tertukar_kombinasi"] == str(math.comb(p["n"], p["r"]))
+    assert "permutasi.boleh_ulang" in jawaban
+    assert "permutasi.kurang_satu" in jawaban
+
+
+def test_permutasi_blok_kunci_dan_malrule():
+    """#6: n benda, k berdampingan → (n−k+1)!×k!."""
+    s = buat_soal("permutasi_blok", 7, level="P6", topik="kombinatorik")
+    p = s.parameter
+    expected = math.factorial(p["n"] - p["k"] + 1) * math.factorial(p["k"])
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_permutasi_blok_malrule_konsep():
+    """#6: hanya blok (K), hanya isi blok (K), kurang_satu (H)."""
+    s = buat_soal("permutasi_blok", 11, level="P6", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert "blok.abaikan_isi_blok" in jawaban
+    assert "blok.hanya_isi_blok" in jawaban
+    assert "blok.kurang_satu" in jawaban
+
+
+def test_kombinasi_pilih_kunci_dan_malrule():
+    """#7: C(n,r) = n!/(r!(n−r)!) — urutan tidak penting."""
+    s = buat_soal("kombinasi_pilih", 7, level="P6", topik="kombinatorik")
+    p = s.parameter
+    assert s.kunci == str(math.comb(p["n"], p["r"])), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_kombinasi_malrule_konsep():
+    """#7: permutasi tertukar (K), 2^n dikira (K), kurang_satu (H)."""
+    s = buat_soal("kombinasi_pilih", 11, level="P6", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["kombinasi.tertukar_permutasi"] == str(
+        math.perm(p["n"], p["r"])
+    )
+    assert "kombinasi.dikira_2_pangkat" in jawaban
+    assert "kombinasi.kurang_satu" in jawaban
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_PERMUTASI)
+def test_kelompok_permutasi_sweep_tanpa_malrule_kosong(template_id):
+    """Tiap soal permutasi/kombinasi punya K dan H (P6)."""
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level="P6", topik="kombinatorik")
+        assert s.malrule, f"{template_id}/{seed} malrule kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, (
+            f"{template_id}/{seed}"
         )

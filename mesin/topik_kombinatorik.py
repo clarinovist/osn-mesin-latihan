@@ -100,6 +100,12 @@ def _angka_ke_bil(angka: tuple[int, ...]) -> int:
     return int("".join(str(d) for d in angka))
 
 
+def _nama_objek(rng: random.Random, n: int) -> list[str]:
+    """n nama acak dari himpunan {A..V} untuk variasi guard 200."""
+    huruf = [chr(ord("A") + i) for i in range(22)]
+    return sorted(rng.sample(huruf, n))
+
+
 def _enumerasi_bilangan(
     angka: tuple[int, ...], panjang: int, syarat
 ) -> int:
@@ -276,11 +282,141 @@ def susun_bilangan_syarat(varian: str, angka: tuple[int, ...], N: int | None = N
     )
 
 
+# ── Bagian C — Permutasi & kombinasi ───────────────────────────────────
+
+
+def permutasi_urutan(n: int, r: int, objek: list[str]) -> Soal:
+    """P(n,r) = n!/(n−r)!. objek adalah daftar n benda berbeda."""
+    kunci = math.perm(n, r)
+    mal = [
+        Malrule(
+            "permutasi.tertukar_kombinasi",
+            str(math.comb(n, r)),
+            "K",
+            f"menghitung kombinasi C({n},{r}) padahal urutan penting (permutasi)",
+        ),
+        Malrule(
+            "permutasi.boleh_ulang",
+            str(n**r),
+            "K",
+            f"benda boleh dipakai berulang — padahal tiap benda hanya sekali",
+        ),
+        Malrule(
+            "permutasi.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan permutasi benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Dari {', '.join(objek[:-1])} dan {objek[-1]} "
+        f"({n} orang berbeda), akan dipilih {r} orang untuk menempati "
+        f"posisi pertama, kedua, dan seterusnya secara berurutan. "
+        f"Berapa banyak cara susunan yang mungkin?"
+    )
+    return Soal(
+        "permutasi_urutan",
+        {"n": n, "r": r, "objek": objek},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
+def permutasi_blok(n: int, k: int, objek: list[str]) -> Soal:
+    """n benda, k harus berdampingan → (n−k+1)!·k!.
+
+    objek adalah daftar n benda berbeda; k benda pertama disebut
+    sebagai benda yang harus berdampingan.
+    """
+    kunci = math.factorial(n - k + 1) * math.factorial(k)
+    mal = [
+        Malrule(
+            "blok.abaikan_isi_blok",
+            str(math.factorial(n - k + 1)),
+            "K",
+            f"{k} benda dalam blok dianggap tidak bisa diubah urutannya",
+        ),
+        Malrule(
+            "blok.hanya_isi_blok",
+            str(math.factorial(k)),
+            "K",
+            "hanya menghitung urutan dalam blok, lupa bloknya ikut disusun",
+        ),
+        Malrule(
+            "blok.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan blok benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Ada {n} buku berbeda ({', '.join(objek[:-1])} "
+        f"dan {objek[-1]}) akan disusun berjajar di rak. "
+        f"{' dan '.join(objek[:k])} harus berdampingan. "
+        f"Berapa banyak cara susunan yang mungkin?"
+    )
+    return Soal(
+        "permutasi_blok",
+        {"n": n, "k": k, "objek": objek},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
+def kombinasi_pilih(n: int, r: int, objek: list[str]) -> Soal:
+    """C(n,r) = n!/(r!(n−r)!). objek = n benda berbeda."""
+    kunci = math.comb(n, r)
+    mal = [
+        Malrule(
+            "kombinasi.tertukar_permutasi",
+            str(math.perm(n, r)),
+            "K",
+            f"menghitung permutasi P({n},{r}) padahal urutan tidak penting",
+        ),
+        Malrule(
+            "kombinasi.dikira_2_pangkat",
+            str(2**n),
+            "K",
+            f"menghitung 2^{n} (semua himpunan bagian) padahal hanya pilih {r}",
+        ),
+        Malrule(
+            "kombinasi.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan kombinasi benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Dari {', '.join(objek[:-1])} dan {objek[-1]} "
+        f"({n} orang berbeda), akan dipilih {r} orang untuk menjadi "
+        f"anggota tim (urutan tidak penting). "
+        f"Berapa banyak cara memilih tim?"
+    )
+    return Soal(
+        "kombinasi_pilih",
+        {"n": n, "r": r, "objek": objek},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
 REGISTRI_TOPIK = {
     "aturan_tambah": aturan_tambah,
     "aturan_kali": aturan_kali,
     "susun_bilangan": susun_bilangan,
     "susun_bilangan_syarat": susun_bilangan_syarat,
+    "permutasi_urutan": permutasi_urutan,
+    "permutasi_blok": permutasi_blok,
+    "kombinasi_pilih": kombinasi_pilih,
 }
 
 KOMPOSISI = {
@@ -375,6 +511,24 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
                 break
         N = d * 10 ** (n - 1)
         return {"varian": "lebih_dari", "angka": list(digit), "N": N}
+    if template_id == "permutasi_urutan":
+        # n orang dengan nama acak (variasi ruang untuk guard 200),
+        # r dipilih supaya P(n,r) beda dari C dan 2^n.
+        n = rng.randint(4, 10)
+        r = rng.randint(2, min(5, n - 1))
+        nama = _nama_objek(rng, n)
+        return {"n": n, "r": r, "objek": nama}
+    if template_id == "permutasi_blok":
+        # n buku, k (2..3) harus berdampingan; nama acak untuk variasi.
+        n = rng.randint(4, 8)
+        k = rng.randint(2, min(3, n - 1))
+        nama = _nama_objek(rng, n)
+        return {"n": n, "k": k, "objek": nama}
+    if template_id == "kombinasi_pilih":
+        n = rng.randint(4, 12)
+        r = rng.randint(2, min(5, n - 1))
+        nama = _nama_objek(rng, n)
+        return {"n": n, "r": r, "objek": nama}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
