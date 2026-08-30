@@ -105,7 +105,7 @@ def _topik_untuk_level(level: str) -> list[str]:
     ]
 
 
-def halaman_utama(kon) -> bytes:
+def halaman_utama(kon, pesan: str = "") -> bytes:
     baris = []
     # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
     # pada kartu siswa P3 lalu gagal ketika form dikirim.
@@ -179,6 +179,8 @@ def halaman_utama(kon) -> bytes:
         '<a href="/akun">Buat siswa</a> dari halaman Akun &amp; Siswa.</div>'
     )
 
+    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
+
     return _halaman(
         T.NAMA_PRODUK,
         f'<div class="topbar">'
@@ -191,6 +193,7 @@ def halaman_utama(kon) -> bytes:
         f"<h1>{T.NAMA_PRODUK} — Latihan Matematika SD</h1>"
         f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
         f"untuk melihat tren.</p>"
+        f"{kabar}"
         f'<div class="grid-utama">{isi_utama}</div>'
         f'<script>'
         f'(function(){{'
@@ -249,6 +252,58 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
     return (
         f'<div class="kartu kartu-variasi"><h2>Variasi cerita ✨</h2>'
         f'<p class="sub">{catatan}</p>{tombol}</div>'
+    )
+
+
+def halaman_konfirmasi_hapus(kon, sesi_id: int) -> bytes | None:
+    """Halaman konfirmasi sebelum menghapus sesi (dua langkah, tanpa JS).
+
+    Peringatannya menyebut angka NYATA sesi ini — berapa jawaban, diagnosis,
+    dan foto yang ikut hilang. Tanpa angka, "hapus" terasa ringan; dengan
+    angka, keputusannya sadar. Mengembalikan None bila sesi tidak ada.
+    """
+    info = kon.execute(
+        """SELECT s.id, s.tanggal, s.level, s.topik, w.nama
+           FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
+        (sesi_id,),
+    ).fetchone()
+    if not info:
+        return None
+
+    def _hitung(sql: str) -> int:
+        return kon.execute(sql, (sesi_id,)).fetchone()[0]
+
+    n_jawaban = _hitung(
+        """SELECT COUNT(*) FROM jawaban j
+           JOIN sesi_soal ss ON ss.id = j.sesi_soal_id WHERE ss.sesi_id = ?"""
+    )
+    n_diagnosis = _hitung(
+        """SELECT COUNT(*) FROM diagnosis d
+           JOIN jawaban j ON j.id = d.jawaban_id
+           JOIN sesi_soal ss ON ss.id = j.sesi_soal_id WHERE ss.sesi_id = ?"""
+    )
+    n_foto = _hitung("SELECT COUNT(*) FROM lampiran WHERE sesi_id = ?")
+
+    return _halaman(
+        f"Hapus sesi #{sesi_id}?",
+        f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Batal, kembali ke sesi</a></div>'
+        f"<h1>Hapus sesi #{sesi_id}?</h1>"
+        f'<div class="kartu">'
+        f'<p>Sesi <b>#{sesi_id}</b> milik <b>{html.escape(info["nama"])}</b> '
+        f'&middot; {info["tanggal"]} &middot; {_ambil(info, "level", LEVEL_BAWAAN)} '
+        f'&middot; {_ambil(info, "topik", TOPIK_BAWAAN)}</p>'
+        f"<p>Yang ikut hilang bersama sesi ini:</p>"
+        f"<ul><li><b>{n_jawaban} jawaban</b></li>"
+        f"<li><b>{n_diagnosis} diagnosis</b></li>"
+        f"<li><b>{n_foto} foto</b> lembar</li></ul>"
+        f'<div class="pesan galat">Tindakan ini <b>tidak bisa dibatalkan</b>. '
+        f"Riwayat diagnosis tidak bisa dibangun ulang.</div>"
+        f'<form method="post" action="/sesi/{sesi_id}/hapus" '
+        f'style="margin-top:.9rem;display:flex;gap:.6rem;align-items:center">'
+        f'<input type="hidden" name="konfirmasi" value="1">'
+        f'<button type="submit" class="tombol-hapus">Ya, hapus sesi ini</button>'
+        f'<a href="/sesi/{sesi_id}">Batal</a>'
+        f"</form></div>",
     )
 
 
@@ -380,6 +435,9 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
         f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
         f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
+        f'<form method="get" action="/sesi/{sesi_id}/hapus" style="margin:.4rem 0">'
+        f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus sesi</button>'
+        f"</form>"
         f"{kabar}"
         f"{_tombol_cerita(kon, sesi_id)}"
         f"{blok_lampiran}"
@@ -1269,8 +1327,12 @@ class Penangan(BaseHTTPRequestHandler):
             # data anak, tapi tetap tidak boleh ditampilkan ke murid.
             if self._peran_saya() == "guru":
                 try:
+                    q = urllib.parse.parse_qs(
+                        urllib.parse.urlparse(self.path).query
+                    )
+                    pesan = (q.get("pesan") or [""])[0]
                     with basis.buka() as kon:
-                        return self._kirim(halaman_utama(kon))
+                        return self._kirim(halaman_utama(kon, pesan=pesan))
                 except Exception:
                     pass  # DB bermasalah -> landing saja, jangan 500 mentah
             from landing import halaman_landing
@@ -1304,6 +1366,15 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                     if isi:
                         return self._kirim(isi)
+                if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
+                    isi = halaman_konfirmasi_hapus(
+                        kon, int(jalur.split("/")[2])
+                    )
+                    if isi is None:
+                        return self._kirim(
+                            _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
+                        )
+                    return self._kirim(isi)
                 if jalur.startswith("/sesi/"):
                     return self._kirim(halaman_sesi(kon, int(jalur.split("/")[2])))
                 if jalur.startswith("/laporan/"):
@@ -1726,6 +1797,42 @@ class Penangan(BaseHTTPRequestHandler):
                 )
             self.send_response(303)
             self.send_header("Location", f"/lampiran/{lid}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
+            try:
+                sesi_id = int(jalur.split("/")[2])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            data = urllib.parse.parse_qs(
+                self.rfile.read(panjang).decode("utf-8"),
+                keep_blank_values=True,
+            )
+            if (data.get("konfirmasi") or [""])[0] != "1":
+                # Tanpa konfirmasi = hanya melihat halaman peringatan lagi.
+                # Sesi tidak disentuh sama sekali.
+                with basis.buka() as kon:
+                    isi = halaman_konfirmasi_hapus(kon, sesi_id)
+                if isi is None:
+                    return self._kirim(
+                        _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
+                    )
+                return self._kirim(isi)
+            with basis.buka() as kon:
+                dihapus = basis.hapus_sesi(kon, sesi_id)
+            if not dihapus:
+                return self._kirim(
+                    _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
+                )
+            # Berkas foto tidak diurus DB — dibuang di sini, SETELAH baris
+            # DB benar-benar hilang supaya tidak ada foto yatim sebaliknya.
+            lampiran_mod.bersihkan_berkas(sesi_id)
+            tujuan = urllib.parse.urlencode({"pesan": f"Sesi {sesi_id} dihapus."})
+            self.send_response(303)
+            self.send_header("Location", f"/?{tujuan}")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
