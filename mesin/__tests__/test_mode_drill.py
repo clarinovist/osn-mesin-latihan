@@ -146,7 +146,7 @@ def test_buat_sesi_seed_baru_drill_via_web(db):
 def test_form_buat_sesi_memuat_pilihan_mode_dan_timer(db):
     """Halaman utama guru: radio Diagnosa/Latihan Cepat + timer fields."""
     with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "AnakUji")
+        basis.tambah_siswa(kon, "AnakUji", pemilik="guru")
         html = web.halaman_utama(kon).decode()
         assert 'name="mode"' in html
         assert 'value="diagnostik"' in html
@@ -167,7 +167,7 @@ def test_http_buat_sesi_drill_dengan_timer(server):
     """POST /sesi-baru/<id> dengan mode=drill + timer -> sesi drill."""
     db = server.db
     with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "AnakUji")
+        basis.tambah_siswa(kon, "AnakUji", pemilik="guru")
         sid = kon.execute("SELECT id FROM siswa WHERE nama = 'AnakUji'").fetchone()[0]
     kode, html, _ = server.minta(
         f"/sesi-baru/{sid}",
@@ -195,7 +195,7 @@ def test_http_buat_sesi_mode_asing_ditolak(server):
     """Mode asing -> 400 dengan pesan jelas."""
     db = server.db
     with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "AnakUji")
+        basis.tambah_siswa(kon, "AnakUji", pemilik="guru")
         sid = kon.execute("SELECT id FROM siswa WHERE nama = 'AnakUji'").fetchone()[0]
     kode, html, _ = server.minta(
         f"/sesi-baru/{sid}",
@@ -210,7 +210,7 @@ def test_http_buat_sesi_timer_mode_asing_ditolak(server):
     """Timer mode asing -> 400."""
     db = server.db
     with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "AnakUji")
+        basis.tambah_siswa(kon, "AnakUji", pemilik="guru")
         sid = kon.execute("SELECT id FROM siswa WHERE nama = 'AnakUji'").fetchone()[0]
     kode, html, _ = server.minta(
         f"/sesi-baru/{sid}",
@@ -398,7 +398,7 @@ def test_http_drill_alur_penuh_tanpa_kode_N(server):
     """Guru buat sesi drill -> murid jawab tanpa cara (via HP) ->
     guru buka halaman sesi -> tidak ada kode N (menebak)."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "feby")  # nama == akun murid uji
+        siswa_id = basis.tambah_siswa(kon, "feby", pemilik="guru")  # nama == akun murid uji
 
     # Guru buat sesi drill via POST
     server.minta(

@@ -141,11 +141,30 @@ def _fmt_durasi(mulai, selesai) -> str:
     return f"{detik // 60}:{detik % 60:02d}"
 
 
-def halaman_utama(kon, pesan: str = "") -> bytes:
+def _badge_peran(peran: str) -> str:
+    """Penanda peran di topbar — supaya siapa pun langsung tahu di sisi mana
+    dia berada. Murid punya dunia visual sendiri, jadi cukup dua ini."""
+    if peran == "admin":
+        return '<span class="badge-peran badge-peran-admin">Pengelola</span>'
+    if peran == "guru":
+        return '<span class="badge-peran badge-peran-guru">Orang Tua</span>'
+    return ""
+
+
+def halaman_utama(
+    kon,
+    pesan: str = "",
+    pemilik: str | None = None,
+    peran: str = "guru",
+) -> bytes:
+    """Dashboard pengelola. `pemilik=None` = semua keluarga (admin);
+    string = hanya keluarga itu. Panggilan lama tanpa argumen tetap
+    melihat semuanya — perilaku mode lokal dan test langsung."""
     baris = []
+    admin = peran == "admin"
     # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
     # pada kartu siswa P3 lalu gagal ketika form dikirim.
-    for s in basis.daftar_siswa(kon):
+    for s in basis.daftar_siswa(kon, pemilik):
         opsi_topik = "".join(
             f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
             for t in _topik_untuk_level(s["tingkat"])
@@ -178,11 +197,20 @@ def halaman_utama(kon, pesan: str = "") -> bytes:
             for r in sesi
         ) or '<tr><td colspan="7" class="kosong">belum ada sesi</td></tr>'
 
+        label_keluarga = ""
+        if admin:
+            siapa = s["pemilik"] or "warisan"
+            label_keluarga = (
+                f'<span class="badge-keluarga">keluarga: {html.escape(siapa)}</span>'
+            )
+
         baris.append(
             f'<div class="kartu kartu-siswa">'
             f'<div class="siswa-kepala">'
-            f'<h2>{html.escape(s["nama"])}'
-            f'<span class="badge-tingkat">({s["tingkat"]})</span></h2>'
+            f"<h2>{html.escape(s['nama'])}"
+            f'<span class="badge-tingkat">({s["tingkat"]})</span>'
+            f"{label_keluarga}"
+            f"</h2>"
             f'<a class="btn" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
             f"</div>"
             f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
@@ -227,7 +255,7 @@ def halaman_utama(kon, pesan: str = "") -> bytes:
     return _halaman(
         T.NAMA_PRODUK,
         f'<div class="topbar">'
-        f'<span class="brand">{T.NAMA_PRODUK}</span>'
+        f'<span class="brand">{T.NAMA_PRODUK} {_badge_peran(peran)}</span>'
         f'<nav class="topbar-navigasi">'
         f'<a href="/akun">Akun &amp; Siswa</a>'
         f'<form method="post" action="/keluar" style="margin:0">'
@@ -1300,23 +1328,35 @@ class Penangan(BaseHTTPRequestHandler):
             return (kred[0], peran)
         return None
 
-    def _peran_saya(self) -> str | None:
+    def _identitas(self) -> tuple[str, str] | None:
+        """(pengguna, peran) pengunjung ini, atau None bila anonim.
+
+        Mode lokal (tanpa berkas sandi) = satu akun bawaan "guru": semua
+        halaman terbuka seperti semula, dan data yang dibuat tercatat atas
+        nama "guru" pula — konsisten dengan pembuatnya.
+        """
         if not sandi.wajib_sandi():
-            return "guru"
-        # cookie dulu
+            return ("guru", "guru")
         tok = self._ambil_token()
         if tok:
             got = sesi.ambil(tok)
             if got:
-                return got[1]
+                return got
         kred = self._kredensial()
         if not kred:
             return None
-        return sandi.peran_dari(*kred)
+        peran = sandi.peran_dari(*kred)
+        if peran:
+            return (kred[0], peran)
+        return None
+
+    def _peran_saya(self) -> str | None:
+        ident = self._identitas()
+        return ident[1] if ident else None
 
     def _lolos_sandi(self) -> bool:
-        """Palang guru. Dilewati kalau berkas sandi tidak ada (mode lokal)."""
-        if self._peran_saya() == "guru":
+        """Palang pengelola (guru/admin). Dilewati kalau berkas sandi tidak ada."""
+        if self._peran_saya() in ("guru", "admin"):
             return True
 
         pesan = _halaman(
@@ -1330,10 +1370,37 @@ class Penangan(BaseHTTPRequestHandler):
         self.wfile.write(pesan)
         return False
 
+    def _bisa_lihat_sesi(self, kon, sesi_id: int) -> bool:
+        """Kepemilikan sesi: guru hanya sesi milik keluarganya, admin semua.
+
+        Tolakan rute memakai 404, bukan 403 — keberadaan id orang lain
+        bukan informasi yang boleh bocor.
+        """
+        ident = self._identitas()
+        if not ident:
+            return False
+        if ident[1] == "admin":
+            return True
+        return basis.sesi_milik(kon, sesi_id, ident[0])
+
+    def _bisa_lihat_siswa(self, kon, siswa_id: int) -> bool:
+        ident = self._identitas()
+        if not ident:
+            return False
+        if ident[1] == "admin":
+            return True
+        return basis.siswa_milik(kon, siswa_id, ident[0])
+
+    def _bisa_lihat_lampiran(self, kon, lampiran_id: int) -> bool:
+        lamp = basis.ambil_lampiran(kon, lampiran_id)
+        if not lamp:
+            return False
+        return self._bisa_lihat_sesi(kon, int(lamp["sesi_id"]))
+
     def _kirim_berkas_lampiran(self, kon, lampiran_id: int) -> None:
         """Kirim isi berkas foto lampiran (hanya guru, hanya milik sesi)."""
         lamp = basis.ambil_lampiran(kon, lampiran_id)
-        if not lamp:
+        if not lamp or not self._bisa_lihat_sesi(kon, int(lamp["sesi_id"])):
             return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
         berkas = (
             lampiran_mod.direktori_lampiran()
@@ -1362,17 +1429,23 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(self._halaman_masuk(galat=galat))
         if jalur == "/":
             # Launch publik: / adalah landing untuk yang belum masuk.
-            # Guru dengan sesi valid tetap dapat dashboard. Murid & anonim
-            # -> landing (bukan 401) — dashboard guru bukan rahasia sekuat
-            # data anak, tapi tetap tidak boleh ditampilkan ke murid.
-            if self._peran_saya() == "guru":
+            # Guru/admin dengan sesi valid tetap dapat dashboard. Murid &
+            # anonim -> landing (bukan 401) — dashboard guru bukan rahasia
+            # sekuat data anak, tapi tetap tidak boleh ditampilkan ke murid.
+            ident = self._identitas()
+            if ident and ident[1] in ("guru", "admin"):
                 try:
                     q = urllib.parse.parse_qs(
                         urllib.parse.urlparse(self.path).query
                     )
                     pesan = (q.get("pesan") or [""])[0]
                     with basis.buka() as kon:
-                        return self._kirim(halaman_utama(kon, pesan=pesan))
+                        pemilik = None if ident[1] == "admin" else ident[0]
+                        return self._kirim(
+                            halaman_utama(
+                                kon, pesan=pesan, pemilik=pemilik, peran=ident[1]
+                            )
+                        )
                 except Exception:
                     pass  # DB bermasalah -> landing saja, jangan 500 mentah
             from landing import halaman_landing
@@ -1401,30 +1474,51 @@ class Penangan(BaseHTTPRequestHandler):
                         kon, int(jalur.rsplit("/", 1)[1])
                     )
                 if jalur.startswith("/lampiran/"):
-                    isi = lampiran_mod.halaman_konfirmasi(
-                        kon, int(jalur.split("/")[2])
-                    )
+                    lampiran_id = int(jalur.split("/")[2])
+                    if not self._bisa_lihat_lampiran(kon, lampiran_id):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    isi = lampiran_mod.halaman_konfirmasi(kon, lampiran_id)
                     if isi:
                         return self._kirim(isi)
                 if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
-                    isi = halaman_konfirmasi_hapus(
-                        kon, int(jalur.split("/")[2])
-                    )
+                    sesi_id = int(jalur.split("/")[2])
+                    if not self._bisa_lihat_sesi(kon, sesi_id):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    isi = halaman_konfirmasi_hapus(kon, sesi_id)
                     if isi is None:
                         return self._kirim(
                             _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
                         )
                     return self._kirim(isi)
                 if jalur.startswith("/sesi/"):
-                    return self._kirim(halaman_sesi(kon, int(jalur.split("/")[2])))
+                    sesi_id = int(jalur.split("/")[2])
+                    if not self._bisa_lihat_sesi(kon, sesi_id):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    return self._kirim(halaman_sesi(kon, sesi_id))
                 if jalur.startswith("/laporan/"):
-                    return self._kirim(halaman_laporan(kon, int(jalur.split("/")[2])))
+                    siswa_id = int(jalur.split("/")[2])
+                    if not self._bisa_lihat_siswa(kon, siswa_id):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    return self._kirim(halaman_laporan(kon, siswa_id))
                 if jalur == "/akun":
                     return self._kirim(halaman_akun(kon))
                 if jalur.startswith("/lembar/"):
                     bagian = jalur.split("/")
+                    sesi_id = int(bagian[2])
+                    if not self._bisa_lihat_sesi(kon, sesi_id):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
                     guru = len(bagian) > 3 and bagian[3] == "penilaian"
-                    isi = halaman_lembar(kon, int(bagian[2]), guru)
+                    isi = halaman_lembar(kon, sesi_id, guru)
                     if isi:
                         return self._kirim(isi)
         except (ValueError, IndexError):
@@ -1695,8 +1789,8 @@ class Penangan(BaseHTTPRequestHandler):
                     mentah, keep_blank_values=True
                 ).items()
             }
-            kredensial = self._kredensial()
-            pengguna = kredensial[0] if kredensial else "guru"
+            ident = self._identitas()
+            pengguna = ident[0] if ident else "guru"
             with basis.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna)
                 return self._kirim(halaman_akun(kon, pesan, galat))
@@ -1709,6 +1803,10 @@ class Penangan(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
             with basis.buka() as kon:
+                if not self._bisa_lihat_sesi(kon, sesi_id):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
                 _, _, catatan = llm.bungkus_sesi(kon, sesi_id, _soal_dari_baris)
                 return self._kirim(halaman_sesi(kon, sesi_id, catatan))
 
@@ -1735,6 +1833,10 @@ class Penangan(BaseHTTPRequestHandler):
                 )
                 return self._kirim(_halaman("Topik tidak dikenal", pesan), 400)
             with basis.buka() as kon:
+                if not self._bisa_lihat_siswa(kon, siswa_id):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
                 siswa = kon.execute(
                     "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
                 ).fetchone()
@@ -1810,6 +1912,10 @@ class Penangan(BaseHTTPRequestHandler):
                     ).items()
                 }
                 with basis.buka() as kon:
+                    if not self._bisa_lihat_lampiran(kon, angka):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
                     jumlah, pesan = lampiran_mod.terapkan(kon, angka, data)
                     isi = lampiran_mod.halaman_konfirmasi(kon, angka, pesan)
                     if isi is None:
@@ -1831,6 +1937,10 @@ class Penangan(BaseHTTPRequestHandler):
                     "SELECT 1 FROM sesi WHERE id = ?", (angka,)
                 ).fetchone():
                     return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+                if not self._bisa_lihat_sesi(kon, angka):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
                 lid, pesan = lampiran_mod.proses_upload(
                     kon, angka, content_type, tubuh
                 )
@@ -1852,6 +1962,11 @@ class Penangan(BaseHTTPRequestHandler):
                 sesi_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            with basis.buka() as kon:
+                if not self._bisa_lihat_sesi(kon, sesi_id):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
             panjang = int(self.headers.get("Content-Length", 0) or 0)
             data = urllib.parse.parse_qs(
                 self.rfile.read(panjang).decode("utf-8"),
@@ -1895,6 +2010,10 @@ class Penangan(BaseHTTPRequestHandler):
 
         sesi_id = int(jalur.split("/")[2])
         with basis.buka() as kon:
+            if not self._bisa_lihat_sesi(kon, sesi_id):
+                return self._kirim(
+                    _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                )
             pesan = simpan_sesi(kon, sesi_id, data)
             self._kirim(halaman_sesi(kon, sesi_id, pesan))
 

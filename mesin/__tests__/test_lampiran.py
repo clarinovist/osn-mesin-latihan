@@ -183,7 +183,7 @@ def test_siapkan_membuat_tabel_lampiran(db):
 
 def test_simpan_dan_daftar_lampiran(db):
     with basis.buka(db) as kon:
-        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sid = basis.tambah_siswa(kon, "AnakLamp", pemilik="guru")
         sesi_id = basis.buat_sesi(kon, sid, seed=7)
         lid = basis.simpan_lampiran(
             kon, sesi_id, "lembar-1.jpg", mime="image/jpeg",
@@ -269,7 +269,7 @@ def test_http_upload_lampiran_mulai_ekstraksi(server, monkeypatch):
         ),
     )
     with server.buka() as kon:
-        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sid = basis.tambah_siswa(kon, "AnakLamp", pemilik="guru")
         sesi_id = basis.buat_sesi(kon, sid, seed=7, mode="drill")
         jumlah_soal = len(basis.isi_sesi(kon, sesi_id))
 
@@ -294,7 +294,7 @@ def test_http_upload_lampiran_mulai_ekstraksi(server, monkeypatch):
 def test_http_upload_bukan_gambar_ditolak(server):
     """MIME bukan gambar -> 400, tanpa menyentuh AI."""
     with server.buka() as kon:
-        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sid = basis.tambah_siswa(kon, "AnakLamp", pemilik="guru")
         sesi_id = basis.buat_sesi(kon, sid, seed=7)
     kode, html, _ = minta_multipart(
         server, f"/lampiran/{sesi_id}",
@@ -313,7 +313,7 @@ def test_http_serve_berkas_lampiran(server, monkeypatch):
     direktori_root = server.db.parent / "lampiran-uji"
     monkeypatch.setenv("OSN_DIREKTORI_LAMPIRAN", str(direktori_root))
     with server.buka() as kon:
-        sid = basis.tambah_siswa(kon, "AnakLamp")
+        sid = basis.tambah_siswa(kon, "AnakLamp", pemilik="guru")
         sesi_id = basis.buat_sesi(kon, sid, seed=7)
         lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
         direktori = direktori_root / str(sesi_id)
@@ -440,7 +440,7 @@ def test_http_terapkan_lewat_form(server):
     commit; di beberapa mesin pembacaan pertama test bisa bersaing dengan
     penutupan itu (deterministik terlihat sebagai rows lama)."""
     with server.buka() as kon:
-        sid = basis.tambah_siswa(kon, "feby")
+        sid = basis.tambah_siswa(kon, "feby", pemilik="guru")
         sesi_id = basis.buat_sesi(kon, sid, seed=7, mode="drill")
         lid = basis.simpan_lampiran(kon, sesi_id, "lembar-1.jpg")
         kunci = basis.isi_sesi(kon, sesi_id)[0]["kunci"]

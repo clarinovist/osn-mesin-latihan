@@ -32,7 +32,7 @@ def db(tmp_path, monkeypatch):
 
 def _sesi_dengan_hasil(kon) -> int:
     """Sesi 12 soal; dua soal pertama punya jawaban + diagnosis + foto."""
-    sid = basis.tambah_siswa(kon, "Uji")
+    sid = basis.tambah_siswa(kon, "Uji", pemilik="guru")
     sesi_id = basis.buat_sesi(kon, sid, seed=42)
     for baris in basis.isi_sesi(kon, sesi_id)[:2]:
         jid = basis.simpan_jawaban(

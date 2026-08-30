@@ -24,7 +24,7 @@ from uji_http import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 def server(tmp_path, monkeypatch):
     s = ServerUji(tmp_path, monkeypatch)
     with s.buka() as kon:
-        sid = basis.tambah_siswa(kon, "Putri")
+        sid = basis.tambah_siswa(kon, "Putri", pemilik="guru")
         sesi_id = basis.buat_sesi(kon, sid, seed=7)
     yield s, sesi_id, sid
     s.berhenti()

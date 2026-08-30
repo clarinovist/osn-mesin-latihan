@@ -189,7 +189,7 @@ def test_http_murid_simpan_guru_langsung_lihat_benar(server):
     """Alur nyata: anak POST dari HP -> guru buka halaman sesi -> badge
     BENAR sudah terpasang TANPA guru menekan 'Simpan & diagnosis' dulu."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "feby")  # nama == akun murid uji
+        siswa_id = basis.tambah_siswa(kon, "feby", pemilik="guru")  # nama == akun murid uji
 
     server.minta(
         f"/sesi-baru/{siswa_id}", auth=("guru", SANDI_GURU),

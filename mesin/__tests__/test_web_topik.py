@@ -42,7 +42,7 @@ def server(tmp_path, monkeypatch):
 
 def test_post_sesi_baru_menyimpan_topik_eksplisit(server):
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "Topik Eksplisit")
+        siswa_id = basis.tambah_siswa(kon, "Topik Eksplisit", pemilik="guru")
     # urlopen mengikuti 303 sampai halaman sesi — yang dicek adalah
     # tempat akhir (halaman sesi) + nilai yang tersimpan di basis data.
     kode, isi, _ = server.minta(
@@ -65,7 +65,7 @@ def test_post_sesi_baru_tanpa_topik_pakai_bawaan_kanonik(server):
     """Form tanpa pilihan topik tetap menyimpan id kanonik — bukan nilai
     lama 'pola bilangan' dengan spasi."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "Topik Default")
+        siswa_id = basis.tambah_siswa(kon, "Topik Default", pemilik="guru")
     kode, isi, _ = server.minta(
         f"/sesi-baru/{siswa_id}", auth=("guru", SANDI_GURU), data={}
     )
@@ -123,7 +123,7 @@ def test_dropdown_menampilkan_nama_paket_bukan_id(db):
 def test_siswa_p3_tidak_ditawari_dan_tidak_bisa_memilih_aritmetika(server):
     """Topik P5/P6 tidak boleh memicu error server untuk siswa P3."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "Topik P3", "P3")
+        siswa_id = basis.tambah_siswa(kon, "Topik P3", "P3", pemilik="guru")
         isi = web.halaman_utama(kon).decode()
     assert 'value="aritmetika-dasar"' not in isi
 
@@ -139,7 +139,7 @@ def test_siswa_p3_tidak_ditawari_dan_tidak_bisa_memilih_aritmetika(server):
 def test_siswa_level_teks_lama_tetap_ditawari_dan_bisa_membuat_sesi(server):
     """Kolom tingkat lama yang bebas teks tetap mendapat fallback pola P3."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "Topik Level Lama", "tingkat-lama")
+        siswa_id = basis.tambah_siswa(kon, "Topik Level Lama", "tingkat-lama", pemilik="guru")
         isi = web.halaman_utama(kon).decode()
     assert 'value="pola-bilangan"' in isi
     assert 'value="aritmetika-dasar"' not in isi
@@ -195,7 +195,7 @@ def test_alur_aritmetika_memakai_judul_dan_laporan_topik_sendiri(server):
     paket pola bilangan.
     """
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "feby", "P5")
+        siswa_id = basis.tambah_siswa(kon, "feby", "P5", pemilik="guru")
 
     kode, isi, _ = server.minta(
         f"/sesi-baru/{siswa_id}",
@@ -293,7 +293,7 @@ def test_alur_guru_murid_jawab_laporan_bertopik(server):
     """Sesi bertopik eksplisit dilalui ujung ke ujung lewat socket:
     laporan tetap utuh dan topiknya tampil, bukan tercampur diam-diam."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "feby")  # nama == akun murid uji
+        siswa_id = basis.tambah_siswa(kon, "feby", pemilik="guru")  # nama == akun murid uji
 
     server.minta(
         f"/sesi-baru/{siswa_id}",
@@ -344,7 +344,7 @@ def test_siswa_p3_tidak_melihat_geometri_datar(server):
 def test_siswa_p5_bisa_membuat_sesi_geometri_datar(server):
     """POST /sesi-baru geometri-datar → sesi tersimpan, lembar valid."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "Sesi Geo", "P5")
+        siswa_id = basis.tambah_siswa(kon, "Sesi Geo", "P5", pemilik="guru")
 
     kode, isi, _ = server.minta(
         f"/sesi-baru/{siswa_id}",
@@ -368,7 +368,7 @@ def test_siswa_p5_bisa_membuat_sesi_geometri_datar(server):
 def test_alur_geometri_datar_guru_murid_laporan(server):
     """Alur penuh geometri lewat socket: dropdown, sesi, murid, laporan."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "feby", "P5")
+        siswa_id = basis.tambah_siswa(kon, "feby", "P5", pemilik="guru")
 
     # dropdown memuat geometri-datar untuk P5
     with server.buka() as kon:

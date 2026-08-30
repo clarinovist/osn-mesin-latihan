@@ -448,7 +448,7 @@ def server(tmp_path, monkeypatch):
 def _bikin_sesi_untuk_feby(server) -> int:
     """Guru buat sesi untuk 'feby' (akun murid uji) → kembalikan sesi_id."""
     with server.buka() as kon:
-        siswa_id = basis.tambah_siswa(kon, "feby")
+        siswa_id = basis.tambah_siswa(kon, "feby", pemilik="guru")
     server.minta(
         f"/sesi-baru/{siswa_id}",
         auth=("guru", SANDI_GURU),
