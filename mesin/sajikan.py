@@ -34,6 +34,23 @@ def alamat_wifi() -> str:
         s.close()
 
 
+def siapkan_admin_dan_pemilik() -> str | None:
+    """Naikkan pemasangan lama ke model multi-keluarga. Idempoten.
+
+    Kalau belum ada akun admin, akun guru PERTAMA dipromosikan (bootstrap
+    deterministik — pemilik produk tidak perlu menyunting sandi.json lewat
+    tangan), lalu seluruh siswa warisan yang ber-pemilik kosong dibackfill
+    ke nama admin itu: data lama adalah keluarga si pengelola. Tanpa berkas
+    sandi (mode lokal) tidak ada yang diubah.
+    """
+    admin = sandi.pastikan_admin()
+    if admin is None:
+        return None
+    with basis.buka() as kon:
+        kon.execute("UPDATE siswa SET pemilik = ? WHERE pemilik = ''", (admin,))
+    return admin
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Sajikan halaman guru")
     p.add_argument("--jaringan", action="store_true",
@@ -53,6 +70,7 @@ def main() -> int:
         return 0
 
     basis.siapkan()
+    admin = siapkan_admin_dan_pemilik()
     inang = "0.0.0.0" if arg.jaringan else "127.0.0.1"
 
     # Palang kedua. Palang pertama ada di web.py (memeriksa tiap permintaan);
@@ -77,6 +95,8 @@ def main() -> int:
     print(f"basis data : {basis.BAWAAN}")
     print(f"isi        : {n_siswa} siswa, {n_sesi} sesi")
     print(f"sandi      : {'aktif' if sandi.wajib_sandi() else 'TIDAK aktif (lokal saja)'}")
+    if admin:
+        print(f"admin      : {admin} (melihat semua keluarga)")
     print()
     print(f"  http://127.0.0.1:{arg.port}")
     if arg.jaringan:

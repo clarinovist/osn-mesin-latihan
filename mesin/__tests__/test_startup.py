@@ -1,0 +1,100 @@
+"""Bootstrap startup: promosi admin + backfill pemilik data warisan.
+
+Pemasangan lama (single-family) naik kelas ke multi-keluarga tanpa langkah
+manual: akun guru pertama jadi admin, dan seluruh siswa warisan ber-pemilik
+' ' dibubuhi nama admin itu. Keduanya idempoten — startup boleh berulang.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import basis  # noqa: E402
+import sajikan  # noqa: E402
+import sandi  # noqa: E402
+
+SANDI_GURU = "sandi-guru-panjang-123"
+
+
+@pytest.fixture()
+def pasangan(tmp_path, monkeypatch):
+    """DB + berkas sandi sementara, terpasang sebagai bawaan modul."""
+    db = tmp_path / "uji.db"
+    berkas = tmp_path / "sandi.json"
+    basis.siapkan(db)
+    monkeypatch.setattr(basis, "BAWAAN", db)
+    monkeypatch.setattr(sandi, "BERKAS_SANDI", berkas)
+    return db, berkas
+
+
+def test_startup_mempromosikan_admin_dan_backfill_pemilik(pasangan):
+    db, berkas = pasangan
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "Rara", "P3")  # warisan: pemilik ''
+        basis.tambah_siswa(kon, "Bima", "P4")
+    sandi.simpan_sandi(SANDI_GURU, "guru", berkas)
+
+    admin = sajikan.siapkan_admin_dan_pemilik()
+
+    assert admin == "guru"
+    assert sandi.cari_akun("guru", berkas)["peran"] == "admin"
+    with basis.buka(db) as kon:
+        pemilik = {
+            r["nama"]: r["pemilik"]
+            for r in kon.execute("SELECT nama, pemilik FROM siswa")
+        }
+    assert pemilik == {"Rara": "guru", "Bima": "guru"}
+
+
+def test_startup_idempoten(pasangan):
+    db, berkas = pasangan
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "Rara", "P3")
+    sandi.simpan_sandi(SANDI_GURU, "guru", berkas)
+
+    assert sajikan.siapkan_admin_dan_pemilik() == "guru"
+    assert sajikan.siapkan_admin_dan_pemilik() == "guru"
+
+    akun = sandi.muat_akun(berkas)
+    assert len(akun) == 1
+    assert akun[0]["peran"] == "admin"
+    with basis.buka(db) as kon:
+        pemilik = [
+            r["pemilik"] for r in kon.execute("SELECT pemilik FROM siswa")
+        ]
+    assert pemilik == ["guru"]
+
+
+def test_startup_tanpa_berkas_sandi_tak_menyentuh_db(pasangan):
+    """Mode lokal (tanpa sandi.json): tidak ada yang dipromosikan, dan
+    baris warisan dibiarkan ber-pemilik kosong."""
+    db, _ = pasangan
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "Rara", "P3")
+
+    assert sajikan.siapkan_admin_dan_pemilik() is None
+
+    with basis.buka(db) as kon:
+        pemilik = [
+            r["pemilik"] for r in kon.execute("SELECT pemilik FROM siswa")
+        ]
+    assert pemilik == [""]
+
+
+def test_startup_dengan_admin_ada_tidak_mengubah_siswa(pasangan):
+    db, berkas = pasangan
+    sandi.tambah_akun("pengelola", "sandi-pengelola-9999", "admin", berkas)
+    sandi.tambah_akun("ortu-a", "sandi-ortu-a-123456", "guru", berkas)
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "Rara", "P3", pemilik="ortu-a")
+
+    assert sajikan.siapkan_admin_dan_pemilik() == "pengelola"
+
+    with basis.buka(db) as kon:
+        baris = kon.execute("SELECT pemilik FROM siswa").fetchone()
+    assert baris["pemilik"] == "ortu-a"
