@@ -118,17 +118,19 @@ jobs:
         # Verifikasi dari internet, bukan dari dalam VPS. Container sehat
         # belum berarti situsnya terjangkau — reverse proxy atau sertifikat
         # bisa jadi masalahnya, dan itu hanya terlihat dari luar.
+        # Cek /murid/ (bukan /): sejak landing publik, / menjawab 200 untuk
+        # anonim. /murid/ tetap harus 401 tanpa kredensial — data anak.
         run: |
           set -e
           for i in $(seq 1 10); do
             KODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
-                   "https://${{ secrets.SITUS }}/" || echo 000)
+                   "https://${{ secrets.SITUS }}/murid/" || echo 000)
             if [ "$KODE" = "401" ]; then
-              echo "Situs hidup dan palang sandi aktif (401)"
+              echo "Situs hidup dan palang data anak aktif (401 di /murid/)"
               exit 0
             fi
             echo "percobaan $i: $KODE"
             sleep 6
           done
-          echo "::error::Situs tidak menjawab 401 — periksa VPS"
+          echo "::error::Situs tidak menjawab 401 di /murid/ — periksa VPS"
           exit 1
