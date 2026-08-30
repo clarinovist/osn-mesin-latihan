@@ -106,6 +106,16 @@ def _nama_objek(rng: random.Random, n: int) -> list[str]:
     return sorted(rng.sample(huruf, n))
 
 
+# Semua pasangan (b, k) dengan 1 <= b,k <= 24 dan b+k <= 25 → 300 sel.
+# Dibangun sekali, dipilih rng.choice uniform supaya tiap sel kesempatan
+# sama (randint terpisah bias ke sel dengan baris kecil).
+_JALUR_PETAK: list[dict[str, int]] = [
+    {"b": b, "k": k}
+    for b in range(1, 25)
+    for k in range(1, 26 - b)
+]
+
+
 def _enumerasi_bilangan(
     angka: tuple[int, ...], panjang: int, syarat
 ) -> int:
@@ -409,6 +419,167 @@ def kombinasi_pilih(n: int, r: int, objek: list[str]) -> Soal:
     )
 
 
+# ── Bagian D — Penerapan ───────────────────────────────────────────────
+
+
+def jabat_tangan(n: int) -> Soal:
+    """n orang jabat tangan → n(n−1)/2."""
+    kunci = n * (n - 1) // 2
+    mal = [
+        Malrule(
+            "jabat.lupa_bagi_2",
+            str(n * (n - 1)),
+            "K",
+            f"{n} x {n - 1} tanpa dibagi dua — lupa tiap jabat tangan dihitung dua orang",
+        ),
+        Malrule(
+            "jabat.jabat_diri",
+            str(n),
+            "K",
+            "menjawab n (setiap orang jabat tangannya sendiri)",
+        ),
+        Malrule(
+            "jabat.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Dalam sebuah pertemuan, ada {n} orang. Setiap orang berjabat "
+        f"tangan satu kali dengan setiap orang lainnya. "
+        f"Berapa banyak jabat tangan yang terjadi?"
+    )
+    return Soal(
+        "jabat_tangan",
+        {"n": n},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
+def jalur_petak(b: int, k: int) -> Soal:
+    """Petak b×k → C(b+k, b) jalur terpendek (kanan/bawah)."""
+    kunci = math.comb(b + k, b)
+    mal = [
+        Malrule(
+            "jalur.dua_arah",
+            str(2 * math.comb(b + k, b)),
+            "K",
+            "mengalikan dua — arah yang benar hanya kanan dan bawah, bukan kiri/atas",
+        ),
+        Malrule(
+            "jalur.jumlah_step",
+            str(b + k),
+            "K",
+            "menjumlahkan langkah kanan dan bawah, bukan menghitung kombinasinya",
+        ),
+        Malrule(
+            "jalur.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan kombinasi benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Kota A ke Kota B melewati petak {b}×{k} di mana hanya bisa "
+        f"ke kanan atau ke bawah. Berapa banyak jalur terpendek yang "
+        f"mungkin?"
+    )
+    return Soal(
+        "jalur_petak",
+        {"b": b, "k": k},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
+def sarang_merpati(n: int, m: int) -> Soal:
+    """n benda ke m laci → minimal ceil(n/m) sama."""
+    kunci = (n + m - 1) // m
+    # Urutan penting: H dulu. n−m (K) kadang menyamai kunci+1 (H); kalau H
+    # muncul belakangan, saring_malrule membuangnya dan soal kehilangan
+    # jalur H. Dengan H dulu, yang terbuang hanya K n−m — floor (K) tetap.
+    mal = [
+        Malrule(
+            "merpati.kelebihan_satu",
+            str(kunci + 1),
+            "H",
+            "pembulatan benar, hasilnya kelebihan satu",
+        ),
+        Malrule(
+            "merpati.dibulatkan_bawah",
+            str(n // m),
+            "K",
+            f"{n} benda ke {m} laci — dibulatkan ke bawah, padahal harus ke atas",
+        ),
+        Malrule(
+            "merpati.dikira_selisih",
+            str(n - m),
+            "K",
+            f"menghitung selisih {n}−{m}, padahal yang diminta pembagian",
+        ),
+    ]
+    teks = (
+        f"Ada {n} merpati dan {m} sangkar. Berapa jumlah merpati "
+        f"terbanyak yang pasti ada di satu sangkar yang sama?"
+    )
+    return Soal(
+        "sarang_merpati",
+        {"n": n, "m": m},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
+def inklusi_eksklusi_2(a: int, b: int, c: int) -> Soal:
+    """|A∪B| = a + b − c."""
+    kunci = a + b - c
+    mal = [
+        Malrule(
+            "inklusi.lupa_irisan",
+            str(a + b),
+            "K",
+            f"menjumlah |A|={a} dan |B|={b} tanpa mengurangi irisan",
+        ),
+        Malrule(
+            "inklusi.dikali",
+            str(a * b),
+            "K",
+            f"mengalikan |A|×|B|={a}×{b} padahal aturan jumlah−irisan",
+        ),
+        Malrule(
+            "inklusi.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "perhitungan jumlah−irisan benar, hasilnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Dari 100 siswa, {a} siswa suka matematika dan {b} siswa suka "
+        f"IPA, serta {c} siswa suka keduanya. Berapa banyak siswa yang "
+        f"suka matematika atau IPA (atau keduanya)?"
+    )
+    return Soal(
+        "inklusi_eksklusi_2",
+        {"a": a, "b": b, "c": c},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="D",
+    )
+
+
 REGISTRI_TOPIK = {
     "aturan_tambah": aturan_tambah,
     "aturan_kali": aturan_kali,
@@ -417,6 +588,10 @@ REGISTRI_TOPIK = {
     "permutasi_urutan": permutasi_urutan,
     "permutasi_blok": permutasi_blok,
     "kombinasi_pilih": kombinasi_pilih,
+    "jabat_tangan": jabat_tangan,
+    "jalur_petak": jalur_petak,
+    "sarang_merpati": sarang_merpati,
+    "inklusi_eksklusi_2": inklusi_eksklusi_2,
 }
 
 KOMPOSISI = {
@@ -529,6 +704,28 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         r = rng.randint(2, min(5, n - 1))
         nama = _nama_objek(rng, n)
         return {"n": n, "r": r, "objek": nama}
+    if template_id == "jabat_tangan":
+        return {"n": rng.randint(4, 250)}
+    if template_id == "jalur_petak":
+        # Grid 1..24, baris+kolom <= 25 → 300 sel, sampling UNIFORM
+        # (bukan randint terpisah yang bias ke sel kecil). Maksimum
+        # C(24,12)=2.704.156 — angka besar tapi terbayang di P6, dan
+        # plan menuntut >= 200 kombinasi (kendala hasil kecil tidak
+        # kompatibel dengan guard, lihat catatan Task 2.4).
+        return dict(rng.choice(_JALUR_PETAK))
+    if template_id == "sarang_merpati":
+        # n > m, n % m != 0 (supaya ceil != floor)
+        m = rng.randint(2, 10)
+        n = rng.randint(m + 1, 100)
+        while n % m == 0:
+            n = rng.randint(m + 1, 100)
+        return {"n": n, "m": m}
+    if template_id == "inklusi_eksklusi_2":
+        a, b = rng.randint(3, 40), rng.randint(3, 40)
+        while a == b:
+            b = rng.randint(3, 40)
+        c = rng.randint(1, min(a, b) - 1)
+        return {"a": a, "b": b, "c": c}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 

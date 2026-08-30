@@ -288,3 +288,103 @@ def test_kelompok_permutasi_sweep_tanpa_malrule_kosong(template_id):
         assert {"K", "H"} <= {m.kode for m in s.malrule}, (
             f"{template_id}/{seed}"
         )
+
+
+# ── Template penerapan (#8-#11) — Task 2.4 ────────────────────────────
+
+KELOMPOK_PENERAPAN = (
+    "jabat_tangan", "jalur_petak", "sarang_merpati", "inklusi_eksklusi_2"
+)
+
+
+def test_jabat_tangan_kunci_dan_malrule():
+    """#8: n orang jabat tangan → n(n−1)/2."""
+    s = buat_soal("jabat_tangan", 7, level="P5", topik="kombinatorik")
+    p = s.parameter
+    expected = p["n"] * (p["n"] - 1) // 2
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_jabat_tangan_malrule_konsep():
+    """#8: lupa_bagi_2 (K), jabat_diri (K), kurang_satu (H)."""
+    s = buat_soal("jabat_tangan", 11, level="P5", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["jabat.lupa_bagi_2"] == str(p["n"] * (p["n"] - 1))
+    assert jawaban["jabat.jabat_diri"] == str(p["n"])
+    assert jawaban["jabat.kurang_satu"] == str(p["n"] * (p["n"] - 1) // 2 - 1)
+
+
+def test_jalur_petak_kunci_dan_malrule():
+    """#9: petak m×n → C(m+n, m) jalur."""
+    s = buat_soal("jalur_petak", 7, level="P6", topik="kombinatorik")
+    p = s.parameter
+    expected = math.comb(p["b"] + p["k"], p["b"])
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_jalur_petak_malrule_konsep():
+    """#9: dua_arah (K), jumlah_step (K), kurang_satu (H)."""
+    s = buat_soal("jalur_petak", 11, level="P6", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert "jalur.dua_arah" in jawaban
+    assert "jalur.jumlah_step" in jawaban
+    assert "jalur.kurang_satu" in jawaban
+
+
+def test_sarang_merpati_kunci_dan_malrule():
+    """#10: n benda → m laci → minimal ceil(n/m) sama."""
+    s = buat_soal("sarang_merpati", 7, level="P6", topik="kombinatorik")
+    p = s.parameter
+    expected = (p["n"] + p["m"] - 1) // p["m"]
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_sarang_merpati_malrule_konsep():
+    """#10: dibulatkan_bawah (K), kurang_satu (K), kelebihan_satu (H)."""
+    s = buat_soal("sarang_merpati", 11, level="P6", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert "merpati.dibulatkan_bawah" in jawaban
+    assert "merpati.kelebihan_satu" in jawaban
+
+
+def test_inklusi_eksklusi_kunci_dan_malrule():
+    """#11: |A∪B| = a + b − c."""
+    s = buat_soal("inklusi_eksklusi_2", 7, level="P5", topik="kombinatorik")
+    p = s.parameter
+    expected = p["a"] + p["b"] - p["c"]
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_inklusi_eksklusi_malrule_konsep():
+    """#11: lupa_irisan (K), dikali (K), jawab_irisan (B), kurang_satu (H)."""
+    s = buat_soal("inklusi_eksklusi_2", 11, level="P5", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["inklusi.lupa_irisan"] == str(p["a"] + p["b"])
+    assert "inklusi.dikali" in jawaban
+    assert "inklusi.kurang_satu" in jawaban
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_PENERAPAN)
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_kelompok_penerapan_sweep_tanpa_malrule_kosong(template_id, level):
+    """Tiap soal penerapan punya K dan H."""
+    if template_id in ("jalur_petak", "sarang_merpati") and level == "P5":
+        return  # #9, #10 hanya P6
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="kombinatorik")
+        assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, (
+            f"{template_id}@{level}/{seed}"
+        )
