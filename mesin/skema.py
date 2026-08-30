@@ -24,12 +24,20 @@ PRAGMA foreign_keys = ON;
 
 -- Anak. Disimpan inisial/nama panggilan saja, bukan nama lengkap:
 -- mengurangi dampak kalau basis data ini bocor.
+--
+-- `pemilik` = username akun guru/orang tua pemiliknya (multi-keluarga).
+-- Kosong berarti warisan era single-family: hanya terlihat oleh admin,
+-- dan dibackfill ke username admin saat startup. Nama boleh dobel ANTAR
+-- pemilik (UNIQUE komposit), tapi tidak dalam satu keluarga.
 CREATE TABLE IF NOT EXISTS siswa (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    nama        TEXT    NOT NULL UNIQUE,
+    nama        TEXT    NOT NULL,
     tingkat     TEXT    NOT NULL DEFAULT 'P3',
-    dibuat      TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
+    pemilik     TEXT    NOT NULL DEFAULT '',
+    dibuat      TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours')),
+    UNIQUE (nama, pemilik)
 );
+CREATE INDEX IF NOT EXISTS idx_siswa_pemilik ON siswa(pemilik);
 
 -- Bank soal. Tumbuh tiap generate; tanda_tangan mencegah duplikat.
 --
@@ -205,6 +213,11 @@ MIGRASI: list[tuple[str, str, str]] = [
     ("sesi", "timer_mode", "ALTER TABLE sesi ADD COLUMN timer_mode TEXT NOT NULL DEFAULT 'tanpa'"),
     ("sesi", "durasi_menit", "ALTER TABLE sesi ADD COLUMN durasi_menit INTEGER NOT NULL DEFAULT 15"),
     ("sesi", "timer_auto", "ALTER TABLE sesi ADD COLUMN timer_auto INTEGER NOT NULL DEFAULT 0"),
+    # Kepemilikan keluarga (30 Agu 2026): username akun guru pemilik anak.
+    # ALTER ini hanya menambah kolom; kendala UNIQUE(nama) lama masih menempel
+    # di definisi tabel — basis.rebuild_siswa_unik yang menggantinya jadi
+    # UNIQUE(nama, pemilik) lewat rebuild tabel.
+    ("siswa", "pemilik", "ALTER TABLE siswa ADD COLUMN pemilik TEXT NOT NULL DEFAULT ''"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.

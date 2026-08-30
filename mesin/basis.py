@@ -67,6 +67,7 @@ def siapkan(path: Path | str = BAWAAN) -> None:
         for nama in VIEW_USANG:
             kon.execute(f"DROP VIEW IF EXISTS {nama}")
         migrasi(kon)
+        rebuild_siswa_unik(kon)
         kon.executescript(SKEMA)
         # Migrasi bentuk parameter (A4): pola string per-template → list
         # JSON murni. Idempoten dan terverifikasi per baris (kunci lama
@@ -98,6 +99,73 @@ def migrasi(kon: sqlite3.Connection) -> list[str]:
         kon.execute(pernyataan)
         dijalankan.append(f"{tabel}.{kolom}")
     return dijalankan
+
+
+def rebuild_siswa_unik(kon: sqlite3.Connection) -> bool:
+    """Ganti UNIQUE(nama) global jadi UNIQUE(nama, pemilik) lewat rebuild tabel.
+
+    Kendala tabel tidak bisa di-ALTER di SQLite — satu-satunya jalan adalah
+    buat tabel baru, salin, drop, rename. Deteksinya lewat indeks unik yang
+    menyusun satu kolom `nama` saja (tabel lama memilikinya sebagai
+    sqlite_autoindex; tabel baru mengunci (nama, pemilik) sekaligus), jadi
+    aman dijalankan berulang.
+
+    foreign_keys dimatikan sementara: DROP tabel induk dilarang selama
+    penjaga hidup. Seluruh langkahnya satu transaksi eksplisit — kalau
+    foreign_key_check menemukan sisa, semuanya digulung balik, bukan
+    dibiarkan setengah jadi.
+    """
+    ada = kon.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'siswa'"
+    ).fetchone()
+    if not ada:
+        return False
+
+    unik_nama_saja = False
+    for idx in kon.execute("PRAGMA index_list(siswa)").fetchall():
+        if not idx["unique"]:
+            continue
+        kolom = [
+            r["name"]
+            for r in kon.execute(f"PRAGMA index_info({idx['name']})").fetchall()
+        ]
+        if kolom == ["nama"]:
+            unik_nama_saja = True
+    if not unik_nama_saja:
+        return False
+
+    kon.commit()
+    kon.execute("PRAGMA foreign_keys = OFF")
+    try:
+        kon.executescript(
+            """
+            BEGIN IMMEDIATE;
+            CREATE TABLE siswa_baru (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                nama        TEXT    NOT NULL,
+                tingkat     TEXT    NOT NULL DEFAULT 'P3',
+                pemilik     TEXT    NOT NULL DEFAULT '',
+                dibuat      TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours')),
+                UNIQUE (nama, pemilik)
+            );
+            INSERT INTO siswa_baru (id, nama, tingkat, pemilik, dibuat)
+                SELECT id, nama, tingkat, pemilik, dibuat FROM siswa;
+            DROP TABLE siswa;
+            ALTER TABLE siswa_baru RENAME TO siswa;
+            COMMIT;
+            """
+        )
+        sisa = kon.execute("PRAGMA foreign_key_check").fetchall()
+        if sisa:
+            raise sqlite3.IntegrityError(
+                f"rebuild siswa meninggalkan FK rusak: {sisa!r}"
+            )
+    finally:
+        # Rollback no-op kalau COMMIT sudah jalan; menyelamatkan dari skrip
+        # yang gagal di tengah (transaksi masih terbuka).
+        kon.rollback()
+        kon.execute("PRAGMA foreign_keys = ON")
+    return True
 
 
 # ── Siswa ───────────────────────────────────────────────────────────────
