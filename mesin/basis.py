@@ -245,6 +245,21 @@ def isi_sesi(kon: sqlite3.Connection, sesi_id: int) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+def hapus_sesi(kon: sqlite3.Connection, sesi_id: int) -> bool:
+    """Hapus satu sesi beserta seluruh jejaknya di basis data.
+
+    sesi_soal, jawaban, diagnosis, dan lampiran mengikuti lewat
+    ON DELETE CASCADE — sudah diatur skema. Berkas foto lampiran di
+    cakram TIDAK diurus sini: pemanggil (web) membersihkannya lewat
+    lampiran.bersihkan_berkas.
+
+    Mengembalikan False bila sesi tidak ada, tanpa melempar — pemanggil
+    cukup menampilkan pesan, bukan menangani pengecualian.
+    """
+    cur = kon.execute("DELETE FROM sesi WHERE id = ?", (sesi_id,))
+    return cur.rowcount > 0
+
+
 def malrule_soal(kon: sqlite3.Connection, soal_id: int) -> list[sqlite3.Row]:
     return kon.execute(
         "SELECT malrule_id, jawaban, kode, alasan FROM malrule WHERE soal_id = ?",

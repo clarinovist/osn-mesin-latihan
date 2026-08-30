@@ -26,6 +26,7 @@ import html
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 
 import basis
@@ -60,6 +61,17 @@ def direktori_lampiran() -> Path:
     import basis  # late: hindari siklus impor saat modul dimuat
 
     return Path(basis.BAWAAN).resolve().parent / "lampiran"
+
+
+def bersihkan_berkas(sesi_id: int) -> None:
+    """Buang folder foto lampiran milik satu sesi.
+
+    DB menghapus baris lampiran lewat ON DELETE CASCADE, tapi berkasnya
+    tinggal di cakram — dipanggil bersama basis.hapus_sesi saat sesi
+    dihapus. Folder yang tidak ada dianggap bukan kesalahan: sesi tanpa
+    foto dan pemanggilan kedua sama-sama aman.
+    """
+    shutil.rmtree(direktori_lampiran() / str(sesi_id), ignore_errors=True)
 
 
 # ── Parser multipart minimal ──────────────────────────────────────────
