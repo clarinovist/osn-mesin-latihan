@@ -29,6 +29,64 @@ def db(tmp_path):
     return p
 
 
+# ── Kepemilikan keluarga (multi-keluarga) ───────────────────────────────
+
+
+def test_tambah_siswa_membubuhkan_pemilik(db):
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Bima", "P3", pemilik="ortu-a")
+        baris = kon.execute(
+            "SELECT pemilik FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()
+    assert baris["pemilik"] == "ortu-a"
+
+
+def test_tambah_siswa_tanpa_pemilik_tetap_kosong(db):
+    """Perilaku lama (panggilan tanpa pemilik) tidak berubah."""
+    with basis.buka(db) as kon:
+        sid = basis.tambah_siswa(kon, "Rara")
+        baris = kon.execute(
+            "SELECT pemilik FROM siswa WHERE id = ?", (sid,)
+        ).fetchone()
+    assert baris["pemilik"] == ""
+
+
+def test_daftar_siswa_terfilter_per_pemilik(db):
+    with basis.buka(db) as kon:
+        basis.tambah_siswa(kon, "Bima", pemilik="ortu-a")
+        basis.tambah_siswa(kon, "Rara", pemilik="ortu-b")
+        basis.tambah_siswa(kon, "Cici", pemilik="ortu-a")
+        milik_a = [r["nama"] for r in basis.daftar_siswa(kon, "ortu-a")]
+        semua = [r["nama"] for r in basis.daftar_siswa(kon)]
+    assert milik_a == ["Bima", "Cici"]
+    # None = tanpa filter: panggilan admin dan panggilan lama
+    assert semua == ["Bima", "Cici", "Rara"]
+
+
+def test_dobel_nama_dalam_satu_keluarga_mengembalikan_yang_lama(db):
+    with basis.buka(db) as kon:
+        a1 = basis.tambah_siswa(kon, "Bima", pemilik="ortu-a")
+        a2 = basis.tambah_siswa(kon, "Bima", pemilik="ortu-a")
+        b1 = basis.tambah_siswa(kon, "Bima", pemilik="ortu-b")
+    assert a2 == a1
+    assert b1 != a1
+
+
+def test_siswa_milik_dan_sesi_milik(db):
+    with basis.buka(db) as kon:
+        a1 = basis.tambah_siswa(kon, "Bima", pemilik="ortu-a")
+        b1 = basis.tambah_siswa(kon, "Rara", pemilik="ortu-b")
+        s1 = basis.buat_sesi(kon, a1, seed=1)
+        s2 = basis.buat_sesi(kon, b1, seed=2)
+        assert basis.siswa_milik(kon, a1, "ortu-a")
+        assert not basis.siswa_milik(kon, a1, "ortu-b")
+        assert not basis.siswa_milik(kon, 9999, "ortu-a")
+        assert basis.sesi_milik(kon, s1, "ortu-a")
+        assert not basis.sesi_milik(kon, s1, "ortu-b")
+        assert not basis.sesi_milik(kon, s2, "ortu-a")
+        assert not basis.sesi_milik(kon, 9999, "ortu-a")
+
+
 def test_sesi_berisi_dua_belas_soal(db):
     with basis.buka(db) as kon:
         sid = basis.tambah_siswa(kon, "Uji")
