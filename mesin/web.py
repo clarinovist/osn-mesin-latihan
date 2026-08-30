@@ -49,7 +49,6 @@ PETA_SECTION_AKUN = {
     # Aksi POST /akun -> section tempat hasilnya ditampilkan, supaya
     # pengguna kembali ke tempat formnya, bukan melompat ke bawaan.
     "sandi": "akun",
-    "siswa": "siswa",
     "anak_baru": "siswa",
     "tingkat": "siswa",
     "siswa_hapus": "siswa",
@@ -1006,7 +1005,7 @@ def halaman_akun(
     """Kelola sandi dan daftar siswa — sidebar + section, tanpa JS.
 
     Satu halaman, tiga section via ?section=: "akun" (ganti sandi),
-    "siswa" (daftar anak + form tambah), "akun-murid" (akun latihan anak).
+    "siswa" (daftar anak + hapus aman), "akun-murid" (akun latihan anak).
     Nilai tak dikenal jatuh ke "akun". Admin hanya punya section "akun" —
     data keluarga lain bukan ranahnya (baca-semua-tulis-tidak).
 
@@ -1089,31 +1088,18 @@ def halaman_akun(
         f"<h2>Siswa</h2></div>"
         f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Tingkat</th>'
         f"<th>Sesi</th><th>Akun latihan</th><th>Aksi</th></tr>{daftar}</table></div>"
-        f'<form method="post" action="/akun" style="margin-top:.9rem">'
-        f'<input type="hidden" name="aksi" value="siswa">'
-        f'<div class="baris">'
-        f'<div><label>Nama siswa baru</label>'
-        f'<input type="text" name="nama" placeholder="nama panggilan saja" required></div>'
-        f'<div><label>Tingkat</label>'
-        f'<select name="tingkat">'
-        + "".join(
-            f'<option value="{lv}"{" selected" if lv == LEVEL_BAWAAN else ""}>{lv}</option>'
-            for lv in LEVEL
-        )
-        + f"</select></div></div>"
-        f'<p class="sub" style="margin-top:.5rem">Pakai nama panggilan atau '
-        f"inisial, bukan nama lengkap — mengurangi dampak bila basis data ini "
-        f"bocor.</p>"
-        f'<button type="submit" class="tombol-coral">Tambah siswa</button>'
-        f"</form></div>"
+        f'<p class="sub" style="margin-top:.7rem">Anak baru ditambahkan dari '
+        f'kartu "Tambah anak" di bawah — sekalian dengan akun latihannya.'
+        f"</p></div>"
     )
     kartu_anak = (
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">🧒</span>'
-        f"<h2>Tambah anak + akun latihannya</h2></div>"
+        f"<h2>Tambah anak</h2></div>"
         f'<p class="sub">Satu langkah untuk pengguna baru: buat siswa '
         f"sekaligus akun yang dipakai anak untuk masuk ke /murid dari HP. "
-        f"Nama siswa dan nama akun otomatis dibuat sama.</p>"
+        f"Pakai nama panggilan atau inisial, bukan nama lengkap — "
+        f"mengurangi dampak bila basis data ini bocor.</p>"
         f'<form method="post" action="/akun">'
         f'<input type="hidden" name="aksi" value="anak_baru">'
         f'<div class="baris">'
@@ -1126,6 +1112,10 @@ def halaman_akun(
             for lv in LEVEL
         )
         + f"</select></div></div>"
+        f"<label>Nama login anak (opsional — bawaan sama dengan nama anak)"
+        f"</label>"
+        f'<input type="text" name="nama_akun" '
+        f'placeholder="diisi bila nama anak sudah dipakai keluarga lain">'
         f"<label>Kata sandi anak (minimal 8 karakter)</label>"
         f'<input type="password" name="sandi_anak" autocomplete="new-password" '
         f'required minlength="8">'
@@ -1245,31 +1235,6 @@ def proses_akun(
             "",
         )
 
-    if aksi == "siswa":
-        nama = data.get("nama", "").strip()
-        tingkat = data.get("tingkat", LEVEL_BAWAAN).strip() or LEVEL_BAWAAN
-
-        if not nama:
-            return "", "Nama siswa tidak boleh kosong."
-        if len(nama) > 40:
-            return "", "Nama terlalu panjang."
-        # Level divalidasi terhadap daftar tertutup. Tanpa ini, salah ketik
-        # ("p4", "kelas 4") diam-diam jatuh ke profil P3 lewat `profil()`,
-        # dan guru mengira anaknya dapat soal P4 padahal tidak.
-        if not level_valid(tingkat):
-            return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
-        # Duplikat diperiksa PER KELUARGA: dua keluarga boleh sama-sama
-        # punya "Bima", tapi satu keluarga tidak.
-        sudah = kon.execute(
-            "SELECT 1 FROM siswa WHERE lower(nama) = lower(?) AND pemilik = ?",
-            (nama, pengguna_kini),
-        ).fetchone()
-        if sudah:
-            return "", f"Siswa bernama {nama} sudah ada di keluargamu."
-
-        basis.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
-        return f"Siswa {nama} ditambahkan ({tingkat}).", ""
-
     if aksi == "anak_baru":
         """Onboarding publik: siswa + akun murid sekaligus (atomic).
 
@@ -1280,6 +1245,10 @@ def proses_akun(
         nama = data.get("nama", "").strip()
         tingkat = data.get("tingkat", LEVEL_BAWAAN).strip() or LEVEL_BAWAAN
         sandi_anak = data.get("sandi_anak", "")
+        # Nama login boleh beda dari nama anak — jalannya bila nama anak
+        # sudah dipakai keluarga lain sebagai login (nama anak tetap unik
+        # per keluarga, nama login unik global).
+        nama_akun = (data.get("nama_akun") or "").strip() or nama
 
         if not nama:
             return "", "Nama anak tidak boleh kosong."
@@ -1294,12 +1263,12 @@ def proses_akun(
             (nama, pengguna_kini),
         ).fetchone():
             return "", f"Siswa bernama {nama} sudah ada di keluargamu."
-        if sandi.cari_akun(nama) is not None:
-            return "", f"Nama {nama} sudah dipakai akun lain. Pakai nama lain."
+        if sandi.cari_akun(nama_akun) is not None:
+            return "", f"Nama {nama_akun} sudah dipakai akun lain. Pakai nama lain."
 
         siswa_id = basis.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
         try:
-            sandi.tambah_akun(nama, sandi_anak, "murid", siswa_id=siswa_id)
+            sandi.tambah_akun(nama_akun, sandi_anak, "murid", siswa_id=siswa_id)
         except ValueError as e:
             # Pembuatan akun meledak di tengah: batalkan siswa yang baru
             # dibuat supaya tidak ada anak yatim tanpa akun.
@@ -1312,7 +1281,7 @@ def proses_akun(
         catatan = " (persetujuan orang tua dicatat)" if data.get("persetujuan_ortu") else ""
         return (
             f"Anak {nama} ditambahkan ({tingkat}) beserta akun latihannya{catatan}. "
-            f"Anak masuk lewat /murid dengan nama {nama}.",
+            f"Anak masuk lewat /murid dengan nama {nama_akun}.",
             "",
         )
 

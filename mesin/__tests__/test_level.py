@@ -275,7 +275,8 @@ def test_lembar_sesi_lama_tetap_dirender_pada_levelnya(db):
 
 def test_tambah_siswa_menolak_tingkat_ngawur(db):
     pesan, galat = web.proses_akun(
-        db, {"aksi": "siswa", "nama": "Salah", "tingkat": "kelas 4"}, "guru"
+        db, {"aksi": "anak_baru", "nama": "Salah", "tingkat": "kelas 4",
+             "sandi_anak": "sandi-uji-12345"}, "guru"
     )
     assert pesan == ""
     assert "P3" in galat

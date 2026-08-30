@@ -82,14 +82,15 @@ def test_css_menu_pengguna_tersedia():
 
 def test_aksi_akun_kembali_ke_section_asal(server):
     """POST /akun tanpa field section: peta aksi->section menentukan di
-    section mana hasilnya tampil — aksi siswa kembali ke section siswa."""
+    section mana hasilnya tampil — aksi anak_baru kembali ke section siswa."""
     s, _, _ = server
     kode, isi, _ = s.minta(
         "/akun",
         auth=("ortu-a", SANDI_A),
-        data={"aksi": "siswa", "nama": "Rara", "tingkat": "P3"},
+        data={"aksi": "anak_baru", "nama": "Rara", "tingkat": "P3",
+              "sandi_anak": "sandi-rara-12345"},
     )
     assert kode == 200
     assert "Rara" in isi, "pesan sukses tidak tampil"
-    assert "Tambah siswa" in isi, "hasil aksi tidak kembali ke section siswa"
+    assert "Tambah anak" in isi, "hasil aksi tidak kembali ke section siswa"
     assert "Ganti sandi" not in isi

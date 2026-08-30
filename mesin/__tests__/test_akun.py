@@ -109,18 +109,24 @@ def test_sandi_baru_tidak_tersimpan_sebagai_teks(siap):
 def test_tambah_siswa_berhasil(siap):
     with basis.buka(siap) as kon:
         pesan, galat = web.proses_akun(kon, {
-            "aksi": "siswa", "nama": "Rara", "tingkat": "P4",
+            "aksi": "anak_baru", "nama": "Rara", "tingkat": "P4",
+            "sandi_anak": "sandi-rara-12345",
         }, "guru")
         nama = [s["nama"] for s in basis.daftar_siswa(kon)]
 
     assert not galat
     assert "Rara" in pesan
     assert "Rara" in nama
+    assert sandi.cari_akun("Rara") is not None, "anak baru harus punya akun"
 
 
 def test_nama_kosong_ditolak(siap):
     with basis.buka(siap) as kon:
-        _, galat = web.proses_akun(kon, {"aksi": "siswa", "nama": "   "}, "guru")
+        _, galat = web.proses_akun(
+            kon,
+            {"aksi": "anak_baru", "nama": "   ", "sandi_anak": "sandi-rara-12345"},
+            "guru",
+        )
         assert "kosong" in galat.lower()
         assert len(basis.daftar_siswa(kon)) == 0
 
@@ -128,15 +134,22 @@ def test_nama_kosong_ditolak(siap):
 def test_nama_duplikat_ditolak_tanpa_pandang_huruf(siap):
     """Dua siswa bernama sama membuat laporan tidak bisa dibedakan."""
     with basis.buka(siap) as kon:
-        web.proses_akun(kon, {"aksi": "siswa", "nama": "Rara"}, "guru")
-        _, galat = web.proses_akun(kon, {"aksi": "siswa", "nama": "rara"}, "guru")
+        web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "Rara", "sandi_anak": "sandi-rara-12345",
+        }, "guru")
+        _, galat = web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "rara", "sandi_anak": "sandi-rara-12345",
+        }, "guru")
         assert "sudah ada" in galat.lower()
         assert len(basis.daftar_siswa(kon)) == 1
 
 
 def test_tingkat_kosong_memakai_bawaan(siap):
     with basis.buka(siap) as kon:
-        web.proses_akun(kon, {"aksi": "siswa", "nama": "Tanpa", "tingkat": ""}, "guru")
+        web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "Tanpa", "tingkat": "",
+            "sandi_anak": "sandi-tanpa-1234",
+        }, "guru")
         s = basis.daftar_siswa(kon)[0]
     assert s["tingkat"] == "P3"
 
@@ -274,8 +287,12 @@ def test_hapus_siswa_keluarga_lain_ditolak(siap):
 def test_pesan_galat_di_escape(siap):
     """Nama siswa masuk pesan galat; karakter khusus tidak boleh merusak HTML."""
     with basis.buka(siap) as kon:
-        web.proses_akun(kon, {"aksi": "siswa", "nama": "<b>X</b>"}, "guru")
-        _, galat = web.proses_akun(kon, {"aksi": "siswa", "nama": "<b>X</b>"}, "guru")
+        web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "<b>X</b>", "sandi_anak": "sandi-eks-12345",
+        }, "guru")
+        _, galat = web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "<b>X</b>", "sandi_anak": "sandi-eks-12345",
+        }, "guru")
         h = web.halaman_akun(kon, "", galat, section="siswa").decode()
 
     assert "<b>X</b>" not in h
@@ -416,7 +433,7 @@ def test_section_siswa_memuat_daftar_dan_form(siap):
         basis.tambah_siswa(kon, "Andi")
         h = web.halaman_akun(kon, section="siswa").decode()
     assert "Andi" in h
-    assert "Tambah siswa" in h
+    assert "Tambah siswa" not in h, "form tambah siswa sudah tidak ada"
     assert "Tambah anak" in h
     assert "Ganti sandi" not in h
     assert "Akun murid" not in h
@@ -455,11 +472,11 @@ def test_admin_hanya_section_akun(siap):
 def test_peta_aksi_ke_section_lengkap():
     """Tiap aksi POST /akun harus punya section tujuan — hasil aksi tampil
     di tempat formnya, bukan melompat ke section bawaan."""
-    for aksi in ("sandi", "siswa", "siswa_hapus", "anak_baru", "tingkat",
+    for aksi in ("sandi", "siswa_hapus", "anak_baru", "tingkat",
                  "akun_murid_tambah", "akun_murid_hapus", "akun_murid_sandi"):
         assert aksi in web.PETA_SECTION_AKUN, f"aksi {aksi} tak dipetakan"
     assert web.PETA_SECTION_AKUN["siswa_hapus"] == "siswa"
-    assert web.PETA_SECTION_AKUN["siswa"] == "siswa"
+    assert "siswa" not in web.PETA_SECTION_AKUN, "aksi siswa sudah dihapus"
     assert web.PETA_SECTION_AKUN["akun_murid_tambah"] == "akun-murid"
     assert web.PETA_SECTION_AKUN["sandi"] == "akun"
 
@@ -498,18 +515,31 @@ def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):
 
 def test_siswa_baru_ber_pemilik_pembuatnya(siap):
     with basis.buka(siap) as kon:
-        web.proses_akun(kon, {"aksi": "siswa", "nama": "MilikA", "tingkat": "P3"}, "ortu-a")
+        web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "MilikA", "tingkat": "P3",
+            "sandi_anak": "sandi-milka-1234",
+        }, "ortu-a")
         baris = kon.execute("SELECT pemilik FROM siswa WHERE nama='MilikA'").fetchone()
     assert baris["pemilik"] == "ortu-a"
 
 
 def test_dobel_nama_antar_keluarga_sah_dalam_keluarga_ditolak(siap):
     """Dua keluarga boleh sama-sama punya 'Bima'; dalam satu keluarga tetap
-    ditolak tanpa pandang huruf besar-kecil."""
+    ditolak tanpa pandang huruf besar-kecil. Login keluarga kedua memakai
+    variasi karena nama login unik global."""
     with basis.buka(siap) as kon:
-        _, g1 = web.proses_akun(kon, {"aksi": "siswa", "nama": "Bima", "tingkat": "P3"}, "ortu-a")
-        _, g2 = web.proses_akun(kon, {"aksi": "siswa", "nama": "Bima", "tingkat": "P3"}, "ortu-b")
-        _, g3 = web.proses_akun(kon, {"aksi": "siswa", "nama": "BIMA", "tingkat": "P3"}, "ortu-a")
+        _, g1 = web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "Bima", "tingkat": "P3",
+            "sandi_anak": "sandi-bima-12345",
+        }, "ortu-a")
+        _, g2 = web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "Bima", "tingkat": "P3",
+            "sandi_anak": "sandi-bima-67890", "nama_akun": "bima-kedua",
+        }, "ortu-b")
+        _, g3 = web.proses_akun(kon, {
+            "aksi": "anak_baru", "nama": "BIMA", "tingkat": "P3",
+            "sandi_anak": "sandi-bima-abcde",
+        }, "ortu-a")
         n = kon.execute("SELECT COUNT(*) c FROM siswa WHERE nama='Bima'").fetchone()["c"]
     assert g1 == "" and g2 == ""
     assert g3 != ""

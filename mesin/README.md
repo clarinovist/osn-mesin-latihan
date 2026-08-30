@@ -101,18 +101,23 @@ Tautan **"Akun & Siswa"** di menu pengguna (dropdown topbar) membuka
 
 - **akun** — ganti sandi (minimal 12 karakter, perlu sandi lama). Ganti
   sandi acak bawaan deploy dengan yang kamu ingat.
-- **siswa** — tabel siswa (select tingkat + simpan), form "Tambah anak +
-  akun latihannya", dan form tambah siswa polos. Anak yang kamu buat
-  otomatis jadi milik keluargamu.
+- **siswa** — tabel siswa: select tingkat + simpan, kolom status akun
+  latihan (nama login anak, atau "belum ada login"), dan tombol Hapus.
+  Anak baru ditambahkan lewat kartu "Tambah anak" (satu pintu: siswa +
+  akun latihannya sekaligus; nama login opsional, bawaan sama dengan
+  nama anak). Anak yang kamu buat otomatis jadi milik keluargamu.
 - **akun-murid** — tabel status akun latihan anak, setel sandi, tambah akun
   murid, hapus akun.
 
 Section tak dikenal jatuh ke "akun". Setelah aksi POST, kamu kembali ke
 section asalnya.
 
-Siswa sengaja tidak bisa dihapus: menghapusnya ikut menghapus seluruh sesi,
-jawaban, dan diagnosisnya. Kalau seorang anak berhenti, biarkan saja
-datanya — tidak mengganggu apa pun.
+Menghapus akun latihan TIDAK menghapus anaknya — anak tetap ada di
+tabel siswa, tinggal dikasih login baru dari section akun-murid. Sebaliknya,
+menghapus siswa menghapus sesi, jawaban, dan diagnosisnya (riwayat yang
+tidak bisa dibangun ulang), jadi siswa ber-riwayat sengaja tidak bisa
+dihapus; siswa tanpa riwayat (salah ketik / data uji) boleh dihapus dan
+akun latihannya ikut dihapus sekalian.
 
 Admin hanya melihat section **akun** (ganti sandi sendiri); section siswa
 dan akun-murid tidak ditampilkan.

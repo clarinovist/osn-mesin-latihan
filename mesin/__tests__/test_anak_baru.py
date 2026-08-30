@@ -89,6 +89,43 @@ def test_anak_baru_sandi_pendek_ditolak_tanpa_siswa_yatim(db):
     assert sandi.cari_akun("Aisha") is None
 
 
+def test_anak_baru_nama_login_opsional(db):
+    """Nama login boleh beda dari nama anak — jalannya bila nama anak
+    sudah dipakai keluarga lain sebagai login global."""
+    pesan, galat = web.proses_akun(
+        db, dict(DATA_LENGKAP, nama_akun="aisha-santoso"), "ortu-a"
+    )
+    assert galat == ""
+    baris = db.execute("SELECT id FROM siswa WHERE nama='Aisha'").fetchone()
+    assert baris is not None
+    akun = sandi.cari_akun("aisha-santoso")
+    assert akun is not None and akun["siswa_id"] == baris["id"]
+    assert sandi.cari_akun("Aisha") is None, "login bawaan tidak boleh ikut dibuat"
+    assert "aisha-santoso" in pesan, "pesan harus menyebut nama loginnya"
+
+
+def test_anak_baru_dobel_nama_antar_keluarga_via_login_beda(db):
+    """Janji README: dua keluarga boleh sama-sama punya 'Bima'. Kalau nama
+    login 'Bima' sudah dipakai keluarga pertama, keluarga kedua cukup
+    memakai variasi nama login; dalam satu keluarga tetap ditolak."""
+    _, g1 = web.proses_akun(db, dict(
+        DATA_LENGKAP, nama="Bima", tingkat="P3", sandi_anak="sandi-bima-12345",
+    ), "ortu-a")
+    _, g2 = web.proses_akun(db, dict(
+        DATA_LENGKAP, nama="Bima", tingkat="P3",
+        sandi_anak="sandi-bima-67890", nama_akun="bima-kedua",
+    ), "ortu-b")
+    _, g3 = web.proses_akun(db, dict(
+        DATA_LENGKAP, nama="BIMA", tingkat="P3", sandi_anak="sandi-bima-abcde",
+    ), "ortu-a")
+    n = db.execute(
+        "SELECT COUNT(*) c FROM siswa WHERE nama='Bima'"
+    ).fetchone()["c"]
+    assert g1 == "" and g2 == ""
+    assert g3 != "" and "sudah ada" in g3.lower()
+    assert n == 2
+
+
 # ── Multi-keluarga: pemilik & tautan siswa_id ───────────────────────────
 
 
