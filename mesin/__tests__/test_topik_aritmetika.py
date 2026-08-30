@@ -19,7 +19,10 @@ from generator import buat_lembar, buat_soal  # noqa: E402
 
 def test_registry_memuat_pola_dan_aritmetika_dasar():
     """Loader paket harus memberi UI dua opsi topik yang nyata."""
-    assert topik.daftar_topik() == ["aritmetika-dasar", "pola-bilangan"]
+    # Superset, bukan daftar tertutup: paket baru boleh masuk tanpa
+    # mengubah test lama (keputusan plan 30 Aug 2026, Fase 0).
+    assert "aritmetika-dasar" in topik.daftar_topik()
+    assert "pola-bilangan" in topik.daftar_topik()
 
     paket = topik.ambil("aritmetika-dasar")
     assert paket.id == "aritmetika-dasar"

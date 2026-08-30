@@ -30,7 +30,10 @@ def pb():
 
 
 def test_paket_pola_bilangan_terdaftar(pb):
-    assert topik.daftar_topik() == ["aritmetika-dasar", "pola-bilangan"]
+    # Superset, bukan daftar tertutup: paket baru boleh masuk tanpa
+    # mengubah test lama (keputusan plan 30 Aug 2026, Fase 0).
+    assert "pola-bilangan" in topik.daftar_topik()
+    assert "aritmetika-dasar" in topik.daftar_topik()
     assert pb.id == "pola-bilangan"
     assert pb.nama == "Pola Bilangan"
     assert pb.judul_lembar == "Latihan Pola Bilangan"
@@ -118,7 +121,9 @@ def test_render_badan_template_lain_menyerahkan_ke_bawaan(pb):
 def test_templates_registri_menggabungkan_semua_paket():
     pb = topik.paket_bawaan()
     aritmetika = topik.ambil("aritmetika-dasar")
-    assert set(templates.REGISTRI) == set(pb.templates) | set(aritmetika.templates)
+    # Superset, bukan persis dua paket: paket baru tidak boleh memaksa
+    # test lama berubah (keputusan plan 30 Aug 2026, Fase 0).
+    assert set(pb.templates) | set(aritmetika.templates) <= set(templates.REGISTRI)
     for paket in (pb, aritmetika):
         for tid in paket.templates:
             assert templates.REGISTRI[tid] is paket.templates[tid]
@@ -257,19 +262,19 @@ def test_urutan_impor_apapun_hasil_sama():
     skenario = {
         "topik_dulu": (
             "import topik\nimport templates\n"
-            "assert len(templates.REGISTRI) == 19\n"
+            "assert len(templates.REGISTRI) >= 19\n"
         ),
         "templates_dulu": (
             "import templates\nimport topik\n"
-            "assert len(templates.REGISTRI) == 19\n"
+            "assert len(templates.REGISTRI) >= 19\n"
         ),
         "paket_dulu": (
             "import topik_pola_bilangan\nimport templates\n"
-            "assert len(templates.REGISTRI) == 19\n"
+            "assert len(templates.REGISTRI) >= 19\n"
         ),
         "generator_dulu": (
             "import generator\nimport topik\n"
-            "assert len(topik.registri()) == 19\n"
+            "assert len(topik.registri()) >= 19\n"
             "assert generator.buat_soal('suku_ke_n', 1, level='P6')\n"
         ),
     }
