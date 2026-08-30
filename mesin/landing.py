@@ -25,6 +25,8 @@ def _halaman_publik(judul: str, isi: str) -> bytes:
         "border-radius:8px;text-decoration:none;font-weight:600;margin:.2rem .4rem .2rem 0}"
         f"a.tombol-coral{{background:{T.AKSEN_MURID_KORAL};color:{T.TEKS_PUTIH}}}"
         f"a.tombol-putih{{background:none;color:{T.STATUS_KUAT};border:1px solid {T.STATUS_KUAT}}}"
+        f".topbar-navigasi a.tombol-putih:hover{{color:{T.AKSEN_MURID_UTAMA};"
+        f"border-color:{T.AKSEN_MURID_UTAMA}}}"
         "a.brand{text-decoration:none}"
     )
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
@@ -50,7 +52,7 @@ def halaman_daftar(
     isi = f"""
 <div class="topbar"><a class="brand" href="/">{n}</a>
 <nav class="topbar-navigasi">
-<a href="/masuk">Masuk</a></nav></div>
+<a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
 
 <section class="kartu" style="max-width:26rem;margin:2rem auto">
 <h1>Daftar {n}</h1>
@@ -89,7 +91,7 @@ def halaman_kebijakan() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     isi = f"""
 <div class="topbar"><a class="brand" href="/">{n}</a>
-<nav class="topbar-navigasi"><a href="/masuk">Masuk</a></nav></div>
+<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
 
 <section class="kartu" style="max-width:46rem;margin:2rem auto">
 <h1>Kebijakan Privasi</h1>
@@ -151,7 +153,7 @@ def halaman_landing() -> bytes:
     tag = html.escape(T.TAGLINE)
     isi = f"""
 <div class="topbar"><a class="brand" href="/">{n}</a>
-<nav class="topbar-navigasi"><a href="/masuk">Masuk</a></nav></div>
+<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
 
 <section class="kartu hero-landing">
   <img src="{ikon.OWL}" alt="" width="120" height="120">

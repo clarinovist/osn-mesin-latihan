@@ -3,7 +3,8 @@
 Kontrak:
 1. /daftar: brand = anchor link ke /; nav hanya "Masuk"; tidak ada
    duplikat "Sudah punya akun? Masuk" di bawah form.
-2. Homepage: nav hanya "Masuk"; hero single CTA; footer tanpa /masuk.
+2. Homepage: nav hanya "Masuk" — sebagai tombol outline (tombol-putih),
+   tetap kalah menonjol dari CTA coral; hero single CTA; footer tanpa /masuk.
 3. Kedua halaman: tepat 1 href="/masuk".
 """
 from __future__ import annotations
@@ -51,9 +52,12 @@ def test_landing_href_masuk_tepat_satu():
     assert h.count('href="/masuk"') == 1
 
 
-def test_landing_tidak_ada_tombol_putih_masuk():
+def test_landing_masuk_tombol_outline_di_nav():
+    """Dulu Masuk sengaja teks polos (single-CTA), tapi tampilannya
+    seperti lupa didesain. Sekarang tombol outline — tetap kalah
+    menonjol dari CTA coral."""
     h = _html(halaman_landing)
-    assert 'tombol-putih" href="/masuk"' not in h
+    assert '<a class="tombol-putih" href="/masuk">Masuk</a>' in h
 
 
 def test_landing_footer_tanpa_masuk():
@@ -71,7 +75,9 @@ def test_landing_brand_adalah_link_beranda():
 def test_landing_hero_single_cta():
     h = _html(halaman_landing)
     assert "Mulai — daftar sekarang" in h
-    assert 'class="tombol-putih"' not in h
+    # satu-satunya tombol-putih di halaman adalah "Masuk" di nav —
+    # hero tetap punya CTA tunggal coral
+    assert h.count('class="tombol-putih"') == 1
 
 
 # ─────────────────── halaman_kebijakan ───────────────────
