@@ -253,9 +253,53 @@ def jumlah_sudut_segitiga(
     )
 
 
+def sudut_luar_segitiga(a: int, b: int) -> Soal:
+    """Sudut luar segitiga = a+b (dua sudut dalam tak bersisian).
+
+    Hanya P5+ (komposisi P5/P6 memuatnya; P4 menolak lewat `_level_efektif`).
+    Kunci a+b; malrule membedakan "dikira sudut dalam" (180−a−b) dari
+    "selisih a−b" (keduanya K) dan salah hitung (H).
+    """
+    kunci = a + b
+    mal = [
+        Malrule(
+            "sudut_luar.dikira_dalam",
+            str(180 - a - b),
+            "K",
+            "menghitung sudut dalam yang tersisa padahal yang ditanya sudut luar",
+        ),
+        Malrule(
+            "sudut_luar.selisih_a_b",
+            str(a - b),
+            "K",
+            "mengurangkan dua sudut dalam padahal sudut luar = jumlah keduanya",
+        ),
+        Malrule(
+            "sudut_luar.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "jumlah dua sudut dalam sudah benar, hasilnya meleset satu",
+        ),
+    ]
+    return Soal(
+        "sudut_luar_segitiga",
+        {"a": a, "b": b},
+        (
+            f"Dua sudut dalam sebuah segitiga yang tidak bersisian dengan "
+            f"sudut luar besarnya {a}° dan {b}°. "
+            f"Berapa besar sudut luar tersebut?"
+        ),
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="A",
+    )
+
+
 REGISTRI_TOPIK = {
     "sudut_pelurus_berpenyiku": sudut_pelurus_berpenyiku,
     "jumlah_sudut_segitiga": jumlah_sudut_segitiga,
+    "sudut_luar_segitiga": sudut_luar_segitiga,
 }
 
 KOMPOSISI = {
@@ -359,6 +403,15 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         )
         p, q, r = rng.choice(pilihan)
         return {"varian": varian, "p": p, "q": q, "r": r}
+    if template_id == "sudut_luar_segitiga":
+        # a > b supaya selisih positif; a != 90 supaya dikira_dalam (180-a-b)
+        # != selisih_a_b (a-b); a+b != 90 supaya dikira_dalam != kunci (a+b).
+        a = rng.randint(30, 89)
+        b = rng.randint(20, a - 1)
+        while a + b == 90:
+            a = rng.randint(30, 89)
+            b = rng.randint(20, a - 1)
+        return {"a": a, "b": b}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 

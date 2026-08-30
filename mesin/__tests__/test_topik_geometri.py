@@ -115,3 +115,54 @@ def test_judul_bagian_geometri():
         "C": "Bagian C — Lingkaran",
         "D": "Bagian D — Arsiran & perubahan ukuran",
     }
+
+
+# ── Template kelompok sudut (#1-#3) — Task 1.2 ────────────────────────
+
+KELOMPOK_SUDUT = ("sudut_pelurus_berpenyiku", "jumlah_sudut_segitiga", "sudut_luar_segitiga")
+
+
+def test_sudut_luar_segitiga_kunci_dan_malrule():
+    """#3 sudut_luar: luar = a+b (dua dalam tak bersisian)."""
+    s = buat_soal("sudut_luar_segitiga", 7, level="P5", topik="geometri-datar")
+    p = s.parameter
+    assert s.kunci == str(p["a"] + p["b"])
+    assert "Berapa besar sudut luar" in s.teks
+    jawaban = [m.jawaban for m in s.malrule]
+    kode = {m.kode for m in s.malrule}
+    assert s.kunci not in jawaban
+    assert len(jawaban) == len(set(jawaban))
+    assert {"K", "H"} <= kode, kode
+
+
+def test_sudut_luar_malrule_konsep_dan_hitung():
+    """#3: 180-(a+b) dikira dalam (K), selisih a-b (K), kurang-1 (H)."""
+    s = buat_soal("sudut_luar_segitiga", 11, level="P5", topik="geometri-datar")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["sudut_luar.dikira_dalam"] == str(180 - p["a"] - p["b"])
+    assert jawaban["sudut_luar.selisih_a_b"] == str(p["a"] - p["b"])
+    assert jawaban["sudut_luar.kurang_satu"] == str(p["a"] + p["b"] - 1)
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_SUDUT)
+@pytest.mark.parametrize("level", ("P4", "P5", "P6"))
+def test_kelompok_sudut_sweep_tanpa_malrule_kosong(template_id, level):
+    """Tiap soal kelompok sudut punya jalur diagnosis (malrule tak kosong)."""
+    if template_id == "sudut_luar_segitiga" and level == "P4":
+        return  # #3 hanya P5+
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="geometri-datar")
+        assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, (
+            f"{template_id}@{level}/{seed}"
+        )
+
+
+def test_sudut_luar_segitiga_tidak_di_komposisi_p4():
+    """#3 hanya P5+ — komposisi P4 tidak memuatnya."""
+    komposisi = _paket().komposisi_untuk("P4")
+    assert "sudut_luar_segitiga" not in komposisi
+    # Template tetap bisa dipanggil langsung (P4 adalah level valid paket)
+    s = buat_soal("sudut_luar_segitiga", 7, level="P4", topik="geometri-datar")
+    assert s is not None
