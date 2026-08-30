@@ -201,6 +201,20 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .baris {{ display: flex; gap: .8rem; flex-wrap: wrap; }}
 .baris > * {{ flex: 1; min-width: 180px; }}
 
+/* ── Tombol mata pada kolom sandi (lihat/sembunyikan) ──────────────── */
+/* Input dibungkus .kolom-sandi oleh SKRIP_MATA_SANDI. padding-right
+   penting: input "sandi baru" di tabel akun memakai style inline. */
+.kolom-sandi {{ position: relative; }}
+.kolom-sandi > input {{ padding-right: 2.6rem !important; }}
+.tombol-mata {{
+  position: absolute; top: 50%; right: .35rem; transform: translateY(-50%);
+  width: 1.9rem; height: 1.9rem; display: inline-flex; align-items: center;
+  justify-content: center; padding: 0; border: none; background: none;
+  color: {T.TEKS_SUBTLE}; cursor: pointer; border-radius: {T.RADIUS_KECIL};
+}}
+.tombol-mata:hover {{ color: {T.TEKS_UTAMA}; }}
+.tombol-mata svg {{ display: block; }}
+
 /* ── Pilihan mode & timer saat buat sesi (Latihan Cepat) ───────────── */
 .mode-pilih {{ display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .2rem; }}
 .mode-opsi {{ display: flex; align-items: center; gap: .4rem; font-size: .88rem;
@@ -366,4 +380,40 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   body {{ background: #fff; }}
   .simpan-strip, .tombol-coral, .tombol-kecil {{ display: none; }}
 }}
+"""
+
+# Skrip tombol mata — dipasang shell halaman (web.py _halaman,
+# landing.py _halaman_publik) di akhir <body>. Membungkus setiap
+# input sandi dengan .kolom-sandi lalu menambah tombol tampilkan/
+# sembunyikan. Murni penampilan: name, value, dan validasi tak berubah.
+SKRIP_MATA_SANDI = """\
+(function(){
+  var ikonLihat = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7.5 11-7.5S23 12 23 12s-4 7.5-11 7.5S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var ikonSembunyi = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.4 10.4 0 0 1 12 19.5C5 19.5 1 12 1 12a18.6 18.6 0 0 1 5.06-5.94"/><path d="M9.9 4.74A9.9 9.9 0 0 1 12 4.5c7 0 11 7.5 11 7.5a18.6 18.6 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  var kolom = document.querySelectorAll('input[type=password]');
+  for (var i = 0; i < kolom.length; i++) { (function(el){
+    if (el.closest('.kolom-sandi')) return;
+    var bungkus = document.createElement('div');
+    bungkus.className = 'kolom-sandi';
+    el.parentNode.insertBefore(bungkus, el);
+    bungkus.appendChild(el);
+    var mata = document.createElement('button');
+    mata.type = 'button';
+    mata.className = 'tombol-mata';
+    mata.title = 'Tampilkan sandi';
+    mata.setAttribute('aria-label', 'Tampilkan sandi');
+    mata.setAttribute('aria-pressed', 'false');
+    mata.innerHTML = ikonLihat;
+    mata.addEventListener('click', function(){
+      var tampil = el.type === 'password';
+      el.type = tampil ? 'text' : 'password';
+      mata.innerHTML = tampil ? ikonSembunyi : ikonLihat;
+      mata.title = tampil ? 'Sembunyikan sandi' : 'Tampilkan sandi';
+      mata.setAttribute('aria-label', mata.title);
+      mata.setAttribute('aria-pressed', String(tampil));
+      el.focus({ preventScroll: true });
+    });
+    bungkus.appendChild(mata);
+  })(kolom[i]); }
+})();
 """

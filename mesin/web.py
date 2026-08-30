@@ -29,7 +29,7 @@ import lampiran as lampiran_mod
 import sandi
 import sesi
 from diagnosa import diagnosa
-from gaya_guru import GAYA_GURU as GAYA
+from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI
 from generator import LEVEL_BAWAAN, buat_soal
 from templates import LEVEL, REGISTRI, Soal, level_valid
 from topik import TOPIK_BAWAAN, Topik, ambil, daftar_topik, dari_sesi
@@ -67,7 +67,7 @@ def _halaman(
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(judul)}</title><style>{GAYA}</style></head>
-<body><div class="bungkus">{batang}{isi}</div></body></html>""".encode()
+<body><div class="bungkus">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script></body></html>""".encode()
 
 
 def _soal_dari_baris(baris) -> Soal:

@@ -13,7 +13,7 @@ import html
 
 import design_tokens as T
 import ikon
-from gaya_guru import GAYA_GURU as GAYA
+from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI
 
 
 def _halaman_publik(judul: str, isi: str) -> bytes:
@@ -30,7 +30,7 @@ def _halaman_publik(judul: str, isi: str) -> bytes:
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(judul)}</title><style>{GAYA}</style><style>{gaya_cta}</style></head>
-<body><div class="bungkus">{isi}</div></body></html>""".encode()
+<body><div class="bungkus">{isi}</div><script>{SKRIP_MATA_SANDI}</script></body></html>""".encode()
 
 
 def halaman_daftar(
