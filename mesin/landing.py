@@ -18,9 +18,17 @@ from gaya_guru import GAYA_GURU as GAYA
 
 def _halaman_publik(judul: str, isi: str) -> bytes:
     """Kerangka halaman publik — sama gaya _halaman web.py, tanpa data."""
+    # Link yang berperan sebagai tombol CTA (selector button.* di CSS guru
+    # tidak mengenai <a>). Style lokal, tidak menyentuh CSS bersama.
+    gaya_cta = (
+        "a.tombol-coral,a.tombol-putih{display:inline-block;padding:.6rem 1.2rem;"
+        "border-radius:8px;text-decoration:none;font-weight:600;margin:.2rem .4rem .2rem 0}"
+        f"a.tombol-coral{{background:{T.AKSEN_MURID_KORAL};color:{T.TEKS_PUTIH}}}"
+        f"a.tombol-putih{{background:none;color:{T.STATUS_KUAT};border:1px solid {T.STATUS_KUAT}}}"
+    )
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(judul)}</title><style>{GAYA}</style></head>
+<title>{html.escape(judul)}</title><style>{GAYA}</style><style>{gaya_cta}</style></head>
 <body><div class="bungkus">{isi}</div></body></html>""".encode()
 
 
