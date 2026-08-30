@@ -205,3 +205,58 @@ def test_kelompok_kpk_sweep(template_id, level):
         s = buat_soal(template_id, seed, level=level, topik="teori-bilangan")
         assert s.malrule, f"{template_id}@{level}/{seed} kosong"
         assert {"K", "H"} <= {m.kode for m in s.malrule}
+
+
+# ── Template #5-#6 sisa & paritas — Task 3.4 ──────────────────────────
+
+KELOMPOK_SISA = ("sisa_pembagian", "paritas")
+
+
+def test_sisa_pembagian_kunci():
+    """#5: N dibagi d bersisa sisa = N % d, sisa >= 1."""
+    s = buat_soal("sisa_pembagian", 7, level="P4", topik="teori-bilangan")
+    p = s.parameter
+    expected = p["N"] % p["d"]
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_sisa_malrule_konsep():
+    """#5: quotient (K), complement (K), kurang_satu (H)."""
+    s = buat_soal("sisa_pembagian", 11, level="P4", topik="teori-bilangan")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["sisa.quotient"] == str(p["N"] // p["d"])
+    assert jawaban["sisa.kurang_satu"] == str(p["N"] % p["d"] - 1)
+
+
+def test_paritas_kunci():
+    """#6: jumlah n bilangan ganjil mulai a = n·(a+n−1); a=1 → n²."""
+    s = buat_soal("paritas", 7, level="P4", topik="teori-bilangan")
+    p = s.parameter
+    expected = p["n"] * (p["a"] + p["n"] - 1)
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_paritas_malrule_konsep():
+    """#6: jumlah_natural (K), hanya_suku_pertama (K), kurang_satu (H)."""
+    s = buat_soal("paritas", 11, level="P4", topik="teori-bilangan")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert jawaban["paritas.jumlah_natural"] == str(p["n"] * (p["n"] + 1) // 2)
+    assert jawaban["paritas.hanya_suku_pertama"] == str(p["n"] * p["a"])
+    assert jawaban["paritas.kurang_satu"] == str(
+        p["n"] * (p["a"] + p["n"] - 1) - 1
+    )
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_SISA)
+@pytest.mark.parametrize("level", ("P4", "P5", "P6"))
+def test_kelompok_sisa_sweep(template_id, level):
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="teori-bilangan")
+        assert s.malrule, f"{template_id}@{level}/{seed} kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}

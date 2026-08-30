@@ -208,11 +208,100 @@ def fpb_kpk_hubungan(a: int, b: int) -> Soal:
     )
 
 
+# ── Bagian C — Sisa & paritas ──────────────────────────────────────────
+
+
+def sisa_pembagian(N: int, d: int) -> Soal:
+    """N dibagi d bersisa N % d (sisa >= 1, d > sisa)."""
+    kunci = N % d
+    # Urutan penting: H dulu. kurang_satu (kunci−1) kadang = complement
+    # (d−kunci) saat d = 2·kunci−1; kalau H muncul belakangan, saring
+    # membuangnya dan soal kehilangan jalur H.
+    mal = [
+        Malrule(
+            "sisa.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "pembagian benar, sisanya meleset satu",
+        ),
+        Malrule(
+            "sisa.quotient",
+            str(N // d),
+            "K",
+            f"menjawab hasil bagi {N // d} padahal yang diminta sisa",
+        ),
+        Malrule(
+            "sisa.complement",
+            str(d - kunci),
+            "K",
+            f"menjawab {d}−{kunci} — menghitung kekurangan menuju kelipatan berikutnya",
+        ),
+    ]
+    teks = f"Jika {N} dibagi {d}, berapa sisanya?"
+    return Soal(
+        "sisa_pembagian",
+        {"N": N, "d": d},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
+def paritas(a: int, n: int) -> Soal:
+    """Jumlah n bilangan ganjil berurutan mulai a = n·(a+n−1).
+
+    a=1 → n² (bentuk klasik). Parameter a memeperluas ruang variasi
+    (guard >= 200) tanpa mengubah konsep paritas.
+    """
+    kunci = n * (a + n - 1)
+    # H dulu: kurang_satu tidak pernah sama dengan kunci.
+    mal = [
+        Malrule(
+            "paritas.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "rumus jumlah benar, hasilnya meleset satu",
+        ),
+        Malrule(
+            "paritas.jumlah_natural",
+            str(n * (n + 1) // 2),
+            "K",
+            "memakai rumus 1+2+...+n padahal yang dijumlahkan bilangan ganjil mulai a",
+        ),
+        Malrule(
+            "paritas.hanya_suku_pertama",
+            str(n * a),
+            "K",
+            "mengalikan banyak suku dengan suku pertama, lupa beda 2",
+        ),
+    ]
+    if a == 1:
+        teks = f"Berapa jumlah {n} bilangan ganjil pertama (1 + 3 + 5 + …)?"
+    else:
+        teks = (
+            f"Berapa jumlah {n} bilangan ganjil berurutan yang dimulai "
+            f"dari {a} ({a} + {a+2} + …)?"
+        )
+    return Soal(
+        "paritas",
+        {"a": a, "n": n},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="C",
+    )
+
+
 REGISTRI_TOPIK = {
     "keterbagian": keterbagian,
     "prima_faktorisasi": prima_faktorisasi,
     "kpk_dua_bilangan": kpk_dua_bilangan,
     "fpb_kpk_hubungan": fpb_kpk_hubungan,
+    "sisa_pembagian": sisa_pembagian,
+    "paritas": paritas,
 }
 
 KOMPOSISI = {
@@ -288,6 +377,31 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         while a == b or math.gcd(a, b) < 2:
             a, b = rng.randint(6, 200), rng.randint(6, 200)
         return {"a": a, "b": b}
+    if template_id == "sisa_pembagian":
+        # Hindari: kunci 0 (H negatif), quotient == kunci (N//d == N%d),
+        # complement == kunci (d == 2·sisa), dan K == H (quotient == kunci−1
+        # atau complement == kunci−1) — semua membuat jalur K atau H hilang
+        # setelah saring_malrule.
+        N = rng.randint(10, 500)
+        d = rng.randint(3, 20)
+        kunci = N % d
+        while (
+            kunci == 0
+            or N // d == kunci
+            or d - kunci == kunci
+            or N // d == kunci - 1
+            or d - kunci == kunci - 1
+        ):
+            N = rng.randint(10, 500)
+            d = rng.randint(3, 20)
+            kunci = N % d
+        return {"N": N, "d": d}
+    if template_id == "paritas":
+        # a mulai (boleh 1..15), n banyak suku (2..20); a,n lebar supaya
+        # ruang variasi >= 200. a=1 bentuk klasik n².
+        a = rng.randint(1, 15)
+        n = rng.randint(2, 20)
+        return {"a": a, "n": n}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
