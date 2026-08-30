@@ -101,3 +101,105 @@ def test_judul_bagian_kombinatorik():
         "C": "Bagian C — Permutasi & kombinasi",
         "D": "Bagian D — Penerapan",
     }
+
+
+# ── Template susun angka (#3-#4) — Task 2.2 ────────────────────────────
+
+KELOMPOK_SUSUN = ("susun_bilangan", "susun_bilangan_syarat")
+
+
+def _enumerasi_bilangan(angka: tuple[int, ...], panjang: int, syarat):
+    """Brute force semua bilangan `panjang` digit dari angka berbeda."""
+    import itertools
+
+    hasil = 0
+    for urutan in itertools.permutations(angka, panjang):
+        if urutan[0] == 0:
+            continue  # 0 tidak boleh di depan
+        if syarat(urutan):
+            hasil += 1
+    return hasil
+
+
+def test_susun_bilangan_kunci_dan_malrule():
+    """#3: susun n angka jadi bilangan n-digit, 0 tidak boleh di depan."""
+    s = buat_soal("susun_bilangan", 7, level="P5", topik="kombinatorik")
+    p = s.parameter
+    assert p["varian"] in ("dengan_nol", "tanpa_nol")
+    angka = tuple(p["angka"])
+    n = len(angka)
+    # brute force = sumber kebenaran
+    expected = _enumerasi_bilangan(angka, n, lambda u: True)
+    assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+    assert s.kunci not in [m.jawaban for m in s.malrule]
+    assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_susun_bilangan_malrule_konsep():
+    """#3: nol_boleh_depan (K), lupa_digit (K), kurang_satu (H)."""
+    for seed in range(1, 120):
+        s = buat_soal("susun_bilangan", seed, level="P5", topik="kombinatorik")
+        jawaban = {m.id: m.jawaban for m in s.malrule}
+        assert "susun.nol_boleh_depan" in jawaban
+        assert "susun.kurang_satu" in jawaban
+        if s.parameter["varian"] == "dengan_nol":
+            return
+    raise AssertionError("tidak ada satu pun soal dengan_nol dalam 120 seed")
+
+
+def test_susun_bilangan_syarat_genap():
+    """#4 varian genap: digit terakhir harus genap."""
+    for seed in range(1, 120):
+        s = buat_soal("susun_bilangan_syarat", seed, level="P5", topik="kombinatorik")
+        p = s.parameter
+        if p["varian"] != "genap":
+            continue
+        angka = tuple(p["angka"])
+        expected = _enumerasi_bilangan(
+            angka, len(angka), lambda u: u[-1] % 2 == 0
+        )
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+        return
+    raise AssertionError("tidak ada satu pun soal genap dalam 120 seed")
+
+
+def test_susun_bilangan_syarat_lebih_dari():
+    """#4 varian lebih_dari: bilangan harus > N."""
+    for seed in range(1, 120):
+        s = buat_soal("susun_bilangan_syarat", seed, level="P5", topik="kombinatorik")
+        p = s.parameter
+        if p["varian"] != "lebih_dari":
+            continue
+        angka = tuple(p["angka"])
+        expected = _enumerasi_bilangan(
+            angka, len(angka), lambda u: int("".join(map(str, u))) > p["N"]
+        )
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+        return
+    raise AssertionError("tidak ada satu pun soal lebih_dari dalam 120 seed")
+
+
+def test_susun_bilangan_syarat_malrule_konsep():
+    """#4: abaikan_syarat (K), syarat_terbalik (K), kurang_satu (H)."""
+    s = buat_soal("susun_bilangan_syarat", 11, level="P5", topik="kombinatorik")
+    p = s.parameter
+    jawaban = {m.id: m.jawaban for m in s.malrule}
+    assert "susun_syarat.abaikan_syarat" in jawaban
+    assert "susun_syarat.syarat_terbalik" in jawaban
+    assert "susun_syarat.kurang_satu" in jawaban
+
+
+@pytest.mark.parametrize("template_id", KELOMPOK_SUSUN)
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_kelompok_susun_sweep_tanpa_malrule_kosong(template_id, level):
+    """Tiap soal susun angka punya K dan H."""
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="kombinatorik")
+        assert s.malrule, f"{template_id}@{level}/{seed} malrule kosong"
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, (
+            f"{template_id}@{level}/{seed}"
+        )

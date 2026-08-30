@@ -96,9 +96,191 @@ def aturan_kali(m: int, n: int) -> Soal:
     )
 
 
+def _angka_ke_bil(angka: tuple[int, ...]) -> int:
+    return int("".join(str(d) for d in angka))
+
+
+def _enumerasi_bilangan(
+    angka: tuple[int, ...], panjang: int, syarat
+) -> int:
+    """Brute force: banyak bilangan `panjang` digit dari angka berbeda."""
+    from itertools import permutations
+
+    hasil = 0
+    for urutan in permutations(angka, panjang):
+        if urutan[0] == 0:
+            continue
+        if syarat(urutan):
+            hasil += 1
+    return hasil
+
+
+# ── Bagian B — Susunan angka ───────────────────────────────────────────
+
+
+def susun_bilangan(varian: str, angka: tuple[int, ...]) -> Soal:
+    """Susun n angka jadi bilangan n-digit, 0 tidak boleh di depan.
+
+    Varian: "dengan_nol" (0 ada di angka) → (n-1)·(n-1)! cara.
+    Varian: "tanpa_nol" (tidak ada 0) → n! cara.
+    """
+    n = len(angka)
+    if varian == "dengan_nol":
+        kunci = (n - 1) * math.factorial(n - 1)
+        mal = [
+            Malrule(
+                "susun.nol_boleh_depan",
+                str(math.factorial(n)),
+                "K",
+                "0 ditempatkan di depan — padahal 0 tidak boleh menjadi digit pertama",
+            ),
+            Malrule(
+                "susun.lupa_digit",
+                str(math.factorial(n - 1)),
+                "K",
+                "hanya menyusun n−1 angka, lupa satu digit ikut",
+            ),
+            Malrule(
+                "susun.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "penyusunan benar, perhitungannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Angka {', '.join(str(d) for d in angka[:-1])} "
+            f"dan {angka[-1]} akan disusun menjadi bilangan "
+            f"{n} digit yang berbeda. 0 tidak boleh menjadi digit "
+            f"pertama. Berapa banyak bilangan yang dapat dibuat?"
+        )
+    else:
+        kunci = math.factorial(n)
+        mal = [
+            Malrule(
+                "susun.nol_boleh_depan",
+                str(n**n),
+                "K",
+                "angka boleh diulang padahal harus berbeda setiap digit",
+            ),
+            Malrule(
+                "susun.lupa_digit",
+                str(math.factorial(n - 1)),
+                "K",
+                "hanya menyusun n−1 angka, satu digit dilupakan",
+            ),
+            Malrule(
+                "susun.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "penyusunan benar, perhitungannya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Angka {', '.join(str(d) for d in angka[:-1])} "
+            f"dan {angka[-1]} akan disusun menjadi bilangan "
+            f"{n} digit yang berbeda (angka tidak boleh berulang). "
+            f"Berapa banyak bilangan yang dapat dibuat?"
+        )
+    return Soal(
+        "susun_bilangan",
+        {"varian": varian, "angka": list(angka)},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
+def susun_bilangan_syarat(varian: str, angka: tuple[int, ...], N: int | None = None) -> Soal:
+    """Susun n digit → bilangan genap atau > N.
+
+    Varian "genap": digit terakhir harus genap (angka dari 1..9, tanpa 0).
+    Varian "lebih_dari": bilangan yang terbentuk > N.
+    Kedua varian diverifikasi brute force di test (sumber kebenaran).
+    """
+    n = len(angka)
+    kunci = _enumerasi_bilangan(
+        angka,
+        n,
+        (lambda u: u[-1] % 2 == 0) if varian == "genap"
+        else (lambda u: _angka_ke_bil(u) > N),
+    )
+    if varian == "genap":
+        genap = [d for d in angka if d % 2 == 0]
+        ganjil = [d for d in angka if d % 2 == 1]
+        mal = [
+            Malrule(
+                "susun_syarat.abaikan_syarat",
+                str(math.factorial(n)),
+                "K",
+                "menghitung semua kemungkinan tanpa syarat digit terakhir genap",
+            ),
+            Malrule(
+                "susun_syarat.syarat_terbalik",
+                str(len(ganjil) * math.factorial(n - 1)),
+                "K",
+                "memakai digit ganjil di akhir, padahal harus genap",
+            ),
+            Malrule(
+                "susun_syarat.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "perhitungan benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Angka {', '.join(str(d) for d in angka[:-1])} "
+            f"dan {angka[-1]} akan disusun menjadi bilangan "
+            f"{n} digit yang berbeda dan genap. "
+            f"Berapa banyak bilangan yang dapat dibuat?"
+        )
+    else:
+        mal = [
+            Malrule(
+                "susun_syarat.abaikan_syarat",
+                str(math.factorial(n)),
+                "K",
+                f"menghitung semua kemungkinan tanpa syarat > {N}",
+            ),
+            Malrule(
+                "susun_syarat.syarat_terbalik",
+                str(_enumerasi_bilangan(
+                    angka, n, lambda u: _angka_ke_bil(u) <= N
+                )),
+                "K",
+                f"menghitung bilangan yang ≤ {N}, bukan yang > {N}",
+            ),
+            Malrule(
+                "susun_syarat.kurang_satu",
+                str(kunci - 1),
+                "H",
+                "perhitungan benar, hasilnya meleset satu",
+            ),
+        ]
+        teks = (
+            f"Angka {', '.join(str(d) for d in angka[:-1])} "
+            f"dan {angka[-1]} akan disusun menjadi bilangan "
+            f"{n} digit yang berbeda dan lebih besar dari {N}. "
+            f"Berapa banyak bilangan yang dapat dibuat?"
+        )
+    return Soal(
+        "susun_bilangan_syarat",
+        {"varian": varian, "angka": list(angka), "N": N} if varian == "lebih_dari"
+        else {"varian": varian, "angka": list(angka)},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="B",
+    )
+
+
 REGISTRI_TOPIK = {
     "aturan_tambah": aturan_tambah,
     "aturan_kali": aturan_kali,
+    "susun_bilangan": susun_bilangan,
+    "susun_bilangan_syarat": susun_bilangan_syarat,
 }
 
 KOMPOSISI = {
@@ -156,6 +338,43 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         while m == n:
             n = rng.randint(2, 20)
         return {"m": m, "n": n}
+    if template_id == "susun_bilangan":
+        # Pilih n digit acak dari 0..9, pastikan 0 ikut (dengan_nol) atau
+        # tidak (tanpa_nol). Parameter terdefinisi oleh digit set — unik.
+        n = rng.choice((3, 4, 5))
+        if rng.random() < 0.5:
+            # dengan_nol: 0 harus ada, sisanya dari 1..9
+            lainnya = rng.sample(range(1, 10), n - 1)
+            angka = tuple(sorted(lainnya + [0]))
+            return {"varian": "dengan_nol", "angka": list(angka)}
+        # tanpa_nol: semua dari 1..9
+        angka = tuple(sorted(rng.sample(range(1, 10), n)))
+        return {"varian": "tanpa_nol", "angka": list(angka)}
+    if template_id == "susun_bilangan_syarat":
+        # Digit dari 1..9 (tanpa 0, menghindari leading-zero kerumitan)
+        # Pastikan ada genap untuk varian genap.
+        n = rng.choice((3, 4))
+        if rng.random() < 0.5:
+            # genap: pastikan minimal 1 digit genap
+            genap_pool = (2, 4, 6, 8)
+            ganjil_pool = (1, 3, 5, 7, 9)
+            n_genap = rng.randint(1, min(n - 1, len(genap_pool)))
+            n_ganjil = n - n_genap
+            genap = rng.sample(genap_pool, n_genap)
+            ganjil = rng.sample(ganjil_pool, n_ganjil)
+            angka = tuple(sorted(genap + ganjil))
+            return {"varian": "genap", "angka": list(angka)}
+        # lebih_dari: digit acak, N = 10^(n-1) * X (pembulatan)
+        # Pastikan ada digit > X dan ada digit ≤ X.
+        digit = rng.sample(range(1, 10), n)
+        # Ambil digit pertama (paling signifikan) sebagai threshold
+        # N = d * 10^(n-1). Pastikan ada digit > d dan ≤ d.
+        for _ in range(10):
+            d = rng.choice(digit)
+            if any(x > d for x in digit) and any(x <= d for x in digit):
+                break
+        N = d * 10 ** (n - 1)
+        return {"varian": "lebih_dari", "angka": list(digit), "N": N}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
