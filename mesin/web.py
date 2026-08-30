@@ -1667,8 +1667,6 @@ class Penangan(BaseHTTPRequestHandler):
             return
         try:
             with basis.buka() as kon:
-                if jalur == "/":
-                    return self._kirim(halaman_utama(kon))
                 if jalur.startswith("/lampiran/berkas/"):
                     return self._kirim_berkas_lampiran(
                         kon, int(jalur.rsplit("/", 1)[1])
@@ -2180,9 +2178,9 @@ class Penangan(BaseHTTPRequestHandler):
             with basis.buka() as kon:
                 if not kon.execute(
                     "SELECT 1 FROM sesi WHERE id = ?", (angka,)
-                ).fetchone():
-                    return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
-                if not self._bisa_lihat_sesi(kon, angka):
+                ).fetchone() or not self._bisa_lihat_sesi(kon, angka):
+                    # Satu body 404 yang sama untuk "tidak ada" maupun
+                    # "bukan milikmu" — beda body jadi oracle eksistensi.
                     return self._kirim(
                         _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                     )

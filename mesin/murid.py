@@ -70,10 +70,10 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
     """
     from web import _soal_dari_baris  # impor terlambat: hindari siklus impor
 
-    baris_baris = isi_sesi(kon, sesi_id)
-    # pastikan sesi ini benar milik murid sebelum satu pun soal dikirim
+    # pastikan sesi ini benar milik murid SEBELUM satu pun baris dibaca
     if not sesi_murid(kon, siswa_id, sesi_id):
         return []
+    baris_baris = isi_sesi(kon, sesi_id)
     keluar: list[dict] = []
     for b in baris_baris:
         soal: Soal = _soal_dari_baris(b)
