@@ -100,6 +100,55 @@ button.tombol-putih {{
   border: 1px solid {T.BORDER_INTERAKTIF};
 }}
 
+/* ── Menu pengguna dropdown (CSS-only) ────────────────────────────── */
+.menu-pengguna {{ position: relative; }}
+.menu-pengguna summary {{
+  display: flex; align-items: center; gap: .4rem;
+  padding: .35rem .7rem; border: 1px solid {T.BORDER_INTERAKTIF};
+  border-radius: 8px; cursor: pointer; font-size: .9rem;
+  color: {T.TEKS_JUDUL}; background: none; list-style: none;
+}}
+.menu-pengguna summary::-webkit-details-marker {{ display: none; }}
+.menu-pengguna[open] summary {{ border-color: {T.AKSEN_MURID_UTAMA}; }}
+.menu-isi {{
+  position: absolute; right: 0; top: calc(100% + .4rem);
+  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
+  border-radius: {T.RADIUS_KARTU};
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+  min-width: 12rem; padding: .4rem; z-index: 20;
+  display: flex; flex-direction: column;
+}}
+.menu-isi a, .menu-isi button {{
+  display: block; width: 100%; text-align: left;
+  padding: .45rem .6rem; border-radius: 6px; background: none; border: none;
+  color: {T.TEKS_JUDUL}; text-decoration: none; font-size: .9rem;
+  cursor: pointer; font-family: inherit;
+}}
+.menu-isi a:hover, .menu-isi button:hover {{ background: {T.LATAR_KARTU_SEKUNDER}; }}
+.menu-pisah {{ border-top: 1px solid {T.BORDER_HALUS}; margin: .3rem 0; }}
+
+/* ── Sidebar halaman /akun ────────────────────────────────────────── */
+.layout-samping {{
+  display: grid; grid-template-columns: 13rem 1fr;
+  gap: 1.2rem; align-items: start;
+}}
+.nav-samping {{
+  display: flex; flex-direction: column; gap: .25rem;
+  position: sticky; top: 1rem;
+}}
+.nav-samping a {{
+  padding: .5rem .7rem; border-radius: 8px; text-decoration: none;
+  color: {T.TEKS_SUBTLE}; font-size: .92rem; border: 1px solid transparent;
+}}
+.nav-samping a.aktif {{
+  color: {T.AKSEN_MURID_UTAMA}; border-color: {T.BORDER_HALUS};
+  font-weight: 600; background: {T.LATAR_KARTU_SEKUNDER};
+}}
+@media (max-width: 46rem) {{
+  .layout-samping {{ grid-template-columns: 1fr; }}
+  .nav-samping {{ flex-direction: row; flex-wrap: wrap; position: static; }}
+}}
+
 /* ── Dashboard: kartu siswa side-by-side (mockup guru-dashboard) ───── */
 .grid-utama {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }}
 @media (max-width: 46rem) {{ .grid-utama {{ grid-template-columns: 1fr; }} }}
