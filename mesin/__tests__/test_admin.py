@@ -99,3 +99,174 @@ def test_css_badge_peran_tersedia():
 
     assert ".badge-peran" in gaya_guru.GAYA_GURU
     assert ".badge-keluarga" in gaya_guru.GAYA_GURU
+
+
+# --- Kebijakan admin: dashboard khusus + baca-semua-tulis-tidak -----------
+
+
+def _ids_siswa_dan_sesi(server):
+    with server.buka() as kon:
+        siswa = kon.execute(
+            "SELECT id FROM siswa WHERE nama = 'BimaA'"
+        ).fetchone()["id"]
+        sesi_id = kon.execute("SELECT id FROM sesi LIMIT 1").fetchone()["id"]
+    return siswa, sesi_id
+
+
+def _opener_tanpa_ikut():
+    import urllib.error
+    import urllib.request
+
+    class TanpaIkut(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    return urllib.request.build_opener(TanpaIkut)
+
+
+def test_admin_setelah_masuk_diarahkan_ke_panel(server):
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    req = urllib.request.Request(
+        server.alamat + "/masuk",
+        data=urllib.parse.urlencode(
+            {"nama": "pengelola", "sandi": SANDI_ADMIN}
+        ).encode(),
+        method="POST",
+    )
+    try:
+        _opener_tanpa_ikut().open(req)
+        kode, header = 200, {}
+    except urllib.error.HTTPError as e:
+        kode, header = e.code, dict(e.headers)
+    assert kode == 303
+    lokasi = [v for k, v in header.items() if k.lower() == "location"]
+    assert lokasi == ["/admin"], "admin harus darat di dashboard admin"
+
+
+def test_admin_buka_root_diarahkan_ke_panel(server):
+    # urllib mengikuti 303 -> halaman /admin, BUKAN dashboard guru.
+    kode, isi, _ = server.minta("/", auth=("pengelola", SANDI_ADMIN))
+    assert kode == 200
+    assert "Panel Pengelola" in isi
+    assert "Buat sesi baru" not in isi, "admin masih pegang murid lewat /"
+
+
+def test_admin_dilarang_membuat_sesi(server):
+    siswa_a, _ = _ids_siswa_dan_sesi(server)
+    with server.buka() as kon:
+        n0 = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
+    kode, _, _ = server.minta(
+        f"/sesi-baru/{siswa_a}",
+        auth=("pengelola", SANDI_ADMIN),
+        data={"topik": "pola-bilangan", "mode": "diagnostik"},
+    )
+    assert kode == 404
+    with server.buka() as kon:
+        assert kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"] == n0
+
+
+def test_admin_dilarang_hapus_sesi(server):
+    _, sesi_a = _ids_siswa_dan_sesi(server)
+    kode, _, _ = server.minta(
+        f"/sesi/{sesi_a}/hapus",
+        auth=("pengelola", SANDI_ADMIN),
+        data={"konfirmasi": "1"},
+    )
+    assert kode == 404
+    with server.buka() as kon:
+        n = kon.execute(
+            "SELECT COUNT(*) AS n FROM sesi WHERE id = ?", (sesi_a,)
+        ).fetchone()["n"]
+    assert n == 1, "sesi ternyata terhapus oleh admin"
+
+
+def test_admin_dilarang_simpan_jawaban(server):
+    _, sesi_a = _ids_siswa_dan_sesi(server)
+    kode, _, _ = server.minta(
+        f"/sesi/{sesi_a}",
+        auth=("pengelola", SANDI_ADMIN),
+        data={"jawaban_1": "diusap admin"},
+    )
+    assert kode == 404
+    with server.buka() as kon:
+        n = kon.execute(
+            """SELECT COUNT(*) AS n FROM jawaban j
+               JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
+               WHERE ss.sesi_id = ?""",
+            (sesi_a,),
+        ).fetchone()["n"]
+    assert n == 0, "jawaban ternyata tersentuh admin"
+
+
+def test_admin_dilarang_variasi_cerita(server):
+    _, sesi_a = _ids_siswa_dan_sesi(server)
+    kode, _, _ = server.minta(
+        f"/cerita/{sesi_a}", auth=("pengelola", SANDI_ADMIN), data={}
+    )
+    assert kode == 404
+
+
+def test_admin_dilarang_upload_lampiran(server):
+    _, sesi_a = _ids_siswa_dan_sesi(server)
+    kode, _, _ = server.minta(
+        f"/lampiran/{sesi_a}", auth=("pengelola", SANDI_ADMIN), data={"x": "1"}
+    )
+    assert kode == 404
+
+
+def test_admin_hanya_ganti_sandi_sendiri_di_akun(server):
+    siswa_a, _ = _ids_siswa_dan_sesi(server)
+    kode, _, _ = server.minta(
+        "/akun",
+        auth=("pengelola", SANDI_ADMIN),
+        data={"aksi": "tingkat", "siswa_id": siswa_a, "tingkat": "P4"},
+    )
+    assert kode == 404, "aksi tulis di /akun harus tertutup untuk admin"
+    with server.buka() as kon:
+        tingkat = kon.execute(
+            "SELECT tingkat FROM siswa WHERE id = ?", (siswa_a,)
+        ).fetchone()["tingkat"]
+    assert tingkat == "P3", "tingkat anak ternyata diubah admin"
+
+    kode, isi, _ = server.minta(
+        "/akun",
+        auth=("pengelola", SANDI_ADMIN),
+        data={
+            "aksi": "sandi",
+            "lama": SANDI_ADMIN,
+            "baru": "sandi-pengelola-baru-1",
+            "ulang": "sandi-pengelola-baru-1",
+        },
+    )
+    assert kode == 200
+    assert "Sandi diganti" in isi
+
+
+def test_halaman_sesi_admin_hanya_baca(server):
+    _, sesi_a = _ids_siswa_dan_sesi(server)
+    kode, isi, _ = server.minta(
+        f"/sesi/{sesi_a}", auth=("pengelola", SANDI_ADMIN)
+    )
+    assert kode == 200
+    assert "Simpan &amp; diagnosis" not in isi, "form tulis bocor ke admin"
+    assert "Hapus sesi" not in isi
+    assert "Upload foto" not in isi
+    assert "laporan siswa ini" in isi, "jalur baca harus tetap ada"
+
+
+def test_admin_laporan_tetap_terbuka(server):
+    siswa_a, _ = _ids_siswa_dan_sesi(server)
+    kode, _, _ = server.minta(
+        f"/laporan/{siswa_a}", auth=("pengelola", SANDI_ADMIN)
+    )
+    assert kode == 200, "admin masih boleh MEMBACA laporan"
+
+
+def test_admin_panel_anak_ditautkan_ke_laporan(server):
+    siswa_a, _ = _ids_siswa_dan_sesi(server)
+    kode, isi, _ = server.minta("/admin", auth=("pengelola", SANDI_ADMIN))
+    assert kode == 200
+    assert f'href="/laporan/{siswa_a}"' in isi, "nama anak harus jadi tautan"

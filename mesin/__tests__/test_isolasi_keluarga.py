@@ -188,15 +188,18 @@ def test_dashboard_guru_menampilkan_badge_orang_tua(dua_keluarga):
     assert "Orang Tua" in isi
 
 
-def test_dashboard_admin_semua_keluarga_dengan_label(dua_keluarga):
+def test_admin_diarahkan_ke_panel_semua_keluarga(dua_keluarga):
+    # Kebijakan baru: admin tidak lagi "pegang" murid lewat dashboard guru.
+    # GET / untuk admin dialihkan ke /admin — daftar semua keluarga tampil
+    # di sana (baca-semua-tulis-tidak).
     s, ids = dua_keluarga
     kode, isi, _ = s.minta("/", auth=("pengelola", SANDI_ADMIN))
     assert kode == 200
     assert "BimaA" in isi
     assert "RaraB" in isi
-    assert "keluarga: ortu-a" in isi
-    assert "keluarga: ortu-b" in isi
     assert "Pengelola" in isi
+    assert "Buat sesi baru" not in isi
+    assert f'href="/laporan/{ids["b"]}"' in isi, "anak harus jadi tautan baca"
 
 
 def test_murid_keluarga_a_tak_bisa_menjangkau_sesi_keluarga_b(dua_keluarga):

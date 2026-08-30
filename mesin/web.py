@@ -378,7 +378,16 @@ def halaman_konfirmasi_hapus(kon, sesi_id: int) -> bytes | None:
     )
 
 
-def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
+def halaman_sesi(
+    kon, sesi_id: int, pesan: str = "", peran: str = "guru"
+) -> bytes:
+    """Detail satu sesi. `peran="admin"` = varian hanya-baca.
+
+    Kebijakan admin baca-semua-tulis-tidak dijaga di router (POST ditolak
+    404); di sini tombol/form tulis disembunyikan supaya admin tidak
+    menabrak 404 dari UI-nya sendiri. Baca tetap utuh: daftar lampiran,
+    lembar, kunci, dan tautan laporan."""
+    admin = peran == "admin"
     info = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
                    w.nama, w.id AS siswa_id
@@ -479,17 +488,48 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         if baris_lampiran
         else '<p class="sub">Belum ada foto lembar.</p>'
     )
+    unggah = (
+        ""
+        if admin
+        else (
+            f'<form method="post" action="/lampiran/{sesi_id}" '
+            'enctype="multipart/form-data">'
+            "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
+            '<input type="file" name="foto" accept="image/jpeg,image/png">'
+            '<button type="submit">Upload foto</button>'
+            "</form>"
+        )
+    )
     blok_lampiran = (
         '<div class="kartu blok-lampiran">'
         "<h2>Lampiran — foto lembar</h2>"
         f"{daftar}"
-        f'<form method="post" action="/lampiran/{sesi_id}" '
-        'enctype="multipart/form-data">'
-        "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
-        '<input type="file" name="foto" accept="image/jpeg,image/png">'
-        '<button type="submit">Upload foto</button>'
-        "</form></div>"
+        f"{unggah}"
+        "</div>"
     )
+
+    tombol_hapus = (
+        ""
+        if admin
+        else (
+            f'<form method="get" action="/sesi/{sesi_id}/hapus" '
+            f'style="margin:.4rem 0">'
+            f'<button type="submit" class="tombol-kecil tombol-hapus">'
+            f"Hapus sesi</button></form>"
+        )
+    )
+    blok_cerita = "" if admin else _tombol_cerita(kon, sesi_id)
+    if admin:
+        # fieldset disabled mematikan semua input tanpa JS — admin tetap
+        # bisa MEMBACA nilai tersimpan, tapi tak ada yang bisa dikirim.
+        blok_isi = f'<fieldset disabled>{"".join(kartu)}</fieldset>'
+    else:
+        blok_isi = (
+            f'<form method="post" action="/sesi/{sesi_id}">'
+            f'{"".join(kartu)}'
+            f'<div class="simpan-strip"><button type="submit">'
+            f"Simpan &amp; diagnosis</button></div></form>"
+        )
 
     return _halaman(
         f"Sesi #{sesi_id}",
@@ -503,16 +543,11 @@ def halaman_sesi(kon, sesi_id: int, pesan: str = "") -> bytes:
         f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
         f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
         f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
-        f'<form method="get" action="/sesi/{sesi_id}/hapus" style="margin:.4rem 0">'
-        f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus sesi</button>'
-        f"</form>"
+        f"{tombol_hapus}"
         f"{kabar}"
-        f"{_tombol_cerita(kon, sesi_id)}"
+        f"{blok_cerita}"
         f"{blok_lampiran}"
-        f'<form method="post" action="/sesi/{sesi_id}">'
-        f'{"".join(kartu)}'
-        f'<div class="simpan-strip"><button type="submit">'
-        f"Simpan &amp; diagnosis</button></div></form>",
+        f"{blok_isi}",
     )
 
 
@@ -1281,21 +1316,41 @@ def proses_akun(
 
 
 def halaman_admin(kon, pesan: str = "", galat: str = "") -> bytes:
-    """Panel pengelola (peran admin): daftar keluarga + buat akun orang tua.
+    """Dashboard admin: ringkasan, daftar keluarga, buat akun orang tua.
 
-    Hanya peran admin yang sampai sini — penjaganya ada di router. Isinya
-    sengaja ringkas: admin bukan pengganti guru, hanya pengawas dan pembuat
-    akun. Detail anak tetap dibuka lewat dashboard, tempat admin melihat
-    semua keluarga sekaligus.
+    Hanya peran admin yang sampai sini — penjaganya ada di router, dan
+    sejak login admin langsung diarahkan ke sini. Kebijakan admin
+    baca-semua-tulis-tidak: satu-satunya tulisan di halaman ini adalah
+    membuat akun orang tua (domain admin sendiri); data murid hanya bisa
+    DIBACA — nama anak jadi tautan ke laporannya, aksi tulis data murid
+    ditolak 404 di router.
     """
+    akun = sandi.muat_akun()
+    n_keluarga = sum(1 for a in akun if a.get("peran", "guru") == "guru")
+    total_siswa = kon.execute("SELECT COUNT(*) AS n FROM siswa").fetchone()["n"]
+    total_sesi = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
+    ringkas = (
+        '<div class="kartu-stat">'
+        f'<div class="stat"><div class="angka-besar">{n_keluarga}</div>'
+        f'<div class="stat-label">keluarga</div></div>'
+        f'<div class="stat"><div class="angka-besar">{total_siswa}</div>'
+        f'<div class="stat-label">siswa</div></div>'
+        f'<div class="stat"><div class="angka-besar">{total_sesi}</div>'
+        f'<div class="stat-label">sesi</div></div>'
+        "</div>"
+    )
+
     keluarga = []
-    for a in sandi.muat_akun():
+    for a in akun:
         if a.get("peran", "guru") not in ("guru", "admin"):
             continue
         nama = a["pengguna"]
         anak = basis.daftar_siswa(kon, nama)
         daftar_anak = (
-            ", ".join(html.escape(s["nama"]) for s in anak)
+            ", ".join(
+                f'<a href="/laporan/{s["id"]}">{html.escape(s["nama"])}</a>'
+                for s in anak
+            )
             or '<span class="kosong">belum ada anak</span>'
         )
         terakhir = kon.execute(
@@ -1331,6 +1386,7 @@ def halaman_admin(kon, pesan: str = "", galat: str = "") -> bytes:
         f"</form></nav></div>"
         f"<h1>Panel Pengelola</h1>"
         f'{kabar}'
+        f"{ringkas}"
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">🏡</span>'
         f"<h2>Keluarga</h2></div>"
@@ -1537,6 +1593,14 @@ class Penangan(BaseHTTPRequestHandler):
         ident = self._identitas()
         return ident[1] if ident else None
 
+    def _tolak_admin(self) -> None:
+        """Tolak admin yang mencoba MENULIS data murid (404, bukan 403).
+
+        Kebijakan baca-semua-tulis-tidak: admin boleh membuka semua halaman
+        baca, tapi tidak satu pun aksi tulis. Body 404-nya identik dengan
+        tolakan kepemilikan supaya tidak jadi oracle yang berbeda."""
+        self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+
     def _lolos_sandi(self) -> bool:
         """Palang pengelola (guru/admin). Dilewati kalau berkas sandi tidak ada."""
         if self._peran_saya() in ("guru", "admin"):
@@ -1612,21 +1676,29 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(self._halaman_masuk(galat=galat))
         if jalur == "/":
             # Launch publik: / adalah landing untuk yang belum masuk.
-            # Guru/admin dengan sesi valid tetap dapat dashboard. Murid &
-            # anonim -> landing (bukan 401) — dashboard guru bukan rahasia
-            # sekuat data anak, tapi tetap tidak boleh ditampilkan ke murid.
+            # Guru dengan sesi valid tetap dapat dashboard. Admin dialihkan
+            # ke dashboardnya sendiri di /admin — dashboard guru (dengan
+            # form "Buat sesi") bukan tempat admin: baca-semua-tulis-tidak.
+            # Murid & anonim -> landing (bukan 401) — dashboard guru bukan
+            # rahasia sekuat data anak, tapi tetap tak boleh dilihat murid.
             ident = self._identitas()
-            if ident and ident[1] in ("guru", "admin"):
+            if ident and ident[1] == "admin":
+                self.send_response(303)
+                self.send_header("Location", "/admin")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if ident and ident[1] == "guru":
                 try:
                     q = urllib.parse.parse_qs(
                         urllib.parse.urlparse(self.path).query
                     )
                     pesan = (q.get("pesan") or [""])[0]
                     with basis.buka() as kon:
-                        pemilik = None if ident[1] == "admin" else ident[0]
                         return self._kirim(
                             halaman_utama(
-                                kon, pesan=pesan, pemilik=pemilik, peran=ident[1]
+                                kon, pesan=pesan, pemilik=ident[0],
+                                peran=ident[1],
                             )
                         )
                 except Exception:
@@ -1681,6 +1753,10 @@ class Penangan(BaseHTTPRequestHandler):
                     if isi:
                         return self._kirim(isi)
                 if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
+                    # Halaman konfirmasi hapus = prasyarat tulis; admin
+                    # hanya-baca tidak sampai sini.
+                    if self._peran_saya() == "admin":
+                        return self._tolak_admin()
                     sesi_id = int(jalur.split("/")[2])
                     if not self._bisa_lihat_sesi(kon, sesi_id):
                         return self._kirim(
@@ -1698,7 +1774,13 @@ class Penangan(BaseHTTPRequestHandler):
                         return self._kirim(
                             _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                         )
-                    return self._kirim(halaman_sesi(kon, sesi_id))
+                    ident = self._identitas()
+                    return self._kirim(
+                        halaman_sesi(
+                            kon, sesi_id,
+                            peran=ident[1] if ident else "guru",
+                        )
+                    )
                 if jalur.startswith("/laporan/"):
                     siswa_id = int(jalur.split("/")[2])
                     if not self._bisa_lihat_siswa(kon, siswa_id):
@@ -1881,7 +1963,9 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(self._halaman_masuk("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
         sesi.catat_berhasil(nama, ip)
         token = sesi.buat(nama, peran)
-        tujuan = "/murid" if peran == "murid" else "/"
+        tujuan = "/murid" if peran == "murid" else (
+            "/admin" if peran == "admin" else "/"
+        )
         self.send_response(303)
         self.send_header("Location", tujuan)
         self.send_header("Set-Cookie", self._set_cookie(token))
@@ -1997,6 +2081,10 @@ class Penangan(BaseHTTPRequestHandler):
             ident = self._identitas()
             pengguna = ident[0] if ident else "guru"
             peran = ident[1] if ident else "guru"
+            if peran == "admin" and data.get("aksi") != "sandi":
+                # Kebijakan baca-semua-tulis-tidak: satu-satunya aksi admin
+                # di /akun adalah mengganti sandinya sendiri.
+                return self._tolak_admin()
             with basis.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna, peran)
                 return self._kirim(
@@ -2045,6 +2133,8 @@ class Penangan(BaseHTTPRequestHandler):
                 sesi_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            if self._peran_saya() == "admin":
+                return self._tolak_admin()
             with basis.buka() as kon:
                 if not self._bisa_lihat_sesi(kon, sesi_id):
                     return self._kirim(
@@ -2054,6 +2144,8 @@ class Penangan(BaseHTTPRequestHandler):
                 return self._kirim(halaman_sesi(kon, sesi_id, catatan))
 
         if jalur.startswith("/sesi-baru/"):
+            if self._peran_saya() == "admin":
+                return self._tolak_admin()
             try:
                 siswa_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
@@ -2138,6 +2230,8 @@ class Penangan(BaseHTTPRequestHandler):
             return
 
         if jalur.startswith("/lampiran/"):
+            if self._peran_saya() == "admin":
+                return self._tolak_admin()
             bagian = jalur.split("/")
             try:
                 angka = int(bagian[2])
@@ -2201,6 +2295,8 @@ class Penangan(BaseHTTPRequestHandler):
             return
 
         if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
+            if self._peran_saya() == "admin":
+                return self._tolak_admin()
             try:
                 sesi_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
@@ -2243,6 +2339,9 @@ class Penangan(BaseHTTPRequestHandler):
 
         if not jalur.startswith("/sesi/"):
             return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+        if self._peran_saya() == "admin":
+            # Simpan jawaban/diagnosis = tulis data murid.
+            return self._tolak_admin()
 
         panjang = int(self.headers.get("Content-Length", 0))
         mentah = self.rfile.read(panjang).decode("utf-8")
