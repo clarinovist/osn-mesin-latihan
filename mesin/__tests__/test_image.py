@@ -1,6 +1,6 @@
 """Kontrak image: image membawa seluruh paket, bukan daftar manual.
 
-Riwayat 25 Agustus 2026: render.py, gaya_*.py, murid.py, dan llm.py lahir
+Riwayat 25 Agustus 2026: render.py, gaya_*.py, students.py, dan llm.py lahir
 tanpa dimasukkan ke COPY Dockerfile. Semua test lolos di lokal (filenya
 ada), build GitHub Actions juga hijau — lalu deploy gagal sehat karena
 import error DI DALAM container, dan rollback otomatis menyembunyikan
@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 ROOT = Path(__file__).resolve().parent.parent
 
 # Titik masuk & modul inti yang pasti dibutuhkan saat container jalan.
-TITIK_MASUK = ("sajikan.py", "web.py", "periksa_sehat.py")
+TITIK_MASUK = ("serve.py", "web.py", "healthcheck.py")
 
 
 def _impor_lokal(blok: str) -> set[str]:

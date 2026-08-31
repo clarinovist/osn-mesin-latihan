@@ -2,7 +2,7 @@
 
 Seed menentukan parameter, parameter menentukan soal. Sejak Fase A (registry
 topik) generator TIDAK tahu apa-apa tentang pola bilangan: template, batas
-angka, dan komposisi lembar datang dari paket topik (topik.py).
+angka, dan komposisi lembar datang dari paket topik (topics.py).
 
 Kontrak determinisme yang diuji di __tests__/test_generator.py dan
 __tests__/test_identitas_refactor.py:
@@ -17,7 +17,7 @@ import random
 from dataclasses import dataclass, replace
 
 from templates import LEVEL, Soal
-from topik import TOPIK_BAWAAN, Topik, ambil
+from topics import TOPIK_BAWAAN, Topik, ambil
 
 LEVEL_BAWAAN = "P3"
 
@@ -34,7 +34,7 @@ def profil(level: str) -> dict:
 
 
 def paket_bawaan() -> Topik:
-    from topik import paket_bawaan as _paket_bawaan
+    from topics import paket_bawaan as _paket_bawaan
 
     return _paket_bawaan()
 

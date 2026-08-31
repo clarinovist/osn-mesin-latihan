@@ -20,7 +20,7 @@ WORKDIR /app
 # keduanya datang dari volume saat dijalankan.
 #
 # Sejak A4: SELURUH .py root disalin lewat wildcard, bukan daftar manual.
-# Daftar manual pernah menjadi insiden 25 Agustus 2026: render.py & murid.py
+# Daftar manual pernah menjadi insiden 25 Agustus 2026: render.py & students.py
 # lahir tapi tidak masuk daftar, image terbangun "sukses", deploy gagal
 # sehat karena import error, dan rollback otomatis yang menyelamatkan situs
 # justru menyembunyikan penyebabnya — di lokal semua test hijau karena
@@ -46,8 +46,8 @@ EXPOSE 8724
 # Pemeriksaan kesehatan: 401 dihitung SEHAT, karena justru menandakan server
 # menjawab DAN palang sandi aktif. Yang tidak sehat adalah tidak menjawab
 # sama sekali, atau menjawab 200 tanpa diminta sandi (palang jebol).
-COPY --chown=osn:osn periksa_sehat.py /app/
+COPY --chown=osn:osn healthcheck.py /app/
 HEALTHCHECK --interval=60s --timeout=8s --start-period=15s --retries=3 \
-  CMD ["python", "/app/periksa_sehat.py"]
+  CMD ["python", "/app/healthcheck.py"]
 
-CMD ["python", "sajikan.py", "--jaringan", "--port", "8724"]
+CMD ["python", "serve.py", "--jaringan", "--port", "8724"]

@@ -14,9 +14,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import basis  # noqa: E402
-import sajikan  # noqa: E402
-import sandi  # noqa: E402
+import database  # noqa: E402
+import serve  # noqa: E402
+import auth  # noqa: E402
 
 SANDI_GURU = "sandi-guru-panjang-123"
 
@@ -26,24 +26,24 @@ def pasangan(tmp_path, monkeypatch):
     """DB + berkas sandi sementara, terpasang sebagai bawaan modul."""
     db = tmp_path / "uji.db"
     berkas = tmp_path / "sandi.json"
-    basis.siapkan(db)
-    monkeypatch.setattr(basis, "BAWAAN", db)
-    monkeypatch.setattr(sandi, "BERKAS_SANDI", berkas)
+    database.siapkan(db)
+    monkeypatch.setattr(database, "BAWAAN", db)
+    monkeypatch.setattr(auth, "BERKAS_SANDI", berkas)
     return db, berkas
 
 
 def test_startup_mempromosikan_admin_dan_backfill_pemilik(pasangan):
     db, berkas = pasangan
-    with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "Rara", "P3")  # warisan: pemilik ''
-        basis.tambah_siswa(kon, "Bima", "P4")
-    sandi.simpan_sandi(SANDI_GURU, "guru", berkas)
+    with database.buka(db) as kon:
+        database.tambah_siswa(kon, "Rara", "P3")  # warisan: pemilik ''
+        database.tambah_siswa(kon, "Bima", "P4")
+    auth.simpan_sandi(SANDI_GURU, "guru", berkas)
 
-    admin = sajikan.siapkan_admin_dan_pemilik()
+    admin = serve.siapkan_admin_dan_pemilik()
 
     assert admin == "guru"
-    assert sandi.cari_akun("guru", berkas)["peran"] == "admin"
-    with basis.buka(db) as kon:
+    assert auth.cari_akun("guru", berkas)["peran"] == "admin"
+    with database.buka(db) as kon:
         pemilik = {
             r["nama"]: r["pemilik"]
             for r in kon.execute("SELECT nama, pemilik FROM siswa")
@@ -53,17 +53,17 @@ def test_startup_mempromosikan_admin_dan_backfill_pemilik(pasangan):
 
 def test_startup_idempoten(pasangan):
     db, berkas = pasangan
-    with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "Rara", "P3")
-    sandi.simpan_sandi(SANDI_GURU, "guru", berkas)
+    with database.buka(db) as kon:
+        database.tambah_siswa(kon, "Rara", "P3")
+    auth.simpan_sandi(SANDI_GURU, "guru", berkas)
 
-    assert sajikan.siapkan_admin_dan_pemilik() == "guru"
-    assert sajikan.siapkan_admin_dan_pemilik() == "guru"
+    assert serve.siapkan_admin_dan_pemilik() == "guru"
+    assert serve.siapkan_admin_dan_pemilik() == "guru"
 
-    akun = sandi.muat_akun(berkas)
+    akun = auth.muat_akun(berkas)
     assert len(akun) == 1
     assert akun[0]["peran"] == "admin"
-    with basis.buka(db) as kon:
+    with database.buka(db) as kon:
         pemilik = [
             r["pemilik"] for r in kon.execute("SELECT pemilik FROM siswa")
         ]
@@ -74,12 +74,12 @@ def test_startup_tanpa_berkas_sandi_tak_menyentuh_db(pasangan):
     """Mode lokal (tanpa sandi.json): tidak ada yang dipromosikan, dan
     baris warisan dibiarkan ber-pemilik kosong."""
     db, _ = pasangan
-    with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "Rara", "P3")
+    with database.buka(db) as kon:
+        database.tambah_siswa(kon, "Rara", "P3")
 
-    assert sajikan.siapkan_admin_dan_pemilik() is None
+    assert serve.siapkan_admin_dan_pemilik() is None
 
-    with basis.buka(db) as kon:
+    with database.buka(db) as kon:
         pemilik = [
             r["pemilik"] for r in kon.execute("SELECT pemilik FROM siswa")
         ]
@@ -88,13 +88,13 @@ def test_startup_tanpa_berkas_sandi_tak_menyentuh_db(pasangan):
 
 def test_startup_dengan_admin_ada_tidak_mengubah_siswa(pasangan):
     db, berkas = pasangan
-    sandi.tambah_akun("pengelola", "sandi-pengelola-9999", "admin", berkas)
-    sandi.tambah_akun("ortu-a", "sandi-ortu-a-123456", "guru", berkas)
-    with basis.buka(db) as kon:
-        basis.tambah_siswa(kon, "Rara", "P3", pemilik="ortu-a")
+    auth.tambah_akun("pengelola", "sandi-pengelola-9999", "admin", berkas)
+    auth.tambah_akun("ortu-a", "sandi-ortu-a-123456", "guru", berkas)
+    with database.buka(db) as kon:
+        database.tambah_siswa(kon, "Rara", "P3", pemilik="ortu-a")
 
-    assert sajikan.siapkan_admin_dan_pemilik() == "pengelola"
+    assert serve.siapkan_admin_dan_pemilik() == "pengelola"
 
-    with basis.buka(db) as kon:
+    with database.buka(db) as kon:
         baris = kon.execute("SELECT pemilik FROM siswa").fetchone()
     assert baris["pemilik"] == "ortu-a"

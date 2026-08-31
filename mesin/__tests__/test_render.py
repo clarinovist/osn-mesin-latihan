@@ -1,6 +1,6 @@
 """Kontrak Fase 3: satu sumber render, dua tampilan.
 
-render.py memegang struktur DOM; gaya_layar.py dan gaya_cetak.py memegang
+render.py memegang struktur DOM; screen_style.py dan print_style.py memegang
 CSS. Yang dijaga di sini:
 
   1. Struktur DOM identik di kedua tampilan — kalau tidak, test kebocoran
@@ -21,12 +21,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from gaya_cetak import GAYA_CETAK  # noqa: E402
-from gaya_layar import GAYA_LAYAR  # noqa: E402
+from print_style import GAYA_CETAK  # noqa: E402
+from screen_style import GAYA_LAYAR  # noqa: E402
 from generator import buat_lembar, buat_soal  # noqa: E402
 from render import lembar_penilaian, lembar_soal  # noqa: E402
 from templates import Soal  # noqa: E402
-from topik import paket_bawaan  # noqa: E402
+from topics import paket_bawaan  # noqa: E402
 
 
 def _dom(html: str) -> str:
@@ -110,7 +110,7 @@ def test_gaya_cetak_menjaga_riwayat_gagal_garis_panduan():
     assert "background-image" in GAYA_CETAK
     assert "svg+xml" in GAYA_CETAK, (
         "garis panduan kotak Caraku harus SVG data-URI, bukan gradient — "
-        "dua kali sudah gagal, lihat komentar gaya_cetak.py"
+        "dua kali sudah gagal, lihat komentar print_style.py"
     )
     assert "repeating-linear-gradient" not in GAYA_CETAK
     assert "print-color-adjust" in GAYA_CETAK
@@ -129,15 +129,15 @@ def test_gaya_layar_tanpa_satuan_mm_dan_punya_target_sentuh():
 
 def test_fasad_cetak_tetap_mengekspor_nama_lama():
     """Pemanggil lama (buat_lembar.py CLI, web.py, test lama) memakai
-    `cetak.lembar_soal` dst. Pemecahan modul tidak boleh mematahkan mereka."""
-    import cetak
+    `worksheets.lembar_soal` dst. Pemecahan modul tidak boleh mematahkan mereka."""
+    import worksheets
 
-    assert cetak.lembar_soal is lembar_soal
-    assert cetak.lembar_penilaian is lembar_penilaian
-    assert cetak.CSS is GAYA_CETAK
-    assert hasattr(cetak, "_badan_soal")
+    assert worksheets.lembar_soal is lembar_soal
+    assert worksheets.lembar_penilaian is lembar_penilaian
+    assert worksheets.CSS is GAYA_CETAK
+    assert hasattr(worksheets, "_badan_soal")
     # Diagram SVG kini milik paket topik, bukan renderer
-    from topik_pola_bilangan import _svg_korek  # noqa: F401
+    from topic_number_patterns import _svg_korek  # noqa: F401
 
 
 def test_soal_bagian_f_terender_dengan_kotak_caraku_besar():

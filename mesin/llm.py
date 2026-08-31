@@ -85,7 +85,7 @@ def aktif() -> bool:
 # Satu soal tidak pernah dibayar dua kali: kalimat hasil LLM disimpan
 # berkunci hash(parameter + versi_prompt + model). Tabelnya dibuat oleh
 # PEMANGGIL lewat ensure_table(kon), pola yang sama dengan skema di
-# skema.py/basis.py — modul ini tidak menyentuh skema milik orang lain.
+# schema.py/database.py — modul ini tidak menyentuh skema milik orang lain.
 
 
 def ensure_table(kon: sqlite3.Connection) -> None:

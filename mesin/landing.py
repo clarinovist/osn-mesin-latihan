@@ -12,8 +12,8 @@ from __future__ import annotations
 import html
 
 import design_tokens as T
-import ikon
-from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
+import icons
+from teacher_style import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 
 
 def _halaman_publik(judul: str, isi: str) -> bytes:
@@ -157,7 +157,7 @@ def halaman_landing() -> bytes:
 <nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
 
 <section class="kartu hero-landing">
-  <img src="{ikon.OWL}" alt="" width="120" height="120">
+  <img src="{icons.OWL}" alt="" width="120" height="120">
   <h1>{n}</h1>
   <p class="sub">{tag}</p>
   <p>Anak berlatih matematika, menuliskan <b>caranya</b>, dan sistem

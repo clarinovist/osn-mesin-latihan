@@ -114,7 +114,7 @@ def saring_malrule(kunci: str, kandidat: list[Malrule]) -> tuple[Malrule, ...]:
 # Konten di atas (Soal, Malrule, saring_malrule, LEVEL) tetap milik modul
 # ini — dipakai semua topik. Konten KHAS pola bilangan (16 template,
 # REGISTRI, komposisi lembar, susun_lembar) sudah pindah ke paket topik
-# (topik_pola_bilangan.py). Akses lama `from templates import REGISTRI`
+# (topic_number_patterns.py). Akses lama `from templates import REGISTRI`
 # dst. tetap bekerja lewat atribut-malas di bawah: dimuat sekali saat
 # pertama kali disentuh, lalu di-cache.
 
@@ -131,11 +131,11 @@ def __getattr__(nama: str):
     # juga membentuk rekursi saat paket sedang mengimpor modul ini.
     if nama.startswith("__") or nama in _DARI_PAKET:
         if nama in _DARI_PAKET:
-            import topik
+            import topics
 
-            pb = topik.paket_bawaan()
+            pb = topics.paket_bawaan()
             if nama == "REGISTRI":
-                nilai: Any = topik.registri()
+                nilai: Any = topics.registri()
             elif nama == "URUTAN_PER_LEVEL":
                 nilai = pb.komposisi
             elif nama == "URUTAN_LEMBAR":
@@ -148,15 +148,15 @@ def __getattr__(nama: str):
             f"modul {__name__!r} tidak punya atribut {nama!r}"
         )
 
-    import topik
+    import topics
 
-    gabungan = topik.registri()
+    gabungan = topics.registri()
     if nama in gabungan:
         nilai = gabungan[nama]
         globals()[nama] = nilai
         return nilai
     raise AttributeError(
         f"modul {__name__!r} tidak punya atribut {nama!r} — "
-        "isi khas pola bilangan sudah pindah ke topik_pola_bilangan"
+        "isi khas pola bilangan sudah pindah ke topic_number_patterns"
     )
 

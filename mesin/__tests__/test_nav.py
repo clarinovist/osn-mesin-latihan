@@ -15,9 +15,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import basis  # noqa: E402
-import sandi  # noqa: E402
-from uji_http import ServerUji  # noqa: E402
+import database  # noqa: E402
+import auth  # noqa: E402
+from http_test_kit import ServerUji  # noqa: E402
 
 SANDI_A = "sandi-ortu-a-1234567"
 SANDI_ADMIN = "sandi-pengelola-9999"
@@ -27,10 +27,10 @@ SANDI_ADMIN = "sandi-pengelola-9999"
 def server(tmp_path, monkeypatch):
     s = ServerUji(tmp_path, monkeypatch)
     with s.buka() as kon:
-        a = basis.tambah_siswa(kon, "BimaA", "P3", pemilik="ortu-a")
-        sesi_a = basis.buat_sesi(kon, a, seed=7)
-    sandi.tambah_akun("ortu-a", SANDI_A, "guru", path=sandi.BERKAS_SANDI)
-    sandi.tambah_akun("pengelola", SANDI_ADMIN, "admin", path=sandi.BERKAS_SANDI)
+        a = database.tambah_siswa(kon, "BimaA", "P3", pemilik="ortu-a")
+        sesi_a = database.buat_sesi(kon, a, seed=7)
+    auth.tambah_akun("ortu-a", SANDI_A, "guru", path=auth.BERKAS_SANDI)
+    auth.tambah_akun("pengelola", SANDI_ADMIN, "admin", path=auth.BERKAS_SANDI)
     yield s, a, sesi_a
     s.berhenti()
 
@@ -74,10 +74,10 @@ def test_menu_admin_tanpa_item_guru(server):
 
 
 def test_css_menu_pengguna_tersedia():
-    import gaya_guru
+    import teacher_style
 
     for kelas in ("menu-pengguna", "menu-isi", "menu-pisah"):
-        assert f".{kelas}" in gaya_guru.GAYA_GURU
+        assert f".{kelas}" in teacher_style.GAYA_GURU
 
 
 def test_aksi_akun_kembali_ke_section_asal(server):

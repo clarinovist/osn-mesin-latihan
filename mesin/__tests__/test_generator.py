@@ -58,7 +58,7 @@ def test_semua_template_terdaftar_di_urutan_lembar():
     sekarang: tidak ada template yatim (terdaftar tapi tak pernah dipakai),
     dan tidak ada nama di komposisi yang tidak punya implementasi.
     """
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     paket = paket_bawaan()
     terpakai = {t for urutan in paket.komposisi.values() for t in urutan}

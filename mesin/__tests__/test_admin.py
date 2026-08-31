@@ -14,9 +14,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import basis  # noqa: E402
-import sandi  # noqa: E402
-from uji_http import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
+import database  # noqa: E402
+import auth  # noqa: E402
+from http_test_kit import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
 SANDI_A = "sandi-ortu-a-1234567"
 SANDI_ADMIN = "sandi-pengelola-9999"
@@ -26,10 +26,10 @@ SANDI_ADMIN = "sandi-pengelola-9999"
 def server(tmp_path, monkeypatch):
     s = ServerUji(tmp_path, monkeypatch)
     with s.buka() as kon:
-        a = basis.tambah_siswa(kon, "BimaA", "P3", pemilik="ortu-a")
-        basis.buat_sesi(kon, a, seed=5)
-    sandi.tambah_akun("ortu-a", SANDI_A, "guru", path=sandi.BERKAS_SANDI)
-    sandi.tambah_akun("pengelola", SANDI_ADMIN, "admin", path=sandi.BERKAS_SANDI)
+        a = database.tambah_siswa(kon, "BimaA", "P3", pemilik="ortu-a")
+        database.buat_sesi(kon, a, seed=5)
+    auth.tambah_akun("ortu-a", SANDI_A, "guru", path=auth.BERKAS_SANDI)
+    auth.tambah_akun("pengelola", SANDI_ADMIN, "admin", path=auth.BERKAS_SANDI)
     yield s
     s.berhenti()
 
@@ -66,7 +66,7 @@ def test_admin_membuat_akun_orang_tua(server):
     )
     assert kode == 200
     assert "ortu-baru" in isi
-    assert sandi.periksa_peran("ortu-baru", "sandi-ortu-baru-123", "guru")
+    assert auth.periksa_peran("ortu-baru", "sandi-ortu-baru-123", "guru")
 
 
 def test_guru_baru_nama_ganda_ditolak_tanpa_mengubah_lama(server):
@@ -79,7 +79,7 @@ def test_guru_baru_nama_ganda_ditolak_tanpa_mengubah_lama(server):
             "sandi": "sandi-penyerang-999",
         },
     )
-    assert sandi.periksa("ortu-a", SANDI_A), "sandi ortu-a ternyata berubah!"
+    assert auth.periksa("ortu-a", SANDI_A), "sandi ortu-a ternyata berubah!"
 
 
 def test_guru_baru_sandi_pendek_ditolak(server):
@@ -90,15 +90,15 @@ def test_guru_baru_sandi_pendek_ditolak(server):
     )
     assert kode == 200
     assert "12 karakter" in isi
-    assert sandi.cari_akun("pendek") is None
+    assert auth.cari_akun("pendek") is None
 
 
 def test_css_badge_peran_tersedia():
     """Badge peran harus bergaya — bukan span telanjang di topbar."""
-    import gaya_guru
+    import teacher_style
 
-    assert ".badge-peran" in gaya_guru.GAYA_GURU
-    assert ".badge-keluarga" in gaya_guru.GAYA_GURU
+    assert ".badge-peran" in teacher_style.GAYA_GURU
+    assert ".badge-keluarga" in teacher_style.GAYA_GURU
 
 
 # --- Kebijakan admin: dashboard khusus + baca-semua-tulis-tidak -----------

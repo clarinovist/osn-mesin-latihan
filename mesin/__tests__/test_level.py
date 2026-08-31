@@ -15,12 +15,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import basis  # noqa: E402
+import database  # noqa: E402
 import web  # noqa: E402
 from generator import buat_lembar, buat_soal, profil  # noqa: E402
-from skema import MIGRASI  # noqa: E402
+from schema import MIGRASI  # noqa: E402
 from templates import LEVEL, URUTAN_PER_LEVEL, level_valid, susun_lembar  # noqa: E402
-from topik_pola_bilangan import PROFIL_LEVEL  # noqa: E402
+from topic_number_patterns import PROFIL_LEVEL  # noqa: E402
 
 SEED_UJI = list(range(1, 61))
 
@@ -28,8 +28,8 @@ SEED_UJI = list(range(1, 61))
 @pytest.fixture()
 def db(tmp_path):
     p = tmp_path / "uji.db"
-    basis.siapkan(p)
-    with basis.buka(p) as kon:
+    database.siapkan(p)
+    with database.buka(p) as kon:
         yield kon
 
 
@@ -211,8 +211,8 @@ def test_bank_tidak_menggabungkan_soal_lintas_level(db):
     soal_p3 = buat_soal("titik_segitiga", 7, level="P3")
     soal_p5 = replace(soal_p3, level="P5")
 
-    id_p3 = basis.simpan_soal(db, soal_p3)
-    id_p5 = basis.simpan_soal(db, soal_p5)
+    id_p3 = database.simpan_soal(db, soal_p3)
+    id_p5 = database.simpan_soal(db, soal_p5)
     assert id_p3 != id_p5
 
     baris = db.execute(
@@ -226,17 +226,17 @@ def test_bank_tidak_menggabungkan_soal_lintas_level(db):
 
 @pytest.mark.parametrize("level", LEVEL)
 def test_sesi_menyimpan_levelnya(db, level):
-    sid = basis.tambah_siswa(db, f"Anak{level}", level)
-    sesi_id = basis.buat_sesi(db, sid, 5150, level=level)
+    sid = database.tambah_siswa(db, f"Anak{level}", level)
+    sesi_id = database.buat_sesi(db, sid, 5150, level=level)
     baris = db.execute("SELECT level FROM sesi WHERE id = ?", (sesi_id,)).fetchone()
     assert baris["level"] == level
-    for b in basis.isi_sesi(db, sesi_id):
+    for b in database.isi_sesi(db, sesi_id):
         assert b["level"] == level
 
 
 def test_sesi_baru_memakai_tingkat_siswa(db):
     """Ini yang membuat kolom siswa.tingkat akhirnya berarti."""
-    sid = basis.tambah_siswa(db, "Naik", "P5")
+    sid = database.tambah_siswa(db, "Naik", "P5")
     sesi_id = web.buat_sesi_seed_baru(db, sid)
     baris = db.execute("SELECT level FROM sesi WHERE id = ?", (sesi_id,)).fetchone()
     assert baris["level"] == "P5"
@@ -244,7 +244,7 @@ def test_sesi_baru_memakai_tingkat_siswa(db):
 
 def test_menaikkan_tingkat_tidak_mengubah_sesi_lama(db):
     """Riwayat tidak boleh berubah surut saat anak naik level."""
-    sid = basis.tambah_siswa(db, "Riwayat", "P3", pemilik="guru")
+    sid = database.tambah_siswa(db, "Riwayat", "P3", pemilik="guru")
     lama = web.buat_sesi_seed_baru(db, sid)
 
     pesan, galat = web.proses_akun(
@@ -262,11 +262,11 @@ def test_menaikkan_tingkat_tidak_mengubah_sesi_lama(db):
 
 
 def test_lembar_sesi_lama_tetap_dirender_pada_levelnya(db):
-    sid = basis.tambah_siswa(db, "Cetak", "P3")
-    sesi_id = basis.buat_sesi(db, sid, 777, level="P3")
+    sid = database.tambah_siswa(db, "Cetak", "P3")
+    sesi_id = database.buat_sesi(db, sid, 777, level="P3")
     db.execute("UPDATE siswa SET tingkat = 'P6' WHERE id = ?", (sid,))
 
-    for b in basis.isi_sesi(db, sesi_id):
+    for b in database.isi_sesi(db, sesi_id):
         assert web._soal_dari_baris(b).level == "P3"
 
 
@@ -284,7 +284,7 @@ def test_tambah_siswa_menolak_tingkat_ngawur(db):
 
 
 def test_ubah_tingkat_menolak_nilai_ngawur(db):
-    sid = basis.tambah_siswa(db, "Tetap", "P3")
+    sid = database.tambah_siswa(db, "Tetap", "P3")
     pesan, galat = web.proses_akun(
         db, {"aksi": "tingkat", "siswa_id": str(sid), "tingkat": "p4"}, "guru"
     )
@@ -345,9 +345,9 @@ def test_migrasi_menambah_kolom_pada_db_lama(tmp_path):
     kon.commit()
     kon.close()
 
-    basis.siapkan(p)
+    database.siapkan(p)
 
-    with basis.buka(p) as kon:
+    with database.buka(p) as kon:
         kolom_sesi = {r["name"] for r in kon.execute("PRAGMA table_info(sesi)")}
         kolom_soal = {r["name"] for r in kon.execute("PRAGMA table_info(soal)")}
         assert "level" in kolom_sesi
@@ -360,23 +360,23 @@ def test_migrasi_menambah_kolom_pada_db_lama(tmp_path):
 
 def test_migrasi_aman_dijalankan_berulang(tmp_path):
     p = tmp_path / "ulang.db"
-    basis.siapkan(p)
-    basis.siapkan(p)
-    basis.siapkan(p)
-    with basis.buka(p) as kon:
-        assert basis.migrasi(kon) == []
+    database.siapkan(p)
+    database.siapkan(p)
+    database.siapkan(p)
+    with database.buka(p) as kon:
+        assert database.migrasi(kon) == []
 
 
 def test_view_ringkasan_terbangun_ulang_dengan_kolom_level(tmp_path):
     """View lama tidak diperbarui CREATE VIEW IF NOT EXISTS — harus di-DROP."""
     p = tmp_path / "view.db"
-    basis.siapkan(p)
-    with basis.buka(p) as kon:
-        sid = basis.tambah_siswa(kon, "Lihat", "P4")
-        basis.buat_sesi(kon, sid, 31337, level="P4")
+    database.siapkan(p)
+    with database.buka(p) as kon:
+        sid = database.tambah_siswa(kon, "Lihat", "P4")
+        database.buat_sesi(kon, sid, 31337, level="P4")
     # panggil ulang: view harus tetap sehat, bukan menyisakan definisi lama
-    basis.siapkan(p)
-    with basis.buka(p) as kon:
+    database.siapkan(p)
+    with database.buka(p) as kon:
         baris = kon.execute("SELECT * FROM ringkasan_sesi").fetchall()
         assert baris
         assert baris[0]["level"] == "P4"
@@ -553,7 +553,7 @@ def test_setiap_template_bisa_membedakan_k_dari_h():
     satu; ia hanya muncul setelah penyaringan. Karena itu diperiksa di sini,
     terpusat, untuk semua template sekaligus.
     """
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     paket = paket_bawaan()
     tanpa_h: list[str] = []
@@ -578,7 +578,7 @@ def test_soal_bermalrule_tunggal_tidak_mendominasi():
     malrule menyusut jadi satu setelah penyaringan dan jalur H tidak pernah
     selamat. Setelah pola diwajibkan 4-6 huruf, angkanya turun ke ~6%.
     """
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     paket = paket_bawaan()
     buruk: list[str] = []
@@ -629,7 +629,7 @@ def test_sisa_bagi_siklus_polanya_cukup_kaya():
 def test_bagian_tidak_pernah_terpecah_dalam_satu_lembar():
     """Tiap huruf bagian hanya boleh muncul sebagai SATU blok berurutan.
 
-    `cetak.lembar_soal` mencetak judul bagian setiap kali `soal.bagian`
+    `worksheets.lembar_soal` mencetak judul bagian setiap kali `soal.bagian`
     berganti. Kalau komposisi menaruh Bagian F, lalu E, lalu F lagi, lembar
     anak akan memuat judul "Bagian F" DUA KALI dengan Bagian E terselip di
     antaranya. Itu persis yang terjadi saat Bagian F pertama disusun:
@@ -666,7 +666,7 @@ def test_tiap_bagian_yang_terpakai_punya_judul_sendiri():
     """Judul fallback "Bagian F" polos berarti anak tidak diberi tahu apa
     yang berubah — dan Bagian F adalah satu-satunya bagian yang menuntut
     cara kerja berbeda."""
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     judul_bagian = paket_bawaan().judul_bagian
 
@@ -694,7 +694,7 @@ def test_tiap_bagian_yang_terpakai_punya_judul_sendiri():
 
 
 def _tanpa_jalur(nama: str, lv: str, kode_dibutuhkan: set[str]) -> int:
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     jumlah = total = 0
     paket = paket_bawaan()
@@ -717,7 +717,7 @@ def test_tiap_template_per_soal_tidak_kehilangan_jalur_k():
     daripada itu: anak yang benar-benar salah konsep di soal itu tercatat
     sebagai salah hitung (B/H), lalu tindak lanjutnya meleset arah.
     """
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     buruk = []
     for nama in paket_bawaan().templates:
@@ -731,7 +731,7 @@ def test_malrule_kolaps_tidak_ada_yang_identik_dengan_kunci():
     """Malrule yang jawabannya == kunci akan dibuang penyaringan, tapi
     kehadirannya di kode menyesatkan pembaca: ia SEolah-olah meng-cover
     miskonsepsi yang sebenarnya tidak pernah terdeteksi."""
-    from topik import paket_bawaan
+    from topics import paket_bawaan
 
     paket = paket_bawaan()
     buruk = []

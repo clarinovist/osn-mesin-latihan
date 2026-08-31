@@ -2,7 +2,7 @@
 
 Alasan tanpa framework: satu-satunya pengguna adalah guru di jaringan
 rumah/VPS sendiri, kuerinya sedikit, dan tiap dependensi tambahan adalah
-satu hal lagi yang bisa gagal saat deploy. spike/sajikan.py sudah memakai
+satu hal lagi yang bisa gagal saat deploy. spike/serve.py sudah memakai
 http.server dan itu terbukti cukup.
 
 Rute:
@@ -22,17 +22,17 @@ from dataclasses import replace
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler
 
-import basis
-import cetak
+import database
+import worksheets
 import design_tokens as T
-import lampiran as lampiran_mod
-import sandi
-import sesi
-from diagnosa import diagnosa
-from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
+import attachments as lampiran_mod
+import auth
+import sessions
+from diagnosis import diagnosa
+from teacher_style import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 from generator import LEVEL_BAWAAN, buat_soal
 from templates import LEVEL, REGISTRI, Soal, level_valid
-from topik import TOPIK_BAWAAN, Topik, ambil, daftar_topik, dari_sesi
+from topics import TOPIK_BAWAAN, Topik, ambil, daftar_topik, dari_sesi
 
 KODE_PILIHAN = [
     ("", "— pilih —"),
@@ -210,7 +210,7 @@ def halaman_utama(
     admin = peran == "admin"
     # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
     # pada kartu siswa P3 lalu gagal ketika form dikirim.
-    for s in basis.daftar_siswa(kon, pemilik):
+    for s in database.daftar_siswa(kon, pemilik):
         opsi_topik = "".join(
             f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
             for t in _topik_untuk_level(s["tingkat"])
@@ -442,7 +442,7 @@ def halaman_sesi(
         return _halaman("Tidak ada", "<h1>Sesi tidak ditemukan</h1>")
 
     kartu = []
-    for b in basis.isi_sesi(kon, sesi_id):
+    for b in database.isi_sesi(kon, sesi_id):
         soal = _soal_dari_baris(b)
         sudah = b["jawaban_id"] is not None
         kode = b["kode_final"]
@@ -519,7 +519,7 @@ def halaman_sesi(
     # Upload menjalankan ekstraksi AI, hasilnya dikonfirmasi guru di halaman
     # /lampiran/<id> sebelum masuk jawaban.
     baris_lampiran = []
-    for lamp in basis.daftar_lampiran(kon, sesi_id):
+    for lamp in database.daftar_lampiran(kon, sesi_id):
         status_cls = "benar" if lamp["status"] == "diterapkan" else "N"
         baris_lampiran.append(
             f'<li><a href="/lampiran/{lamp["id"]}">'
@@ -603,7 +603,7 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
     `manual` supaya nanti bisa diukur seberapa sering mesin meleset.
     """
     diubah = 0
-    for b in basis.isi_sesi(kon, sesi_id):
+    for b in database.isi_sesi(kon, sesi_id):
         sid = b["sesi_soal_id"]
         jwb = data.get(f"jwb_{sid}", "").strip()
         cara = data.get(f"cara_{sid}", "").strip()
@@ -614,12 +614,12 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
         if not (jwb or cara or restate or belum or pilihan):
             continue
 
-        jid = basis.simpan_jawaban(kon, sid, jwb, cara, restate, belum)
+        jid = database.simpan_jawaban(kon, sid, jwb, cara, restate, belum)
 
         soal = _soal_dari_baris(b)
         u = diagnosa(
             b["kunci"], jwb, cara, restate, belum,
-            basis.malrule_soal(kon, b["soal_id"]),
+            database.malrule_soal(kon, b["soal_id"]),
             soal.minta_restatement,
         )
 
@@ -630,7 +630,7 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
         else:
             benar, final, manual = u.benar, u.kode, False
 
-        basis.simpan_diagnosis(
+        database.simpan_diagnosis(
             kon, jid, benar, u.kode, final, u.malrule_id, u.alasan, manual
         )
         diubah += 1
@@ -657,8 +657,8 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
     jumlah = 0
     # Mode sesi: drill (Latihan Cepat) tidak meminta Caraku, jadi diagnosis
     # memakai cara sintetis supaya aturan "jawaban tanpa cara = N (menebak)"
-    # tidak salah menuduh. Storage tetap cara='' — lihat murid.AWALAN_DRILL.
-    import murid  # impor terlambat: web.py tidak boleh mengimpor murid di atas
+    # tidak salah menuduh. Storage tetap cara='' — lihat students.AWALAN_DRILL.
+    import students  # impor terlambat: web.py tidak boleh mengimpor murid di atas
 
     baris_mode = kon.execute(
         "SELECT mode FROM sesi WHERE id = ?", (sesi_id,)
@@ -667,9 +667,9 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
 
     def _cara(b) -> str:
         cara = b["cara"] or ""
-        return murid.AWALAN_DRILL + cara if drill else cara
+        return students.AWALAN_DRILL + cara if drill else cara
 
-    for b in basis.isi_sesi(kon, sesi_id):
+    for b in database.isi_sesi(kon, sesi_id):
         if b["jawaban_id"] is None:
             continue  # anak melewati soal ini: biarkan tanpa baris
         if b["manual"] == 1:
@@ -678,7 +678,7 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
             u = diagnosa(
                 b["kunci"], b["jawaban"] or "", _cara(b),
                 b["restatement"] or "", bool(b["belum_pernah"]),
-                basis.malrule_soal(kon, b["soal_id"]),
+                database.malrule_soal(kon, b["soal_id"]),
                 soal.minta_restatement,
             )
             kon.execute(
@@ -691,10 +691,10 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
         u = diagnosa(
             b["kunci"], b["jawaban"] or "", _cara(b),
             b["restatement"] or "", bool(b["belum_pernah"]),
-            basis.malrule_soal(kon, b["soal_id"]),
+            database.malrule_soal(kon, b["soal_id"]),
             soal.minta_restatement,
         )
-        basis.simpan_diagnosis(
+        database.simpan_diagnosis(
             kon, b["jawaban_id"],
             benar=u.benar, kode_usulan=u.kode, kode_final=u.kode,
             malrule_id=u.malrule_id, alasan=u.alasan, manual=False,
@@ -706,7 +706,7 @@ def diagnosa_murid(kon, sesi_id: int) -> int:
 def _chart_tren(ring) -> str:
     """SVG line chart % benar per sesi (mockup guru-laporan).
 
-    ring diurutkan DESC oleh basis.ringkasan; dibalik supaya sumbu x
+    ring diurutkan DESC oleh database.ringkasan; dibalik supaya sumbu x
     berjalan kronologis (sesi terbaru di kanan). Kalau kurang dari 2 titik
     tidak digambar — satu titik tidak bisa disebut tren.
     """
@@ -804,7 +804,7 @@ def halaman_laporan(
     if not siswa:
         return _halaman("Tidak ada", "<h1>Siswa tidak ditemukan</h1>")
 
-    ring = basis.ringkasan(kon, siswa_id)
+    ring = database.ringkasan(kon, siswa_id)
     total_sesi = len(ring)
     benar_sum = sum(r["benar"] or 0 for r in ring)
     soal_sum = sum(r["jumlah_soal"] or 0 for r in ring)
@@ -824,7 +824,7 @@ def halaman_laporan(
         for r in ring
     ) or '<tr><td colspan="11" class="kosong">belum ada sesi dinilai</td></tr>'
 
-    mis = basis.miskonsepsi_berulang(kon, siswa_id)
+    mis = database.miskonsepsi_berulang(kon, siswa_id)
     daftar_mis = "".join(
         f'<tr><td>{html.escape(m["alasan"] or m["malrule_id"])}</td>'
         f'<td class="tipe">{m["template_id"]}</td>'
@@ -835,7 +835,7 @@ def halaman_laporan(
     ) or ('<tr><td colspan="5" class="kosong">belum ada miskonsepsi '
           "tercatat</td></tr>")
 
-    peta = basis.peta_materi_baru(kon, siswa_id)
+    peta = database.peta_materi_baru(kon, siswa_id)
     daftar_peta = "".join(
         f'<tr><td>{p["template_id"]}</td>'
         f'<td class="tipe">{html.escape(p["topik"])}</td>'
@@ -894,17 +894,17 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
     """Kartu akun murid di halaman akun.
 
     Pola persis kartu Siswa: tabel + form di bawahnya. Daftar akun diambil
-    dari sandi.muat_akun() yang disaring peran == murid. Tiap akun dicek
-    kecocokannya dengan tabel siswa lewat murid.siswa_dari_akun; kalau tidak
+    dari auth.muat_akun() yang disaring peran == murid. Tiap akun dicek
+    kecocokannya dengan tabel siswa lewat students.siswa_dari_akun; kalau tidak
     cocok ditandai jelas "belum terhubung ke siswa" supaya guru tahu kenapa
     anak tidak bisa masuk. Guru hanya melihat & mengelola akun keluarganya;
     panggilan langsung tanpa `pengguna` (mode lokal / test) melihat semua.
     """
-    import murid as _murid
+    import students as _murid
 
     filter_siswa = None if (peran == "admin" or pengguna is None) else pengguna
-    daftar_siswa = basis.daftar_siswa(kon, filter_siswa)
-    akun_murid = [a for a in sandi.muat_akun() if a.get("peran") == "murid"]
+    daftar_siswa = database.daftar_siswa(kon, filter_siswa)
+    akun_murid = [a for a in auth.muat_akun() if a.get("peran") == "murid"]
     if pengguna is not None and peran != "admin":
         akun_murid = [
             a
@@ -986,7 +986,7 @@ def status_akun_latihan(kon, siswa_id: int) -> str:
     Nama login bila anaknya sudah punya akun, penanda jelas bila belum —
     supaya jelas bahwa menghapus akun latihan tidak menghapus anaknya.
     """
-    import murid as _murid
+    import students as _murid
 
     nama = _murid.akun_murid_dari_siswa(kon, siswa_id)
     if nama:
@@ -1045,7 +1045,7 @@ def halaman_akun(
         f'<input type="hidden" name="siswa_id" value="{s["id"]}">'
         f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus</button>'
         f"</form></td></tr>"
-        for s in basis.daftar_siswa(kon, None if peran == "admin" else pengguna)
+        for s in database.daftar_siswa(kon, None if peran == "admin" else pengguna)
     )
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
@@ -1055,7 +1055,7 @@ def halaman_akun(
     if pengguna is not None:
         pengguna_tampil = html.escape(pengguna)
     else:
-        d = sandi.muat_sandi()
+        d = auth.muat_sandi()
         if not d:
             pengguna_tampil = "(belum disetel)"
         elif "akun" in d:
@@ -1186,11 +1186,11 @@ def _akun_murid_milik(kon, pengguna: str, peran: str, nama: str) -> bool:
     """
     if peran == "admin":
         return True
-    a = sandi.cari_akun(nama)
+    a = auth.cari_akun(nama)
     if not a or a.get("peran") != "murid":
         return False
     if a.get("siswa_id") is not None:
-        return basis.siswa_milik(kon, int(a["siswa_id"]), pengguna)
+        return database.siswa_milik(kon, int(a["siswa_id"]), pengguna)
     baris = kon.execute(
         "SELECT 1 FROM siswa WHERE nama = ? COLLATE NOCASE AND pemilik = ?",
         (nama, pengguna),
@@ -1220,7 +1220,7 @@ def proses_akun(
         baru = data.get("baru", "")
         ulang = data.get("ulang", "")
 
-        if not sandi.periksa(pengguna_kini, lama):
+        if not auth.periksa(pengguna_kini, lama):
             return "", "Sandi lama salah."
         if baru != ulang:
             return "", "Sandi baru dan ulangannya tidak sama."
@@ -1229,7 +1229,7 @@ def proses_akun(
         if baru == lama:
             return "", "Sandi baru sama dengan yang lama."
 
-        sandi.simpan_sandi(baru, pengguna_kini)
+        auth.simpan_sandi(baru, pengguna_kini)
         return (
             "Sandi diganti. Masuk lagi dengan sandi baru.",
             "",
@@ -1263,12 +1263,12 @@ def proses_akun(
             (nama, pengguna_kini),
         ).fetchone():
             return "", f"Siswa bernama {nama} sudah ada di keluargamu."
-        if sandi.cari_akun(nama_akun) is not None:
+        if auth.cari_akun(nama_akun) is not None:
             return "", f"Nama {nama_akun} sudah dipakai akun lain. Pakai nama lain."
 
-        siswa_id = basis.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
+        siswa_id = database.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
         try:
-            sandi.tambah_akun(nama_akun, sandi_anak, "murid", siswa_id=siswa_id)
+            auth.tambah_akun(nama_akun, sandi_anak, "murid", siswa_id=siswa_id)
         except ValueError as e:
             # Pembuatan akun meledak di tengah: batalkan siswa yang baru
             # dibuat supaya tidak ada anak yatim tanpa akun.
@@ -1301,7 +1301,7 @@ def proses_akun(
         ).fetchone()
         if not baris or (
             peran != "admin"
-            and not basis.siswa_milik(kon, siswa_id, pengguna_kini)
+            and not database.siswa_milik(kon, siswa_id, pengguna_kini)
         ):
             return "", "Siswa tidak dikenal."
         kon.execute(
@@ -1327,7 +1327,7 @@ def proses_akun(
         ).fetchone()
         if not baris or (
             peran != "admin"
-            and not basis.siswa_milik(kon, siswa_id, pengguna_kini)
+            and not database.siswa_milik(kon, siswa_id, pengguna_kini)
         ):
             return "", "Siswa tidak dikenal."
         nama = baris["nama"]
@@ -1341,11 +1341,11 @@ def proses_akun(
                 f"sengaja tidak bisa dihapus — sesi, jawaban, dan "
                 f"diagnosisnya tidak bisa dibangun ulang.",
             )
-        import murid as _murid
+        import students as _murid
 
         login = _murid.akun_murid_dari_siswa(kon, siswa_id)
         if login:
-            sandi.hapus_akun(login)
+            auth.hapus_akun(login)
         kon.execute("DELETE FROM siswa WHERE id = ?", (siswa_id,))
         return f"Siswa {nama} dihapus beserta akun latihannya.", ""
 
@@ -1365,7 +1365,7 @@ def proses_akun(
                 siswa_id = int(data["siswa_id"])
             except ValueError:
                 return "", "Siswa tidak dikenal."
-            if peran != "admin" and not basis.siswa_milik(
+            if peran != "admin" and not database.siswa_milik(
                 kon, siswa_id, pengguna_kini
             ):
                 return "", "Siswa tidak dikenal."
@@ -1398,7 +1398,7 @@ def proses_akun(
         if len(sandi_baru) < 8:
             return "", "Sandi murid minimal 8 karakter."
         try:
-            sandi.tambah_akun(nama_akun, sandi_baru, "murid", siswa_id=siswa_id)
+            auth.tambah_akun(nama_akun, sandi_baru, "murid", siswa_id=siswa_id)
         except ValueError as e:
             return "", str(e)
         return f"Akun murid {nama_akun} ditambahkan.", ""
@@ -1409,7 +1409,7 @@ def proses_akun(
             return "", "Nama tidak boleh kosong."
         if not _akun_murid_milik(kon, pengguna_kini, peran, nama):
             return "", f"Akun {nama} tidak ditemukan."
-        ok = sandi.hapus_akun(nama)
+        ok = auth.hapus_akun(nama)
         if not ok:
             return "", f"Akun {nama} tidak ditemukan."
         return f"Akun murid {nama} dihapus.", ""
@@ -1423,7 +1423,7 @@ def proses_akun(
             return "", "Sandi murid minimal 8 karakter."
         if not _akun_murid_milik(kon, pengguna_kini, peran, nama):
             return "", f"Akun {nama} tidak ditemukan."
-        ok = sandi.setel_sandi_murid(nama, baru)
+        ok = auth.setel_sandi_murid(nama, baru)
         if not ok:
             return "", f"Akun {nama} tidak ditemukan."
         return f"Sandi {nama} diperbarui.", ""
@@ -1443,7 +1443,7 @@ def halaman_admin(
     DIBACA — nama anak jadi tautan ke laporannya, aksi tulis data murid
     ditolak 404 di router.
     """
-    akun = sandi.muat_akun()
+    akun = auth.muat_akun()
     n_keluarga = sum(1 for a in akun if a.get("peran", "guru") == "guru")
     total_siswa = kon.execute("SELECT COUNT(*) AS n FROM siswa").fetchone()["n"]
     total_sesi = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
@@ -1463,7 +1463,7 @@ def halaman_admin(
         if a.get("peran", "guru") not in ("guru", "admin"):
             continue
         nama = a["pengguna"]
-        anak = basis.daftar_siswa(kon, nama)
+        anak = database.daftar_siswa(kon, nama)
         daftar_anak = (
             ", ".join(
                 f'<a href="/laporan/{s["id"]}">{html.escape(s["nama"])}</a>'
@@ -1551,7 +1551,7 @@ def buat_sesi_seed_baru(
     KeyError oleh ambil() — salah ketik id topik adalah bug pemanggil, bukan
     data produksi yang perlu dimaafkan (kontraknya beda dari level).
 
-    `mode` dan `timer_*` diteruskan ke basis.buat_sesi; nilai asing ditolak
+    `mode` dan `timer_*` diteruskan ke database.buat_sesi; nilai asing ditolak
     di sana (ValueError) — pemanggil wajib validasi sebelum menyentuh DB.
     """
     if level is None:
@@ -1573,7 +1573,7 @@ def buat_sesi_seed_baru(
     for _ in range(500):
         seed = random.randint(1, 9_999_999)
         if seed not in dipakai:
-            return basis.buat_sesi(
+            return database.buat_sesi(
                 kon, siswa_id, seed, level=level, topik=topik, mode=mode,
                 timer_mode=timer_mode, durasi_menit=durasi_menit,
                 timer_auto=timer_auto,
@@ -1597,7 +1597,7 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
     if not info:
         return None
 
-    soal = [_soal_dari_baris(b) for b in basis.isi_sesi(kon, sesi_id)]
+    soal = [_soal_dari_baris(b) for b in database.isi_sesi(kon, sesi_id)]
     # Judul dari paket topik sesi ini — bukan selalu paket bawaan. Sesi lama
     # dengan nilai kolom aneh jatuh ke bawaan lewat dari_sesi(), sesuai
     # kontrak data produksi.
@@ -1606,15 +1606,15 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
     # jadi dipakai gaya layar — kartu sentuh, tanpa satuan mm. Versi cetak
     # tetap keluar lewat tombol cetak browser (@media print di gaya layar
     # menurunkan dirinya ke perilaku kertas).
-    from gaya_layar import GAYA_LAYAR
+    from screen_style import GAYA_LAYAR
 
     if untuk_guru:
-        isi = cetak.lembar_penilaian(
+        isi = worksheets.lembar_penilaian(
             soal, info["nama"], info["tanggal"], info["seed"],
             gaya=GAYA_LAYAR, topik_paket=paket,
         )
     else:
-        isi = cetak.lembar_soal(
+        isi = worksheets.lembar_soal(
             soal, info["nama"], info["tanggal"], gaya=GAYA_LAYAR,
             topik_paket=paket,
         )
@@ -1653,11 +1653,11 @@ class Penangan(BaseHTTPRequestHandler):
         host = (self.headers.get("Host") or "").split(":")[0].lower()
         if host not in ("localhost", "127.0.0.1", ""):
             c["osn_sesi"]["secure"] = True
-        c["osn_sesi"]["max-age"] = str(sesi.TTL_DETIK)
+        c["osn_sesi"]["max-age"] = str(sessions.TTL_DETIK)
         return c.output(header="").strip()
 
     def _kredensial(self):
-        return sandi.dari_header(self.headers.get("Authorization"))
+        return auth.dari_header(self.headers.get("Authorization"))
 
     def _sesi_atau_basic(self, peran_wajib: str | None = None):
         """Kembalikan (pengguna, peran) bila lolos via cookie ATAU Basic.
@@ -1667,14 +1667,14 @@ class Penangan(BaseHTTPRequestHandler):
         """
         tok = self._ambil_token()
         if tok:
-            got = sesi.ambil(tok)
+            got = sessions.ambil(tok)
             if got and (peran_wajib is None or got[1] == peran_wajib):
                 return got
         kred = self._kredensial()
         if not kred:
             return None
         # kred adalah (pengguna, sandi) dari header Basic
-        peran = sandi.peran_dari(*kred)
+        peran = auth.peran_dari(*kred)
         if peran and (peran_wajib is None or peran == peran_wajib):
             return (kred[0], peran)
         return None
@@ -1686,17 +1686,17 @@ class Penangan(BaseHTTPRequestHandler):
         halaman terbuka seperti semula, dan data yang dibuat tercatat atas
         nama "guru" pula — konsisten dengan pembuatnya.
         """
-        if not sandi.wajib_sandi():
+        if not auth.wajib_sandi():
             return ("guru", "guru")
         tok = self._ambil_token()
         if tok:
-            got = sesi.ambil(tok)
+            got = sessions.ambil(tok)
             if got:
                 return got
         kred = self._kredensial()
         if not kred:
             return None
-        peran = sandi.peran_dari(*kred)
+        peran = auth.peran_dari(*kred)
         if peran:
             return (kred[0], peran)
         return None
@@ -1740,7 +1740,7 @@ class Penangan(BaseHTTPRequestHandler):
             return False
         if ident[1] == "admin":
             return True
-        return basis.sesi_milik(kon, sesi_id, ident[0])
+        return database.sesi_milik(kon, sesi_id, ident[0])
 
     def _bisa_lihat_siswa(self, kon, siswa_id: int) -> bool:
         ident = self._identitas()
@@ -1748,17 +1748,17 @@ class Penangan(BaseHTTPRequestHandler):
             return False
         if ident[1] == "admin":
             return True
-        return basis.siswa_milik(kon, siswa_id, ident[0])
+        return database.siswa_milik(kon, siswa_id, ident[0])
 
     def _bisa_lihat_lampiran(self, kon, lampiran_id: int) -> bool:
-        lamp = basis.ambil_lampiran(kon, lampiran_id)
+        lamp = database.ambil_lampiran(kon, lampiran_id)
         if not lamp:
             return False
         return self._bisa_lihat_sesi(kon, int(lamp["sesi_id"]))
 
     def _kirim_berkas_lampiran(self, kon, lampiran_id: int) -> None:
         """Kirim isi berkas foto lampiran (hanya guru, hanya milik sesi)."""
-        lamp = basis.ambil_lampiran(kon, lampiran_id)
+        lamp = database.ambil_lampiran(kon, lampiran_id)
         if not lamp or not self._bisa_lihat_sesi(kon, int(lamp["sesi_id"])):
             return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
         berkas = (
@@ -1806,7 +1806,7 @@ class Penangan(BaseHTTPRequestHandler):
                         urllib.parse.urlparse(self.path).query
                     )
                     pesan = (q.get("pesan") or [""])[0]
-                    with basis.buka() as kon:
+                    with database.buka() as kon:
                         return self._kirim(
                             halaman_utama(
                                 kon, pesan=pesan, pemilik=ident[0],
@@ -1830,7 +1830,7 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(halaman_kebijakan())
         if jalur == "/murid" or jalur.startswith("/murid/"):
             try:
-                with basis.buka() as kon:
+                with database.buka() as kon:
                     return self._rute_murid_get(kon, jalur, self.path)
             except (ValueError, IndexError):
                 pass
@@ -1848,7 +1848,7 @@ class Penangan(BaseHTTPRequestHandler):
                 )
             try:
                 ident = self._identitas()
-                with basis.buka() as kon:
+                with database.buka() as kon:
                     return self._kirim(
                         halaman_admin(kon, pengguna=ident[0] if ident else "")
                     )
@@ -1859,7 +1859,7 @@ class Penangan(BaseHTTPRequestHandler):
         if not self._lolos_sandi():
             return
         try:
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 if jalur.startswith("/lampiran/berkas/"):
                     return self._kirim_berkas_lampiran(
                         kon, int(jalur.rsplit("/", 1)[1])
@@ -1958,7 +1958,7 @@ class Penangan(BaseHTTPRequestHandler):
         sendiri. Kredensial salah/peran salah -> 401, bukan 404 — supaya
         anak yang salah ketik sandi tidak mengira situsnya rusak.
         """
-        import murid
+        import students
 
         kredensial = self._sesi_atau_basic(peran_wajib="murid")
         if not kredensial:
@@ -1970,7 +1970,7 @@ class Penangan(BaseHTTPRequestHandler):
                 ),
                 401,
             )
-        siswa_id = murid.siswa_dari_akun(kon, kredensial[0])
+        siswa_id = students.siswa_dari_akun(kon, kredensial[0])
         if siswa_id is None:
             nama = html.escape(kredensial[0])
             return self._kirim(
@@ -1982,7 +1982,7 @@ class Penangan(BaseHTTPRequestHandler):
                 )
             )
         if jalur == "/murid":
-            return self._kirim(murid.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
+            return self._kirim(students.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
         bagian = jalur.split("/")
         # /murid/selesai/<id> — konfirmasi setelah semua soal terisi
         if len(bagian) >= 3 and bagian[2] == "selesai":
@@ -1990,7 +1990,7 @@ class Penangan(BaseHTTPRequestHandler):
                 sesi_id = int(bagian[3])
             except (ValueError, IndexError):
                 sesi_id = -1
-            isi = murid.halaman_selesai(kon, siswa_id, sesi_id)
+            isi = students.halaman_selesai(kon, siswa_id, sesi_id)
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
@@ -2010,7 +2010,7 @@ class Penangan(BaseHTTPRequestHandler):
                     tersimpan = max(0, min(99, int(q.get("tersimpan", ["0"])[0])))
                 except (ValueError, TypeError):
                     tersimpan = 0
-            isi = murid.halaman_kerja(kon, siswa_id, int(bagian[3]), tersimpan)
+            isi = students.halaman_kerja(kon, siswa_id, int(bagian[3]), tersimpan)
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
@@ -2019,7 +2019,7 @@ class Penangan(BaseHTTPRequestHandler):
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
     def _halaman_masuk(self, galat: str = "") -> bytes:
-        import ikon
+        import icons
 
         kabar = (
             f'<div class="pesan galat">{html.escape(galat)}</div>' if galat else ""
@@ -2028,13 +2028,13 @@ class Penangan(BaseHTTPRequestHandler):
             T.NAMA_PRODUK,
             f'<div class="layout-masuk">'
             f'<div class="masuk-kiri">'
-            f'<img src="{ikon.OWL}" alt="Burung hantu lulusan" width="200" height="200">'
+            f'<img src="{icons.OWL}" alt="Burung hantu lulusan" width="200" height="200">'
             f"<h1>{T.NAMA_PRODUK}</h1>"
             f"<p>{T.TAGLINE}</p>"
             f"</div>"
             f'<div class="masuk-kanan">'
             f'<div class="kartu kartu-masuk">'
-            f'<img src="{ikon.GEMBOK}" alt="" class="ikon-gembok" width="44" height="44">'
+            f'<img src="{icons.GEMBOK}" alt="" class="ikon-gembok" width="44" height="44">'
             f"{kabar}"
             f'<form method="post" action="/masuk">'
             f'<label>Nama</label>'
@@ -2060,7 +2060,7 @@ class Penangan(BaseHTTPRequestHandler):
         nama = (data.get("nama") or "").strip()
         pw = data.get("sandi") or ""
         ip = self.client_address[0] if self.client_address else "unknown"
-        if sesi.sedang_diblokir(nama, ip):
+        if sessions.sedang_diblokir(nama, ip):
             return self._kirim(
                 halaman_daftar("Terlalu banyak percobaan. Coba lagi 15 menit lagi."),
                 galat=True,
@@ -2074,13 +2074,13 @@ class Penangan(BaseHTTPRequestHandler):
             galat = "Centang persetujuan Kebijakan Privasi dulu, ya."
         else:
             try:
-                sandi.tambah_akun(nama, pw, "guru")
+                auth.tambah_akun(nama, pw, "guru")
             except ValueError:
                 galat = f"Nama {nama} sudah dipakai. Pakai nama lain, atau masuk bila memang akunmu."
         if galat:
             return self._kirim(halaman_daftar(galat, galat=True, nama=nama))
 
-        token = sesi.buat(nama, "guru")
+        token = sessions.buat(nama, "guru")
         self.send_response(303)
         self.send_header("Location", "/")
         self.send_header("Set-Cookie", self._set_cookie(token))
@@ -2093,14 +2093,14 @@ class Penangan(BaseHTTPRequestHandler):
         ip = self.client_address[0] if self.client_address else "unknown"
         if not nama or not pw:
             return self._kirim(self._halaman_masuk("Nama dan sandi wajib diisi."))
-        if sesi.sedang_diblokir(nama, ip):
+        if sessions.sedang_diblokir(nama, ip):
             return self._kirim(self._halaman_masuk("Terlalu banyak percobaan. Coba lagi 15 menit lagi."), 429)
-        peran = sandi.peran_dari(nama, pw)
+        peran = auth.peran_dari(nama, pw)
         if not peran:
-            sesi.catat_gagal(nama, ip)
+            sessions.catat_gagal(nama, ip)
             return self._kirim(self._halaman_masuk("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
-        sesi.catat_berhasil(nama, ip)
-        token = sesi.buat(nama, peran)
+        sessions.catat_berhasil(nama, ip)
+        token = sessions.buat(nama, peran)
         tujuan = "/murid" if peran == "murid" else (
             "/admin" if peran == "admin" else "/"
         )
@@ -2114,7 +2114,7 @@ class Penangan(BaseHTTPRequestHandler):
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
 
         if jalur.startswith("/murid/kerjakan/"):
-            import murid
+            import students
 
             kredensial = self._sesi_atau_basic(peran_wajib="murid")
             if not kredensial:
@@ -2130,10 +2130,10 @@ class Penangan(BaseHTTPRequestHandler):
                 ).items()
             }
             sesi_id = int(jalur.split("/")[3])
-            with basis.buka() as kon:
-                siswa_id = murid.siswa_dari_akun(kon, kredensial[0])
+            with database.buka() as kon:
+                siswa_id = students.siswa_dari_akun(kon, kredensial[0])
                 hasil = (
-                    murid.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
+                    students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
                     if siswa_id is not None
                     else None
                 )
@@ -2145,17 +2145,17 @@ class Penangan(BaseHTTPRequestHandler):
                 if hasil:
                     # Waktu pengerjaan: POST pertama yang mengisi soal =
                     # mulai; semua terisi = selesai. Keduanya idempoten
-                    # (WHERE IS NULL) — lihat basis.tandai_mulai.
-                    basis.tandai_mulai(kon, sesi_id)
+                    # (WHERE IS NULL) — lihat database.tandai_mulai.
+                    database.tandai_mulai(kon, sesi_id)
                     diagnosa_murid(kon, sesi_id)
                     # Semua soal sudah terisi → arahkan ke halaman Selesai,
                     # bukan kembali ke lembar yang sama. Anak yang masih
                     # setengah jalan tetap kembali ke lembar + banner
                     # tersimpan supaya bisa lanjut mengerjakan.
                     if siswa_id is not None:
-                        selesai = murid.semua_terisi(kon, siswa_id, sesi_id)
+                        selesai = students.semua_terisi(kon, siswa_id, sesi_id)
                         if selesai:
-                            basis.tandai_selesai(kon, sesi_id)
+                            database.tandai_selesai(kon, sesi_id)
             if hasil is None:
                 return self._kirim(
                     _halaman("403", "<h1>Bukan sesimu</h1>"), 403
@@ -2196,7 +2196,7 @@ class Penangan(BaseHTTPRequestHandler):
         if jalur == "/keluar":
             tok = self._ambil_token()
             if tok:
-                sesi.hapus(tok)
+                sessions.hapus(tok)
             self.send_response(303)
             self.send_header("Location", "/masuk")
             self.send_header("Set-Cookie", self._set_cookie(None))
@@ -2223,7 +2223,7 @@ class Penangan(BaseHTTPRequestHandler):
                 # Kebijakan baca-semua-tulis-tidak: satu-satunya aksi admin
                 # di /akun adalah mengganti sandinya sendiri.
                 return self._tolak_admin()
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna, peran)
                 section = data.get("section") or PETA_SECTION_AKUN.get(
                     data.get("aksi", ""), "akun"
@@ -2258,7 +2258,7 @@ class Penangan(BaseHTTPRequestHandler):
                     galat = "Kata sandi minimal 12 karakter."
                 else:
                     try:
-                        sandi.tambah_akun(nama, pw, "guru")
+                        auth.tambah_akun(nama, pw, "guru")
                         pesan = (
                             f"Akun orang tua {nama} dibuat. Orang tua bisa "
                             f"masuk lewat /masuk."
@@ -2268,7 +2268,7 @@ class Penangan(BaseHTTPRequestHandler):
             else:
                 galat = "Aksi tidak dikenal."
             ident = self._identitas()
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 return self._kirim(
                     halaman_admin(
                         kon, pesan, galat,
@@ -2285,7 +2285,7 @@ class Penangan(BaseHTTPRequestHandler):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
             if self._peran_saya() == "admin":
                 return self._tolak_admin()
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 if not self._bisa_lihat_sesi(kon, sesi_id):
                     return self._kirim(
                         _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
@@ -2324,7 +2324,7 @@ class Penangan(BaseHTTPRequestHandler):
                     f"{', '.join(html.escape(t) for t in daftar_topik())}.</p>"
                 )
                 return self._kirim(_halaman("Topik tidak dikenal", pesan), 400)
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 if not self._bisa_lihat_siswa(kon, siswa_id):
                     return self._kirim(
                         _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
@@ -2405,7 +2405,7 @@ class Penangan(BaseHTTPRequestHandler):
                         mentah, keep_blank_values=True
                     ).items()
                 }
-                with basis.buka() as kon:
+                with database.buka() as kon:
                     if not self._bisa_lihat_lampiran(kon, angka):
                         return self._kirim(
                             _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
@@ -2426,7 +2426,7 @@ class Penangan(BaseHTTPRequestHandler):
                     _halaman("Terlalu besar", "<h1>Upload terlalu besar</h1>"), 400
                 )
             tubuh = self.rfile.read(panjang)
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 if not kon.execute(
                     "SELECT 1 FROM sesi WHERE id = ?", (angka,)
                 ).fetchone() or not self._bisa_lihat_sesi(kon, angka):
@@ -2458,7 +2458,7 @@ class Penangan(BaseHTTPRequestHandler):
                 sesi_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
-            with basis.buka() as kon:
+            with database.buka() as kon:
                 if not self._bisa_lihat_sesi(kon, sesi_id):
                     return self._kirim(
                         _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
@@ -2471,7 +2471,7 @@ class Penangan(BaseHTTPRequestHandler):
             if (data.get("konfirmasi") or [""])[0] != "1":
                 # Tanpa konfirmasi = hanya melihat halaman peringatan lagi.
                 # Sesi tidak disentuh sama sekali.
-                with basis.buka() as kon:
+                with database.buka() as kon:
                     ident = self._identitas()
                     isi = halaman_konfirmasi_hapus(
                         kon, sesi_id,
@@ -2483,8 +2483,8 @@ class Penangan(BaseHTTPRequestHandler):
                         _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
                     )
                 return self._kirim(isi)
-            with basis.buka() as kon:
-                dihapus = basis.hapus_sesi(kon, sesi_id)
+            with database.buka() as kon:
+                dihapus = database.hapus_sesi(kon, sesi_id)
             if not dihapus:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
@@ -2513,7 +2513,7 @@ class Penangan(BaseHTTPRequestHandler):
         }
 
         sesi_id = int(jalur.split("/")[2])
-        with basis.buka() as kon:
+        with database.buka() as kon:
             if not self._bisa_lihat_sesi(kon, sesi_id):
                 return self._kirim(
                     _halaman("404", "<h1>Halaman tidak ada</h1>"), 404

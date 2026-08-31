@@ -1,6 +1,6 @@
 """Design tokens — sumber tunggal untuk semua nilai visual aplikasi.
 
-Dipakai oleh gaya_layar.py, gaya_cetak.py, gaya_guru.py, dan murid.py
+Dipakai oleh screen_style.py, print_style.py, teacher_style.py, dan students.py
 (CSS_MURID). Tujuan: konsistensi antar-viewport (layar sentuh, cetak A4,
 dashboard guru) tanpa duplikasi nilai. Ubah di sini, efek ke semua permukaan.
 
@@ -22,8 +22,8 @@ dan garis cetak; latar semua halaman adalah LATAR_MURID.
 
 Script generator: desain-ui/gen_guru.py (gpt-image-2 via chenzk.top).
 
-Permukaan guru diimplementasi di gaya_guru.py (5 halaman layar); lembar di
-gaya_layar.py (browser) + gaya_cetak.py (kertas A4); murid di murid.py.
+Permukaan guru diimplementasi di teacher_style.py (5 halaman layar); lembar di
+screen_style.py (browser) + print_style.py (kertas A4); murid di students.py.
 """
 
 # ─────────────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 """Render lembar soal jadi HTML — struktur saja, tanpa CSS.
 
-Dipecah dari cetak.py (Fase 3). Pemisahan tiga lapis:
+Dipecah dari worksheets.py (Fase 3). Pemisahan tiga lapis:
 
   render.py       struktur DOM (fungsi di berkas ini)
-  gaya_layar.py   tampilan browser/HP
-  gaya_cetak.py   tampilan kertas A4
+  screen_style.py   tampilan browser/HP
+  print_style.py   tampilan kertas A4
 
 Struktur DOM-nya identik untuk kedua tampilan, sehingga test yang menjaga
 kontrak — terutama "berkas anak tidak boleh memuat kunci" — cukup ditulis
@@ -29,10 +29,10 @@ from __future__ import annotations
 import html
 import json
 
-from gaya_cetak import GAYA_CETAK
-from gaya_layar import GAYA_LAYAR
+from print_style import GAYA_CETAK
+from screen_style import GAYA_LAYAR
 from templates import Soal
-from topik import Topik, paket_bawaan
+from topics import Topik, paket_bawaan
 
 
 def _badan_soal(soal: Soal, topik_paket: Topik | None = None) -> str:
