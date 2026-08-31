@@ -333,12 +333,29 @@ def test_siswa_p5_melihat_geometri_datar_di_dropdown(server):
     assert "Geometri Datar" in isi
 
 
-def test_siswa_p3_tidak_melihat_geometri_datar(server):
-    """P3 tidak melihat opsi Geometri Datar di dropdown."""
+def test_siswa_p3_melihat_geometri_datar_di_dropdown(server):
+    """P3 kini melihat Geometri Datar, Statistika, dan Logika di dropdown.
+
+    Dulu P3 sengaja hanya pola-bilangan (Keputusan Pengguna #1 — test lama
+    test_siswa_p3_tidak_melihat_geometri_datar). Dibalik 31 Agu 2026: band
+    SASMO P1-4 memuat geometri/statistika/logika versi sederhana, jadi
+    ketiga topik itu dibuka untuk P3 — dropdown lahir dari komposisi paket,
+    topik tanpa kunci P3 tetap tersembunyi.
+    """
     with server.buka() as kon:
         basis.tambah_siswa(kon, "P3 Geo", "P3")
         isi = web.halaman_utama(kon).decode()
-    assert 'value="geometri-datar"' not in isi
+    for topik in ("pola-bilangan", "geometri-datar", "statistika", "logika"):
+        assert f'value="{topik}"' in isi
+    for topik in (
+        "pengukuran",
+        "teori-bilangan",
+        "aritmetika-dasar",
+        "kombinatorik",
+        "aritmatika-lanjut",
+        "geometri-ruang",
+    ):
+        assert f'value="{topik}"' not in isi
 
 
 def test_siswa_p5_bisa_membuat_sesi_geometri_datar(server):

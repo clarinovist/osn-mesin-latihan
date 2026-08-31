@@ -1,7 +1,9 @@
 """Paket topik logika — Fase 7 plan 30 Aug 2026.
 
 Enam template menutup cakupan penalaran & logika OSN SD: penalaran
-(bagian A), besaran & umur (B). Level P5/P6 (P3/P4 tidak didukung).
+(bagian A), besaran & umur (B). Level P3/P5/P6. P3 selaras band SASMO
+Primary 1–4 (non-routine: logic problems) — tanpa template baru,
+cukup filter parameter per level di _parameter; P4 tetap di luar scope.
 Soal berbentuk teks; pilihan ganda dirender sebagai daftar A-E.
 """
 
@@ -345,6 +347,21 @@ REGISTRI_TOPIK = {
 }
 
 KOMPOSISI = {
+    # P3 (10 soal): 1, 2, 1, 2, 5, 4, 1, 2, 5, 4
+    # mudah → sulit: pengandaian & tabel (penalaran murni) dulu,
+    # lalu uang (bagi), umur (paling abstrak) di akhir.
+    "P3": (
+        "benar_salah_pengandaian",
+        "tabel_penalaran",
+        "benar_salah_pengandaian",
+        "tabel_penalaran",
+        "soal_uang",
+        "soal_umur",
+        "benar_salah_pengandaian",
+        "tabel_penalaran",
+        "soal_uang",
+        "soal_umur",
+    ),
     # P5 (10 soal): 1, 2, 3, 5, 1, 2, 3, 5, 1, 2
     "P5": (
         "benar_salah_pengandaian",
@@ -390,7 +407,8 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         nama = rng.choice(("Andi", "Budi", "Citra", "Dewi", "Eko"))
         warna = rng.choice(("merah", "biru", "hijau", "kuning", "hitam"))
         barang = rng.choice(("pensil", "buku", "tas", "sepatu", "topi"))
-        kelas = rng.choice((4, 5, 6))
+        # P3: kelas 3 (cerita sesuai usia); P5/P6 tetap 4-6
+        kelas = 3 if level == "P3" else rng.choice((4, 5, 6))
         pilihan_benar = rng.randint(0, 4)
         # urutan tampilan: posisi pilihan_benar = pernyataan benar (0),
         # sisanya pernyataan 1..4 diacak — pakai rng deterministik, bukan hash()
@@ -410,11 +428,20 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
     if template_id == "tabel_penalaran":
         # 3 nama dari 5 (atau 4 nama untuk posisi_tiga)
         pool = ("Andi", "Budi", "Citra", "Dewi", "Eko")
-        urutan = list(rng.sample(pool, 4 if rng.random() < 0.5 else 3))
-        if len(urutan) == 4:
-            tanya = rng.choice(("tertinggi", "terendah", "posisi_dua", "posisi_tiga"))
-        else:
+        if level == "P3":
+            # Selalu 3 nama, tanya tanpa posisi_tiga (urutan ketiga dari
+            # atas butuh minimal 4 nama). Pool diperlebar ke 7 nama:
+            # pool 5 hanya 60 urutan × 3 tanya = 180 kombinasi unik,
+            # di bawah target variasi ≥ 200 per template.
+            urutan = list(rng.sample(
+                ("Andi", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita"), 3))
             tanya = rng.choice(("tertinggi", "terendah", "posisi_dua"))
+        else:
+            urutan = list(rng.sample(pool, 4 if rng.random() < 0.5 else 3))
+            if len(urutan) == 4:
+                tanya = rng.choice(("tertinggi", "terendah", "posisi_dua", "posisi_tiga"))
+            else:
+                tanya = rng.choice(("tertinggi", "terendah", "posisi_dua"))
         return {"urutan": urutan, "tanya": tanya}
     if template_id == "jumlah_selisih":
         # jumlah & selisih paritas sama supaya (j±s)/2 bulat
@@ -426,15 +453,29 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         return {"jumlah": jumlah, "selisih": selisih, "tanya": tanya}
     if template_id == "soal_umur":
         # a = k·b + (k−1)·n → n = (a−kb)/(k−1) bulat & positif
-        b = rng.randint(2, 10)
-        k = rng.choice((2, 3, 4, 5))
-        n = rng.randint(1, 8)
+        if level == "P3":
+            # P3: k kecil, umur anak & jarak tahun ringan. Batas awal
+            # (b 2..6, n 1..5) hanya 5×2×5×2 = 100 kombinasi unik; dipasa
+            # jadi b 2..8, n 1..8 (7×2×8×2 = 224) demi target ≥ 200.
+            b = rng.randint(2, 8)
+            k = rng.choice((2, 3))
+            n = rng.randint(1, 8)
+        else:
+            b = rng.randint(2, 10)
+            k = rng.choice((2, 3, 4, 5))
+            n = rng.randint(1, 8)
         a = k * b + (k - 1) * n
         tanya = rng.choice(("n_tahun", "kali_umur"))
         return {"a": a, "b": b, "k": k, "n": n, "tanya": tanya}
     if template_id == "soal_uang":
-        kecil = rng.randint(10, 50)
-        k = rng.choice((2, 3, 4, 5, 6, 7, 8, 9))
+        if level == "P3":
+            # P3: k kecil; kecil dinaikkan ke 10..40 karena 10..20 hanya
+            # 11×4×2 = 88 kombinasi unik, di bawah target ≥ 200.
+            kecil = rng.randint(10, 40)
+            k = rng.choice((2, 3, 4, 5))
+        else:
+            kecil = rng.randint(10, 50)
+            k = rng.choice((2, 3, 4, 5, 6, 7, 8, 9))
         total = (k + 1) * kecil
         tanya = rng.choice(("uang_kecil", "uang_besar"))
         return {"total": total, "k": k, "tanya": tanya}
@@ -454,7 +495,7 @@ TOPIK = Topik(
     judul_penilaian="Penilaian — Logika & Penalaran",
     templates=REGISTRI_TOPIK,
     komposisi=KOMPOSISI,
-    profil={"P5": {}, "P6": {}},
+    profil={"P3": {}, "P5": {}, "P6": {}},
     judul_bagian=JUDUL_BAGIAN,
     catatan_bagian=CATATAN_BAGIAN,
     parameter_untuk=_parameter,
