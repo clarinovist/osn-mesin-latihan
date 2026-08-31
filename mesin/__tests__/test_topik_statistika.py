@@ -1,7 +1,9 @@
-"""Fase 6: kontrak paket topik kedelapan — statistika (P4/P5/P6).
+"""Fase 6: kontrak paket topik kedelapan — statistika (P3-P6).
 
 Lima template menutup cakupan statistika OSN SD: rata-rata (bagian A),
-median & modus, diagram lingkaran dan batang/garis (B). P3 tidak didukung.
+median & modus, diagram lingkaran dan batang/garis (B). P3 didukung
+selaras band SASMO Primary 1-4 (statistics): hanya modus & diagram batang,
+median menunggu P4.
 """
 
 from __future__ import annotations
@@ -40,6 +42,23 @@ def test_statistika_memulai_dengan_template_awal():
 
 
 # ── Komposisi per level (tabel plan Fase 6) ────────────────────────────
+
+
+def test_komposisi_p3_sepuluh_soal():
+    """P3: hanya modus & diagram batang — median & rata-rata menunggu P4."""
+    komposisi = _paket().komposisi_untuk("P3")
+    assert komposisi == (
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+    )
 
 
 def test_komposisi_p4_sepuluh_soal():
@@ -90,20 +109,25 @@ def test_komposisi_p6_sepuluh_soal():
     )
 
 
-def test_statistika_menolak_level_di_luar_scope():
-    """Paket P4-P6 tidak boleh diam-diam membuat sesi untuk anak P3."""
-    with pytest.raises(ValueError, match="statistika"):
-        buat_lembar(7, level="P3", topik="statistika")
-    with pytest.raises(ValueError, match="statistika"):
-        buat_soal("rata_rata", 7, level="P3", topik="statistika")
+def test_statistika_p3_kini_didukung():
+    """Dulu paket menolak P3; sejak P3 selaras band SASMO Primary 1-4,
+    lembar P3 sah — pembukaan level tidak boleh melempar ValueError lagi."""
+    lembar = buat_lembar(7, level="P3", topik="statistika")
+    assert lembar.level == "P3"
+    assert len(lembar.soal) == 10
 
 
-def test_statistika_level_teks_aneh_jatuh_ke_p4():
-    """Data tingkat lama yang aneh memakai level pertama paket (P4)."""
+def test_statistika_level_teks_aneh_jatuh_ke_p3():
+    """Level teks aneh memakai level pertama paket.
+
+    Dulu jatuh ke P4 — kunci pertama KOMPOSISI saat statistika belum
+    mendukung P3. Kini "P3" kunci pertama KOMPOSISI, jadi teks aneh
+    jatuh ke P3 (kontrak lama susun_lembar tetap dipertahankan).
+    """
     aneh = buat_lembar(7, level="tingkat-lama", topik="statistika")
-    p4 = buat_lembar(7, level="P4", topik="statistika")
-    assert aneh.level == "P4"
-    assert aneh.tanda_tangan == p4.tanda_tangan
+    p3 = buat_lembar(7, level="P3", topik="statistika")
+    assert aneh.level == "P3"
+    assert aneh.tanda_tangan == p3.tanda_tangan
 
 
 def test_statistika_memuat_lima_template():
@@ -187,6 +211,29 @@ def test_median_modus_kunci():
         assert {"K", "H"} <= {m.kode for m in s.malrule}, p
 
 
+def test_median_modus_p3_modus_saja():
+    """P3: median tidak boleh lolos — selalu varian modus, data kecil.
+
+    Median di atas kelas 3; band SASMO Primary 1-4 (statistics) memuat
+    modus. P3: n 3-5, nilai 1-12, konstruksi jamin-modus data[0]=data[1].
+    """
+    from collections import Counter
+
+    for seed in range(1, 120):
+        s = buat_soal("median_modus", seed, level="P3", topik="statistika")
+        p = s.parameter
+        assert p["varian"] == "modus", p
+        data = p["data"]
+        assert 3 <= len(data) <= 5, p
+        assert all(1 <= x <= 12 for x in data), p
+        hitung = Counter(data)
+        expected = max(hitung.items(), key=lambda kv: kv[1])[0]
+        assert data[0] == data[1], p  # jamin-modus: nilai ganda di depan
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
 # ── Template #4 diagram_lingkaran ──────────────────────────────────────
 
 
@@ -221,6 +268,19 @@ def test_diagram_batang_garis_kunci():
             a, b = data[p["i"]], data[(p["i"] + 1) % len(data)]
             expected = abs(a - b)
         assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_diagram_batang_garis_p3_batas():
+    """P3: empat batang, nilai 1-20; ketiga varian tetap boleh."""
+    for seed in range(1, 120):
+        s = buat_soal("diagram_batang_garis", seed, level="P3", topik="statistika")
+        p = s.parameter
+        assert p["varian"] in ("baca", "jumlah", "selisih"), p
+        data = p["data"]
+        assert len(data) == 4, p
+        assert all(1 <= x <= 20 for x in data), p
         assert s.kunci not in [m.jawaban for m in s.malrule]
         assert {"K", "H"} <= {m.kode for m in s.malrule}, p
 

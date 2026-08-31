@@ -2,8 +2,10 @@
 
 Lima template menutup cakupan statistika & pengukuran OSN SD: rata-rata
 (bagian A), median & modus, diagram lingkaran dan batang/garis (B).
-Level P4/P5/P6 (P3 tidak didukung). Soal berbentuk teks; diagram dirender
-sebagai deskripsi data (SVG adalah penyempurnaan render_badan belakangan).
+Level P3-P6; P3 selaras band SASMO Primary 1-4 (statistics) — cukup modus
+dan pembacaan diagram batang, median & rata-rata menunggu P4+. Soal
+berbentuk teks; diagram dirender sebagai deskripsi data (SVG adalah
+penyempurnaan render_badan belakangan).
 """
 
 from __future__ import annotations
@@ -286,6 +288,20 @@ REGISTRI_TOPIK = {
 }
 
 KOMPOSISI = {
+    # P3 (10 soal): 3, 5, 3, 5, 3, 5, 3, 5, 3, 5 — modus dulu (mudah),
+    # diagram batang menyusul; median & rata-rata menunggu P4.
+    "P3": (
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+        "median_modus",
+        "diagram_batang_garis",
+    ),
     # P4 (10 soal): 1, 3, 5, 1, 3, 5, 1, 3, 5, 1
     "P4": (
         "rata_rata",
@@ -365,15 +381,25 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             x2 = rng.randint(5, 90)
         return {"n1": n1, "n2": n2, "x1": x1, "x2": x2}
     if template_id == "median_modus":
-        varian = rng.choice(("median", "modus"))
+        # P3: median di atas kelas 3 — selalu varian modus; band SASMO
+        # Primary 1-4 (statistics) memuat modus, bukan median.
+        if level == "P3":
+            varian = "modus"
+        else:
+            varian = rng.choice(("median", "modus"))
         if varian == "median":
             n = rng.randint(3, 9)
             data = [rng.randint(1, 30) for _ in range(n)]
             return {"varian": varian, "data": data}
-        # modus: 3-7 data, minimal satu nilai muncul ≥2 kali
-        n = rng.randint(3, 7)
-        data = [rng.randint(1, 20) for _ in range(n)]
-        modus = rng.randint(1, 20)
+        # modus: 3-7 data (P3: 3-5, nilai 1-12), minimal satu nilai muncul ≥2 kali
+        if level == "P3":
+            n = rng.randint(3, 5)
+            data = [rng.randint(1, 12) for _ in range(n)]
+            modus = rng.randint(1, 12)
+        else:
+            n = rng.randint(3, 7)
+            data = [rng.randint(1, 20) for _ in range(n)]
+            modus = rng.randint(1, 20)
         data[0] = modus
         if n > 1:
             data[1] = modus
@@ -395,8 +421,12 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         return {"varian": varian, "s": sudut, "total": total, "nilai": nilai}
     if template_id == "diagram_batang_garis":
         varian = rng.choice(("baca", "jumlah", "selisih"))
-        n = rng.randint(4, 6)
-        data = [rng.randint(1, 50) for _ in range(n)]
+        if level == "P3":
+            # P3: empat batang, nilai 1-20 — ketiga varian tetap boleh.
+            n, atas = 4, 20
+        else:
+            n, atas = rng.randint(4, 6), 50
+        data = [rng.randint(1, atas) for _ in range(n)]
         i = rng.randint(0, n - 1)
         if varian == "baca":
             return {"varian": varian, "data": data, "i": i}
@@ -405,7 +435,7 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         # selisih: pastikan dua batang yang dibandingkan berbeda
         a, b = data[i], data[(i + 1) % n]
         while a == b:
-            data[(i + 1) % n] = rng.randint(1, 50)
+            data[(i + 1) % n] = rng.randint(1, atas)
             b = data[(i + 1) % n]
         return {"varian": varian, "data": data, "i": i}
     raise KeyError(f"template tidak dikenal: {template_id}")
@@ -418,7 +448,7 @@ TOPIK = Topik(
     judul_penilaian="Penilaian — Statistika",
     templates=REGISTRI_TOPIK,
     komposisi=KOMPOSISI,
-    profil={"P4": {}, "P5": {}, "P6": {}},
+    profil={"P3": {}, "P4": {}, "P5": {}, "P6": {}},
     judul_bagian=JUDUL_BAGIAN,
     catatan_bagian=CATATAN_BAGIAN,
     parameter_untuk=_parameter,
