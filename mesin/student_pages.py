@@ -132,7 +132,8 @@ input:disabled, textarea:disabled {{
   outline: none; border-color: {T.AKSEN_MURID_UTAMA}; border-style: solid;
   box-shadow: 0 0 0 3px rgba(15,163,163,0.18);
 }}
-.baris-jawab {{ display: flex; align-items: baseline; gap: .6rem; margin-top: .7rem; }}
+.baris-jawab {{ display: flex; align-items: baseline; gap: .6rem; margin-top: .7rem; flex-wrap: wrap; }}
+.baris-jawab input[type=text] {{ flex: 1; min-width: 0; }}
 .centang-baris {{
   display: flex; align-items: center; gap: .5rem; margin-top: .7rem;
   font-size: .95rem; color: #444;
@@ -280,7 +281,7 @@ input:disabled, textarea:disabled {{
 .pilih-cara-grup {{
   display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: .8rem;
 }}
-@media (max-width: 30rem) {{
+@media (max-width: 36rem) {{
   .pilih-cara-grup {{ grid-template-columns: 1fr; }}
 }}
 

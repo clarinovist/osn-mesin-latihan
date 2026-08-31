@@ -187,15 +187,15 @@ def halaman_laporan(
     topik_lemah = _topik_terlemah(ring)
 
     tren = "".join(
-        f'<tr><td><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
-        f'<td>{r["tanggal"]}</td>'
-        f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
-        f'<td class="tipe">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
-        f'<td class="angka">{r["benar"] or 0}/{r["jumlah_soal"]}</td>'
-        f'<td class="angka"><b>{r["k"] or 0}</b></td>'
-        f'<td class="angka">{r["b"] or 0}</td><td class="angka">{r["h"] or 0}</td>'
-        f'<td class="angka">{r["e"] or 0}</td><td class="angka">{r["t"] or 0}</td>'
-        f'<td class="angka">{r["n"] or 0}</td></tr>'
+        f'<tr><td data-label="Sesi"><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
+        f'<td data-label="Tanggal">{r["tanggal"]}</td>'
+        f'<td class="tipe" data-label="Level">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
+        f'<td class="tipe" data-label="Topik">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
+        f'<td class="angka" data-label="Benar">{r["benar"] or 0}/{r["jumlah_soal"]}</td>'
+        f'<td class="angka" data-label="K"><b>{r["k"] or 0}</b></td>'
+        f'<td class="angka" data-label="B">{r["b"] or 0}</td><td class="angka" data-label="H">{r["h"] or 0}</td>'
+        f'<td class="angka" data-label="E">{r["e"] or 0}</td><td class="angka" data-label="T">{r["t"] or 0}</td>'
+        f'<td class="angka" data-label="N">{r["n"] or 0}</td></tr>'
         for r in ring
     ) or '<tr><td colspan="11" class="kosong">belum ada sesi dinilai</td></tr>'
 
@@ -246,20 +246,20 @@ def halaman_laporan(
         f'<div class="kartu"><h2>Diagnosis</h2>'
         f'<ul class="diagnosis-lis">{_daftar_diagnosis(mis, peta)}</ul></div>'
         f"</div>"
-        f'<div class="tabel-wrap"><div class="kartu"><h2>Tren per sesi</h2><table>'
-        f"<tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th><th>Benar</th><th>K</th>"
-        f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr>{tren}</table></div></div>"
-        f'<div class="kartu"><h2>Miskonsepsi yang bertahan</h2>'
+        f'<div class="tabel-wrap tabel-tren"><div class="kartu"><h2>Tren per sesi</h2><table>'
+        f"<thead><tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th><th>Benar</th><th>K</th>"
+        f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr></thead><tbody>{tren}</tbody></table></div></div>"
+        f'<div class="tabel-wrap"><div class="kartu"><h2>Miskonsepsi yang bertahan</h2>'
         f'<p class="sub">Dihitung per gagasan keliru, bukan per soal. Satu '
         f"miskonsepsi yang muncul di tiga soal tetap satu baris. Yang muncul "
         f"di lebih dari satu sesi berarti belum tuntas meski angkanya sudah "
         f"diganti.</p><table>"
         f"<tr><th>Miskonsepsi</th><th>Tipe soal</th><th>Topik</th><th>Jumlah sesi</th>"
-        f"<th>Rentang</th></tr>{daftar_mis}</table></div>"
-        f'<div class="kartu"><h2>Materi yang belum diajarkan</h2>'
+        f"<th>Rentang</th></tr>{daftar_mis}</table></div></div>"
+        f'<div class="tabel-wrap"><div class="kartu"><h2>Materi yang belum diajarkan</h2>'
         f'<p class="sub">Dari soal yang dicentang "belum pernah lihat". Ini '
         f"peta urutan belajar, bukan daftar kegagalan.</p><table>"
         f"<tr><th>Tipe soal</th><th>Topik</th><th>Berapa kali</th><th>Terakhir</th></tr>"
-        f"{daftar_peta}</table></div>",
+        f"{daftar_peta}</table></div></div>",
         ident=(pengguna, peran) if pengguna else None,
     )

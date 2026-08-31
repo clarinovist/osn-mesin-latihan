@@ -130,7 +130,7 @@ input:disabled, textarea:disabled, select:disabled {{
   background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
   border-radius: {T.RADIUS_KARTU};
   box-shadow: 0 8px 24px rgba(0,0,0,.08);
-  min-width: 12rem; padding: .4rem; z-index: 20;
+  min-width: 12rem; max-width: min(12rem, calc(100vw - 1.2rem)); padding: .4rem; z-index: 20;
   display: flex; flex-direction: column;
 }}
 .menu-isi a, .menu-isi button {{
@@ -186,7 +186,12 @@ input:disabled, textarea:disabled, select:disabled {{
 }}
 .strip-sesi .strip-kolom {{ display: flex; flex-direction: column; gap: .2rem; }}
 .strip-sesi label {{ margin: 0; }}
-.strip-sesi select {{ width: auto; min-width: 13rem; }}
+.strip-sesi select {{
+  flex: 1; min-width: 10rem; max-width: 100%;
+}}
+@media (max-width: 30rem) {{
+  .strip-sesi select {{ min-width: 0; }}
+}}
 .strip-sesi .pengaturan-timer {{ flex-basis: 100%; }}
 .strip-sesi button {{ padding: .55rem 1.2rem; }}
 .kartu-siswa {{ margin-bottom: 0; }}
@@ -223,7 +228,14 @@ th {{ background: {T.LATAR_KARTU_SEKUNDER}; color: {T.TEKS_JUDUL}; font-weight: 
 .angka {{ text-align: right; font-variant-numeric: tabular-nums; }}
 .kosong {{ color: {T.TEKS_SUBTLE}; font-style: italic; }}
 .tipe {{ color: {T.TEKS_SUBTLE}; font-size: .82rem; }}
-.tabel-wrap {{ overflow-x: auto; }}
+.tabel-wrap {{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}}
+/* Hint scroll halus — bayangan kanan tipis agar user tahu tabel bisa digeser */
+.tabel-wrap table {{ min-width: 480px; }}
 /* Sesi baru: baris disorot 1x di dashboard (opsi 1 — tanpa lompat ke /sesi/). */
 tr.sorot-baru td {{
   background: {T.BADGE_GURU_BG}; color: {T.BADGE_GURU_TEKS};
@@ -268,6 +280,7 @@ textarea:focus, select:focus {{
 textarea {{ min-height: 3.2rem; resize: vertical; }}
 .baris {{ display: flex; gap: .8rem; flex-wrap: wrap; }}
 .baris > * {{ flex: 1; min-width: 180px; }}
+@media (max-width: 30rem) {{ .baris > * {{ min-width: 0; }} }}
 
 /* ── Tombol mata pada kolom sandi (lihat/sembunyikan) ──────────────── */
 /* Input dibungkus .kolom-sandi oleh SKRIP_MATA_SANDI. padding-right
@@ -448,6 +461,57 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   background: {T.LATAR_MURID}; border: 1px solid {T.BORDER_HALUS};
   border-radius: {T.RADIUS_KARTU}; padding: 1.4rem; max-width: 440px;
   margin: 2rem auto; text-align: center;
+}}
+
+/* ── Mobile polish: tabel card-stacked & form compact ─────────────── */
+
+/* Tabel laporan tren 11 kol di HP — simpan wrapper scroll, tapi jadikan
+   kartu stacked agar tidak perlu menggeser ke kanan terus. Label diambil
+   dari data-label tiap td; header disembunyikan. Aktif di bawah 46rem. */
+/* Diterapkan via kelas wrapper .tabel-tren di reports.py */
+@media (max-width: 46rem) {{
+  .tabel-tren table,
+  .tabel-tren thead,
+  .tabel-tren tbody,
+  .tabel-tren tr,
+  .tabel-tren th,
+  .tabel-tren td {{ display: block; }}
+  .tabel-tren thead {{ display: none; }}
+  .tabel-tren table {{ min-width: 0; border: 0; }}
+  .tabel-tren tr {{
+    border: 1px solid {T.BORDER_HALUS}; border-radius: {T.RADIUS_KECIL};
+    margin-bottom: .7rem; overflow: hidden; background: #fff;
+  }}
+  .tabel-tren td {{
+    border: none; border-bottom: 1px solid {T.BORDER_HALUS};
+    display: flex; justify-content: space-between; gap: .6rem;
+    padding: .45rem .6rem; font-size: .9rem;
+  }}
+  .tabel-tren td:last-child {{ border-bottom: none; }}
+  .tabel-tren td::before {{
+    content: attr(data-label); font-weight: 600; color: {T.TEKS_SUBTLE};
+    flex: none; max-width: 46%; text-align: left;
+  }}
+  .tabel-tren td.angka {{ text-align: right; }}
+}}
+
+/* Form tabel akun murid: tumpuk vertical di HP, input fleksibel */
+.baris-aksi {{ display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }}
+.input-sandi-kecil {{
+  width: 8.5rem; max-width: 42vw; padding: .3rem .5rem; font-size: .9rem;
+  border: 1px solid {T.BORDER_HALUS}; border-radius: {T.RADIUS_KECIL};
+  font-family: inherit;
+}}
+@media (max-width: 30rem) {{
+  .baris-aksi {{ flex-direction: column; align-items: stretch; }}
+  .baris-aksi form {{ width: 100%; }}
+  .input-sandi-kecil {{ width: 100%; max-width: none; flex: 1; }}
+  .baris-aksi form[style] {{ margin-left: 0 !important; }}
+}}
+
+/* Miskonsepsi & materi: kecilkan padding di HP supaya tidak makan lebar */
+@media (max-width: 30rem) {{
+  .bungkus {{ padding-left: .6rem; padding-right: .6rem; }}
 }}
 
 /* Hormati preferensi gerak: transisi hover/dropdown dimatikan bagi yang

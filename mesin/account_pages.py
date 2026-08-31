@@ -75,7 +75,7 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
                 f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center;margin-left:.4rem">'
                 f'<input type="hidden" name="aksi" value="akun_murid_sandi">'
                 f'<input type="hidden" name="nama" value="{nama_esc}">'
-                f'<input type="password" name="baru" placeholder="sandi baru" required style="width:130px;padding:.3rem .5rem">'
+                f'<input type="password" name="baru" placeholder="sandi baru" required class="input-sandi-kecil">'
                 f'<button type="submit" class="tombol-kecil">Setel sandi baru</button>'
                 f"</form>"
                 f"</div>"
@@ -136,7 +136,7 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
         f"<p class=\"sub\">Akun murid dipakai anak untuk masuk ke /murid. "
         f"Nama untuk masuk harus unik di seluruh aplikasi — kalau sudah "
         f"dipakai keluarga lain, pakai variasi lain (mis. tambah nama belakang).</p>"
-        f"<table><tr><th>Nama</th><th>Status</th><th>Aksi</th></tr>{baris}</table>"
+        f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Status</th><th>Aksi</th></tr>{baris}</table></div>'
         f"{tambah}"
         f"</div>"
     )
