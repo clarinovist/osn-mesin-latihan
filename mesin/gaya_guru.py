@@ -28,13 +28,13 @@ body {{
   color: {T.TEKS_UTAMA}; margin: 0; background: {T.LATAR_MURID};
 }}
 .bungkus {{ max-width: 960px; margin: 0 auto; padding: {T.SP_4} 0.9rem 3rem; }}
-a {{ color: {T.AKSEN_MURID_UTAMA}; }}
+a {{ color: {T.AKSEN_TEAL_TUA}; }}
 h1 {{ font-size: 1.5rem; margin: 0.3rem 0 0.3rem; color: {T.TEKS_JUDUL}; }}
 h2 {{ font-size: 1.15rem; margin: 1.4rem 0 0.6rem; color: {T.TEKS_JUDUL}; }}
 .sub {{ color: {T.TEKS_SUBTLE}; font-size: .9rem; margin: 0 0 1.3rem; }}
 .jejak {{ font-size: .88rem; margin: 0 0 0.8rem; color: {T.TEKS_SUBTLE}; }}
 .jejak a {{ color: {T.TEKS_SUBTLE}; text-decoration: none; }}
-.jejak a:hover {{ color: {T.AKSEN_MURID_UTAMA}; }}
+.jejak a:hover {{ color: {T.AKSEN_TEAL_TUA}; }}
 
 /* ── Kartu ─────────────────────────────────────────────────────────── */
 .kartu {{
@@ -45,8 +45,11 @@ h2 {{ font-size: 1.15rem; margin: 1.4rem 0 0.6rem; color: {T.TEKS_JUDUL}; }}
 .kartu h2 {{ margin-top: 0; }}
 
 /* ── Tombol ────────────────────────────────────────────────────────── */
+/* Latar tombol solid memakai aksen versi teks-aman: teks putih di atas
+   teal/coral terang hanya 3.1:1 / 2.8:1 — di bawah ambang 4.5:1 teks
+   berukuran normal. Warna tetap satu rasa, hanya lebih dalam. */
 button {{
-  background: {T.AKSEN_MURID_UTAMA}; color: #fff; border: 0;
+  background: {T.AKSEN_TEAL_TUA}; color: #fff; border: 0;
   border-radius: 9px; padding: .7rem 1.2rem; font-size: 1rem; cursor: pointer;
 }}
 button:hover {{ filter: brightness(0.94); }}
@@ -54,10 +57,11 @@ button.tombol-sekunder {{
   background: {T.LATAR_KARTU_SEKUNDER}; color: {T.TEKS_JUDUL};
   border: 1px solid {T.BORDER_INTERAKTIF};
 }}
-button.tombol-coral {{ background: {T.AKSEN_MURID_KORAL}; }}
+button.tombol-coral {{ background: {T.AKSEN_KORAL_TUA}; }}
+/* Tombol cerita (amber): teks amber di atas putih 1.9:1 tidak terbaca —
+   pakai pasangan badge amber yang sudah lolos kontras (Pengelola). */
 button.tombol-amber {{
-  background: #fff; color: {T.AKSEN_MURID_AMBER};
-  border: 1.5px solid {T.AKSEN_MURID_AMBER};
+  background: {T.BADGE_ADMIN_BG}; color: {T.BADGE_ADMIN_TEKS};
 }}
 button.tombol-kecil {{ padding: .35rem .7rem; font-size: .82rem; border-radius: 6px; }}
 button.tombol-putih {{
@@ -68,23 +72,34 @@ button.tombol-putih {{
   font-size: .9rem; text-decoration: none; background: {T.LATAR_KARTU_SEKUNDER};
   color: {T.TEKS_JUDUL}; border: 1px solid {T.BORDER_INTERAKTIF};
 }}
-.btn.utama {{ background: {T.AKSEN_MURID_UTAMA}; color: #fff; border: 0; }}
-.btn.coral {{ background: {T.AKSEN_MURID_KORAL}; color: #fff; border: 0; }}
+.btn.utama {{ background: {T.AKSEN_TEAL_TUA}; color: #fff; border: 0; }}
+.btn.coral {{ background: {T.AKSEN_KORAL_TUA}; color: #fff; border: 0; }}
+
+/* Keadaan mati: tombol/isi yang dinonaktifkan (fieldset admin, auto-lock
+   timer drill, tombol tanpa siswa) harus TERLIHAT mati, bukan sekadar
+   tak bereaksi. */
+button:disabled {{
+  opacity: .55; cursor: not-allowed; filter: none;
+}}
+input:disabled, textarea:disabled, select:disabled {{
+  background: #f3f4f6; color: {T.TEKS_SUBTLE};
+  border-color: {T.BORDER_HALUS}; cursor: not-allowed;
+}}
 
 /* ── Header halaman guru (mockup guru-dashboard) ───────────────────── */
 .topbar {{
   display: flex; align-items: center; justify-content: space-between;
-  gap: 1rem; padding: 0.6rem 0 0.2rem; margin-bottom: 0.4rem;
+  flex-wrap: wrap; gap: 1rem; padding: 0.6rem 0 0.2rem; margin-bottom: 0.4rem;
   border-bottom: 1px solid {T.BORDER_HALUS};
 }}
 .brand {{
-  font-weight: 800; font-size: 1.15rem; color: {T.AKSEN_MURID_UTAMA};
+  font-weight: 800; font-size: 1.15rem; color: {T.AKSEN_TEAL_TUA};
   display: flex; align-items: center; gap: .55rem;
 }}
 .brand img {{ width: 34px; height: 34px; }}
 .topbar-navigasi {{ display: flex; align-items: center; gap: .7rem; }}
 .topbar-navigasi a {{ color: {T.TEKS_SUBTLE}; text-decoration: none; font-size: .9rem; }}
-.topbar-navigasi a:hover {{ color: {T.AKSEN_MURID_UTAMA}; }}
+.topbar-navigasi a:hover {{ color: {T.AKSEN_TEAL_TUA}; }}
 .topbar-navigasi form {{ margin: 0; }}
 .badge-peran {{
   display: inline-block; padding: .12rem .55rem; border-radius: {T.RADIUS_PIL};
@@ -141,7 +156,7 @@ button.tombol-putih {{
   color: {T.TEKS_SUBTLE}; font-size: .92rem; border: 1px solid transparent;
 }}
 .nav-samping a.aktif {{
-  color: {T.AKSEN_MURID_UTAMA}; border-color: {T.BORDER_HALUS};
+  color: {T.AKSEN_TEAL_TUA}; border-color: {T.BORDER_HALUS};
   font-weight: 600; background: {T.LATAR_KARTU_SEKUNDER};
 }}
 @media (max-width: 46rem) {{
@@ -159,13 +174,15 @@ button.tombol-putih {{
 }}
 .siswa-kepala h2 {{ margin: 0; font-size: 1.15rem; }}
 .badge-tingkat {{
-  font-size: .78rem; font-weight: 700; color: {T.AKSEN_MURID_UTAMA};
+  font-size: .78rem; font-weight: 700; color: {T.AKSEN_TEAL_TUA};
   background: {T.LATAR_KARTU_SEKUNDER}; padding: .15rem .5rem;
   border-radius: {T.RADIUS_PIL}; margin-left: .3rem;
 }}
+/* Penanda "Latihan Cepat" memakai pasangan badge amber (sama dengan badge
+   Pengelola): coral terang di atas hijau muda hanya ~2.6:1. */
 .badge-mode {{
-  font-size: .78rem; font-weight: 700; color: {T.AKSEN_MURID_KORAL};
-  background: {T.LATAR_TERSIMPAN}; border: 1px solid {T.BORDER_TERSIMPAN};
+  font-size: .78rem; font-weight: 700; color: {T.BADGE_ADMIN_TEKS};
+  background: {T.BADGE_ADMIN_BG};
   padding: .12rem .5rem; border-radius: {T.RADIUS_PIL}; white-space: nowrap;
 }}
 .siswa-kepala a {{ font-size: .85rem; white-space: nowrap; }}
@@ -188,12 +205,18 @@ th {{ background: {T.LATAR_KARTU_SEKUNDER}; color: {T.TEKS_JUDUL}; font-weight: 
 
 /* ── Form ──────────────────────────────────────────────────────────── */
 label {{ display: block; font-size: .84rem; color: {T.TEKS_SUBTLE}; margin: .55rem 0 .2rem; }}
-input[type=text], input[type=password], textarea, select {{
+/* font-size 1rem, bukan .95rem: di iOS fokus pada input < 16px memicu
+   zoom viewport otomatis dan merusak layout. type=number & type=file
+   ikut diatur — dulu keduanya tak tersentuh sehingga memakai ukuran
+   bawaan peramban (dan ikut memicu zoom). */
+input[type=text], input[type=password], input[type=number], input[type=file],
+textarea, select {{
   width: 100%; padding: .5rem .6rem; border: 1px solid {T.BORDER_HALUS};
-  border-radius: {T.RADIUS_KECIL}; font-size: .95rem; font-family: inherit;
+  border-radius: {T.RADIUS_KECIL}; font-size: 1rem; font-family: inherit;
   background: #fff; color: {T.TEKS_UTAMA};
 }}
-input[type=text]:focus, input[type=password]:focus, textarea:focus, select:focus {{
+input[type=text]:focus, input[type=password]:focus, input[type=number]:focus,
+textarea:focus, select:focus {{
   outline: none; border-color: {T.AKSEN_MURID_UTAMA};
   box-shadow: 0 0 0 2px rgba(15,163,163,0.12);
 }}
@@ -205,10 +228,10 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 /* Input dibungkus .kolom-sandi oleh SKRIP_MATA_SANDI. padding-right
    penting: input "sandi baru" di tabel akun memakai style inline. */
 .kolom-sandi {{ position: relative; }}
-.kolom-sandi > input {{ padding-right: 2.6rem !important; }}
+.kolom-sandi > input {{ padding-right: 3rem !important; }}
 .tombol-mata {{
-  position: absolute; top: 50%; right: .35rem; transform: translateY(-50%);
-  width: 1.9rem; height: 1.9rem; display: inline-flex; align-items: center;
+  position: absolute; top: 50%; right: .3rem; transform: translateY(-50%);
+  width: 2.75rem; height: 2.75rem; display: inline-flex; align-items: center;
   justify-content: center; padding: 0; border: none; background: none;
   color: {T.TEKS_SUBTLE}; cursor: pointer; border-radius: {T.RADIUS_KECIL};
 }}
@@ -238,7 +261,7 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .nomor {{
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 2.1rem; height: 2.1rem; font-weight: 700; font-size: .95rem;
-  background: {T.AKSEN_MURID_UTAMA}; color: #fff;
+  background: {T.AKSEN_TEAL_TUA}; color: #fff;
   border-radius: {T.RADIUS_BULAT};
 }}
 .teks-soal {{
@@ -246,7 +269,9 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   border-radius: {T.RADIUS_KECIL}; padding: .55rem .7rem; margin: .4rem 0;
   white-space: pre-wrap; font-size: .93rem;
 }}
-.kunci {{ font-weight: 700; color: {T.STATUS_LEMAH}; }}
+/* Kunci jawaban adalah data yang dibaca terus: amber terang #FFB020 di
+   atas putih 1.9:1 tidak layak — pakai versi amber teks-aman. */
+.kunci {{ font-weight: 700; color: {T.KODE_SALAH_BACA_TEKS}; }}
 .centang {{
   display: flex; align-items: center; gap: .45rem; margin-top: .55rem;
   font-size: .88rem; color: {T.TEKS_SUBTLE};
@@ -336,8 +361,8 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 }}
 .baris-form {{ display: flex; gap: .7rem; align-items: flex-end; flex-wrap: wrap; }}
 .baris-form > div {{ flex: 1; min-width: 150px; }}
-.status-ok {{ color: {T.STATUS_KUAT}; }}
-.status-buruk {{ color: {T.STATUS_SALAH}; }}
+.status-ok {{ color: {T.AKSEN_TEAL_TUA}; }}
+.status-buruk {{ color: {T.AKSEN_KORAL_TUA}; }}
 
 /* ── Halaman masuk (mockup guru-masuk) ─────────────────────────────── */
 .layout-masuk {{
@@ -376,10 +401,48 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   margin: 2rem auto; text-align: center;
 }}
 
+/* Hormati preferensi gerak: transisi hover/dropdown dimatikan bagi yang
+   memintanya. Satu blok untuk seluruh permukaan guru. */
+@media (prefers-reduced-motion: reduce) {{
+  * {{
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }}
+}}
+
 @media print {{
   body {{ background: #fff; }}
   .simpan-strip, .tombol-coral, .tombol-kecil {{ display: none; }}
 }}
+"""
+
+# Skrip cegah kirim ganda — dipasang shell halaman (web.py _halaman,
+# landing.py _halaman_publik) setelah SKRIP_MATA_SANDI. Setiap submit:
+# tombolnya dimatikan dan diberi teks "Menyimpan…" supaya guru yang
+# menekan dua kali (atau menekan lagi saat jaringan lambat) tidak
+# mengirim form yang sama dua kali. pageshow memulihkan tombol bila
+# peramban kembali lewat cache (tombol jangan mati selamanya).
+SKRIP_CEGAH_KIRIM_GANDA = """\
+(function(){
+  document.addEventListener('submit', function(e){
+    var b = e.target.querySelector('button[type=submit]');
+    if (!b || b.disabled) return;
+    b.disabled = true;
+    b.dataset.labelAsli = b.textContent;
+    b.textContent = 'Menyimpan…';
+    b.classList.add('sedang-kirim');
+  }, true);
+  window.addEventListener('pageshow', function(e){
+    if (!e.persisted) return;
+    var b = document.querySelectorAll('button.sedang-kirim');
+    for (var i = 0; i < b.length; i++) {
+      b[i].disabled = false;
+      if (b[i].dataset.labelAsli) b[i].textContent = b[i].dataset.labelAsli;
+      b[i].classList.remove('sedang-kirim');
+    }
+  });
+})();
 """
 
 # Skrip tombol mata — dipasang shell halaman (web.py _halaman,

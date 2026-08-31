@@ -29,7 +29,7 @@ import lampiran as lampiran_mod
 import sandi
 import sesi
 from diagnosa import diagnosa
-from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI
+from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 from generator import LEVEL_BAWAAN, buat_soal
 from templates import LEVEL, REGISTRI, Soal, level_valid
 from topik import TOPIK_BAWAAN, Topik, ambil, daftar_topik, dari_sesi
@@ -67,7 +67,7 @@ def _halaman(
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(judul)}</title><style>{GAYA}</style></head>
-<body><div class="bungkus">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script></body></html>""".encode()
+<body><div class="bungkus">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
 
 def _soal_dari_baris(baris) -> Soal:
@@ -933,7 +933,7 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
                 f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center;margin-left:.4rem">'
                 f'<input type="hidden" name="aksi" value="akun_murid_sandi">'
                 f'<input type="hidden" name="nama" value="{nama_esc}">'
-                f'<input type="password" name="baru" placeholder="sandi baru" required style="width:130px;padding:.3rem .5rem;font-size:.85rem">'
+                f'<input type="password" name="baru" placeholder="sandi baru" required style="width:130px;padding:.3rem .5rem">'
                 f'<button type="submit" class="tombol-kecil">Setel sandi baru</button>'
                 f"</form>"
                 f"</div>"

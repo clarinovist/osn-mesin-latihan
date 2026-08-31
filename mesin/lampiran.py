@@ -332,7 +332,7 @@ body {{
   background: {T.LATAR_MURID};
 }}
 .bungkus {{ max-width: 900px; margin: 0 auto; padding: 1rem 0.9rem 3rem; }}
-a {{ color: {T.AKSEN_MURID_UTAMA}; }}
+a {{ color: {T.AKSEN_TEAL_TUA}; }}
 h1 {{ font-size: 1.4rem; color: {T.TEKS_JUDUL}; }}
 .jejak {{ font-size: .88rem; margin: 0 0 .8rem; }}
 .jejak a {{ color: {T.TEKS_SUBTLE}; text-decoration: none; }}
@@ -344,17 +344,20 @@ h1 {{ font-size: 1.4rem; color: {T.TEKS_JUDUL}; }}
 .nomor {{
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 2.1rem; height: 2.1rem; font-weight: 700; font-size: .95rem;
-  background: {T.AKSEN_MURID_UTAMA}; color: #fff; border-radius: {T.RADIUS_BULAT};
+  background: {T.AKSEN_TEAL_TUA}; color: #fff; border-radius: {T.RADIUS_BULAT};
 }}
 .tipe {{ color: {T.TEKS_SUBTLE}; font-size: .88rem; flex: 1; }}
-.kunci {{ font-weight: 700; color: {T.STATUS_LEMAH}; font-size: .88rem; }}
-.tanda {{ color: {T.AKSEN_MURID_KORAL}; font-weight: 700; }}
+.kunci {{ font-weight: 700; color: {T.KODE_SALAH_BACA_TEKS}; font-size: .88rem; }}
+.tanda {{ color: {T.AKSEN_KORAL_TUA}; font-weight: 700; }}
 label {{ display: block; font-size: .84rem; color: {T.TEKS_SUBTLE}; margin: .4rem 0 .15rem; }}
 input[type=text] {{
   width: 100%; padding: .5rem .6rem; border: 1px solid {T.BORDER_HALUS};
-  border-radius: {T.RADIUS_KECIL}; font-size: .95rem; font-family: inherit;
+  border-radius: {T.RADIUS_KECIL}; font-size: 1rem; font-family: inherit;
 }}
-input[type=text]:focus {{ outline: none; border-color: {T.AKSEN_MURID_UTAMA}; }}
+input[type=text]:focus {{
+  outline: none; border-color: {T.AKSEN_MURID_UTAMA};
+  box-shadow: 0 0 0 2px rgba(15,163,163,0.12);
+}}
 .baris {{ display: flex; gap: .8rem; flex-wrap: wrap; }}
 .baris > div {{ flex: 1; min-width: 160px; }}
 .centang {{ display: flex; align-items: center; gap: .45rem; margin-top: .5rem; font-size: .88rem; }}
@@ -373,7 +376,7 @@ input[type=text]:focus {{ outline: none; border-color: {T.AKSEN_MURID_UTAMA}; }}
   background: linear-gradient(to top, {T.LATAR_MURID} 70%, transparent);
 }}
 button {{
-  background: {T.AKSEN_MURID_UTAMA}; color: #fff; border: 0;
+  background: {T.AKSEN_TEAL_TUA}; color: #fff; border: 0;
   border-radius: 9px; padding: .85rem 1.3rem; font-size: 1rem; cursor: pointer; width: 100%;
 }}
 """

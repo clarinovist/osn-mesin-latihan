@@ -133,14 +133,23 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
    Kelas dasar sengaja disalin dari gaya_layar.py, bukan diimpor, supaya
    halaman murid tetap satu berkas CSS yang bisa dibaca utuh. */
 
-.murid-header {{ display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; }}
+.murid-header {{ display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; flex-wrap: wrap; }}
 .murid-header h1 {{ margin: 0; flex: 1; }}
 .btn {{
   display: inline-block; padding: .7rem 1.2rem; border-radius: 9px;
-  border: none; background: {T.AKSEN_MURID_UTAMA}; color: #fff; font-size: 1rem;
+  border: none; background: {T.AKSEN_TEAL_TUA}; color: #fff; font-size: 1rem;
   text-decoration: none; cursor: pointer;
 }}
 .btn.secondary {{ background: #eef1f6; color: {T.TEKS_JUDUL}; border: 1px solid #ccd3dd; }}
+
+/* Keadaan mati: auto-lock timer Latihan Cepat mematikan input di kartu
+   soal yang waktunya habis; tanpa gaya ini kotak yang tidak bisa diisi
+   lagi terlihat sama dengan kotak biasa dan anak terus mengetik tanpa
+   efek. */
+button:disabled, .btn:disabled {{ opacity: .55; cursor: not-allowed; }}
+input:disabled, textarea:disabled {{
+  background: #f3f4f6; color: {T.TEKS_SUBTLE}; cursor: not-allowed;
+}}
 
 .petunjuk {{
   background: {T.LATAR_KARTU_SEKUNDER}; border: 1px solid {T.BORDER_INTERAKTIF}; border-radius: {T.RADIUS_SEDANG};
@@ -194,13 +203,22 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
   font-size: 1.15rem; padding: .55rem .7rem; border: 2px solid #333;
   border-radius: {T.RADIUS_KECIL}; min-width: 7rem;
 }}
+/* Fokus yang terlihat: jawaban dan caraku adalah medan utama halaman ini.
+   outline diganti border+bayangan (bukan dihapus tanpa pengganti). */
+.soal-murid input[type=text]:focus, .soal-murid textarea:focus {{
+  outline: none; border-color: {T.AKSEN_MURID_UTAMA}; border-style: solid;
+  box-shadow: 0 0 0 3px rgba(15,163,163,0.18);
+}}
 .baris-jawab {{ display: flex; align-items: baseline; gap: .6rem; margin-top: .7rem; }}
 .centang-baris {{
   display: flex; align-items: center; gap: .5rem; margin-top: .7rem;
   font-size: .95rem; color: #444;
 }}
-.simpan-strip {{ position: sticky; bottom: 0; padding: .8rem 0; background: {T.LATAR_MURID}; }}
-.simpan-strip .btn {{ width: 100%; font-size: 1.1rem; padding: .95rem; background: {T.AKSEN_MURID_KORAL}; }}
+.simpan-strip {{
+  position: sticky; bottom: 0; padding: .8rem 0 .4rem;
+  background: linear-gradient(to top, {T.LATAR_MURID} 70%, transparent);
+}}
+.simpan-strip .btn {{ width: 100%; font-size: 1.1rem; padding: .95rem; background: {T.AKSEN_KORAL_TUA}; }}
 
 /* Pilihan cepat "Caraku" — target sentuh penuh, bukan lingkaran radio kecil.
    Seluruh kotak bisa di-tap; anak tidak perlu membidik titik 20px. */
@@ -219,6 +237,13 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
 .pilih-cara:has(input:checked) {{
   border-color: {T.AKSEN_MURID_UTAMA}; background: {T.LATAR_KARTU_SEKUNDER}; font-weight: 600;
 }}
+/* Fokus papan tombol pada pilihan cara: cincin di KOTAK, bukan pada titik
+   radio kecil di dalamnya. Outline radio diganti, bukan dihapus begitu saja. */
+.pilih-cara:has(input:focus-visible) {{
+  border-color: {T.AKSEN_MURID_UTAMA};
+  box-shadow: 0 0 0 3px rgba(15,163,163,0.28);
+}}
+.pilih-cara input:focus-visible {{ outline: none; }}
 
 /* Konfirmasi setelah simpan. Tanpa ini anak tidak tahu jawabannya masuk,
    lalu menekan tombol berulang kali atau mengira kerjanya hilang. */
@@ -231,14 +256,20 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
 /* ── Timer Latihan Cepat ── */
 .timer-strip {{
   position: sticky; top: 0; z-index: 5;
-  background: {T.AKSEN_MURID_UTAMA}; color: #fff;
+  background: {T.AKSEN_TEAL_TUA}; color: #fff;
   padding: .55rem .9rem; border-radius: {T.RADIUS_SEDANG};
   margin-bottom: .8rem; font-size: .98rem; font-weight: 600; text-align: center;
 }}
 .timer-strip b {{ font-size: 1.15rem; }}
-.timer-strip.habis {{ background: {T.AKSEN_MURID_KORAL}; }}
+/* Waktu habis: putih di atas coral hanya 2.8:1 — pakai kosakata galat
+   aplikasi (latar merah muda + teks merah gelap) supaya terbaca dan
+   konsisten dengan pesan galat di permukaan lain. */
+.timer-strip.habis {{
+  background: {T.LATAR_GALAT}; color: {T.TEKS_GALAT};
+  border: 2px solid {T.BORDER_GALAT};
+}}
 .soal-timer-note {{
-  margin-top: .5rem; font-size: .85rem; color: {T.AKSEN_MURID_KORAL};
+  margin-top: .5rem; font-size: .85rem; color: {T.AKSEN_KORAL_TUA};
 }}
 
 /* ── halaman daftar sesi (/murid) ── */
@@ -270,21 +301,21 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
 .meta-sesi {{ font-size: 0.85rem; color: {T.TEKS_SUBTLE}; }}
 .badge-soal {{
   flex: none; font-size: 0.8rem; font-weight: 600;
-  background: {T.LATAR_KARTU_SEKUNDER}; color: {T.AKSEN_MURID_UTAMA};
+  background: {T.LATAR_KARTU_SEKUNDER}; color: {T.AKSEN_TEAL_TUA};
   padding: 0.25rem 0.6rem; border-radius: {T.RADIUS_PIL};
 }}
-.chevron-sesi {{
-  flex: none; display: flex; align-items: center; gap: 0.4rem;
-  width: 16px; height: 16px;
+/* Slot kanan kartu sesi: badge "baru" atau kosong. Badge statis di slot,
+   bukan absolute-transform di slot chevron 16px yang rapuh. */
+.ujung-sesi {{
+  flex: none; display: flex; align-items: center;
 }}
 .badge-baru {{
   font-size: 0.7rem; font-weight: 700; color: #fff;
-  background: {T.AKSEN_MURID_KORAL}; padding: 0.15rem 0.4rem;
+  background: {T.AKSEN_KORAL_TUA}; padding: 0.15rem 0.5rem;
   border-radius: {T.RADIUS_PIL}; white-space: nowrap;
-  position: absolute; transform: translate(-2.2rem, -1.8rem);
 }}
 .badge-latihan {{
-  font-size: 0.7rem; font-weight: 700; color: {T.AKSEN_MURID_UTAMA};
+  font-size: 0.7rem; font-weight: 700; color: {T.AKSEN_TEAL_TUA};
   background: {T.LATAR_KARTU_SEKUNDER}; padding: 0.15rem 0.4rem;
   border-radius: {T.RADIUS_PIL}; white-space: nowrap; margin-left: 0.25rem;
 }}
@@ -306,6 +337,15 @@ h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA};
 }}
 @media (max-width: 30rem) {{
   .pilih-cara-grup {{ grid-template-columns: 1fr; }}
+}}
+
+/* Hormati preferensi gerak — satu blok untuk seluruh permukaan murid. */
+@media (prefers-reduced-motion: reduce) {{
+  * {{
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }}
 }}
 
 @media print {{
@@ -505,7 +545,7 @@ def halaman_kerja(
         sisa = 0;
         if (AUTO) {{
           var f = document.querySelector("form");
-          if (f) {{ f.submit(); }}
+          if (f) {{ f.dataset.kirimOtomatis = "1"; f.submit(); }}
           return;
         }}
         var p = document.getElementById("timer-pesan");
@@ -546,6 +586,40 @@ def halaman_kerja(
 </script>
 """
 
+    # Penjaga kerja anak, selalu terpasang (bukan hanya saat timer):
+    #   - tombol simpan mati + berubah "Menyimpan…" saat mengirim, supaya
+    #     ketukan ganda tidak mengirim lembar dua kali;
+    #   - menutup/meninggalkan halaman dengan isian yang belum disimpan
+    #     minta konfirmasi dulu — geser-balik di HP nyata-nya terjadi;
+    #   - kirim otomatis timer (form.submit()) tidak melewati event submit,
+    #     jadi ditandai data-kirim-otomatis agar lolos dari konfirmasi.
+    jaga = """
+<script>
+(function(){
+  var f = document.querySelector('form');
+  if (!f) return;
+  var kotor = false;
+  f.addEventListener('input', function(){ kotor = true; }, true);
+  f.addEventListener('change', function(){ kotor = true; }, true);
+  f.addEventListener('submit', function(){
+    kotor = false;
+    var b = f.querySelector('button[type=submit]');
+    if (b) { b.disabled = true; b.textContent = 'Menyimpan\u2026'; }
+  });
+  window.addEventListener('pageshow', function(){
+    var b = f.querySelector('button[type=submit]');
+    if (b && b.disabled) { b.disabled = false; b.textContent = 'Simpan jawabanku'; }
+  });
+  window.addEventListener('beforeunload', function(e){
+    if (kotor && f.dataset.kirimOtomatis !== '1') {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+})();
+</script>
+"""
+
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -574,7 +648,7 @@ def halaman_kerja(
 <div class="simpan-strip hanya-layar"><button type="submit" class="btn">Simpan jawabanku</button></div>
 </form>
 <form method="post" action="/keluar" class="hanya-layar" style="margin-top:1rem"><button class="btn secondary" type="submit">Keluar</button></form>
-{skrip}
+{jaga}{skrip}
 </div></body></html>"""
     return isi.encode()
 
@@ -652,7 +726,7 @@ def halaman_selesai(kon, siswa_id: int, sesi_id: int) -> bytes | None:
     </table>
   </div>
   <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
-    <a href="/murid" class="btn" style="background:{T.AKSEN_MURID_UTAMA};color:{T.TEKS_PUTIH};text-decoration:none;padding:.7rem 1.5rem;border-radius:{T.RADIUS_SEDANG}">
+    <a href="/murid" class="btn" style="background:{T.AKSEN_TEAL_TUA};color:{T.TEKS_PUTIH};text-decoration:none;padding:.7rem 1.5rem;border-radius:{T.RADIUS_SEDANG}">
       Kembali ke daftar sesi
     </a>
     <form method="post" action="/keluar" style="margin:0">
@@ -707,7 +781,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
             f"&middot; {_escape(_ambil_topik(b))} {tag_latihan}</span>"
             f"</span>"
             f'<span class="badge-soal">{b["jumlah"]} soal</span>'
-            f'<span class="chevron-sesi">{badge_baru}</span>'
+            f'<span class="ujung-sesi">{badge_baru}</span>'
             "</a>"
         )
 

@@ -66,6 +66,14 @@ STATUS_KUAT = "#0FA3A3"          # teal
 STATUS_LEMAH = "#FFB020"        # amber
 STATUS_SALAH = "#FF6B5B"        # coral
 
+# Aksen versi teks-aman: kontras >= 4.5:1 di atas putih/krem. Dipakai saat
+# aksen menjadi WARNA TEKS (tautan, status, badge) atau latar tombol solid
+# ber-teks putih. AKSEN_MURID_* tetap untuk border, badge besar, dan elemen
+# grafis besar (di sana 3:1 cukup). Teal/coral terang di atas teks kecil
+# gagal kontras (3.1:1 / 2.8:1) — dua token ini penggantinya.
+AKSEN_TEAL_TUA = "#0a7d7d"
+AKSEN_KORAL_TUA = "#cc3f2b"
+
 # Badge peran topbar (multi-keluarga): Pengelola amber, Orang Tua teal —
 # warna status yang sama supaya tetap satu rasa visual.
 BADGE_ADMIN_BG = "#FFB020"
@@ -90,9 +98,10 @@ KODE_BELUM_LIAT_TEKS = "#3f7d57"
 KODE_MENEBAK_BG = "#efeff1"        # N
 KODE_MENEBAK_TEKS = "#5b5b63"
 
-# Chart tren (mockup guru-laporan) — SVG
+# Chart tren (mockup guru-laporan) — SVG. Axis digelapkan dari #8a91a3:
+# label 11px-nya teks kecil, butuh ~4.5:1 di atas putih.
 CHART_GRID = "#e2e6ef"
-CHART_AXIS = "#8a91a3"
+CHART_AXIS = "#6f7690"
 
 # ─────────────────────────────────────────────────────────────────────
 # Palet MURID (permukaan murid: /murid, /murid/kerjakan)

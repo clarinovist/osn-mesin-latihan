@@ -37,12 +37,12 @@ h1 {{
   background: {T.LATAR_KARTU_MURID}; border: 2px solid {T.AKSEN_MURID_UTAMA};
   border-radius: {T.RADIUS_KARTU}; padding: 0.55rem 0.9rem; margin-bottom: 0.7rem;
 }}
-.mesin-banner .nama-app {{ font-weight: 800; color: {T.AKSEN_MURID_UTAMA}; }}
+.mesin-banner .nama-app {{ font-weight: 800; color: {T.AKSEN_TEAL_TUA}; }}
 .mesin-banner .meta-sesi {{ font-size: 0.9rem; color: {T.TEKS_SUBTLE}; }}
 .banner-kunci {{ border-color: {T.AKSEN_MURID_KORAL}; }}
-.banner-kunci .nama-app {{ color: {T.AKSEN_MURID_KORAL}; }}
+.banner-kunci .nama-app {{ color: {T.AKSEN_KORAL_TUA}; }}
 .kunci-headline {{
-  background: {T.AKSEN_MURID_KORAL}; color: #fff; text-align: center;
+  background: {T.AKSEN_KORAL_TUA}; color: #fff; text-align: center;
   font-weight: 800; font-size: 1.2rem; letter-spacing: 0.04em;
   border-radius: {T.RADIUS_SEDANG}; padding: 0.6rem 1rem; margin-bottom: 0.8rem;
 }}

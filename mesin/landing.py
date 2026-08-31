@@ -13,18 +13,19 @@ import html
 
 import design_tokens as T
 import ikon
-from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI
+from gaya_guru import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 
 
 def _halaman_publik(judul: str, isi: str) -> bytes:
     """Kerangka halaman publik — sama gaya _halaman web.py, tanpa data."""
     # Link yang berperan sebagai tombol CTA (selector button.* di CSS guru
     # tidak mengenai <a>). Style lokal, tidak menyentuh CSS bersama.
+    # Warna CTA memakai aksen teks-aman: putih di atas coral terang 2.8:1.
     gaya_cta = (
         "a.tombol-coral,a.tombol-putih{display:inline-block;padding:.6rem 1.2rem;"
         "border-radius:8px;text-decoration:none;font-weight:600;margin:.2rem .4rem .2rem 0}"
-        f"a.tombol-coral{{background:{T.AKSEN_MURID_KORAL};color:{T.TEKS_PUTIH}}}"
-        f"a.tombol-putih{{background:none;color:{T.STATUS_KUAT};border:1px solid {T.STATUS_KUAT}}}"
+        f"a.tombol-coral{{background:{T.AKSEN_KORAL_TUA};color:{T.TEKS_PUTIH}}}"
+        f"a.tombol-putih{{background:none;color:{T.AKSEN_TEAL_TUA};border:1px solid {T.AKSEN_TEAL_TUA}}}"
         f".topbar-navigasi a.tombol-putih:hover{{color:{T.AKSEN_MURID_UTAMA};"
         f"border-color:{T.AKSEN_MURID_UTAMA}}}"
         "a.brand{text-decoration:none}"
@@ -32,7 +33,7 @@ def _halaman_publik(judul: str, isi: str) -> bytes:
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(judul)}</title><style>{GAYA}</style><style>{gaya_cta}</style></head>
-<body><div class="bungkus">{isi}</div><script>{SKRIP_MATA_SANDI}</script></body></html>""".encode()
+<body><div class="bungkus">{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
 
 def halaman_daftar(
