@@ -101,6 +101,12 @@ Gold/Silver lolos ke IJMO; Gold/Silver/Bronze ke SIMOC & SMGF.
 | **Secondary 2** | + Pythagoras' Theorem |
 | **Secondary 3+** | + Trigonometry & Probability |
 
+Implementasi proyek mengikuti band ini di level P3: geometri-datar,
+statistika, dan logika versi sederhana tersedia untuk P3 sejak 31 Agu 2026
+(sebelumnya P3 hanya pola-bilangan). SASMO tidak membagi silabus per kelas —
+band P1–4 yang berlaku untuk P3 sudah memuat ketiga topik versi sederhana.
+Detail keputusan: `docs/plan/2026-08-31-perluasan-p3-geometri-statistika-logika.md`.
+
 **Perbedaan kunci vs OSN SD:** SASMO menekankan **Section A (MCQ) + Section B
 (non-routine terbuka)** sekaligus; soal menengah selalu non-routine/terbuka.
 Ini selaras dengan target kelas 4 produk — 60% MCQ (recall/hitung cepat) +
