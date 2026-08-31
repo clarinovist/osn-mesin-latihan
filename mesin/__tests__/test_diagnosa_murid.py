@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import students  # noqa: E402
+import student_pages  # noqa: E402
 import web  # noqa: E402
 import teacher_pages  # noqa: E402
 import reports  # noqa: E402
@@ -176,7 +177,7 @@ def test_halaman_murid_tetap_bersih_setelah_diagnosis_otomatis(db):
                 {f"jwb_{b['sesi_soal_id']}": b["kunci"],
                  f"cara_{b['sesi_soal_id']}": "yakin"},
             )
-        html = students.halaman_kerja(kon, sid, sesi_id)
+        html = student_pages.halaman_kerja(kon, sid, sesi_id)
         assert html is not None
         html = html.decode()
 

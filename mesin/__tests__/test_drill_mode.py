@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import students  # noqa: E402
+import student_pages  # noqa: E402
 import web  # noqa: E402
 import teacher_pages  # noqa: E402
 import reports  # noqa: E402
@@ -244,7 +245,7 @@ def test_halaman_kerja_drill_tanpa_caraku(db):
     """
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakDrill", 7, mode="drill")
-        html = students.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
     assert "Caraku — pilih dulu" not in html      # label pill tidak ada
     assert 'name="pilih_' not in html             # radio pill tidak ada
     assert 'name="cara_' not in html              # textarea cara tidak ada
@@ -257,7 +258,7 @@ def test_halaman_kerja_diagnostik_masih_punya_caraku(db):
     """Diagnosa (default): pill Caraku + textarea tetap ada."""
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakDiag", 7)
-        html = students.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
     assert "Caraku — pilih dulu" in html
     assert 'name="pilih_' in html
     assert 'name="cara_' in html
@@ -270,7 +271,7 @@ def test_halaman_kerja_drill_timer_per_sesi_tampil(db):
             kon, "AnakDrillSesi", 7, mode="drill",
             timer_mode="sesi", durasi_menit=10,
         )
-        html = students.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
     assert 'id="timer-strip"' in html
     assert "Sisa waktu" in html
     assert "10:00" in html
@@ -283,7 +284,7 @@ def test_halaman_kerja_drill_timer_per_soal_internal(db):
             kon, "AnakDrillSoal", 7, mode="drill",
             timer_mode="soal", durasi_menit=5,
         )
-        html = students.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
     assert "Sisa waktu" not in html             # internal, tak dimunculkan
     assert 'class="soal-timer-note"' in html    # penanda per kartu
     assert "setInterval" in html                # ada JS timer
@@ -379,7 +380,7 @@ def test_kartu_sesi_murid_menampilkan_tag_latihan(db):
         nama = kon.execute(
             "SELECT nama FROM siswa WHERE id = ?", (sid,)
         ).fetchone()["nama"]
-        html = students.halaman_daftar_sesi(kon, sid, nama).decode()
+        html = student_pages.halaman_daftar_sesi(kon, sid, nama).decode()
     assert 'class="badge-latihan"' in html
 
 
@@ -389,7 +390,7 @@ def test_kartu_sesi_murid_diagnostik_tanpa_tag_latihan(db):
         nama = kon.execute(
             "SELECT nama FROM siswa WHERE id = ?", (sid,)
         ).fetchone()["nama"]
-        html = students.halaman_daftar_sesi(kon, sid, nama).decode()
+        html = student_pages.halaman_daftar_sesi(kon, sid, nama).decode()
     assert 'class="badge-latihan"' not in html
 
 

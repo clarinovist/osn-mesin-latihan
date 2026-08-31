@@ -377,6 +377,7 @@ class Penangan(BaseHTTPRequestHandler):
         sendiri. Kredensial salah/peran salah -> 401, bukan 404 — supaya
         anak yang salah ketik sandi tidak mengira situsnya rusak.
         """
+        import student_pages
         import students
 
         kredensial = self._sesi_atau_basic(peran_wajib="murid")
@@ -401,7 +402,7 @@ class Penangan(BaseHTTPRequestHandler):
                 )
             )
         if jalur == "/murid":
-            return self._kirim(students.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
+            return self._kirim(student_pages.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
         bagian = jalur.split("/")
         # /murid/selesai/<id> — konfirmasi setelah semua soal terisi
         if len(bagian) >= 3 and bagian[2] == "selesai":
@@ -409,7 +410,7 @@ class Penangan(BaseHTTPRequestHandler):
                 sesi_id = int(bagian[3])
             except (ValueError, IndexError):
                 sesi_id = -1
-            isi = students.halaman_selesai(kon, siswa_id, sesi_id)
+            isi = student_pages.halaman_selesai(kon, siswa_id, sesi_id)
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
@@ -429,7 +430,7 @@ class Penangan(BaseHTTPRequestHandler):
                     tersimpan = max(0, min(99, int(q.get("tersimpan", ["0"])[0])))
                 except (ValueError, TypeError):
                     tersimpan = 0
-            isi = students.halaman_kerja(kon, siswa_id, int(bagian[3]), tersimpan)
+            isi = student_pages.halaman_kerja(kon, siswa_id, int(bagian[3]), tersimpan)
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404

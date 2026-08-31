@@ -1,35 +1,24 @@
-"""Halaman murid — anak mengerjakan langsung di browser (Fase 4).
+"""Lapisan data sisi anak: ambil soal, simpan jawaban, kepemilikan akun.
 
-Palang keras yang menegakkan halaman ini:
-
-  Rute murid tidak boleh pernah menyentuh kunci, malrule, diagnosis,
-  atau laporan. Bukan niat baik — ditegakkan test
-  (__tests__/test_murid.py::test_palang_murid) yang mem-blokir akses
-  kolom-kolom itu di level sqlite3.Row dan mengintip setiap HTML yang
-  keluar dari fungsi halaman.
-
-Arsitektur datanya sengaja tipis: jawaban anak disimpan lewat
-database.simpan_jawaban() yang sama dengan yang dipakai alur kertas-guru.
-Tidak ada tabel baru, tidak ada jalur simpan kedua — satu fakta, satu
-tempat. Yang berbeda hanya siapa yang mengetik: guru tidak lagi menjadi
-perantara ketikan.
+Dipecah dari students.py (refactor 31 Aug 2026): halaman-halamannya pindah
+ke student_pages.py; modul ini kini murni data + pembatasan akun, tanpa
+HTML. Palang tetap: tidak pernah membaca kolom kunci/malrule untuk anak —
+dijaga test_palang_* (monkeypatch sqlite3.Row).
 """
 
 from __future__ import annotations
 
 import html
-import json
 
-import design_tokens as T
 import auth
 from database import isi_sesi
 from templates import Soal
-from topics import Topik, dari_sesi
+from topics import dari_sesi
+
 
 
 def _escape(t: str) -> str:
     return html.escape(str(t))
-
 
 def _ambil_topik(baris) -> str:
     """Label topik untuk baris sesi; kolom belum ada / aneh -> bawaan."""
@@ -38,7 +27,6 @@ def _ambil_topik(baris) -> str:
     except (IndexError, KeyError):
         return dari_sesi(None).id
     return dari_sesi(nilai).id
-
 
 def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     """Data sesi versi murid — TANPA kunci/malrule/diagnosis.
@@ -58,7 +46,6 @@ def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     if not baris:
         return None  # bukan sesi milik murid ini ATAU tidak ada
     return dict(baris)
-
 
 def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
     """Daftar soal versi murid: identitas + teks saja, tanpa kunci.
@@ -97,562 +84,6 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
         )
     return keluar
 
-
-def _badan_teks(teks: str) -> str:
-    """Pecah teks soal: baris terakhir = pertanyaan (ditonjolkan), sisanya
-    badan soal. Aturan yang sama dengan render._badan_soal untuk teks biasa.
-
-    Tanpa pemecahan ini, pengantar dan pertanyaan menyatu dalam satu div
-    berukuran sama — anak tidak tahu mana yang sebenarnya ditanya.
-    """
-    baris = [b.strip() for b in teks.split("\n") if b.strip()]
-    if len(baris) == 1:
-        return f'<div class="teks">{_escape(baris[0])}</div>'
-    return "".join(
-        f'<div class="{"tanya" if i == len(baris) - 1 else "teks"}">'
-        f"{_escape(b)}</div>"
-        for i, b in enumerate(baris)
-    )
-
-
-CSS_MURID = f"""
-* {{ box-sizing: border-box; }}
-html {{ -webkit-text-size-adjust: 100%; }}
-body {{
-  font-family: {T.FONT_LAYAR};
-  font-size: {T.UKURAN_BADAN_LAYAR}; line-height: {T.LINE_HEIGHT}; color: {T.TEKS_UTAMA}; margin: 0;
-  background: {T.LATAR_MURID};
-}}
-.wrap {{ max-width: {T.LEBAR_KONTEN}; margin: 0 auto; padding: {T.SP_4} 0.9rem 3rem; }}
-h1 {{ font-size: 1.35rem; margin: 0.2rem 0 0.9rem; color: {T.AKSEN_MURID_UTAMA}; }}
-
-/* Gaya dasar di atas adalah separuh dari perbaikan tampilan berantakan:
-   halaman ini dulu hanya memuat gaya khusus murid, sementara markupnya
-   memakai kelas dasar (.wrap, .soal, .bagian, ...) yang tidak pernah
-   didefinisikan — hasilnya tampil dengan font dan lebar bawaan peramban.
-   Kelas dasar sengaja disalin dari screen_style.py, bukan diimpor, supaya
-   halaman murid tetap satu berkas CSS yang bisa dibaca utuh. */
-
-.murid-header {{ display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; flex-wrap: wrap; }}
-.murid-header h1 {{ margin: 0; flex: 1; }}
-.btn {{
-  display: inline-block; padding: .7rem 1.2rem; border-radius: 9px;
-  border: none; background: {T.AKSEN_TEAL_TUA}; color: #fff; font-size: 1rem;
-  text-decoration: none; cursor: pointer;
-}}
-.btn.secondary {{ background: #eef1f6; color: {T.TEKS_JUDUL}; border: 1px solid #ccd3dd; }}
-
-/* Keadaan mati: auto-lock timer Latihan Cepat mematikan input di kartu
-   soal yang waktunya habis; tanpa gaya ini kotak yang tidak bisa diisi
-   lagi terlihat sama dengan kotak biasa dan anak terus mengetik tanpa
-   efek. */
-button:disabled, .btn:disabled {{ opacity: .55; cursor: not-allowed; }}
-input:disabled, textarea:disabled {{
-  background: #f3f4f6; color: {T.TEKS_SUBTLE}; cursor: not-allowed;
-}}
-
-.petunjuk {{
-  background: {T.LATAR_KARTU_SEKUNDER}; border: 1px solid {T.BORDER_INTERAKTIF}; border-radius: {T.RADIUS_SEDANG};
-  padding: 0.9rem 1rem; margin-bottom: 1.2rem; font-size: 0.95rem;
-}}
-.petunjuk p {{ margin: 0 0 0.6rem; }}
-.petunjuk p:last-child {{ margin-bottom: 0; }}
-
-.bagian {{
-  font-size: 1.05rem; font-weight: 700; color: {T.TEKS_JUDUL};
-  margin: 1.6rem 0 0.7rem; padding-bottom: 0.35rem;
-  border-bottom: 2px solid {T.TEKS_JUDUL};
-}}
-.catatan-bagian {{
-  background: {T.LATAR_CATATAN}; border: 1px solid {T.BORDER_CATATAN}; border-radius: {T.RADIUS_KECIL};
-  padding: 0.55rem 0.8rem; margin: -0.2rem 0 0.8rem; font-size: 0.92rem;
-}}
-
-.soal {{
-  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS}; border-radius: {T.RADIUS_KARTU};
-  padding: 1rem; margin-bottom: 1rem;
-}}
-.nomor {{
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 2rem; height: 2rem; font-weight: 700;
-  border: 2px solid {T.AKSEN_MURID_UTAMA}; border-radius: {T.RADIUS_BULAT};
-  margin-right: 0.55rem; font-size: 0.95rem;
-}}
-.bintang {{ font-weight: 700; color: {T.AKSEN_MURID_AMBER}; }}
-
-/* Pertanyaan utama adalah yang paling penting di kartu, jadi ia harus
-   paling menonjol. Dulu badan soal dan pertanyaan berukuran sama persis —
-   anak membaca ulang semua kalimat untuk mencari apa yang ditanya. */
-.teks {{ display: block; margin-top: 0.4rem; }}
-.tanya {{
-  display: block; font-size: 1.12rem; font-weight: 700;
-  margin-top: 0.6rem; color: {T.TEKS_JUDUL};
-}}
-
-.label {{ display: block; font-size: 0.85rem; color: {T.TEKS_SUBTLE}; margin: 0.8rem 0 0.35rem; }}
-
-.daftar-sesi {{ display: block; color: inherit; text-decoration: none; }}
-.daftar-sesi:hover {{ border-color: {T.TEKS_JUDUL}; }}
-
-.soal-murid textarea {{
-  width: 100%; min-height: 84px; border: 1.5px dashed #99a;
-  border-radius: {T.RADIUS_KECIL}; padding: .6rem; font-size: 1rem; font-family: inherit;
-  background: #fafafc;
-}}
-.soal-murid input[type=text] {{
-  font-size: 1.15rem; padding: .55rem .7rem; border: 2px solid #333;
-  border-radius: {T.RADIUS_KECIL}; min-width: 7rem;
-}}
-/* Fokus yang terlihat: jawaban dan caraku adalah medan utama halaman ini.
-   outline diganti border+bayangan (bukan dihapus tanpa pengganti). */
-.soal-murid input[type=text]:focus, .soal-murid textarea:focus {{
-  outline: none; border-color: {T.AKSEN_MURID_UTAMA}; border-style: solid;
-  box-shadow: 0 0 0 3px rgba(15,163,163,0.18);
-}}
-.baris-jawab {{ display: flex; align-items: baseline; gap: .6rem; margin-top: .7rem; }}
-.centang-baris {{
-  display: flex; align-items: center; gap: .5rem; margin-top: .7rem;
-  font-size: .95rem; color: #444;
-}}
-.simpan-strip {{
-  position: sticky; bottom: 0; padding: .8rem 0 .4rem;
-  background: linear-gradient(to top, {T.LATAR_MURID} 70%, transparent);
-}}
-.simpan-strip .btn {{ width: 100%; font-size: 1.1rem; padding: .95rem; background: {T.AKSEN_KORAL_TUA}; }}
-
-/* Pilihan cepat "Caraku" — target sentuh penuh, bukan lingkaran radio kecil.
-   Seluruh kotak bisa di-tap; anak tidak perlu membidik titik 20px. */
-.pilih-cara-grup {{
-  display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem;
-}}
-.pilih-cara {{
-  display: flex; align-items: center; gap: .45rem;
-  border: 1.5px solid #ccd3dd; border-radius: {T.RADIUS_PIL};
-  padding: .55rem .9rem; min-height: {T.TARGET_SENTUH};
-  background: {T.LATAR_KARTU_MURID}; cursor: pointer; font-size: .95rem;
-}}
-.pilih-cara input {{ width: 1.2rem; height: 1.2rem; flex: none; }}
-/* :has() didukung Safari 15.4+ dan Chrome 105+; kalau peramban lebih tua,
-   yang hilang hanya penandaan warna — radio-nya tetap berfungsi. */
-.pilih-cara:has(input:checked) {{
-  border-color: {T.AKSEN_MURID_UTAMA}; background: {T.LATAR_KARTU_SEKUNDER}; font-weight: 600;
-}}
-/* Fokus papan tombol pada pilihan cara: cincin di KOTAK, bukan pada titik
-   radio kecil di dalamnya. Outline radio diganti, bukan dihapus begitu saja. */
-.pilih-cara:has(input:focus-visible) {{
-  border-color: {T.AKSEN_MURID_UTAMA};
-  box-shadow: 0 0 0 3px rgba(15,163,163,0.28);
-}}
-.pilih-cara input:focus-visible {{ outline: none; }}
-
-/* Konfirmasi setelah simpan. Tanpa ini anak tidak tahu jawabannya masuk,
-   lalu menekan tombol berulang kali atau mengira kerjanya hilang. */
-.tersimpan {{
-  background: {T.LATAR_TERSIMPAN}; border: 1px solid {T.BORDER_TERSIMPAN}; color: {T.TEKS_TERSIMPAN};
-  border-radius: {T.RADIUS_SEDANG}; padding: .8rem 1rem; margin-bottom: 1rem;
-  font-size: .98rem;
-}}
-
-/* ── Timer Latihan Cepat ── */
-.timer-strip {{
-  position: sticky; top: 0; z-index: 5;
-  background: {T.AKSEN_TEAL_TUA}; color: #fff;
-  padding: .55rem .9rem; border-radius: {T.RADIUS_SEDANG};
-  margin-bottom: .8rem; font-size: .98rem; font-weight: 600; text-align: center;
-}}
-.timer-strip b {{ font-size: 1.15rem; }}
-/* Waktu habis: putih di atas coral hanya 2.8:1 — pakai kosakata galat
-   aplikasi (latar merah muda + teks merah gelap) supaya terbaca dan
-   konsisten dengan pesan galat di permukaan lain. */
-.timer-strip.habis {{
-  background: {T.LATAR_GALAT}; color: {T.TEKS_GALAT};
-  border: 2px solid {T.BORDER_GALAT};
-}}
-.soal-timer-note {{
-  margin-top: .5rem; font-size: .85rem; color: {T.AKSEN_KORAL_TUA};
-}}
-
-/* ── halaman daftar sesi (/murid) ── */
-.owl-mascot {{ flex: none; width: 40px; height: 40px; }}
-.sub-judul {{
-  font-size: 0.95rem; color: {T.TEKS_SUBTLE}; margin: -0.5rem 0 1.2rem;
-}}
-.keluar-form {{ margin: 0 0 1.2rem; }}
-.keluar-form .btn {{ padding: .4rem 1rem; font-size: 0.85rem; }}
-
-.daftar-sesi-grup {{ display: flex; flex-direction: column; gap: 0.7rem; }}
-
-.kartu-sesi {{
-  display: flex; align-items: center; gap: 0.8rem;
-  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
-  border-radius: {T.RADIUS_KARTU}; padding: 0.8rem 1rem;
-  text-decoration: none; color: {T.TEKS_UTAMA};
-  transition: border-color 0.15s, box-shadow 0.15s;
-}}
-.kartu-sesi:hover {{
-  border-color: {T.AKSEN_MURID_UTAMA};
-  box-shadow: 0 2px 8px rgba(15,163,163,0.12);
-}}
-.ikon-sesi {{
-  flex: none; width: 2.5rem; height: 2.5rem; border-radius: {T.RADIUS_BULAT};
-}}
-.isi-sesi {{ display: flex; flex-direction: column; flex: 1; min-width: 0; }}
-.tanggal-sesi {{ font-weight: 700; font-size: 1rem; color: {T.TEKS_JUDUL}; }}
-.meta-sesi {{ font-size: 0.85rem; color: {T.TEKS_SUBTLE}; }}
-.badge-soal {{
-  flex: none; font-size: 0.8rem; font-weight: 600;
-  background: {T.LATAR_KARTU_SEKUNDER}; color: {T.AKSEN_TEAL_TUA};
-  padding: 0.25rem 0.6rem; border-radius: {T.RADIUS_PIL};
-}}
-/* Slot kanan kartu sesi: badge "baru" atau kosong. Badge statis di slot,
-   bukan absolute-transform di slot chevron 16px yang rapuh. */
-.ujung-sesi {{
-  flex: none; display: flex; align-items: center;
-}}
-.badge-baru {{
-  font-size: 0.7rem; font-weight: 700; color: #fff;
-  background: {T.AKSEN_KORAL_TUA}; padding: 0.15rem 0.5rem;
-  border-radius: {T.RADIUS_PIL}; white-space: nowrap;
-}}
-.badge-latihan {{
-  font-size: 0.7rem; font-weight: 700; color: {T.AKSEN_TEAL_TUA};
-  background: {T.LATAR_KARTU_SEKUNDER}; padding: 0.15rem 0.4rem;
-  border-radius: {T.RADIUS_PIL}; white-space: nowrap; margin-left: 0.25rem;
-}}
-.kosong-hint {{
-  border: 1.5px dashed #ccd3dd; border-radius: {T.RADIUS_KARTU};
-  padding: 1.5rem; text-align: center; color: {T.TEKS_SUBTLE};
-  font-size: 0.95rem;
-}}
-
-/* ── halaman kerja (/murid/kerjakan) ── */
-.meta-sesi-line {{ font-size: 0.85rem; color: {T.TEKS_SUBTLE}; margin-bottom: 1rem; }}
-.petunjuk-ikon {{ display: flex; gap: 0.7rem; align-items: flex-start; }}
-.ikon-petunjuk {{ flex: none; margin-top: 0.15rem; }}
-.petunjuk-ikon > div {{ flex: 1; }}
-
-/* Pilihan "Caraku" — 2 kolom rapi di layar lebar, 1 kolom di sempit */
-.pilih-cara-grup {{
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: .8rem;
-}}
-@media (max-width: 30rem) {{
-  .pilih-cara-grup {{ grid-template-columns: 1fr; }}
-}}
-
-/* Hormati preferensi gerak — satu blok untuk seluruh permukaan murid. */
-@media (prefers-reduced-motion: reduce) {{
-  * {{
-    transition-duration: .01ms !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-  }}
-}}
-
-@media print {{
-  /* Tombol "Cetak / PDF" di kepala halaman memicu window.print(); di sini
-     halaman menurunkan dirinya ke kertas: kontrol hilang, kartu jadi kotak
-     hitam-putih, soal tidak terpotong antarhalaman. Di dialog cetak, murid
-     memilih "Simpan sebagai PDF" — tidak perlu berkas PDF terpisah. */
-  body {{ background: #fff; font-size: {T.UKURAN_BADAN_CETAK}; }}
-  .wrap {{ max-width: none; padding: 0; }}
-  .hanya-layar {{ display: none; }}
-  .soal, .petunjuk {{ border-color: #000; border-radius: 0; }}
-  .soal {{ break-inside: avoid; }}
-  .bagian {{ break-after: avoid; }}
-}}
-"""
-
-
-def halaman_kerja(
-    kon, siswa_id: int, sesi_id: int, tersimpan: int = 0,
-    topik_paket: Topik | None = None,
-) -> bytes | None:
-    """Lembar interaktif murid: baca soal, tulis caraku + jawaban.
-
-    Dua mode sesi (29 Aug 2026):
-      - diagnostik (default): kartu penuh — restate + pill "Caraku" + kotak tulis.
-      - drill (Latihan Cepat): kartu ringan — hanya Jawabanku + centang
-        "belum pernah lihat". Timer per-sesi (tampil jalan) atau per-soal
-        (internal, tak ditampilkan), dengan perilaku peringatan / auto-lock.
-    """
-    import icons
-
-    info = sesi_murid(kon, siswa_id, sesi_id)
-    if not info:
-        return None
-    if topik_paket is None:
-        topik_paket = dari_sesi(info.get("topik"))
-    daftar = soal_murid(kon, sesi_id, siswa_id)
-
-    drill = info.get("mode", "diagnostik") == "drill"
-    timer_mode = info.get("timer_mode", "tanpa") or "tanpa"
-    durasi_menit = int(info.get("durasi_menit") or 15)
-    timer_auto = 1 if info.get("timer_auto") else 0
-
-    kartu: list[str] = []
-    bagian_kini = None
-    for s in daftar:
-        if s["bagian"] != bagian_kini:
-            bagian_kini = s["bagian"]
-            judul = topik_paket.judul_bagian.get(
-                bagian_kini, f"Bagian {bagian_kini}"
-            )
-            kartu.append(f'<div class="bagian">{judul}</div>')
-            if bagian_kini in topik_paket.catatan_bagian:
-                kartu.append(
-                    f'<div class="catatan-bagian">'
-                    f"{topik_paket.catatan_bagian[bagian_kini]}</div>"
-                )
-        t = s["terjawab"] or {}
-        ssid = s["sesi_soal_id"]
-        belum = " checked" if t.get("belum_pernah") else ""
-
-        if drill:
-            catatan_soal = ""
-            if timer_mode == "soal":
-                catatan_soal = (
-                    '<div class="soal-timer-note" style="display:none">'
-                    "Waktu untuk soal ini habis — lanjut ke soal berikutnya.</div>"
-                )
-            kartu.append(f"""
-<div class="soal soal-murid">
-  <span class="nomor">{s['nomor']}</span>
-  {'<span class="bintang">★</span>' if s['tantangan'] else ''}
-  {_badan_teks(s['teks'])}
-  <div class="baris-jawab">
-    <span>Jawabanku:</span>
-    <input type="text" name="jwb_{ssid}"
-           value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
-  </div>
-  <label class="centang-baris">
-    <input type="checkbox" name="blm_{ssid}"{belum} style="width:1.3rem;height:1.3rem">
-    belum pernah lihat soal seperti ini
-  </label>
-  {catatan_soal}
-</div>""")
-            continue
-
-        restate = ""
-        if s["minta_restatement"]:
-            nilai = _escape(t.get("restatement", ""))
-            restate = (
-                '<label class="label">Soal ini mintanya apa? '
-                "(tulis pakai kalimatmu sendiri)</label>"
-                f'<textarea name="restate_{ssid}">{nilai}</textarea>'
-            )
-
-        # Pilihan cepat "Caraku". Kalau jawaban tersimpan berupa pilihan,
-        # tandai yang terpilih supaya anak melihat isiannya kembali.
-        cara_tersimpan = t.get("cara", "") or ""
-        pilihan_kini = ""
-        teks_cara = cara_tersimpan
-        if cara_tersimpan.startswith(AWALAN_PILIHAN):
-            sisa = cara_tersimpan[len(AWALAN_PILIHAN):]
-            pilihan_kini, _, teks_cara = sisa.partition(" — ")
-            pilihan_kini = pilihan_kini.strip()
-            teks_cara = teks_cara.strip()
-
-        tombol = "".join(
-            f'<label class="pilih-cara">'
-            f'<input type="radio" name="pilih_{ssid}" value="{kode}"'
-            f'{" checked" if kode == pilihan_kini else ""}>'
-            f"<span>{_escape(teks)}</span></label>"
-            for kode, teks in PILIHAN_CARA
-        )
-
-        kartu.append(f"""
-<div class="soal soal-murid">
-  <span class="nomor">{s['nomor']}</span>
-  {'<span class="bintang">★</span>' if s['tantangan'] else ''}
-  {_badan_teks(s['teks'])}
-  {restate}
-  <label class="label">Caraku — pilih dulu yang paling mirip:</label>
-  <div class="pilih-cara-grup">{tombol}</div>
-  <label class="label">Kalau mau, tulis lebih jelas di sini (boleh dikosongkan):</label>
-  <textarea name="cara_{ssid}">{_escape(teks_cara)}</textarea>
-  <div class="baris-jawab">
-    <span>Jawabanku:</span>
-    <input type="text" name="jwb_{ssid}"
-           value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
-  </div>
-  <label class="centang-baris">
-    <input type="checkbox" name="blm_{ssid}"{belum} style="width:1.3rem;height:1.3rem">
-    belum pernah lihat soal seperti ini
-  </label>
-</div>""")
-
-    # Konfirmasi setelah simpan. Jumlah soal yang tersimpan disebut angkanya,
-    # bukan sekadar "berhasil": anak bisa langsung tahu kalau ada soal yang
-    # ia kira sudah diisi tapi ternyata belum.
-    kabar = ""
-    if tersimpan:
-        kabar = (
-            f'<div class="tersimpan">Tersimpan ✓ — {tersimpan} soal sudah '
-            f"masuk. Boleh lanjut, atau tutup halaman ini.</div>"
-        )
-
-    if drill:
-        petunjuk = (
-            "<p><b>Cara mengerjakan — baca dulu:</b></p>"
-            "<p>Kerjakan sebisamu, tulis jawaban di kotak <b>Jawabanku</b>."
-            + (" Perhatikan waktunya." if timer_mode == "sesi" else "")
-            + "</p>"
-            "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
-            "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
-            "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
-            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
-        )
-    else:
-        petunjuk = (
-            "<p><b>Cara mengerjakan — baca dulu:</b></p>"
-            "<p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan "
-            "caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>"
-            "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
-            "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
-            "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
-            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
-        )
-
-    # Timer Latihan Cepat. Per-sesi: strip countdown yang tampil jalan (sticky
-    # di atas). Per-soal: internal — tidak ada angka yang tampil, tiap kartu
-    # punya catatan yang muncul kalau waktunya habis.
-    strip = ""
-    if drill and timer_mode == "sesi":
-        strip = (
-            '<div class="timer-strip hanya-layar" id="timer-strip">'
-            "Sisa waktu: <b id=\"timer-tampil\">"
-            f"{durasi_menit:02d}:00</b>"
-            '<span id="timer-pesan" style="display:none">'
-            " — waktu habis, kerjakan sebisanya dan simpan</span></div>"
-        )
-
-    skrip = ""
-    if drill and timer_mode in ("sesi", "soal"):
-        skrip = f"""
-<script>
-(function(){{
-  var MODE = {json.dumps(timer_mode)};
-  var DETIK = {durasi_menit * 60};
-  var AUTO = {1 if timer_auto else 0};
-  var mulai = Date.now();
-  function fmt(s){{ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }}
-  if (MODE === "sesi") {{
-    var strip = document.getElementById("timer-strip");
-    var tampil = document.getElementById("timer-tampil");
-    function tick(){{
-      var sisa = DETIK - Math.floor((Date.now()-mulai)/1000);
-      if (sisa <= 0) {{
-        sisa = 0;
-        if (AUTO) {{
-          var f = document.querySelector("form");
-          if (f) {{ f.dataset.kirimOtomatis = "1"; f.submit(); }}
-          return;
-        }}
-        var p = document.getElementById("timer-pesan");
-        if (p) p.style.display = "";
-        if (strip) strip.className = "timer-strip habis";
-      }}
-      if (tampil) tampil.textContent = fmt(sisa);
-    }}
-    tick();
-    setInterval(tick, 1000);
-  }} else if (MODE === "soal") {{
-    var kartu = document.querySelectorAll(".soal");
-    var mulaiSoal = {{}};
-    document.addEventListener("focusin", function(ev){{
-      var k = ev.target.closest ? ev.target.closest(".soal") : null;
-      if (!k) return;
-      var i = Array.prototype.indexOf.call(kartu, k);
-      if (i >= 0 && !(i in mulaiSoal)) mulaiSoal[i] = Date.now();
-    }});
-    function tick(){{
-      var t = Date.now();
-      kartu.forEach(function(k, i){{
-        if (!(i in mulaiSoal)) return;
-        var sisa = DETIK - Math.floor((t - mulaiSoal[i])/1000);
-        if (sisa > 0) return;
-        if (AUTO) {{
-          k.querySelectorAll("input, textarea, button").forEach(function(inp){{
-            inp.disabled = true;
-          }});
-        }}
-        var n = k.querySelector(".soal-timer-note");
-        if (n) n.style.display = "";
-      }});
-    }}
-    setInterval(tick, 1000);
-  }}
-}})();
-</script>
-"""
-
-    # Penjaga kerja anak, selalu terpasang (bukan hanya saat timer):
-    #   - tombol simpan mati + berubah "Menyimpan…" saat mengirim, supaya
-    #     ketukan ganda tidak mengirim lembar dua kali;
-    #   - menutup/meninggalkan halaman dengan isian yang belum disimpan
-    #     minta konfirmasi dulu — geser-balik di HP nyata-nya terjadi;
-    #   - kirim otomatis timer (form.submit()) tidak melewati event submit,
-    #     jadi ditandai data-kirim-otomatis agar lolos dari konfirmasi.
-    jaga = """
-<script>
-(function(){
-  var f = document.querySelector('form');
-  if (!f) return;
-  var kotor = false;
-  f.addEventListener('input', function(){ kotor = true; }, true);
-  f.addEventListener('change', function(){ kotor = true; }, true);
-  f.addEventListener('submit', function(){
-    kotor = false;
-    var b = f.querySelector('button[type=submit]');
-    if (b) { b.disabled = true; b.textContent = 'Menyimpan\u2026'; }
-  });
-  window.addEventListener('pageshow', function(){
-    var b = f.querySelector('button[type=submit]');
-    if (b && b.disabled) { b.disabled = false; b.textContent = 'Simpan jawabanku'; }
-  });
-  window.addEventListener('beforeunload', function(e){
-    if (kotor && f.dataset.kirimOtomatis !== '1') {
-      e.preventDefault();
-      e.returnValue = '';
-    }
-  });
-})();
-</script>
-"""
-
-    isi = f"""<!DOCTYPE html>
-<html lang="id"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kerjakan — {topik_paket.judul_lembar}</title>
-<style>{CSS_MURID}</style></head><body><div class="wrap">
-<div class="murid-header">
-  <img src="{icons.OWL}" alt="" class="owl-mascot" width="36" height="36">
-  <h1>Halo, {_escape(info['nama'])}</h1>
-  <button class="btn secondary hanya-layar" type="button"
-          onclick="window.print()">Cetak / PDF</button>
-  <a class="btn secondary hanya-layar" href="/murid">Sesi lain</a>
-</div>
-<p class="meta-sesi-line">{_escape(info['tanggal'])} &middot; level {_escape(info['level'])}
- &middot; {len(daftar)} soal
- {'&middot; Latihan Cepat' if drill else ''}</p>
-{strip}
-{kabar}
-<div class="petunjuk petunjuk-ikon">
-  <img src="{icons.BOHLAM}" alt="" class="ikon-petunjuk" width="20" height="20">
-  <div>
-    {petunjuk}
-  </div>
-</div>
-<form method="post" action="/murid/kerjakan/{sesi_id}">
-{"".join(kartu)}
-<div class="simpan-strip hanya-layar"><button type="submit" class="btn">Simpan jawabanku</button></div>
-</form>
-<form method="post" action="/keluar" class="hanya-layar" style="margin-top:1rem"><button class="btn secondary" type="submit">Keluar</button></form>
-{jaga}{skrip}
-</div></body></html>"""
-    return isi.encode()
-
-
 def semua_terisi(kon, siswa_id: int, sesi_id: int) -> bool:
     """True bila SEMUA soal sesi ini sudah punya isian.
 
@@ -678,133 +109,6 @@ def semua_terisi(kon, siswa_id: int, sesi_id: int) -> bool:
         (sesi_id,),
     ).fetchone()[0]
     return ada_kosong == 0
-
-
-def halaman_selesai(kon, siswa_id: int, sesi_id: int) -> bytes | None:
-    """Halaman konfirmasi setelah murid selesai mengerjakan semua soal.
-
-    Muncul setelah POST simpan mendeteksi semua soal terisi. Tidak
-    mengandung kunci/malrule/diagnosa — palang terjaga.
-
-    Mengembalikan None kalau sesi bukan milik murid ini (404).
-    """
-    import icons
-
-    info = sesi_murid(kon, siswa_id, sesi_id)
-    if not info:
-        return None
-    from topics import dari_sesi
-
-    topik_paket = dari_sesi(info.get("topik"))
-    total = kon.execute(
-        "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
-    ).fetchone()[0]
-
-    isi = f"""<!DOCTYPE html>
-<html lang="id"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Selesai — {topik_paket.judul_lembar}</title>
-<style>{CSS_MURID}</style></head><body><div class="wrap">
-<div class="murid-header">
-  <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
-  <h1>Halo, {_escape(info['nama'])}!</h1>
-</div>
-<div class="kartu-selesai" style="background:{T.LATAR_KARTU_MURID};border:1px solid {T.BORDER_HALUS};border-radius:{T.RADIUS_KARTU};text-align:center;padding:2rem 1.5rem;margin-top:1rem">
-  <div style="font-size:3rem;line-height:1;margin-bottom:.5rem">🎉</div>
-  <h2 style="margin:0 0 .5rem;color:{T.AKSEN_MURID_UTAMA}">Selesai!</h2>
-  <p style="font-size:1.1rem;margin:.5rem 0 1.5rem;overflow-wrap:anywhere">
-    Semua jawabanmu sudah masuk. Gurumu bisa melihatnya sekarang.
-  </p>
-  <div class="perincian-selesai" style="display:inline-block;text-align:left;background:{T.LATAR_KARTU_SEKUNDER};border-radius:{T.RADIUS_SEDANG};padding:.8rem 1.2rem;margin-bottom:1.5rem">
-    <table style="border-collapse:collapse">
-      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Tanggal</td>
-          <td style="padding:.2rem 0">{_escape(info['tanggal'])}</td></tr>
-      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Level</td>
-          <td style="padding:.2rem 0">{_escape(info['level'])}</td></tr>
-      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Jumlah soal</td>
-          <td style="padding:.2rem 0">{total}</td></tr>
-    </table>
-  </div>
-  <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
-    <a href="/murid" class="btn" style="background:{T.AKSEN_TEAL_TUA};color:{T.TEKS_PUTIH};text-decoration:none;padding:.7rem 1.5rem;border-radius:{T.RADIUS_SEDANG}">
-      Kembali ke daftar sesi
-    </a>
-    <form method="post" action="/keluar" style="margin:0">
-      <button class="btn secondary" type="submit">Keluar</button>
-    </form>
-  </div>
-</div>
-</div></body></html>"""
-    return isi.encode()
-
-
-def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
-    """Halaman /murid — daftar sesi milik murid ini saja.
-
-    Kartu sesi dirancang seperti mockup (murid-sesiku.png): icon lingkaran
-    berwarna di kiri, tanggal + level/topik di tengah, badge pill "N soal"
-    + chevron kanan. Sesuat yang baru dibuat (tanggal hari ini) dapat badge
-    "baru".
-    """
-    import icons
-
-    _WARNA_ICON = ["#0FA3A3", "#FF6B5B", "#FFB020", "#8B5CF6"]
-    from datetime import date
-
-    hari_ini = date.today().isoformat()
-
-    baris = kon.execute(
-        """SELECT id, tanggal, level, topik, mode,
-                  (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah
-           FROM sesi s WHERE s.siswa_id = ?
-           ORDER BY s.id DESC""",
-        (siswa_id,),
-    ).fetchall()
-
-    kartu = []
-    for i, b in enumerate(baris):
-        warna = _WARNA_ICON[i % len(_WARNA_ICON)]
-        baru = b["tanggal"] == hari_ini
-        badge_baru = '<span class="badge-baru">baru</span>' if baru else ""
-        # Tag "latihan" untuk sesi Latihan Cepat (drill) — biar anak tahu
-        # sesi ini bukan diagnosa penuh.
-        tag_latihan = (
-            '<span class="badge-latihan">latihan</span>'
-            if b["mode"] == "drill" else ""
-        )
-        kartu.append(
-            f'<a class="kartu-sesi" href="/murid/kerjakan/{b["id"]}">'
-            f'<span class="ikon-sesi" style="background:{warna}"></span>'
-            f'<span class="isi-sesi">'
-            f'<span class="tanggal-sesi">{_escape(b["tanggal"])}</span>'
-            f'<span class="meta-sesi">level {_escape(b["level"])} '
-            f"&middot; {_escape(_ambil_topik(b))} {tag_latihan}</span>"
-            f"</span>"
-            f'<span class="badge-soal">{b["jumlah"]} soal</span>'
-            f'<span class="ujung-sesi">{badge_baru}</span>'
-            "</a>"
-        )
-
-    kartu_html = "\n".join(kartu) or (
-        '<div class="kosong-hint">Belum ada sesi. Minta gurumu membuatkan.</div>'
-    )
-
-    isi = f"""<!DOCTYPE html>
-<html lang="id"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sesiku</title><style>{CSS_MURID}</style></head><body><div class="wrap">
-<div class="murid-header">
-  <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
-  <h1>Halo, {_escape(nama)}!</h1>
-</div>
-<p class="sub-judul">Pilih sesi untuk mulai latihan</p>
-<form method="post" action="/keluar" class="keluar-form"><button class="btn secondary" type="submit">Keluar</button></form>
-<div class="daftar-sesi-grup">
-{kartu_html}
-</div>
-</div></body></html>"""
-    return isi.encode()
-
 
 def simpan_jawaban_murid(kon, siswa_id: int, sesi_id: int, data: dict) -> int | None:
     """Simpan jawaban dari form murid. Palang: hanya sesi miliknya sendiri.
@@ -858,13 +162,6 @@ def simpan_jawaban_murid(kon, siswa_id: int, sesi_id: int, data: dict) -> int | 
         jumlah += 1
     return jumlah
 
-
-# Tautan akun murid → siswa (multi-keluarga). Akun baru membawa `siswa_id`
-# eksplisit di sandi.json — nama tampilan siswa boleh dobel antar keluarga,
-# nama login tetap unik global. Akun warisan tanpa siswa_id jatuh ke
-# pencocokan nama seperti dulu.
-
-
 def siswa_dari_akun(kon, pengguna: str) -> int | None:
     """ID siswa untuk akun murid ini, atau None kalau belum terhubung."""
     akun = auth.cari_akun(pengguna)
@@ -877,7 +174,6 @@ def siswa_dari_akun(kon, pengguna: str) -> int | None:
         "SELECT id FROM siswa WHERE nama = ? COLLATE NOCASE", (pengguna.strip(),)
     ).fetchone()
     return int(baris["id"]) if baris else None
-
 
 def akun_murid_dari_siswa(kon, siswa_id: int) -> str | None:
     """Nama login akun murid yang terikat ke siswa ini, atau None.
@@ -900,26 +196,6 @@ def akun_murid_dari_siswa(kon, siswa_id: int) -> str | None:
             warisan = a["pengguna"]
     return warisan
 
-
-# Pilihan cepat "Caraku" — dibaca bersama diagnosis.py.
-#
-# Kotak Caraku yang KOSONG membuat diagnosis mati: `diagnosa()` menandai
-# "ada jawaban tanpa Caraku" sebagai N (menebak). Di kertas itu masuk akal —
-# anak yang mengerjakan pasti meninggalkan coretan. Di HP tidak: mengetik
-# kalimat di keyboard ponsel jauh lebih mahal daripada mencoret di kertas,
-# dan anak yang PAHAM pun sering melewatinya.
-#
-# Terkonfirmasi saat uji di HP nyata (25 Agustus 2026): "caraku sering
-# kosong". Artinya anak yang tahu caranya tercatat sebagai penebak, lalu
-# tindak lanjutnya meleset arah.
-#
-# Pilihan yang bisa di-tap membuat kekosongan berhenti ambigu. Ia bukan
-# pengganti coretan — teksnya tetap ada dan tetap lebih berharga — tapi satu
-# ketukan sudah cukup memisahkan "aku hitung satu-satu" (H, wajar untuk
-# levelnya) dari "aku tebak" (N, jujur) dari "aku pakai rumus" (siap naik).
-#
-# Nilai disimpan ke kolom `cara` yang sama, diberi awalan "[pilihan]" supaya
-# guru bisa membedakannya dari tulisan anak sendiri saat membaca laporan.
 PILIHAN_CARA: tuple[tuple[str, str], ...] = (
     ("hitung_satu_satu", "Aku hitung satu per satu"),
     ("lihat_pola", "Aku lihat polanya"),
@@ -931,14 +207,7 @@ PILIHAN_CARA: tuple[tuple[str, str], ...] = (
 
 AWALAN_PILIHAN = "[pilihan] "
 
-# Tanda cara SINTETIS untuk sesi Latihan Cepat (drill). Anak drill tidak
-# diminta menulis Caraku, jadi cara='' di storage — tetapi aturan diagnosa
-# "ada jawaban tanpa kotak Caraku = N (menebak)" akan salah menuduh anak
-# drill menebak. Suntikan ini dipakai SAAT PEMANGGILAN di web.diagnosa_murid
-# (tidak pernah disimpan ke DB) supaya diagnosis drill menghasilkan
-# benar/malrule biasa tanpa pernah N.
 AWALAN_DRILL = "[drill] "
-
 
 def label_pilihan(kode: str) -> str:
     """Label yang dibaca guru untuk sebuah kode pilihan."""

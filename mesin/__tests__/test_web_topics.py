@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import students  # noqa: E402
+import student_pages  # noqa: E402
 import web  # noqa: E402
 import teacher_pages  # noqa: E402
 import reports  # noqa: E402
@@ -262,7 +263,7 @@ def test_halaman_kerja_murid_judul_dari_paket(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Murid Judul")
         sesi_id = database.buat_sesi(kon, sid, seed=80)
-        isi = students.halaman_kerja(kon, sid, sesi_id)
+        isi = student_pages.halaman_kerja(kon, sid, sesi_id)
     assert isi is not None, "halaman kerja tidak terbangkit"
     assert "<title>Kerjakan — Latihan Pola Bilangan</title>" in isi.decode()
 
@@ -283,7 +284,7 @@ def test_murid_daftar_sesi_memuat_topik(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Murid Daftar")
         database.buat_sesi(kon, sid, seed=82)
-        isi = students.halaman_daftar_sesi(kon, sid, "Murid Daftar").decode()
+        isi = student_pages.halaman_daftar_sesi(kon, sid, "Murid Daftar").decode()
     teks = re.sub(r"<[^>]+>", " ", isi)
     assert "pola-bilangan" in teks
 

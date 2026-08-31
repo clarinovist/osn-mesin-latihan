@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import students  # noqa: E402
+import student_pages  # noqa: E402
 import auth  # noqa: E402
 from http_test_kit import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
@@ -83,13 +84,13 @@ def db_dengan_sesi(db_terjaga):
 def test_palang_halaman_kerja_tidak_menyentuh_kunci(db_dengan_sesi):
     db, siswa_id, sesi_id = db_dengan_sesi
     with database.buka(db) as kon:
-        isi = students.halaman_kerja(kon, siswa_id, sesi_id)  # tidak boleh raise
+        isi = student_pages.halaman_kerja(kon, siswa_id, sesi_id)  # tidak boleh raise
 
 
 def test_palang_daftar_sesi_tidak_menyentuh_diagnosis(db_dengan_sesi):
     db, siswa_id, _ = db_dengan_sesi
     with database.buka(db) as kon:
-        students.halaman_daftar_sesi(kon, siswa_id, "AnakUji")
+        student_pages.halaman_daftar_sesi(kon, siswa_id, "AnakUji")
 
 
 def test_palang_soal_murid_tanpa_kunci(db_dengan_sesi):
@@ -113,7 +114,7 @@ def test_murid_tidak_bisa_buka_sesi_anak_lain(db_terjaga):
         sesi_a = database.buat_sesi(kon, a, seed=7)
         assert students.sesi_murid(kon, b, sesi_a) is None
         assert students.soal_murid(kon, sesi_a, b) == []
-        assert students.halaman_kerja(kon, b, sesi_a) is None
+        assert student_pages.halaman_kerja(kon, b, sesi_a) is None
 
 
 def test_simpan_jawaban_menolak_sesi_orang_lain(db_terjaga):
@@ -235,7 +236,7 @@ def test_html_kerja_tanpa_kunci_dalam_form(db):
     with database.buka(db) as kon:
         siswa_id = database.tambah_siswa(kon, "AnakHtml")
         sesi_id = database.buat_sesi(kon, siswa_id, seed=42)
-        halaman = students.halaman_kerja(kon, siswa_id, sesi_id)
+        halaman = student_pages.halaman_kerja(kon, siswa_id, sesi_id)
         assert halaman is not None
         isi = halaman.decode()
         for b in database.isi_sesi(kon, sesi_id):
@@ -333,7 +334,7 @@ def test_konfirmasi_tersimpan_muncul_dengan_jumlah(db_terjaga):
     with database.buka(db_terjaga) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = students.halaman_kerja(kon, sid, ses, tersimpan=3).decode()
+        html = student_pages.halaman_kerja(kon, sid, ses, tersimpan=3).decode()
     assert "Tersimpan" in html
     assert "3 soal" in html
 
@@ -343,7 +344,7 @@ def test_konfirmasi_tidak_muncul_saat_pertama_buka(db_terjaga):
     with database.buka(db_terjaga) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = students.halaman_kerja(kon, sid, ses).decode()
+        html = student_pages.halaman_kerja(kon, sid, ses).decode()
     assert "Tersimpan" not in html
 
 
@@ -360,7 +361,7 @@ def test_pilihan_tampil_kembali_saat_dibuka_lagi(db_terjaga):
         students.simpan_jawaban_murid(
             kon, sid, ses, {f"jwb_{ssid}": "24", f"pilih_{ssid}": "lihat_pola"}
         )
-        html = students.halaman_kerja(kon, sid, ses).decode()
+        html = student_pages.halaman_kerja(kon, sid, ses).decode()
 
     assert 'value="lihat_pola" checked' in html
     # dan pilihan lain tidak ikut tercentang
@@ -373,7 +374,7 @@ def test_semua_pilihan_muncul_di_halaman(db_terjaga):
     with database.buka(db_terjaga) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = students.halaman_kerja(kon, sid, ses).decode()
+        html = student_pages.halaman_kerja(kon, sid, ses).decode()
 
     for kode, label in students.PILIHAN_CARA:
         assert f'value="{kode}"' in html, f"pilihan {kode} hilang"
@@ -428,7 +429,7 @@ def test_halaman_selesai_muncul_untuk_sesi_miliknya(db_dengan_sesi):
         daftar = students.soal_murid(kon, sesi_id, siswa_id)
         data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
         students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
-        html = students.halaman_selesai(kon, siswa_id, sesi_id).decode()
+        html = student_pages.halaman_selesai(kon, siswa_id, sesi_id).decode()
     assert "Selesai" in html
     assert "Simpan jawabanku" not in html, (
         "halaman selesai tidak boleh menyuruh anak menyimpan lagi"
@@ -444,7 +445,7 @@ def test_halaman_selesai_none_untuk_sesi_orang_lain(db_terjaga):
         sid_a = database.tambah_siswa(kon, "AnakA")
         sid_b = database.tambah_siswa(kon, "AnakB")
         ses_a = database.buat_sesi(kon, sid_a, seed=42)
-        assert students.halaman_selesai(kon, sid_b, ses_a) is None
+        assert student_pages.halaman_selesai(kon, sid_b, ses_a) is None
 
 
 def test_halaman_selesai_palang_bersih(db_terjaga):
@@ -456,7 +457,7 @@ def test_halaman_selesai_palang_bersih(db_terjaga):
         daftar = students.soal_murid(kon, ses, sid)
         data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
         students.simpan_jawaban_murid(kon, sid, ses, data)
-        html = students.halaman_selesai(kon, sid, ses).decode()
+        html = student_pages.halaman_selesai(kon, sid, ses).decode()
     for kata in ("kunci", "malrule", "diagnosa", "jawaban_benar"):
         assert kata.lower() not in html.lower()
 
