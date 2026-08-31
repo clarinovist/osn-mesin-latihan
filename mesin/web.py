@@ -231,11 +231,16 @@ class Penangan(BaseHTTPRequestHandler):
                         urllib.parse.urlparse(self.path).query
                     )
                     pesan = (q.get("pesan") or [""])[0]
+                    sorot_raw = (q.get("sorot") or [""])[0]
+                    try:
+                        sorot = int(sorot_raw) if sorot_raw else None
+                    except ValueError:
+                        sorot = None
                     with database.buka() as kon:
                         return self._kirim(
                             halaman_utama(
                                 kon, pesan=pesan, pemilik=ident[0],
-                                peran=ident[1],
+                                peran=ident[1], sorot=sorot,
                             )
                         )
                 except Exception:
@@ -814,17 +819,20 @@ class Penangan(BaseHTTPRequestHandler):
                     f"{', '.join(html.escape(t) for t in daftar_topik())}.</p>"
                 )
                 return self._kirim(_halaman("Topik tidak dikenal", pesan), 400)
+            sesi_id = None
+            nama_siswa = None
             with database.buka() as kon:
                 if not self._bisa_lihat_siswa(kon, siswa_id):
                     return self._kirim(
                         _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                     )
                 siswa = kon.execute(
-                    "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
+                    "SELECT nama, tingkat FROM siswa WHERE id = ?", (siswa_id,)
                 ).fetchone()
                 if not siswa:
                     return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
                 level = siswa["tingkat"] if siswa["tingkat"] in LEVEL else LEVEL_BAWAAN
+                nama_siswa = siswa["nama"]
                 if pilihan_topik not in _topik_untuk_level(level):
                     pesan = (
                         f"<h1>Topik belum tersedia untuk level ini</h1>"
@@ -866,12 +874,14 @@ class Penangan(BaseHTTPRequestHandler):
                     mode=pilihan_mode, timer_mode=timer_mode,
                     durasi_menit=durasi_menit, timer_auto=timer_auto,
                 )
-            # Alihkan ke halaman sesinya, bukan menampilkan ulang halaman
-            # utama: setelah membuat sesi yang dibutuhkan guru adalah
-            # lembarnya, dan pengalihan mencegah sesi ganda kalau halaman
-            # di-muat ulang.
+            # Tetap di dashboard (opsi 1): sesi baru adalah tempat anak
+            # mengerjakan, bukan halaman guru yang kosong. Banner + sorotan baris
+            # menunjukkan sesi mana yang baru, tanpa menampilkan lembar kosong.
+            # PRG tetap dijaga: refresh tidak membuat sesi ganda.
+            pesan_sukses = f"Sesi baru untuk {nama_siswa} berhasil dibuat — sesi #{sesi_id} siap dikerjakan."
+            qs = urllib.parse.urlencode({"pesan": pesan_sukses, "sorot": sesi_id})
             self.send_response(303)
-            self.send_header("Location", f"/sesi/{sesi_id}")
+            self.send_header("Location", f"/?{qs}")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return

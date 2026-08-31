@@ -178,10 +178,16 @@ def halaman_utama(
     pesan: str = "",
     pemilik: str | None = None,
     peran: str = "guru",
+    sorot: int | None = None,
 ) -> bytes:
     """Dashboard pengelola. `pemilik=None` = semua keluarga (admin);
     string = hanya keluarga itu. Panggilan lama tanpa argumen tetap
-    melihat semuanya — perilaku mode lokal dan test langsung."""
+    melihat semuanya — perilaku mode lokal dan test langsung.
+
+    `sorot` = id sesi yang baru dibuat — barisnya diberi sorotan supaya
+    guru langsung tahu sesi mana yang baru (opsi 1: tetap di dashboard,
+    jangan lompat ke /sesi/ yang kosong).
+    """
     baris = []
     admin = peran == "admin"
     # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
@@ -213,8 +219,10 @@ def halaman_utama(
             (s["id"],),
         ).fetchall()
 
+        def _kelas_sorot(rid):
+            return "sorot-baru" if sorot is not None and rid == sorot else ""
         item = "".join(
-            f'<tr><td class="kolom-sesi"><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
+            f'<tr class="{_kelas_sorot(r["id"])}"><td class="kolom-sesi"><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
             f'{_badge_mode(r)}</td>'
             f'<td class="kolom-tanggal">{r["tanggal"]}</td>'
             f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
@@ -565,8 +573,7 @@ def halaman_sesi(
         f'seed {info["seed"]} {badge_mode} '
         f'&middot; '
         f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
-        f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a> '
-        f'&middot; <a href="/laporan/{info["siswa_id"]}">laporan siswa ini</a></p>'
+        f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a></p>'
         f"{tombol_hapus}"
         f"{kabar}"
         f"{blok_cerita}"

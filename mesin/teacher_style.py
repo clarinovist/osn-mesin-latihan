@@ -224,6 +224,18 @@ th {{ background: {T.LATAR_KARTU_SEKUNDER}; color: {T.TEKS_JUDUL}; font-weight: 
 .kosong {{ color: {T.TEKS_SUBTLE}; font-style: italic; }}
 .tipe {{ color: {T.TEKS_SUBTLE}; font-size: .82rem; }}
 .tabel-wrap {{ overflow-x: auto; }}
+/* Sesi baru: baris disorot 1x di dashboard (opsi 1 — tanpa lompat ke /sesi/). */
+tr.sorot-baru td {{
+  background: {T.BADGE_GURU_BG}; color: {T.BADGE_GURU_TEKS};
+}}
+tr.sorot-baru a {{ color: #fff; text-decoration: underline; }}
+@media (prefers-reduced-motion: no-preference) {{
+  tr.sorot-baru {{ animation: sorot-masuk 1.4s ease-out; }}
+  @keyframes sorot-masuk {{
+    0% {{ filter: brightness(1.4); }}
+    100% {{ filter: none; }}
+  }}
+}}
 
 /* ── Form ──────────────────────────────────────────────────────────── */
 label {{ display: block; font-size: .84rem; color: {T.TEKS_SUBTLE}; margin: .55rem 0 .2rem; }}

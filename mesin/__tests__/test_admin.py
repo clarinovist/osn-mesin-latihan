@@ -254,7 +254,7 @@ def test_halaman_sesi_admin_hanya_baca(server):
     assert "Simpan &amp; diagnosis" not in isi, "form tulis bocor ke admin"
     assert "Hapus sesi" not in isi
     assert "Upload foto" not in isi
-    assert "laporan siswa ini" in isi, "jalur baca harus tetap ada"
+    assert "lembar soal" in isi, "jalur baca harus tetap ada"
 
 
 def test_admin_laporan_tetap_terbuka(server):
