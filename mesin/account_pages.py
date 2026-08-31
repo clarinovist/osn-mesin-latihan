@@ -565,6 +565,41 @@ def proses_akun(
 
     return "", "Aksi tidak dikenal."
 
+def proses_admin(data: dict) -> tuple[str, str]:
+    """Jalankan aksi POST /admin yang hanya menyentuh berkas sandi.
+
+    Tanpa parameter kon — satu-satunya tulisan tambahan yang sah dari
+    panel admin adalah menyetel ulang sandi orang tua, dan itu murni
+    urusan auth.json, bukan basis data keluarga (kebijakan admin
+    baca-semua-tulis-tidak tetap berlaku untuk data murid). guru_baru
+    sengaja TIDAK ditangani di sini — tetap di web.py.
+
+    Format kembalian (pesan, galat), persis pola proses_akun.
+    """
+    aksi = data.get("aksi", "")
+
+    if aksi == "guru_sandi":
+        nama = (data.get("nama") or "").strip()
+        baru = data.get("baru", "")
+        if not nama:
+            return "", "Pilih akunnya dulu."
+        if len(baru) < 12:
+            return "", "Kata sandi minimal 12 karakter."
+        # Cek peran di sini, bukan diam-diam di setel_sandi_guru: admin
+        # perlu tahu kalau nama yang dipilih bukan akun orang tua —
+        # sandi admin milik deploy dan tidak boleh tersentuh panel.
+        a = auth.cari_akun(nama)
+        if not a or a.get("peran", "guru") != "guru":
+            return "", f"Akun {nama} tidak ditemukan."
+        if not auth.setel_sandi_guru(nama, baru):
+            return "", f"Akun {nama} tidak ditemukan."
+        return (
+            f"Sandi {nama} diperbarui. Orang tua bisa masuk dengan sandi baru.",
+            "",
+        )
+
+    return "", "Aksi tidak dikenal."
+
 def halaman_admin(
     kon, pesan: str = "", galat: str = "", pengguna: str = ""
 ) -> bytes:
@@ -627,6 +662,51 @@ def halaman_admin(
     if galat:
         kabar += f'<div class="pesan galat">{html.escape(galat)}</div>'
 
+    # Kartu setel ulang sandi orang tua: satu-satunya aksi tulis kedua di
+    # panel ini (menyentuh auth.json saja). Daftar pilihannya hanya akun
+    # ber-peran guru — sandi admin milik deploy, bukan ranah panel.
+    daftar_guru = [a for a in akun if a.get("peran", "guru") == "guru"]
+    if daftar_guru:
+        opsi_guru = "".join(
+            f'<option value="{html.escape(a["pengguna"])}">'
+            f'{html.escape(a["pengguna"])}</option>'
+            for a in daftar_guru
+        )
+        pilih_guru = (
+            '<select name="nama" required>'
+            '<option value="">— pilih akun —</option>'
+            f"{opsi_guru}</select>"
+        )
+        dis_guru = ""
+    else:
+        pilih_guru = (
+            '<select name="nama" disabled>'
+            "<option>belum ada akun orang tua</option></select>"
+        )
+        dis_guru = " disabled"
+    kartu_sandi_guru = (
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">🔑</span>'
+        f"<h2>Setel ulang sandi orang tua</h2></div>"
+        f'<p class="sub">Untuk orang tua yang lupa sandinya: akunnya tidak '
+        f"perlu dihapus — begitu sandinya disetel ulang, anak-anaknya tetap "
+        f"tertaut ke akun ini. Sandi akun pengelola tidak bisa diganti "
+        f"dari sini.</p>"
+        f'<form method="post" action="/admin">'
+        f'<input type="hidden" name="aksi" value="guru_sandi">'
+        f'<div class="baris">'
+        f'<div><label>Akun orang tua</label>'
+        f"{pilih_guru}</div>"
+        f"<div><label>Sandi baru (minimal 12 karakter)</label>"
+        f'<input type="password" name="baru" autocomplete="new-password" '
+        f'required minlength="12"></div>'
+        f"</div>"
+        f'<p style="margin-top:.8rem">'
+        f'<button type="submit" class="tombol-sekunder"{dis_guru}>'
+        f"Setel sandi baru</button></p>"
+        f"</form></div>"
+    )
+
     return _halaman(
         "Panel Pengelola",
         f"<h1>Panel Pengelola</h1>"
@@ -655,6 +735,7 @@ def halaman_admin(
         f'<p class="sub">Orang tua juga bisa mendaftar sendiri di '
         f'<a href="/daftar">/daftar</a> — setelah isolasi, pendaftar baru '
         f"tidak melihat data keluarga mana pun.</p>"
-        f"</div>",
+        f"</div>"
+        f"{kartu_sandi_guru}",
         ident=(pengguna, "admin") if pengguna else None,
     )

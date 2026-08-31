@@ -1,4 +1,4 @@
-"""Halaman sisi anak: kerjakan sesi, selesai, daftar sesi.
+"""Halaman sisi anak: kerjakan sesi, daftar sesi ber-status.
 
 Dipecah dari students.py (refactor 31 Aug 2026) — fungsi pindah utuh,
 perilaku identik. students.py kini lapisan data; modul ini lapisan tampilan
@@ -241,6 +241,28 @@ input:disabled, textarea:disabled {{
   font-size: 0.7rem; font-weight: 700; color: {T.AKSEN_TEAL_TUA};
   background: {T.LATAR_KARTU_SEKUNDER}; padding: 0.15rem 0.4rem;
   border-radius: {T.RADIUS_PIL}; white-space: nowrap; margin-left: 0.25rem;
+}}
+/* Badge status pengerjaan (menggantikan badge-tanggal "baru"): satu warna
+   untuk satu keadaan sesuai kosakata status aplikasi — coral = belum
+   disentuh, amber = sedang dikerjakan, teal netral = menunggu review guru,
+   teal kuat = sudah dinilai. Ukuran disamakan supaya kartu tidak melompat
+   saat statusnya berubah. */
+.badge-kerja {{
+  font-size: 0.7rem; font-weight: 700;
+  color: {T.BADGE_ADMIN_TEKS};
+  background: rgba(255, 176, 32, 0.2);  /* AKSEN_MURID_AMBER versi lembut */
+  padding: 0.15rem 0.5rem;
+  border-radius: {T.RADIUS_PIL}; white-space: nowrap;
+}}
+.badge-review {{
+  font-size: 0.7rem; font-weight: 700; color: {T.AKSEN_TEAL_TUA};
+  background: {T.LATAR_KARTU_SEKUNDER}; padding: 0.15rem 0.5rem;
+  border-radius: {T.RADIUS_PIL}; white-space: nowrap;
+}}
+.badge-selesai {{
+  font-size: 0.7rem; font-weight: 700; color: {T.TEKS_PUTIH};
+  background: {T.STATUS_KUAT}; padding: 0.15rem 0.5rem;
+  border-radius: {T.RADIUS_PIL}; white-space: nowrap;
 }}
 .kosong-hint {{
   border: 1.5px dashed #ccd3dd; border-radius: {T.RADIUS_KARTU};
@@ -574,79 +596,33 @@ def halaman_kerja(
 </div></body></html>"""
     return isi.encode()
 
-def halaman_selesai(kon, siswa_id: int, sesi_id: int) -> bytes | None:
-    """Halaman konfirmasi setelah murid selesai mengerjakan semua soal.
-
-    Muncul setelah POST simpan mendeteksi semua soal terisi. Tidak
-    mengandung kunci/malrule/diagnosa — palang terjaga.
-
-    Mengembalikan None kalau sesi bukan milik murid ini (404).
-    """
-    import icons
-
-    info = sesi_murid(kon, siswa_id, sesi_id)
-    if not info:
-        return None
-    topik_paket = dari_sesi(info.get("topik"))
-    total = kon.execute(
-        "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
-    ).fetchone()[0]
-
-    isi = f"""<!DOCTYPE html>
-<html lang="id"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Selesai — {topik_paket.judul_lembar}</title>
-<style>{CSS_MURID}</style></head><body><div class="wrap">
-<div class="murid-header">
-  <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
-  <h1>Halo, {_escape(info['nama'])}!</h1>
-</div>
-<div class="kartu-selesai" style="background:{T.LATAR_KARTU_MURID};border:1px solid {T.BORDER_HALUS};border-radius:{T.RADIUS_KARTU};text-align:center;padding:2rem 1.5rem;margin-top:1rem">
-  <div style="font-size:3rem;line-height:1;margin-bottom:.5rem">🎉</div>
-  <h2 style="margin:0 0 .5rem;color:{T.AKSEN_MURID_UTAMA}">Selesai!</h2>
-  <p style="font-size:1.1rem;margin:.5rem 0 1.5rem;overflow-wrap:anywhere">
-    Semua jawabanmu sudah masuk. Gurumu bisa melihatnya sekarang.
-  </p>
-  <div class="perincian-selesai" style="display:inline-block;text-align:left;background:{T.LATAR_KARTU_SEKUNDER};border-radius:{T.RADIUS_SEDANG};padding:.8rem 1.2rem;margin-bottom:1.5rem">
-    <table style="border-collapse:collapse">
-      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Tanggal</td>
-          <td style="padding:.2rem 0">{_escape(info['tanggal'])}</td></tr>
-      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Level</td>
-          <td style="padding:.2rem 0">{_escape(info['level'])}</td></tr>
-      <tr><td style="padding:.2rem .6rem .2rem 0;color:{T.TEKS_SUBTLE}">Jumlah soal</td>
-          <td style="padding:.2rem 0">{total}</td></tr>
-    </table>
-  </div>
-  <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
-    <a href="/murid" class="btn" style="background:{T.AKSEN_TEAL_TUA};color:{T.TEKS_PUTIH};text-decoration:none;padding:.7rem 1.5rem;border-radius:{T.RADIUS_SEDANG}">
-      Kembali ke daftar sesi
-    </a>
-    <form method="post" action="/keluar" style="margin:0">
-      <button class="btn secondary" type="submit">Keluar</button>
-    </form>
-  </div>
-</div>
-</div></body></html>"""
-    return isi.encode()
-
-def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
+def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None = None) -> bytes:
     """Halaman /murid — daftar sesi milik murid ini saja.
 
     Kartu sesi dirancang seperti mockup (murid-sesiku.png): icon lingkaran
     berwarna di kiri, tanggal + level/topik di tengah, badge pill "N soal"
-    + chevron kanan. Sesuat yang baru dibuat (tanggal hari ini) dapat badge
-    "baru".
+    + chevron kanan. Badge mengikuti STATUS pengerjaan, bukan tanggal —
+    yang dipedulikan anak/guru adalah: sudah dikerjakan? sudah direview?
+    berapa nilainya?
+
+    `sesi_selesai` = id sesi yang BARU SAJA dikirim anak; hanya menampilkan
+    banner konfirmasi di atas daftar (pengganti halaman /murid/selesai).
     """
     import icons
 
     _WARNA_ICON = ["#0FA3A3", "#FF6B5B", "#FFB020", "#8B5CF6"]
-    from datetime import date
-
-    hari_ini = date.today().isoformat()
 
     baris = kon.execute(
         """SELECT id, tanggal, level, topik, mode,
-                  (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah
+                  (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
+                  s.selesai, s.direview,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   WHERE ss.sesi_id = s.id) AS terisi,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   JOIN diagnosis d ON d.jawaban_id = j.id
+                   WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
            FROM sesi s WHERE s.siswa_id = ?
            ORDER BY s.id DESC""",
         (siswa_id,),
@@ -655,8 +631,22 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
     kartu = []
     for i, b in enumerate(baris):
         warna = _WARNA_ICON[i % len(_WARNA_ICON)]
-        baru = b["tanggal"] == hari_ini
-        badge_baru = '<span class="badge-baru">baru</span>' if baru else ""
+        # Badge berbasis status; urutan if = urutan hidup sesi. Subquery di
+        # atas sengaja dihitung di sini (bukan lewat view ringkasan_sesi):
+        # daftar butuh angka mentah per sesi tanpa GROUP BY gabungan.
+        # Tanggal tidak dipakai — sesi kemarin yang belum disentuh tetap
+        # "Baru", dan itu yang dimengerti anak.
+        if b["terisi"] == 0:
+            badge_status = '<span class="badge-baru">Baru</span>'
+        elif b["selesai"] is None:
+            badge_status = '<span class="badge-kerja">Dikerjakan</span>'
+        elif b["direview"] is None:
+            badge_status = '<span class="badge-review">Masih di review</span>'
+        else:
+            badge_status = (
+                f'<span class="badge-selesai">Selesai · {b["benar"]}'
+                f'/{b["jumlah"]} benar</span>'
+            )
         # Tag "latihan" untuk sesi Latihan Cepat (drill) — biar anak tahu
         # sesi ini bukan diagnosa penuh.
         tag_latihan = (
@@ -672,13 +662,22 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
             f"&middot; {_escape(_ambil_topik(b))} {tag_latihan}</span>"
             f"</span>"
             f'<span class="badge-soal">{b["jumlah"]} soal</span>'
-            f'<span class="ujung-sesi">{badge_baru}</span>'
+            f'<span class="ujung-sesi">{badge_status}</span>'
             "</a>"
         )
 
     kartu_html = "\n".join(kartu) or (
         '<div class="kosong-hint">Belum ada sesi. Minta gurumu membuatkan.</div>'
     )
+
+    # Banner konfirmasi setelah submit penuh (QA): anak dibawa LANGSUNG
+    # kembali ke daftar sesi — bukan ke halaman terpisah — dengan kabar yang
+    # jelas bahwa semua jawabannya sudah masuk.
+    banner = ""
+    if sesi_selesai is not None:
+        banner = (
+            '<div class="tersimpan">🎉 Selesai! Semua jawabanmu sudah masuk.</div>'
+        )
 
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
@@ -688,6 +687,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str) -> bytes:
   <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
   <h1>Halo, {_escape(nama)}!</h1>
 </div>
+{banner}
 <p class="sub-judul">Pilih sesi untuk mulai latihan</p>
 <form method="post" action="/keluar" class="keluar-form"><button class="btn secondary" type="submit">Keluar</button></form>
 <div class="daftar-sesi-grup">

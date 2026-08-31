@@ -108,28 +108,33 @@ def _badge_mode(baris) -> str:
         return '<span class="badge-mode">Latihan Cepat</span>'
     return ""
 
-def _fmt_durasi(mulai, selesai) -> str:
+def _fmt_durasi(mulai, selesai, dicatat_awal=None, dicatat_akhir=None) -> str:
     """Durasi pengerjaan mm:ss dari kolom mulai/selesai sesi.
 
-    Keduanya harus terisi — sesi yang belum selesai jujur tampil '—',
-    bukan durasi setengah jalan yang menyesatkan. Sesi yang dicatat
-    lewat kertas tidak punya keduanya dan memang tidak bisa diukur.
+    Utama: selesai − mulai, dan hanya bila keduanya tercatat. Kalau salah
+    satu tidak ada (sesi kertas yang dilengkapi lewat foto) atau durasinya
+    nol — versi lama mencatat mulai saat simpan pertama, jadi sesi sekali
+    simpan tercatat 0 detik — jatuh ke rentang waktu tercatatnya jawaban
+    (dicatat_awal → dicatat_akhir): perkiraan yang tetap jujur karena tiap
+    simpan mencatat waktunya. Tanpa jejak waktu sama sekali, tampil '—';
+    mengarang durasi lebih buruk daripada menampilkan kosong.
     """
     BENTUK = "%Y-%m-%d %H:%M:%S"
-    if not mulai or not selesai:
-        return "&mdash;"
-    try:
-        detik = int(
-            (
-                datetime.strptime(str(selesai), BENTUK)
-                - datetime.strptime(str(mulai), BENTUK)
-            ).total_seconds()
-        )
-    except ValueError:
-        return "&mdash;"
-    if detik <= 0:
-        return "&mdash;"
-    return f"{detik // 60}:{detik % 60:02d}"
+    for awal, akhir in ((mulai, selesai), (dicatat_awal, dicatat_akhir)):
+        if not awal or not akhir:
+            continue
+        try:
+            detik = int(
+                (
+                    datetime.strptime(str(akhir), BENTUK)
+                    - datetime.strptime(str(awal), BENTUK)
+                ).total_seconds()
+            )
+        except ValueError:
+            continue
+        if detik > 0:
+            return f"{detik // 60}:{detik % 60:02d}"
+    return "&mdash;"
 
 def _badge_peran(peran: str) -> str:
     """Penanda peran di topbar — supaya siapa pun langsung tahu di sisi mana
@@ -189,6 +194,12 @@ def halaman_utama(
         sesi = kon.execute(
             """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
                       s.mulai, s.selesai,
+                      (SELECT MIN(j.dicatat) FROM sesi_soal ss
+                       JOIN jawaban j ON j.sesi_soal_id = ss.id
+                       WHERE ss.sesi_id = s.id) AS dicatat_awal,
+                      (SELECT MAX(j.dicatat) FROM sesi_soal ss
+                       JOIN jawaban j ON j.sesi_soal_id = ss.id
+                       WHERE ss.sesi_id = s.id) AS dicatat_akhir,
                       (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
                       (SELECT COUNT(*) FROM sesi_soal ss
                        JOIN jawaban j ON j.sesi_soal_id = ss.id
@@ -210,7 +221,7 @@ def halaman_utama(
             f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
             f'<td class="angka">{r["benar"]}/{r["n"]}</td>'
-            f'<td class="angka">{_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None))}</td></tr>'
+            f'<td class="angka">{_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</td></tr>'
             for r in sesi
         ) or '<tr><td colspan="7" class="kosong">belum ada sesi</td></tr>'
 

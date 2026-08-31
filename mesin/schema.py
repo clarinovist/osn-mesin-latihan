@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS sesi (
     tanggal   TEXT    NOT NULL DEFAULT (date('now', '+7 hours')),
     mulai     TEXT,
     selesai   TEXT,
+    -- diisi saat guru membuka halaman sesi yang sudah terisi penuh — penanda "guru sudah melihat hasilnya"
+    direview  TEXT,
     catatan   TEXT    NOT NULL DEFAULT '',
     dibuat    TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
 );
@@ -218,6 +220,9 @@ MIGRASI: list[tuple[str, str, str]] = [
     # di definisi tabel — database.rebuild_siswa_unik yang menggantinya jadi
     # UNIQUE(nama, pemilik) lewat rebuild tabel.
     ("siswa", "pemilik", "ALTER TABLE siswa ADD COLUMN pemilik TEXT NOT NULL DEFAULT ''"),
+    # Penanda guru sudah melihat hasil sesi — pelengkap `selesai` untuk
+    # badge status di daftar sesi anak (student_pages.halaman_daftar_sesi).
+    ("sesi", "direview", "ALTER TABLE sesi ADD COLUMN direview TEXT"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.

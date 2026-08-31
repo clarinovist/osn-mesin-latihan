@@ -379,3 +379,36 @@ def setel_sandi_murid(
     p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
     p.chmod(0o600)
     return True
+
+
+def setel_sandi_guru(
+    pengguna: str, sandi_baru: str, path: Path | None = None
+) -> bool:
+    """Setel ulang sandi akun orang tua/guru yang lupa sandinya.
+
+    Admin yang membuatkan akun orang tua harus bisa menyetel ulang sandinya
+    tanpa menghapus akun — menghapus lalu membuat ulang memutus tautan
+    akun ke siswa-siswanya dan mengubah "pemilik" data keluarga. Hanya
+    peran "guru" yang disetel di sini: sandi admin adalah milik deploy
+    (disetel saat pemasangan), bukan ranah panel — kalau panel bisa
+    menggantinya, satu sesi admin yang bocor berarti sandi penjaga
+    tertinggi ikut bisa ditukar.
+
+    Mengembalikan False bila tidak ada akun guru yang cocok — pemanggil
+    (proses_admin) yang menerjemahkannya jadi pesan galat yang jelas.
+    """
+    akun = muat_akun(path)
+    ubah = False
+    for a in akun:
+        if (
+            a["pengguna"].strip().lower() == pengguna.strip().lower()
+            and a.get("peran", "guru") == "guru"
+        ):
+            a.update(buat_hash(sandi_baru))
+            ubah = True
+    if not ubah:
+        return False
+    p = path or BERKAS_SANDI
+    p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
+    p.chmod(0o600)
+    return True

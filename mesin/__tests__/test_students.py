@@ -381,7 +381,7 @@ def test_semua_pilihan_muncul_di_halaman(db_terjaga):
         assert label in html, f"label {label!r} hilang"
 
 
-# ── Halaman Selesai (setelah semua soal terisi) ─────────────────────────
+# ── Semua soal terisi (penentu status "sudah dikirim") ──────────────────
 
 
 def test_semua_terisi_false_saat_kosong(db_terjaga):
@@ -422,47 +422,111 @@ def test_semua_terisi_false_untuk_sesi_orang_lain(db_terjaga):
         assert students.semua_terisi(kon, sid_b, ses_a) is False
 
 
-def test_halaman_selesai_muncul_untuk_sesi_miliknya(db_dengan_sesi):
-    """Halaman selesai render untuk murid yang punya sesi itu."""
-    db, siswa_id, sesi_id = db_dengan_sesi
-    with database.buka(db) as kon:
-        daftar = students.soal_murid(kon, sesi_id, siswa_id)
-        data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
-        students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
-        html = student_pages.halaman_selesai(kon, siswa_id, sesi_id).decode()
-    assert "Selesai" in html
-    assert "Simpan jawabanku" not in html, (
-        "halaman selesai tidak boleh menyuruh anak menyimpan lagi"
-    )
-    assert 'name="jwb_' not in html, (
-        "halaman selesai tidak boleh memuat form jawaban"
-    )
+# ── Badge status daftar sesi (/murid) ────────────────────────────────────
+#
+# Badge mengikuti STATUS pengerjaan, bukan tanggal: belum disentuh → "Baru",
+# sebagian terisi → "Dikerjakan", sudah dikirim → "Masih di review",
+# sudah dinilai guru → "Selesai · N/M benar". Markup <span> diperiksa utuh
+# supaya kata yang kebetulan muncul di teks lain tidak mengaburkan hasil.
 
 
-def test_halaman_selesai_none_untuk_sesi_orang_lain(db_terjaga):
-    """Murid lain tidak boleh membuka halaman selesai sesi orang lain."""
+def _isi_semua_jawaban(kon, siswa_id, sesi_id) -> int:
+    """Isi SEMUA kotak jawaban sesi lewat jalur murid yang sama dengan HP."""
+    data = {
+        f"jwb_{s['sesi_soal_id']}": "1"
+        for s in students.soal_murid(kon, sesi_id, siswa_id)
+    }
+    return students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
+
+
+def test_daftar_sesi_tanpa_jawaban_berbadge_baru(db_terjaga):
+    """Sesi yang belum disentuh sama sekali → "Baru" (coral), bukan status
+    lain — meski sesinya dibuat kemarin."""
     with database.buka(db_terjaga) as kon:
-        sid_a = database.tambah_siswa(kon, "AnakA")
-        sid_b = database.tambah_siswa(kon, "AnakB")
-        ses_a = database.buat_sesi(kon, sid_a, seed=42)
-        assert student_pages.halaman_selesai(kon, sid_b, ses_a) is None
+        sid = database.tambah_siswa(kon, "AnakDaftar")
+        database.buat_sesi(kon, sid, seed=42)
+        html = student_pages.halaman_daftar_sesi(kon, sid, "AnakDaftar").decode()
+    assert '<span class="badge-baru">Baru</span>' in html
+    assert "Masih di review" not in html
+    assert "Semua jawabanmu sudah masuk" not in html, (
+        "banner konfirmasi hanya boleh muncul bila sesi_selesai diberikan"
+    )
 
 
-def test_halaman_selesai_palang_bersih(db_terjaga):
-    """Halaman selesai tidak boleh membocorkan kunci/malrule/diagnosa —
-    diuji lewat fixture palang yang meledak pada kolom terlarang."""
+def test_daftar_sesi_sebagian_terisi_berbadge_dikerjakan(db_terjaga):
+    """Satu jawaban dari 12 → anak sedang mengerjakan, badge amber."""
     with database.buka(db_terjaga) as kon:
-        sid = database.tambah_siswa(kon, "AnakSelesai")
+        sid = database.tambah_siswa(kon, "AnakDaftar")
         ses = database.buat_sesi(kon, sid, seed=42)
-        daftar = students.soal_murid(kon, ses, sid)
-        data = {f"jwb_{s['sesi_soal_id']}": "1" for s in daftar}
-        students.simpan_jawaban_murid(kon, sid, ses, data)
-        html = student_pages.halaman_selesai(kon, sid, ses).decode()
-    for kata in ("kunci", "malrule", "diagnosa", "jawaban_benar"):
-        assert kata.lower() not in html.lower()
+        ssid = students.soal_murid(kon, ses, sid)[0]["sesi_soal_id"]
+        students.simpan_jawaban_murid(kon, sid, ses, {f"jwb_{ssid}": "24"})
+        html = student_pages.halaman_daftar_sesi(kon, sid, "AnakDaftar").decode()
+    assert '<span class="badge-kerja">Dikerjakan</span>' in html
+    assert "Masih di review" not in html
 
 
-# ── E2E HTTP: alur simpan → selesai ───────────────────────────────────
+def test_daftar_sesi_sudah_dikirim_berbadge_masih_di_review(db_terjaga):
+    """Semua soal terisi dan selesai dicatat, tapi guru belum melihat →
+    "Masih di review" — inilah ket yang dulu tidak pernah ada."""
+    with database.buka(db_terjaga) as kon:
+        sid = database.tambah_siswa(kon, "AnakDaftar")
+        ses = database.buat_sesi(kon, sid, seed=42)
+        assert _isi_semua_jawaban(kon, sid, ses)
+        kon.execute(
+            "UPDATE sesi SET selesai = '2026-08-30 09:00:00' WHERE id = ?",
+            (ses,),
+        )
+        html = student_pages.halaman_daftar_sesi(kon, sid, "AnakDaftar").decode()
+    assert '<span class="badge-review">Masih di review</span>' in html
+
+
+def test_daftar_sesi_sudah_direview_berbadge_selesai_dengan_skor(db_terjaga):
+    """Guru sudah membuka hasil (direview terisi) + diagnosis mencatat satu
+    jawaban benar → badge "Selesai · 1/{jumlah} benar": nilainya terlihat
+    anak langsung dari daftar, tanpa harus membuka sesinya."""
+    with database.buka(db_terjaga) as kon:
+        sid = database.tambah_siswa(kon, "AnakDaftar")
+        ses = database.buat_sesi(kon, sid, seed=42)
+        assert _isi_semua_jawaban(kon, sid, ses)
+        kon.execute(
+            "UPDATE sesi SET selesai = '2026-08-30 09:00:00',"
+            " direview = '2026-08-30 10:00:00' WHERE id = ?",
+            (ses,),
+        )
+        jwb_id = kon.execute(
+            """SELECT j.id FROM jawaban j
+               JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
+               WHERE ss.sesi_id = ? LIMIT 1""",
+            (ses,),
+        ).fetchone()["id"]
+        kon.execute(
+            "INSERT INTO diagnosis (jawaban_id, benar) VALUES (?, 1)", (jwb_id,)
+        )
+        jumlah = kon.execute(
+            "SELECT COUNT(*) AS n FROM sesi_soal WHERE sesi_id = ?", (ses,)
+        ).fetchone()["n"]
+        html = student_pages.halaman_daftar_sesi(kon, sid, "AnakDaftar").decode()
+    assert f'<span class="badge-selesai">Selesai · 1/{jumlah} benar</span>' in html
+
+
+def test_daftar_sesi_banner_setelah_submit_penuh(db_terjaga):
+    """QA: setelah submit semua soal, anak kembali ke DAFTAR sesi dengan
+    banner konfirmasi — bukan ke halaman terpisah. Banner hanya muncul bila
+    parameter sesi_selesai diisi."""
+    with database.buka(db_terjaga) as kon:
+        sid = database.tambah_siswa(kon, "AnakDaftar")
+        ses = database.buat_sesi(kon, sid, seed=42)
+        html_biasa = student_pages.halaman_daftar_sesi(
+            kon, sid, "AnakDaftar"
+        ).decode()
+        html_banner = student_pages.halaman_daftar_sesi(
+            kon, sid, "AnakDaftar", sesi_selesai=ses
+        ).decode()
+    assert '<div class="tersimpan">🎉 Selesai! Semua jawabanmu sudah masuk.</div>' in html_banner
+    assert "Semua jawabanmu sudah masuk" not in html_biasa
+
+
+# ── E2E HTTP: alur simpan jawaban ────────────────────────────────────────
 
 
 @pytest.fixture()
@@ -488,26 +552,6 @@ def _bikin_sesi_untuk_feby(server) -> int:
         ).fetchone()["id"]
 
 
-def test_http_simpan_semua_soal_diarahkan_ke_halaman_selesai(server):
-    """Murid mengisi SEMUA soal → setelah POST diarahkan ke halaman selesai,
-    bukan kembali ke lembar kerja dengan banner tersimpan."""
-    sesi_id = _bikin_sesi_untuk_feby(server)
-    with server.buka() as kon:
-        daftar = database.isi_sesi(kon, sesi_id)
-        data = {f"jwb_{b['sesi_soal_id']}": "1" for b in daftar}
-
-    kode, isi, _ = server.minta(
-        f"/murid/kerjakan/{sesi_id}",
-        auth=("feby", SANDI_MURID),
-        data=data,
-    )
-    assert kode == 200
-    assert "Selesai" in isi, "semua soal terisi harus diarahkan ke halaman selesai"
-    assert "Tersimpan" not in isi, (
-        "halaman selesai tidak boleh menampilkan banner tersimpan"
-    )
-
-
 def test_http_simpan_sebagian_tetap_di_lembar_dengan_banner(server):
     """Murid mengisi SEBAGIAN soal → kembali ke lembar + banner tersimpan,
     supaya bisa lanjut mengerjakan sisanya."""
@@ -523,9 +567,84 @@ def test_http_simpan_sebagian_tetap_di_lembar_dengan_banner(server):
     )
     assert kode == 200
     assert "Tersimpan" in isi, "simpan sebagian harus tetap menampilkan banner"
-    assert "Selesai" not in isi, (
-        "belum semua soal terisi — jangan arahkan ke halaman selesai"
+    assert "Masih di review" not in isi, (
+        "belum semua soal terisi — jangan menampilkan status review"
     )
+
+
+def test_http_semua_terisi_langsung_ke_daftar_sesi_dengan_banner(server):
+    """Semua soal terisi → langsung ke daftar sesi dengan banner perayaan,
+    bukan halaman terpisah dengan pilihan "kembali / keluar" (masukan QA:
+    satu klik lebih sedikit; tombol Keluar memang sudah ada di daftar)."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        data = {
+            f"jwb_{b['sesi_soal_id']}": str(i)
+            for i, b in enumerate(database.isi_sesi(kon, sesi_id), start=1)
+        }
+
+    kode, isi, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=data,
+    )
+    assert kode == 200  # 303 diikuti sampai /murid
+    assert "Semua jawabanmu sudah masuk" in isi, "banner perayaan tampil"
+    assert "Simpan jawabanku" not in isi, "bukan lembar kerja lagi"
+
+
+# ── Penandaan direview: guru membuka sesi yang terisi penuh ──────────
+
+
+def test_http_guru_membuka_sesi_terisi_mencatat_direview(server):
+    """Badge "Selesai" di daftar murid butuh penanda kapan guru sudah
+    melihat hasilnya. Momen yang murah dan jujur: guru membuka /sesi/<id>
+    saat sesi terisi penuh — bukan saat lembar masih kosong (bisa jadi
+    baru mau dicetak)."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    with server.buka() as kon:
+        data = {
+            f"jwb_{b['sesi_soal_id']}": str(i)
+            for i, b in enumerate(database.isi_sesi(kon, sesi_id), start=1)
+        }
+    server.minta(
+        f"/murid/kerjakan/{sesi_id}",
+        auth=("feby", SANDI_MURID),
+        data=data,
+    )
+    server.minta(f"/sesi/{sesi_id}", auth=("guru", SANDI_GURU))
+    with server.buka() as kon:
+        direview = kon.execute(
+            "SELECT direview FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()["direview"]
+    assert direview is not None
+
+
+def test_http_sesi_kosong_dibuka_guru_tidak_dicatat_direview(server):
+    """Membuka lembar kosong untuk mencetak bukan momen review — kalau
+    tercatat, sesi yang belum dikerjakan langsung ber-badge "Selesai" di
+    ponsel anak."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    server.minta(f"/sesi/{sesi_id}", auth=("guru", SANDI_GURU))
+    with server.buka() as kon:
+        direview = kon.execute(
+            "SELECT direview FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()["direview"]
+    assert direview is None
+
+
+def test_http_membuka_lembar_mencatat_mulai(server):
+    """Buka lembar = mulai pengerjaan — perbaikan durasi 0 detik untuk sesi
+    yang dikerjakan sekali simpan. Commit stamp mendahului respons: pembaca
+    yang menindaklanjuti respons detik itu juga tidak boleh melihat
+    keadaan pra-commit."""
+    sesi_id = _bikin_sesi_untuk_feby(server)
+    server.minta(f"/murid/kerjakan/{sesi_id}", auth=("feby", SANDI_MURID))
+    with server.buka() as kon:
+        mulai = kon.execute(
+            "SELECT mulai FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()["mulai"]
+    assert mulai is not None
 
 
 # ── Pencatatan waktu pengerjaan (kolom mulai/selesai sesi) ────────────

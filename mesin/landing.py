@@ -149,6 +149,40 @@ memberimu akun.</p>
     return _halaman_publik(f"Kebijakan Privasi — {T.NAMA_PRODUK}", isi)
 
 
+def halaman_lupa_sandi() -> bytes:
+    """Panduan publik "Lupa sandi?" — murni teks, tanpa form apa pun.
+
+    Aplikasi ini SENGAJA tidak menyimpan email/telepon, jadi reset mandiri
+    via email mustahil: tidak ada jalur kirim-ulang sandi otomatis dan tidak
+    boleh diarang seolah ada. Sandi hanya bisa disetel ulang oleh manusia
+    yang tepat — guru/orang tua untuk murid, pengelola untuk orang tua.
+    Halaman ini menunjukkan jalurnya supaya yang terkunci tidak buntu di
+    halaman masuk.
+    """
+    n = html.escape(T.NAMA_PRODUK)
+    isi = f"""
+<div class="topbar"><a class="brand" href="/">{n}</a>
+<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
+
+<section class="kartu" style="max-width:30rem;margin:2rem auto">
+<h1>Lupa sandi?</h1>
+<p class="sub">Tidak apa-apa — sandimu bisa disetel ulang, hanya saja tidak
+lewat email.</p>
+<p>Aplikasi ini tidak menyimpan email, jadi sandi tidak bisa dikirim
+otomatis. Yang menyetel ulang adalah manusia yang tepat:</p>
+<ul>
+<li><b>Kamu murid?</b> Mintalah gurumu atau orang tuamu menyetel sandi
+baru — dari halaman Akun, kartu "Akun latihan", tombol
+"Setel sandi baru".</li>
+<li><b>Kamu orang tua/guru?</b> Hubungi pengelola aplikasi — orang yang
+membuatkan akunmu — untuk menyetel ulang sandimu.</li>
+</ul>
+<p><a href="/masuk">Kembali ke halaman masuk</a></p>
+</section>
+"""
+    return _halaman_publik(f"Lupa sandi? — {T.NAMA_PRODUK}", isi)
+
+
 def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)

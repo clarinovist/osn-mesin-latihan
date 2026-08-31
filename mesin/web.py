@@ -23,7 +23,13 @@ import auth
 import database
 import sessions
 import design_tokens as T
-from account_pages import PETA_SECTION_AKUN, halaman_admin, halaman_akun, proses_akun
+from account_pages import (
+    PETA_SECTION_AKUN,
+    halaman_admin,
+    halaman_akun,
+    proses_admin,
+    proses_akun,
+)
 from generator import LEVEL_BAWAAN
 from reports import diagnosa_murid, halaman_laporan
 from teacher_pages import (
@@ -247,6 +253,14 @@ class Penangan(BaseHTTPRequestHandler):
             from landing import halaman_kebijakan
 
             return self._kirim(halaman_kebijakan())
+        if jalur == "/lupa-sandi":
+            # Publik, dari tautan di /masuk. Aplikasi sengaja tidak
+            # menyimpan email, jadi ini halaman panduan ("mintalah sandi
+            # baru ke X"), bukan reset mandiri — mengarang alur email
+            # berarti mengarang kanal yang tidak ada.
+            from landing import halaman_lupa_sandi
+
+            return self._kirim(halaman_lupa_sandi())
         if jalur == "/murid" or jalur.startswith("/murid/"):
             try:
                 with database.buka() as kon:
@@ -320,6 +334,39 @@ class Penangan(BaseHTTPRequestHandler):
                             _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                         )
                     ident = self._identitas()
+                    # Guru membuka sesi yang terisi penuh = momen review:
+                    # catat sekali supaya daftar sesi murid bisa menandai
+                    # "Selesai". Buka lembar kosong untuk dicetak tidak
+                    # dihitung; admin tidak menulis (baca-semua-tulis-tidak).
+                    #
+                    # Commit sendiri sebelum respons: _kirim dijalankan di
+                    # dalam with buka(), jadi commit konteks baru terjadi
+                    # SETELAH respons pergi. Siapa pun yang membaca detik
+                    # itu juga (murid membuka daftar sesinya, test) akan
+                    # melihat keadaan pra-commit. Stamp peristiwa mandiri
+                    # — tidak ada tulisan lain yang menunggunya — aman
+                    # didahulukan commitnya.
+                    if ident and ident[1] == "guru":
+                        penuh = kon.execute(
+                            """SELECT 1 FROM sesi s
+                               WHERE s.id = ? AND s.direview IS NULL
+                                 AND (SELECT COUNT(*) FROM sesi_soal ss
+                                      WHERE ss.sesi_id = s.id) > 0
+                                 AND NOT EXISTS (
+                                     SELECT 1 FROM sesi_soal ss2
+                                     WHERE ss2.sesi_id = s.id
+                                       AND NOT EXISTS (
+                                           SELECT 1 FROM jawaban j
+                                           WHERE j.sesi_soal_id = ss2.id))""",
+                            (sesi_id,),
+                        ).fetchone()
+                        if penuh:
+                            kon.execute(
+                                "UPDATE sesi SET direview = "
+                                "datetime('now', '+7 hours') WHERE id = ?",
+                                (sesi_id,),
+                            )
+                            kon.commit()
                     return self._kirim(
                         halaman_sesi(
                             kon, sesi_id,
@@ -402,20 +449,23 @@ class Penangan(BaseHTTPRequestHandler):
                 )
             )
         if jalur == "/murid":
-            return self._kirim(student_pages.halaman_daftar_sesi(kon, siswa_id, kredensial[0]))
-        bagian = jalur.split("/")
-        # /murid/selesai/<id> — konfirmasi setelah semua soal terisi
-        if len(bagian) >= 3 and bagian[2] == "selesai":
-            try:
-                sesi_id = int(bagian[3])
-            except (ValueError, IndexError):
-                sesi_id = -1
-            isi = student_pages.halaman_selesai(kon, siswa_id, sesi_id)
-            if isi is None:
-                return self._kirim(
-                    _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
+            # ?selesai=<id> dari pengalihan setelah semua soal terkirim:
+            # hanya memicu banner perayaan di daftar, tidak menyentuh data.
+            sesi_selesai = None
+            if jalur_penuh:
+                q = urllib.parse.parse_qs(
+                    urllib.parse.urlparse(jalur_penuh).query
                 )
-            return self._kirim(isi)
+                try:
+                    sesi_selesai = int(q.get("selesai", ["0"])[0]) or None
+                except (ValueError, TypeError):
+                    sesi_selesai = None
+            return self._kirim(
+                student_pages.halaman_daftar_sesi(
+                    kon, siswa_id, kredensial[0], sesi_selesai
+                )
+            )
+        bagian = jalur.split("/")
         # /murid/kerjakan/<id>
         if len(bagian) >= 3 and bagian[2] == "kerjakan":
             # Jumlah tersimpan datang dari pengalihan setelah POST. Nilainya
@@ -430,7 +480,17 @@ class Penangan(BaseHTTPRequestHandler):
                     tersimpan = max(0, min(99, int(q.get("tersimpan", ["0"])[0])))
                 except (ValueError, TypeError):
                     tersimpan = 0
-            isi = student_pages.halaman_kerja(kon, siswa_id, int(bagian[3]), tersimpan)
+            sesi_id_kerja = int(bagian[3])
+            # Waktu pengerjaan mulai dihitung dari saat lembar DIBUKA, bukan
+            # dari simpan pertama: anak yang mengisi semuanya lalu sekali
+            # simpan tidak boleh tercatat berdurasi 0 detik. Idempoten —
+            # buka ulang tidak menggeser waktu yang sudah tercatat. Commit
+            # sendiri sebelum respons: stamp mandiri, dan commit konteks
+            # buka() baru terjadi setelah respons pergi (lihat /sesi/).
+            if students.sesi_murid(kon, siswa_id, sesi_id_kerja):
+                database.tandai_mulai(kon, sesi_id_kerja)
+                kon.commit()
+            isi = student_pages.halaman_kerja(kon, siswa_id, sesi_id_kerja, tersimpan)
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
@@ -464,7 +524,7 @@ class Penangan(BaseHTTPRequestHandler):
             f'<button type="submit">Masuk</button>'
             f"</form>"
             f'<p class="sub" style="text-align:center;margin-top:.8rem">'
-            f"Pakai kata sandi yang diberikan</p>"
+            f'<a href="/lupa-sandi">Lupa sandi?</a></p>'
             f"</div></div></div>",
         )
 
@@ -568,10 +628,11 @@ class Penangan(BaseHTTPRequestHandler):
                     # (WHERE IS NULL) — lihat database.tandai_mulai.
                     database.tandai_mulai(kon, sesi_id)
                     diagnosa_murid(kon, sesi_id)
-                    # Semua soal sudah terisi → arahkan ke halaman Selesai,
-                    # bukan kembali ke lembar yang sama. Anak yang masih
-                    # setengah jalan tetap kembali ke lembar + banner
-                    # tersimpan supaya bisa lanjut mengerjakan.
+                    # Semua soal sudah terisi → arahkan ke daftar sesi
+                    # (?selesai= memicu banner perayaan di sana), bukan ke
+                    # lembar yang sama. Anak yang masih setengah jalan
+                    # tetap kembali ke lembar + banner tersimpan supaya
+                    # bisa lanjut mengerjakan.
                     if siswa_id is not None:
                         selesai = students.semua_terisi(kon, siswa_id, sesi_id)
                         if selesai:
@@ -581,8 +642,12 @@ class Penangan(BaseHTTPRequestHandler):
                     _halaman("403", "<h1>Bukan sesimu</h1>"), 403
                 )
             if selesai:
+                # Langsung kembali ke daftar sesi — banner ?selesai= sudah
+                # mengonfirmasi. Halaman perayaan terpisah berarti satu
+                # klik ekstra plus pilihan "Keluar" yang membingungkan;
+                # tombol Keluar memang sudah ada di daftar sesi.
                 self.send_response(303)
-                self.send_header("Location", f"/murid/selesai/{sesi_id}")
+                self.send_header("Location", f"/murid?selesai={sesi_id}")
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
@@ -685,6 +750,11 @@ class Penangan(BaseHTTPRequestHandler):
                         )
                     except ValueError as e:
                         galat = str(e)
+            elif data.get("aksi") == "guru_sandi":
+                # Satu tulisan lain yang sah di panel admin: menyetel ulang
+                # sandi akun orang tua yang lupa — sama domainnya dengan
+                # membuat akun (akun itu ciptaan admin). Detail di proses_admin.
+                pesan, galat = proses_admin(data)
             else:
                 galat = "Aksi tidak dikenal."
             ident = self._identitas()

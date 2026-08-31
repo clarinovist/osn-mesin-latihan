@@ -241,6 +241,21 @@ def terapkan(kon, lampiran_id: int, data: dict) -> tuple[int, str]:
 
         reports.diagnosa_murid(kon, sesi_id)
         database.tandai_lampiran(kon, lampiran_id, "diterapkan")
+        # Sesi yang jadi terisi penuh lewat foto dianggap terkirim: kolom
+        # selesai menentukan badge daftar murid ("Masih di review", bukan
+        # "Baru") dan masuk hitungan durasi guru. Tanpa ini sesi kertas
+        # yang selesai tetap tampak belum dikirim selamanya.
+        n_soal = kon.execute(
+            "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
+        ).fetchone()[0]
+        terisi = kon.execute(
+            """SELECT COUNT(DISTINCT ss.id) FROM sesi_soal ss
+               JOIN jawaban j ON j.sesi_soal_id = ss.id
+               WHERE ss.sesi_id = ?""",
+            (sesi_id,),
+        ).fetchone()[0]
+        if n_soal and terisi >= n_soal:
+            database.tandai_selesai(kon, sesi_id)
     return jumlah, f"{jumlah} soal dari foto masuk dan didiagnosis."
 
 

@@ -119,6 +119,26 @@ def test_kebijakan_privasi_200_tanpa_sesi(server):
     assert 'href="/masuk"' in isi  # satu pintu masuk, konsisten landing
 
 
+def test_masuk_punya_tautan_lupa_sandi(server):
+    """Di bawah tombol Masuk ada tautan "Lupa sandi?" — pintu ke panduan,
+    bukan sekadar teks pasif "pakai kata sandi yang diberikan"."""
+    s, _ = server
+    kode, isi, _ = s.minta("/masuk")
+    assert kode == 200
+    assert 'href="/lupa-sandi"' in isi
+
+
+def test_lupa_sandi_200_dan_memuat_panduan(server):
+    """Halaman lupa sandi publik dan jujur: aplikasi tidak menyimpan email,
+    jadi isinya panduan konkret — murid minta guru/orang tua menyetel sandi
+    baru, orang tua menghubungi pengelola."""
+    s, _ = server
+    kode, isi, _ = s.minta("/lupa-sandi")
+    assert kode == 200
+    assert "Lupa sandi?" in isi
+    assert "Setel sandi baru" in isi  # panduan konkret untuk murid
+
+
 def test_kebijakan_privasi_bocor_data_tidak_boleh(server):
     """Halaman statis: tanpa nama siswa/DB, sama untuk semua pengunjung.
     (Id sesi sengaja tidak dites — angka kecil selalu ada di CSS/teks.)"""

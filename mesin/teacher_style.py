@@ -383,7 +383,11 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .kartu-masuk .ikon-gembok {{
   display: block; margin: 0 auto .8rem; width: 44px; height: 44px;
 }}
-.kartu-masuk button {{ width: 100%; margin-top: .7rem; padding: .8rem; }}
+/* Hanya type=submit: tombol mata disuntik SKRIP_MATA_SANDI di dalam kartu
+   yang sama. Tanpa pembatasan ini, .kartu-masuk button (spesifisitas 0,1,1)
+   mengalahkan .tombol-mata (0,1,0) — tombol mata melebar 100% dan ikonnya
+   jatuh di tengah kolom sandi. */
+.kartu-masuk button[type=submit] {{ width: 100%; margin-top: .7rem; padding: .8rem; }}
 
 /* ── Pesan (sukses/galat) ──────────────────────────────────────────── */
 .pesan {{
