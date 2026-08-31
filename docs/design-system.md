@@ -168,28 +168,28 @@ Aturan:
 - Token baru tambahkan ke `design_tokens.py` + catat di dokumen ini.
 
 File CSS per permukaan (semuanya `import design_tokens as T`):
-- `gaya_guru.py` → 5 halaman layar guru (masuk, dashboard, sesi, laporan, akun)
-- `gaya_layar.py` → lembar yang dibaca di browser/HP (anak & guru)
-- `gaya_cetak.py` → lembar kertas A4 (satuan mm/pt, hemat tinta: garis saja)
-- `murid.py` (CSS_MURID) → halaman murid
+- `teacher_style.py` → 5 halaman layar guru (masuk, dashboard, sesi, laporan, akun)
+- `screen_style.py` → lembar yang dibaca di browser/HP (anak & guru)
+- `print_style.py` → lembar kertas A4 (satuan mm/pt, hemat tinta: garis saja)
+- `student_pages.py` (CSS_MURID) → halaman murid
 
 ## Mockup reference
 
 | File | Halaman | Viewport | Implementasi |
 |------|---------|----------|--------------|
-| murid-sesiku.png | /murid — daftar sesi | Mobile | murid.py |
-| murid-kerjakan.png | /murid/kerjakan — halaman kerja | Mobile | murid.py |
-| guru-masuk.png | /masuk — login | Desktop | web.py + gaya_guru.py |
-| guru-dashboard.png | / — dashboard utama | Desktop | web.py + gaya_guru.py |
-| guru-sesi.png | /sesi/<id> — detail sesi | Desktop | web.py + gaya_guru.py |
-| guru-laporan.png | /laporan/<id> — laporan + tren | Desktop | web.py + gaya_guru.py |
-| guru-akun.png | /akun — kelola akun & siswa | Desktop | web.py + gaya_guru.py |
-| guru-lembar-soal.png | /lembar/<id> — soal cetak | A4 | render.py + gaya_* |
-| guru-lembar-kunci.png | /lembar/<id>/penilaian — kunci cetak | A4 | render.py + gaya_* |
+| murid-sesiku.png | /murid — daftar sesi | Mobile | student_pages.py |
+| murid-kerjakan.png | /murid/kerjakan — halaman kerja | Mobile | student_pages.py |
+| guru-masuk.png | /masuk — login | Desktop | web.py + teacher_style.py |
+| guru-dashboard.png | / — dashboard utama | Desktop | teacher_pages.py + teacher_style.py |
+| guru-sesi.png | /sesi/<id> — detail sesi | Desktop | teacher_pages.py + teacher_style.py |
+| guru-laporan.png | /laporan/<id> — laporan + tren | Desktop | reports.py + teacher_style.py |
+| guru-akun.png | /akun — kelola akun & siswa | Desktop | account_pages.py + teacher_style.py |
+| guru-lembar-soal.png | /lembar/<id> — soal cetak | A4 | render.py + print_style.py |
+| guru-lembar-kunci.png | /lembar/<id>/penilaian — kunci cetak | A4 | render.py + print_style.py |
 
 Kontrak penting: implementasi lembar anak (`/lembar/<id>`) TIDAK boleh memuat
 kunci; lembar kunci (`/lembar/<id>/penilaian`) justru memuat semuanya. Keduanya
-hanya beda satu ruas URL — dijaga `__tests__/test_web_lembar.py`.
+hanya beda satu ruas URL — dijaga `__tests__/test_web_worksheet.py`.
 
 ## Workflow: halaman baru
 

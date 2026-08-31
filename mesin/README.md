@@ -9,7 +9,7 @@ baca laporan.
 cd ~/Documents/osn/mesin
 python3 -m venv .venv
 ./.venv/bin/pip install pytest
-./.venv/bin/python siapkan_db.py
+./.venv/bin/python setup_db.py
 ```
 
 ## Dipakai lewat website (cara utama)
@@ -76,8 +76,8 @@ dicetak langsung dari browser, bukan berkas PDF).
 
 ```bash
 cd ~/Documents/osn/mesin
-./.venv/bin/python buat_lembar.py --pdf   # cetak lembar + PDF
-./.venv/bin/python sajikan.py             # halaman guru di 127.0.0.1:8724
+./.venv/bin/python generate_worksheet.py --pdf   # cetak lembar + PDF
+./.venv/bin/python serve.py             # halaman guru di 127.0.0.1:8724
 ```
 
 Basis data lokal terpisah dari VPS. Pakai salah satu saja supaya datanya
@@ -123,7 +123,7 @@ Admin hanya melihat section **akun** (ganti sandi sendiri); section siswa
 dan akun-murid tidak ditampilkan.
 
 Untuk pemasangan lokal di Mac, daftar awal ada di `SISWA` pada
-`siapkan_db.py` (aman dijalankan ulang).
+`setup_db.py` (aman dijalankan ulang).
 
 ### Tiga peran (multi-keluarga)
 
@@ -154,7 +154,7 @@ Brand di topbar adalah tautan beranda (`/` untuk guru, `/admin` untuk admin).
 Kepemilikan tertulis di kolom `siswa.pemilik` — username orang tuanya.
 Guru membaca `WHERE pemilik = username-nya`; admin tanpa filter. Baris
 ber-pemilik kosong itu warisan lama dan hanya terlihat admin. Kalau belum
-ada admin, `sajikan.py` saat startup mempromosikan akun guru PERTAMA jadi
+ada admin, `serve.py` saat startup mempromosikan akun guru PERTAMA jadi
 admin lalu membubuhkan namanya ke semua siswa warisan — otomatis,
 idempoten, tanpa menyunting `sandi.json` lewat tangan.
 
@@ -186,22 +186,30 @@ seed, jadi selalu sama persis.
 |---|---|
 | `templates.py` | tipe soal per level P3–P6 — soal, kunci, dan malrule dihitung dari parameter |
 | `generator.py` | seed -> parameter, dibatasi profil level (`PROFIL_LEVEL`) |
-| `skema.py` | definisi tabel |
-| `basis.py` | akses basis data |
-| `diagnosa.py` | jawaban -> kode B/K/H/E/T/N |
-| `cetak.py` | render HTML lembar soal & penilaian |
-| `render.py` + `gaya_layar.py` + `gaya_cetak.py` | satu sumber render, dua tampilan (layar & cetak) |
-| `buat_lembar.py` | perintah cetak |
-| `web.py` | halaman guru/murid/admin + rute lembar |
+| `schema.py` | definisi tabel |
+| `database.py` | akses basis data |
+| `diagnosis.py` | jawaban -> kode B/K/H/E/T/N |
+| `worksheets.py` | fasad render HTML lembar soal & penilaian |
+| `render.py` + `screen_style.py` + `print_style.py` | satu sumber render, dua tampilan (layar & cetak) |
+| `generate_worksheet.py` | perintah cetak |
+| `web.py` | router HTTP + palang peran/kepemilikan |
+| `teacher_pages.py` | halaman guru: dashboard, sesi, konfirmasi hapus, lembar |
+| `reports.py` | laporan per anak + diagnosa otomatis |
+| `account_pages.py` | halaman akun guru & admin |
 | `landing.py` | halaman publik (daftar, masuk) — brand tautan beranda |
-| `gaya_guru.py` | CSS terpusat untuk halaman pengelola — token dari `design_tokens.py` |
-| `murid.py` | halaman kerja murid — tanpa kunci/malrule/diagnosis (palang test) |
+| `teacher_style.py` | CSS terpusat untuk halaman pengelola — token dari `design_tokens.py` |
+| `students.py` | lapisan data siswa: soal, jawaban, kepemilikan akun |
+| `student_pages.py` | halaman kerja murid — tanpa kunci/malrule/diagnosis (palang test) |
 | `llm.py` | klien DeepSeek untuk variasi cerita — gagal-diam tanpa key |
-| `sesi.py` | sesi cookie (berkas JSON atomik, TTL 14 hari, rate-limit) |
-| `sandi.py` | palang sandi, akun ber-peran admin/guru/murid |
-| `sajikan.py` | menjalankan server + bootstrap admin |
+| `sessions.py` | sesi cookie (berkas JSON atomik, TTL 14 hari, rate-limit) |
+| `auth.py` | palang sandi, akun ber-peran admin/guru/murid |
+| `serve.py` | menjalankan server + bootstrap admin |
 | `cadangkan.sh` | tarik cadangan basis data dari VPS ke Mac |
 | `Dockerfile` | container untuk VPS |
+
+Generator soal per topik: `topics.py` (registrasi) + `topic_*.py`
+(generator), topik besar punya pasangan `topic_*_param.py` (pembatas
+parameter) dan `topic_*_svg.py` (renderer visual).
 
 ## Di VPS
 
