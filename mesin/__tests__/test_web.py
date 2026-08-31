@@ -260,15 +260,19 @@ def test_dashboard_menampilkan_skor_benar(db):
 
 
 def test_dashboard_tanpa_kolom_lembar(db):
-    """Lembar soal/kunci cukup satu pintu: dari halaman sesi. Dashboard
+    """Lembar soal/kunci cukup satu pintu: dari halaman cetak. Dashboard
     yang menampilkan keduanya terasa redundant."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Lembar")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
         h = teacher_pages.halaman_utama(kon).decode()
         hs = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        hc_raw = teacher_pages.halaman_sesi_cetak(kon, sesi_id)
+        assert hc_raw is not None
+        hc = hc_raw.decode()
     assert 'href="/lembar/' not in h
-    assert 'href="/lembar/' in hs
+    assert 'href="/lembar/' not in hs
+    assert 'href="/lembar/' in hc
 
 
 def test_dashboard_badge_mode_hanya_untuk_drill(db):

@@ -409,16 +409,134 @@ def halaman_konfirmasi_hapus(
         ident=(pengguna, peran) if pengguna else None,
     )
 
+def _pil_sesi(kon, sesi_id: int, aktif: str) -> str:
+    """Pil navigasi di halaman sesi: Koreksi · Cetak & Cerita · Lampiran."""
+    n_lamp = kon.execute(
+        "SELECT COUNT(*) FROM lampiran WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()[0]
+    def _a(kunci: str, label: str, href: str) -> str:
+        cls = "pil aktif" if kunci == aktif else "pil"
+        return f'<a class="{cls}" href="{href}">{label}</a>'
+    return (
+        '<nav class="pil-sesi">'
+        + _a("koreksi", "Koreksi", f"/sesi/{sesi_id}")
+        + _a("cetak", "Cetak & Cerita", f"/sesi/{sesi_id}/cetak")
+        + _a("lampiran", f"Lampiran ({n_lamp})", f"/sesi/{sesi_id}/lampiran")
+        + "</nav>"
+    )
+
+
+def halaman_sesi_cetak(
+    kon, sesi_id: int, pesan: str = "", peran: str = "guru",
+    pengguna: str = "",
+) -> bytes | None:
+    """Halaman cetak & cerita per sesi — lembar soal/kunci + variasi cerita."""
+    info = kon.execute(
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                  w.nama, w.id AS siswa_id
+           FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
+        (sesi_id,),
+    ).fetchone()
+    if not info:
+        return None
+    badge_mode = _badge_mode(info)
+    admin = peran == "admin"
+    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
+    blok_cerita = "" if admin else _tombol_cerita(kon, sesi_id)
+    pil = _pil_sesi(kon, sesi_id, "cetak")
+    return _halaman(
+        f"Sesi #{sesi_id} — Cetak",
+        f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke koreksi</a> &middot; <a href="/">&larr; Semua siswa</a></div>'
+        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        f'<p class="sub">{info["tanggal"]} &middot; '
+        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
+        f'seed {info["seed"]} {badge_mode}</p>'
+        f"{kabar}"
+        f"{pil}"
+        f'<div class="kartu"><h2>Cetak</h2>'
+        f'<p><a class="btn" href="/lembar/{sesi_id}" target="_blank">Lembar soal</a> '
+        f'<a class="btn" href="/lembar/{sesi_id}/penilaian" target="_blank">Lembar kunci</a></p>'
+        f'<p class="sub">Dibuka di tab baru — siap cetak.</p></div>'
+        f"{blok_cerita}",
+        ident=(pengguna, peran) if pengguna else None,
+    )
+
+
+def halaman_sesi_lampiran(
+    kon, sesi_id: int, pesan: str = "", peran: str = "guru",
+    pengguna: str = "",
+) -> bytes | None:
+    """Halaman lampiran foto per sesi — daftar + upload."""
+    info = kon.execute(
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                  w.nama, w.id AS siswa_id
+           FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
+        (sesi_id,),
+    ).fetchone()
+    if not info:
+        return None
+    badge_mode = _badge_mode(info)
+    admin = peran == "admin"
+    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
+    baris_lampiran = []
+    for lamp in database.daftar_lampiran(kon, sesi_id):
+        status_cls = "benar" if lamp["status"] == "diterapkan" else "N"
+        baris_lampiran.append(
+            f'<li><a href="/lampiran/{lamp["id"]}">'
+            f'{html.escape(lamp["nama_berkas"])}</a> '
+            f'<span class="kode {status_cls}">{lamp["status"]}</span> '
+            f'<span class="waktu">{html.escape(lamp["dibuat"])}</span></li>'
+        )
+    daftar = (
+        f'<ul class="daftar-lampiran">{"".join(baris_lampiran)}</ul>'
+        if baris_lampiran
+        else '<p class="sub">Belum ada foto lembar.</p>'
+    )
+    unggah = (
+        ""
+        if admin
+        else (
+            f'<form method="post" action="/lampiran/{sesi_id}" '
+            'enctype="multipart/form-data">'
+            "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
+            '<input type="file" name="foto" accept="image/jpeg,image/png">'
+            '<button type="submit">Upload foto</button>'
+            "</form>"
+        )
+    )
+    blok_lampiran = (
+        '<div class="kartu blok-lampiran">'
+        "<h2>Lampiran — foto lembar</h2>"
+        f"{daftar}"
+        f"{unggah}"
+        "</div>"
+    )
+    pil = _pil_sesi(kon, sesi_id, "lampiran")
+    return _halaman(
+        f"Sesi #{sesi_id} — Lampiran",
+        f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke koreksi</a> &middot; <a href="/">&larr; Semua siswa</a></div>'
+        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        f'<p class="sub">{info["tanggal"]} &middot; '
+        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
+        f'seed {info["seed"]} {badge_mode}</p>'
+        f"{kabar}"
+        f"{pil}"
+        f"{blok_lampiran}",
+        ident=(pengguna, peran) if pengguna else None,
+    )
+
+
 def halaman_sesi(
     kon, sesi_id: int, pesan: str = "", peran: str = "guru",
     pengguna: str = "",
 ) -> bytes:
-    """Detail satu sesi. `peran="admin"` = varian hanya-baca.
+    """Detail satu sesi — HANYA koreksi (opsi 3: alat pindah ke /cetak & /lampiran).
 
     Kebijakan admin baca-semua-tulis-tidak dijaga di router (POST ditolak
     404); di sini tombol/form tulis disembunyikan supaya admin tidak
-    menabrak 404 dari UI-nya sendiri. Baca tetap utuh: daftar lampiran,
-    lembar, kunci, dan tautan laporan."""
+    menabrak 404 dari UI-nya sendiri."""
     admin = peran == "admin"
     info = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
@@ -498,47 +616,10 @@ def halaman_sesi(
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
 
-    # Badge mode sesi (Latihan Cepat / drill) — helper yang sama dengan
-    # dashboard; CSS guru memuat kata "Latihan Cepat" di komentar, jadi
-    # badge-nya harus marker kelas.
+    # Badge mode sesi (Latihan Cepat / drill)
     badge_mode = _badge_mode(info)
 
-    # Lampiran foto lembar (Fase 2): form upload + daftar foto yang sudah ada.
-    # Upload menjalankan ekstraksi AI, hasilnya dikonfirmasi guru di halaman
-    # /lampiran/<id> sebelum masuk jawaban.
-    baris_lampiran = []
-    for lamp in database.daftar_lampiran(kon, sesi_id):
-        status_cls = "benar" if lamp["status"] == "diterapkan" else "N"
-        baris_lampiran.append(
-            f'<li><a href="/lampiran/{lamp["id"]}">'
-            f'{html.escape(lamp["nama_berkas"])}</a> '
-            f'<span class="kode {status_cls}">{lamp["status"]}</span> '
-            f'<span class="waktu">{html.escape(lamp["dibuat"])}</span></li>'
-        )
-    daftar = (
-        f'<ul class="daftar-lampiran">{"".join(baris_lampiran)}</ul>'
-        if baris_lampiran
-        else '<p class="sub">Belum ada foto lembar.</p>'
-    )
-    unggah = (
-        ""
-        if admin
-        else (
-            f'<form method="post" action="/lampiran/{sesi_id}" '
-            'enctype="multipart/form-data">'
-            "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
-            '<input type="file" name="foto" accept="image/jpeg,image/png">'
-            '<button type="submit">Upload foto</button>'
-            "</form>"
-        )
-    )
-    blok_lampiran = (
-        '<div class="kartu blok-lampiran">'
-        "<h2>Lampiran — foto lembar</h2>"
-        f"{daftar}"
-        f"{unggah}"
-        "</div>"
-    )
+    pil = _pil_sesi(kon, sesi_id, "koreksi")
 
     tombol_hapus = (
         ""
@@ -550,7 +631,6 @@ def halaman_sesi(
             f"Hapus sesi</button></form>"
         )
     )
-    blok_cerita = "" if admin else _tombol_cerita(kon, sesi_id)
     if admin:
         # fieldset disabled mematikan semua input tanpa JS — admin tetap
         # bisa MEMBACA nilai tersimpan, tapi tak ada yang bisa dikirim.
@@ -570,15 +650,13 @@ def halaman_sesi(
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
-        f'seed {info["seed"]} {badge_mode} '
-        f'&middot; '
-        f'<a href="/lembar/{sesi_id}" target="_blank">lembar soal</a> &middot; '
-        f'<a href="/lembar/{sesi_id}/penilaian" target="_blank">lembar kunci</a></p>'
-        f"{tombol_hapus}"
+        f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"
-        f"{blok_cerita}"
-        f"{blok_lampiran}"
-        f"{blok_isi}",
+        f"{pil}"
+        f"{blok_isi}"
+        f'<div class="danger-zone" style="margin-top:1.2rem;border-top:1px solid #e5c3c3;padding-top:.7rem">'
+        f'<p class="sub" style="margin:0 0 .4rem">Zona bahaya — hapus tidak bisa dibatalkan.</p>'
+        f"{tombol_hapus}</div>",
         ident=(pengguna, peran) if pengguna else None,
     )
 

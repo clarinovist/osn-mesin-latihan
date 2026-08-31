@@ -74,17 +74,25 @@ def test_tombol_tidak_muncul_kalau_fitur_mati(db, monkeypatch):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = teacher_pages.halaman_sesi(kon, ses).decode()
-    assert "Variasi cerita" not in html
+        html_sesi = teacher_pages.halaman_sesi(kon, ses).decode()
+        html_cetak_raw = teacher_pages.halaman_sesi_cetak(kon, ses)
+        html_cetak = html_cetak_raw.decode() if html_cetak_raw else ""
+    assert "Variasi cerita" not in html_sesi
+    assert "Variasi cerita" not in html_cetak
 
 
-def test_tombol_muncul_kalau_fitur_hidup(db):
+def test_tombol_muncul_di_cetak_kalau_fitur_hidup(db):
+    """Opsi 3: Variasi cerita pindah ke /sesi/{id}/cetak."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = teacher_pages.halaman_sesi(kon, ses).decode()
-    assert "Variasi cerita" in html
-    assert "0 dari 12" in html
+        html_sesi = teacher_pages.halaman_sesi(kon, ses).decode()
+        html_cetak_raw = teacher_pages.halaman_sesi_cetak(kon, ses)
+        assert html_cetak_raw is not None
+        html_cetak = html_cetak_raw.decode()
+    assert "Variasi cerita" not in html_sesi
+    assert "Variasi cerita" in html_cetak
+    assert "0 dari 12" in html_cetak
 
 
 def test_kalimat_cerita_tampil_di_lembar_anak(db, monkeypatch):

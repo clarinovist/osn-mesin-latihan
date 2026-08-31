@@ -149,17 +149,31 @@ def test_dua_siswa_dapat_soal_berbeda(db):
 
 
 def test_halaman_utama_tautan_lembar_pindah_ke_halaman_sesi(db):
-    """Lembar soal/kunci cukup satu pintu: dari halaman sesi. Dashboard
-    yang menampilkan keduanya terasa redundant (umpan balik guru,
-    30 Aug 2026) — yang tersisa hanya link sesi + form sesi baru."""
+    """Backward-compat alias — nama lama tetap hijau."""
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "TautanAlias")
+        sesi_id = database.buat_sesi(kon, sid, seed=99)
+        hc_raw = teacher_pages.halaman_sesi_cetak(kon, sesi_id)
+        assert hc_raw is not None
+        assert f'href="/lembar/{sesi_id}"' in hc_raw.decode()
+
+
+def test_halaman_utama_tautan_lembar_pindah_ke_halaman_cetak(db):
+    """Lembar soal/kunci cukup satu pintu: dari halaman cetak (opsi 3).
+    Dashboard dan halaman koreksi tidak lagi memuatnya."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Tautan")
         sesi_id = database.buat_sesi(kon, sid, seed=42)
         h = teacher_pages.halaman_utama(kon).decode()
         hs = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        hc_raw = teacher_pages.halaman_sesi_cetak(kon, sesi_id)
+        assert hc_raw is not None
+        hc = hc_raw.decode()
 
     assert f'href="/lembar/{sesi_id}"' not in h
     assert f'href="/lembar/{sesi_id}/penilaian"' not in h
-    assert f'href="/lembar/{sesi_id}"' in hs
-    assert f'href="/lembar/{sesi_id}/penilaian"' in hs
+    assert f'href="/lembar/{sesi_id}"' not in hs
+    assert f'href="/lembar/{sesi_id}/penilaian"' not in hs
+    assert f'href="/lembar/{sesi_id}"' in hc
+    assert f'href="/lembar/{sesi_id}/penilaian"' in hc
     assert f'action="/sesi-baru/{sid}"' in h

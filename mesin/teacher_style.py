@@ -236,6 +236,17 @@ tr.sorot-baru a {{ color: #fff; text-decoration: underline; }}
     100% {{ filter: none; }}
   }}
 }}
+/* Pil navigasi sesi (opsi 3): Koreksi · Cetak & Cerita · Lampiran */
+.pil-sesi {{ display: flex; gap: .6rem; flex-wrap: wrap; margin: .6rem 0 1rem; }}
+.pil-sesi .pil {{
+  display: inline-block; padding: .35rem .75rem; border-radius: {T.RADIUS_PIL};
+  border: 1px solid {T.BORDER_HALUS}; background: #fff; color: {T.TEKS_SUBTLE};
+  text-decoration: none; font-size: .88rem;
+}}
+.pil-sesi .pil.aktif {{
+  background: {T.AKSEN_TEAL_TUA}; color: #fff; border-color: {T.AKSEN_TEAL_TUA};
+}}
+.pil-sesi .pil:hover {{ border-color: {T.AKSEN_TEAL_TUA}; }}
 
 /* ── Form ──────────────────────────────────────────────────────────── */
 label {{ display: block; font-size: .84rem; color: {T.TEKS_SUBTLE}; margin: .55rem 0 .2rem; }}

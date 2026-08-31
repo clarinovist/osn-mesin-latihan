@@ -40,6 +40,8 @@ from teacher_pages import (
     halaman_konfirmasi_hapus,
     halaman_lembar,
     halaman_sesi,
+    halaman_sesi_cetak,
+    halaman_sesi_lampiran,
     halaman_utama,
     simpan_sesi,
 )
@@ -331,6 +333,38 @@ class Penangan(BaseHTTPRequestHandler):
                         return self._kirim(
                             _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
                         )
+                    return self._kirim(isi)
+                if jalur.startswith("/sesi/") and jalur.endswith("/cetak"):
+                    try:
+                        sesi_id = int(jalur.split("/")[2])
+                    except (ValueError, IndexError):
+                        return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+                    if not self._bisa_lihat_sesi(kon, sesi_id):
+                        return self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+                    ident = self._identitas()
+                    isi = halaman_sesi_cetak(
+                        kon, sesi_id,
+                        peran=ident[1] if ident else "guru",
+                        pengguna=ident[0] if ident else "",
+                    )
+                    if isi is None:
+                        return self._kirim(_halaman("404", "<h1>Sesi tidak ada</h1>"), 404)
+                    return self._kirim(isi)
+                if jalur.startswith("/sesi/") and jalur.endswith("/lampiran"):
+                    try:
+                        sesi_id = int(jalur.split("/")[2])
+                    except (ValueError, IndexError):
+                        return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+                    if not self._bisa_lihat_sesi(kon, sesi_id):
+                        return self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+                    ident = self._identitas()
+                    isi = halaman_sesi_lampiran(
+                        kon, sesi_id,
+                        peran=ident[1] if ident else "guru",
+                        pengguna=ident[0] if ident else "",
+                    )
+                    if isi is None:
+                        return self._kirim(_halaman("404", "<h1>Sesi tidak ada</h1>"), 404)
                     return self._kirim(isi)
                 if jalur.startswith("/sesi/"):
                     sesi_id = int(jalur.split("/")[2])
