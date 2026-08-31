@@ -1,9 +1,11 @@
 """Paket topik geometri datar — Fase 1 plan 30 Aug 2026.
 
-Sepuluh template menutup cakupan geometri datar OSN SD: sudut (bagian A),
-keliling & luas (B), lingkaran (C), arsiran & perubahan ukuran (D).
-Level P4/P5/P6 (P3 ditunda — keputusan pengguna). Soal berbentuk teks
-dulu; diagram SVG adalah penyempurnaan `render_badan` belakangan.
+Dua belas template menutup cakupan geometri datar OSN SD: sudut (bagian A),
+keliling & luas (B), lingkaran (C), arsiran & perubahan ukuran (D), dan
+dasar P3 (E): luas dari kotak satuan serta simetri bangun dasar.
+Level P3–P6; P3 dibuka selaras band SASMO Primary 1–4 (geometry &
+mensuration). Soal berbentuk teks dulu; diagram SVG adalah penyempurnaan
+`render_badan` belakangan.
 
 Python tetap menghitung parameter, kunci, dan malrule; ini bukan soal
 yang ditulis LLM. Malrule lulus `saring_malrule` dengan jalur K dan H
@@ -887,6 +889,225 @@ def perbandingan_ukuran(varian: str, k: int, ukuran: int) -> Soal:
     )
 
 
+# ── Bagian E — dasar P3 (pembukaan level P3) ────────────────────────────
+#
+# Band SASMO Primary 1–4 (geometry & mensuration): luas dibaca langsung
+# dari kotak-kotak satuan, sumbu simetri bangun dasar, keliling maju.
+
+# Hiasan teks NON-jawaban untuk template dasar P3 — melebarkan variasi
+# parameter (target >= 200 kombinasi unik) tanpa menyentuh kunci.
+KONTEKS_KOTAK = (
+    "ubin",
+    "keramik",
+    "kotak kue",
+    "potongan cokelat",
+    "stiker",
+    "kancing",
+)
+WARNA_KERTAS = ("merah", "biru", "hijau", "kuning", "oranye", "ungu")
+
+
+def luas_kotak_satuan(p: int, l: int, satuan: str = "cm", konteks: str = "kotak") -> Soal:
+    """Luas persegi panjang dibaca dari kotak-kotak satuan: grid p × l.
+
+    Template pembuka geometri di P3: luas = banyak kotak yang mengisi
+    bangun, kunci p·l (belum ada rumus). Malrule khasnya: menghitung kotak
+    di tepi saja (keliling, H), menghitung satu baris/kolom saja (K), dan
+    meleset satu (H). p·l == 2(p+l) — (3,6), (4,4), (6,3) — dieksklusi di
+    `_parameter` seperti pada `keliling_luas_datar` supaya hitung_keliling
+    tidak bertabrakan dengan kunci; p·l == 2(p+l)+1 — (3,7), (7,3) — juga
+    dieksklusi supaya kurang_satu (jalur H) tidak ikut tersaring.
+    """
+    kunci = p * l
+    mal = [
+        Malrule(
+            "datar.hitung_keliling",
+            str(2 * (p + l)),
+            "H",
+            "menghitung kotak-kotak di tepi (keliling) padahal yang ditanya isi seluruh bangun",
+        ),
+        Malrule(
+            "datar.hanya_satu_baris",
+            str(p),
+            "K",
+            "hanya menghitung kotak pada satu baris, belum dikalikan banyak barisnya",
+        ),
+        Malrule(
+            "datar.hanya_satu_kolom",
+            str(l),
+            "K",
+            "hanya menghitung kotak pada satu kolom, belum dikalikan banyak kolomnya",
+        ),
+        Malrule(
+            "datar.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "penghitungan kotaknya benar, hasil akhirnya meleset satu",
+        ),
+    ]
+    teks = (
+        f"Persegi panjang tersusun rapi dari {konteks} berbentuk persegi: "
+        f"{p} {konteks} ke samping dan {l} {konteks} ke bawah. "
+        f"Setiap {konteks} bersisi 1 {satuan}. Berapa luas persegi panjang itu?"
+    )
+    return Soal(
+        "luas_kotak_satuan",
+        {"p": p, "l": l, "satuan": satuan, "konteks": konteks},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        minta_restatement=True,
+        bagian="E",
+    )
+
+
+def simetri_bangun(
+    bangun: str,
+    ukuran: int,
+    satuan: str = "cm",
+    warna: str | None = None,
+    lebar: int | None = None,
+) -> Soal:
+    """Banyak sumbu simetri bangun dasar: persegi 4, persegi-panjang 2,
+    segitiga sama sisi 3, belah ketupat 2.
+
+    Jebalan malrule: untuk persegi dan segitiga sama sisi, "menghitung
+    sisi/sudut" memberi angka yang SAMA dengan sumbu simetrinya (4=4,
+    3=3) — keduanya tersaring `saring_malrule`. Jalur K diselamatkan
+    miskonsepsi lain (persegi: "hanya lipatan tegak-mendatar" = 2; sama
+    sisi: "hanya sumbu tegak dari puncak" = 1), dan jalur H datang dari
+    jawaban salah khas (menemukan satu garis saja = 1, salah hitung satu).
+    Ukuran, satuan, warna, dan lebar adalah parameter NON-jawaban —
+    melebarkan variasi tanpa menyentuh kunci.
+    """
+    warna_txt = f" berwarna {warna}" if warna else ""
+    if bangun == "persegi":
+        kunci = 4
+        teks = (
+            f"Persegi{warna_txt} bersisi {ukuran} {satuan}. "
+            f"Berapa banyak sumbu simetrinya?"
+        )
+        # hitung_sisi/hitung_sudut = 4 == kunci → tersaring (jebalan).
+        mal = [
+            Malrule(
+                "simetri.hitung_sisi",
+                "4",
+                "K",
+                "menghitung banyak sisi bangun, bukan banyak garis lipatnya",
+            ),
+            Malrule(
+                "simetri.hitung_sudut",
+                "4",
+                "K",
+                "menghitung banyak sudut bangun, bukan banyak garis lipatnya",
+            ),
+            Malrule(
+                "simetri.hanya_dua_arah",
+                "2",
+                "K",
+                "hanya menghitung lipatan tegak dan mendatar — garis diagonalnya tidak dianggap sumbu simetri",
+            ),
+        ]
+    elif bangun == "persegi_panjang":
+        if lebar is None:
+            lebar = max(2, ukuran // 2)
+        kunci = 2
+        teks = (
+            f"Persegi panjang{warna_txt} panjangnya {ukuran} {satuan} dan "
+            f"lebarnya {lebar} {satuan}. Berapa banyak sumbu simetrinya?"
+        )
+        # 4 sisi ≠ 2 sumbu → hitung_sisi selamat sebagai jalur K.
+        mal = [
+            Malrule(
+                "simetri.hitung_sisi",
+                "4",
+                "K",
+                "menghitung banyak sisi bangun, bukan banyak garis lipatnya",
+            ),
+            Malrule(
+                "simetri.hitung_sudut",
+                "4",
+                "K",
+                "menghitung banyak sudut bangun, bukan banyak garis lipatnya",
+            ),
+        ]
+    elif bangun == "segitiga_sama_sisi":
+        kunci = 3
+        teks = (
+            f"Segitiga sama sisi{warna_txt} sisinya {ukuran} {satuan}. "
+            f"Berapa banyak sumbu simetrinya?"
+        )
+        # Jebalan yang sama dengan persegi: 3 sisi = 3 sumbu, 3 sudut = 3
+        # sumbu → keduanya tersaring; jalur K dari "hanya sumbu tegak".
+        mal = [
+            Malrule(
+                "simetri.hitung_sisi",
+                "3",
+                "K",
+                "menghitung banyak sisi bangun, bukan banyak garis lipatnya",
+            ),
+            Malrule(
+                "simetri.hitung_sudut",
+                "3",
+                "K",
+                "menghitung banyak sudut bangun, bukan banyak garis lipatnya",
+            ),
+            Malrule(
+                "simetri.hanya_sumbu_tegak",
+                "1",
+                "K",
+                "hanya menghitung garis lipat yang tegak dari sudut puncak — dua sumbu miringnya tidak terlihat",
+            ),
+        ]
+    else:  # belah_ketupat
+        kunci = 2
+        teks = (
+            f"Belah ketupat{warna_txt} sisinya {ukuran} {satuan}. "
+            f"Berapa banyak sumbu simetrinya?"
+        )
+        mal = [
+            Malrule(
+                "simetri.hitung_sisi",
+                "4",
+                "K",
+                "menghitung banyak sisi bangun, bukan banyak garis lipatnya",
+            ),
+            Malrule(
+                "simetri.hitung_sudut",
+                "4",
+                "K",
+                "menghitung banyak sudut bangun, bukan banyak garis lipatnya",
+            ),
+        ]
+    # Jalur H yang selamat dari jebalan di SEMUA bangun: jawaban salah khas
+    # (garis lipatnya ditemukan semua tapi salah menghitung jumlahnya, atau
+    # hanya satu garis yang ditemukan).
+    mal.append(
+        Malrule(
+            "simetri.kurang_satu",
+            str(kunci - 1),
+            "H",
+            "garis lipatnya ditemukan semua, penghitungan jumlahnya meleset satu",
+        )
+    )
+    mal.append(
+        Malrule(
+            "simetri.hanya_satu_sumbu",
+            "1",
+            "H",
+            "hanya menemukan satu garis lipat, sumbu yang lain tidak terlihat",
+        )
+    )
+    return Soal(
+        "simetri_bangun",
+        {"bangun": bangun, "ukuran": ukuran, "satuan": satuan, "warna": warna, "lebar": lebar},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        bagian="E",
+    )
+
+
 REGISTRI_TOPIK = {
     "sudut_pelurus_berpenyiku": sudut_pelurus_berpenyiku,
     "jumlah_sudut_segitiga": jumlah_sudut_segitiga,
@@ -898,9 +1119,25 @@ REGISTRI_TOPIK = {
     "juring": juring,
     "luas_arsiran": luas_arsiran,
     "perbandingan_ukuran": perbandingan_ukuran,
+    # Bagian E — dasar P3 (pembukaan level P3)
+    "luas_kotak_satuan": luas_kotak_satuan,
+    "simetri_bangun": simetri_bangun,
 }
 
 KOMPOSISI = {
+    # P3 (8 soal): 11, 11, 12, 11, 12, 4, 4, 4
+    # Dasar dulu (kotak satuan & simetri, bagian E menyatu di depan),
+    # keliling varian "keliling" p, l ∈ 2..10 di akhir sebagai yang tersulit.
+    "P3": (
+        "luas_kotak_satuan",
+        "luas_kotak_satuan",
+        "simetri_bangun",
+        "luas_kotak_satuan",
+        "simetri_bangun",
+        "keliling_luas_datar",
+        "keliling_luas_datar",
+        "keliling_luas_datar",
+    ),
     # P4 (8 soal): 1, 2, 4, 5, 1, 2, 4, 5
     "P4": (
         "sudut_pelurus_berpenyiku",
@@ -945,12 +1182,15 @@ JUDUL_BAGIAN = {
     "B": "Bagian B — Keliling & luas",
     "C": "Bagian C — Lingkaran",
     "D": "Bagian D — Arsiran & perubahan ukuran",
+    "E": "Bagian E — Kotak satuan & simetri",
 }
 
 CATATAN_BAGIAN = {
     "A": "Jumlah sudut segitiga 180°, sudut pelurus 180°, penyiku 90°.",
     "B": "Keliling adalah jumlah semua sisi; luas adalah isi bangun.",
     "C": "π = 22/7 hanya saat jari-jari kelipatan 7, selain itu π = 3,14.",
+    "E": "Luas adalah banyak kotak yang mengisi bangun; sumbu simetri "
+    "adalah garis lipat yang membagi bangun jadi dua bagian sama persis.",
 }
 
 
@@ -1011,6 +1251,19 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             b = rng.randint(20, a - 1)
         return {"a": a, "b": b}
     if template_id == "keliling_luas_datar":
+        if level == "P3":
+            # P3 (SASMO Primary 1-4): hanya keliling maju dengan angka kecil
+            # (2..16). balik_luas (dari K cari luas) disisakan P4+.
+            # Ambang variasi pasangan level baru butuh >=200 kombinasi —
+            # 2..10 cuma 81 pasang, 2..16 memberi 15x15-6 eksklusi = 219.
+            # Eksklusi: p*l == 2(p+l) — (3,6), (4,4), (6,3) — menjatuhkan
+            # malrule tukar_luas; p*l == 2(p+l)-1 — (3,5), (5,3) — menjatuhkan
+            # kurang_satu, satu-satunya jalur H varian ini; (2,2) membuat
+            # tukar_luas dan lupa_kali_dua sama-sama 4.
+            p, l = rng.randint(2, 16), rng.randint(2, 16)
+            while p * l in (2 * (p + l), 2 * (p + l) - 1) or p == l == 2:
+                p, l = rng.randint(2, 16), rng.randint(2, 16)
+            return {"varian": "keliling", "p": p, "l": l}
         if rng.random() < 0.5:
             # maju: keliling 2(p+l). Hindari p*l == 2(p+l) (3x6, 4x4, 6x3)
             # supaya malrule tukar_luas tidak bertabrakan dengan kunci.
@@ -1079,6 +1332,40 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         # k kecil (2,3,4,5) x ukuran lebar (1..30) x 3 varian = 360 combo
         k = rng.choice((2, 3, 4, 5))
         return {"varian": rng.choice(("keliling", "luas", "volume")), "k": k, "ukuran": rng.randint(1, 30)}
+    if template_id == "luas_kotak_satuan":
+        # P3: grid p × l kecil (2..8) supaya kotaknya masih bisa digambar dan
+        # dihitung anak. Eksklusi: p*l == 2(p+l) — (3,6), (4,4), (6,3) —
+        # menjatuhkan malrule hitung_keliling; p*l == 2(p+l)+1 — (3,7), (7,3)
+        # — menjatuhkan kurang_satu (pola yang sama dengan keliling_luas_datar).
+        p, l = rng.randint(2, 8), rng.randint(2, 8)
+        while p * l in (2 * (p + l), 2 * (p + l) + 1):
+            p, l = rng.randint(2, 8), rng.randint(2, 8)
+        # satuan & konteks hanya menghias teks (NON-jawaban) dan menjaga
+        # variasi >= 200 kombinasi unik: 44 grid x 2 satuan x 6 konteks.
+        return {
+            "p": p,
+            "l": l,
+            "satuan": rng.choice(("cm", "m")),
+            "konteks": rng.choice(KONTEKS_KOTAK),
+        }
+    if template_id == "simetri_bangun":
+        # Empat bangun dasar; kunci (jumlah sumbu) ditentukan di template.
+        # ukuran/satuan/warna (+lebar untuk persegi-panjang) NON-jawaban —
+        # 4 bangun x 14 ukuran x 2 satuan x 6 warna melebihi 200 kombinasi.
+        bangun = rng.choice(
+            ("persegi", "persegi_panjang", "segitiga_sama_sisi", "belah_ketupat")
+        )
+        ukuran = rng.randint(3, 16)
+        param: dict = {
+            "bangun": bangun,
+            "ukuran": ukuran,
+            "satuan": rng.choice(("cm", "m")),
+            "warna": rng.choice(WARNA_KERTAS),
+        }
+        if bangun == "persegi_panjang":
+            # lebar < panjang supaya teksnya masuk akal
+            param["lebar"] = rng.randint(2, ukuran - 1)
+        return param
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 
@@ -1089,7 +1376,7 @@ TOPIK = Topik(
     judul_penilaian="Penilaian — Geometri Datar",
     templates=REGISTRI_TOPIK,
     komposisi=KOMPOSISI,
-    profil={"P4": {}, "P5": {}, "P6": {}},
+    profil={"P3": {}, "P4": {}, "P5": {}, "P6": {}},
     judul_bagian=JUDUL_BAGIAN,
     catatan_bagian=CATATAN_BAGIAN,
     parameter_untuk=_parameter,

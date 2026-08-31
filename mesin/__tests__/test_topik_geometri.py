@@ -1,10 +1,12 @@
-"""Fase 1: kontrak paket topik ketiga — geometri datar (P4/P5/P6).
+"""Fase 1: kontrak paket topik ketiga — geometri datar (P3/P4/P5/P6).
 
 Paket ketiga adalah bukti kedua bahwa registry benar-benar menjadi seam
 (plan 30 Aug 2026): paket baru terdaftar, komposisinya dipakai generator,
 dan ia tidak mengubah paket pola-bilangan maupun aritmetika-dasar.
-Keputusan pengguna: geometri-datar mulai di P4 (P3 ditunda), 10 template,
-soal berbentuk teks (SVG belakangan).
+Keputusan lama: geometri-datar mulai di P4 (P3 ditunda), 10 template.
+Diperbarui: P3 dibuka selaras band SASMO Primary 1-4 (geometry &
+mensuration) — 2 template dasar baru (luas_kotak_satuan, simetri_bangun),
+total 12 template, soal berbentuk teks (SVG belakangan).
 """
 
 from __future__ import annotations
@@ -44,6 +46,24 @@ def test_geometri_datar_memulai_dengan_template_sudut():
 
 
 # ── Komposisi per level (tabel plan 30 Aug 2026) ───────────────────────
+
+
+def test_komposisi_p3_delapan_soal():
+    """P3 dibuka: 8 soal dari 3 template dasar, mudah -> sulit.
+
+    Bagian E (kotak satuan & simetri) menyatu di depan, keliling varian
+    "keliling" di akhir sebagai yang tersulit."""
+    komposisi = _paket().komposisi_untuk("P3")
+    assert komposisi == (
+        "luas_kotak_satuan",
+        "luas_kotak_satuan",
+        "simetri_bangun",
+        "luas_kotak_satuan",
+        "simetri_bangun",
+        "keliling_luas_datar",
+        "keliling_luas_datar",
+        "keliling_luas_datar",
+    )
 
 
 def test_komposisi_p4_delapan_soal():
@@ -92,26 +112,24 @@ def test_komposisi_p6_sepuluh_soal():
     )
 
 
-def test_geometri_menolak_level_di_luar_scope():
-    """Paket P4/P5/P6 tidak boleh diam-diam membuat sesi untuk anak P3."""
-    with pytest.raises(ValueError, match="geometri-datar"):
-        buat_lembar(7, level="P3", topik="geometri-datar")
-    with pytest.raises(ValueError, match="geometri-datar"):
-        buat_soal("sudut_pelurus_berpenyiku", 7, level="P3", topik="geometri-datar")
+def test_geometri_level_teks_aneh_jatuh_ke_p3_bukan_p4():
+    """Data tingkat lama yang aneh memakai level PERTAMA paket.
 
-
-def test_geometri_level_teks_aneh_jatuh_ke_p4_bukan_p5():
-    """Data tingkat lama yang aneh memakai level pertama paket (P4)."""
+    Alasan lama: geometri-datar mulai di P4 (P3 ditunda — keputusan
+    pengguna), jadi level teks aneh jatuh ke P4.
+    Alasan perubahan: P3 dibuka dan menjadi kunci PERTAMA di KOMPOSISI;
+    `_level_efektif` mengambil `next(iter(paket.komposisi))` untuk teks
+    aneh, jadi fallback sekarang P3, bukan P4."""
     aneh = buat_lembar(7, level="tingkat-lama", topik="geometri-datar")
-    p4 = buat_lembar(7, level="P4", topik="geometri-datar")
-    assert aneh.level == "P4"
-    assert aneh.tanda_tangan == p4.tanda_tangan
+    p3 = buat_lembar(7, level="P3", topik="geometri-datar")
+    assert aneh.level == "P3"
+    assert aneh.tanda_tangan == p3.tanda_tangan
 
 
-def test_geometri_datar_memuat_sepuluh_template():
-    """Task 1.5: seluruh 10 template sudah terimplementasi."""
+def test_geometri_datar_memuat_dua_belas_template():
+    """Task 1.5 + pembukaan P3: seluruh 12 template sudah terimplementasi."""
     paket = _paket()
-    assert len(paket.templates) == 10
+    assert len(paket.templates) == 12
     for nama in (
         "sudut_pelurus_berpenyiku",
         "jumlah_sudut_segitiga",
@@ -123,12 +141,14 @@ def test_geometri_datar_memuat_sepuluh_template():
         "juring",
         "luas_arsiran",
         "perbandingan_ukuran",
+        "luas_kotak_satuan",
+        "simetri_bangun",
     ):
         assert nama in paket.templates, nama
 
 
-# Level teks aneh -> P4 diuji di Task 1.5, saat seluruh template sudah
-# ada dan buat_lembar P4 bisa dibangun penuh.
+# Level teks aneh -> P3 (kunci pertama KOMPOSISI) diuji di atas, bersama
+# lembar P3 yang kini bisa dibangun penuh.
 
 
 # ── Judul bagian ───────────────────────────────────────────────────────
@@ -141,6 +161,7 @@ def test_judul_bagian_geometri():
         "B": "Bagian B — Keliling & luas",
         "C": "Bagian C — Lingkaran",
         "D": "Bagian D — Arsiran & perubahan ukuran",
+        "E": "Bagian E — Kotak satuan & simetri",
     }
 
 
@@ -497,3 +518,91 @@ def test_kelompok_arsiran_sweep_tanpa_malrule_kosong(template_id, level):
         assert {"K", "H"} <= {m.kode for m in s.malrule}, (
             f"{template_id}@{level}/{seed}"
         )
+
+
+# ── Template dasar P3 (#11-#12) — pembukaan level P3 ──────────────────
+#
+# P3 dibuka selaras band SASMO Primary 1-4 (geometry & mensuration): luas
+# dibaca dari kotak-kotak satuan, sumbu simetri bangun dasar, dan keliling
+# maju dengan angka kecil.
+
+
+def test_luas_kotak_satuan_kunci():
+    """#11: luas = p × l dari grid kotak satuan; p, l ∈ 2..8."""
+    for seed in range(1, 120):
+        s = buat_soal("luas_kotak_satuan", seed, level="P3", topik="geometri-datar")
+        p = s.parameter
+        assert 2 <= p["p"] <= 8 and 2 <= p["l"] <= 8, p
+        # (3,6), (4,4), (6,3) terlarang: p*l == 2(p+l) menjatuhkan malrule
+        # hitung_keliling — pola yang sama dengan keliling_luas_datar.
+        assert p["p"] * p["l"] != 2 * (p["p"] + p["l"]), p
+        assert s.kunci == str(p["p"] * p["l"]), f"{p=}, kunci={s.kunci}"
+        assert "luas" in s.teks
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_luas_kotak_satuan_malrule_konsep_dan_hitung():
+    """#11: kotak tepi dikira luas (H), satu baris/kolom saja (K), kurang-1 (H)."""
+    for seed in range(1, 120):
+        s = buat_soal("luas_kotak_satuan", seed, level="P3", topik="geometri-datar")
+        p = s.parameter
+        jawaban = {m.id: m.jawaban for m in s.malrule}
+        # Semua malrule wajib SELAMAT dari saring_malrule — guard _parameter
+        # menyingkirkan tabrakan (p*l == 2(p+l) dan p*l-1 == 2(p+l)).
+        assert jawaban["datar.hitung_keliling"] == str(2 * (p["p"] + p["l"])), p
+        assert jawaban["datar.hanya_satu_baris"] == str(p["p"]), p
+        assert jawaban["datar.kurang_satu"] == str(p["p"] * p["l"] - 1), p
+
+
+def test_simetri_bangun_kunci():
+    """#12: sumbu simetri — persegi 4, PP 2, sama sisi 3, belah ketupat 2."""
+    kunci_bangun = {
+        "persegi": 4,
+        "persegi_panjang": 2,
+        "segitiga_sama_sisi": 3,
+        "belah_ketupat": 2,
+    }
+    terlihat = set()
+    for seed in range(1, 120):
+        s = buat_soal("simetri_bangun", seed, level="P3", topik="geometri-datar")
+        p = s.parameter
+        assert p["bangun"] in kunci_bangun, p
+        assert s.kunci == str(kunci_bangun[p["bangun"]]), f"{p=}, kunci={s.kunci}"
+        assert "sumbu simetri" in s.teks
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+        terlihat.add(p["bangun"])
+    assert terlihat == set(kunci_bangun)  # keempat bangun muncul dalam 120 seed
+
+
+def test_simetri_bangun_jebalan_tersaring():
+    """Jebalan #12: untuk persegi & sama sisi, menghitung sisi/sudut memberi
+    angka yang SAMA dengan sumbu simetrinya (4=4, 3=3) → malrule itu
+    tersaring saring_malrule; jalur K dan H tetap ada lewat malrule
+    alternatif. Untuk PP & ketupat (4 sisi ≠ 2 sumbu), hitung_sisi justru
+    selamat sebagai jalur K."""
+    for seed in range(1, 120):
+        s = buat_soal("simetri_bangun", seed, level="P3", topik="geometri-datar")
+        p = s.parameter
+        id_selamat = {m.id for m in s.malrule}
+        if p["bangun"] in ("persegi", "segitiga_sama_sisi"):
+            assert "simetri.hitung_sisi" not in id_selamat, (p, id_selamat)
+            assert "simetri.hitung_sudut" not in id_selamat, (p, id_selamat)
+        else:
+            assert "simetri.hitung_sisi" in id_selamat, (p, id_selamat)
+
+
+def test_keliling_luas_datar_p3_varian_keliling():
+    """#4 di P3: hanya varian "keliling" dengan p, l ∈ 2..16 — balik_luas
+    disisakan P4+. Rentang 2..16 (bukan 2..10) demi ambang variasi >=200
+    kombinasi untuk pasangan level baru."""
+    for seed in range(1, 120):
+        s = buat_soal("keliling_luas_datar", seed, level="P3", topik="geometri-datar")
+        p = s.parameter
+        assert p["varian"] == "keliling", p
+        assert 2 <= p["p"] <= 16 and 2 <= p["l"] <= 16, p
+        assert p["p"] * p["l"] != 2 * (p["p"] + p["l"]), p
+        assert s.kunci == str(2 * (p["p"] + p["l"]))
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
