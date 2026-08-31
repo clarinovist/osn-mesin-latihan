@@ -164,9 +164,31 @@ input:disabled, textarea:disabled, select:disabled {{
   .nav-samping {{ flex-direction: row; flex-wrap: wrap; position: static; }}
 }}
 
-/* ── Dashboard: kartu siswa side-by-side (mockup guru-dashboard) ───── */
+/* Kartu berdampingan — kini hanya dipakai landing.py; dashboard keluarga
+   pindah ke .daftar-anak (band per anak). */
 .grid-utama {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }}
 @media (max-width: 46rem) {{ .grid-utama {{ grid-template-columns: 1fr; }} }}
+/* Band per anak (dashboard keluarga): satu anak satu baris penuh. Dulu
+   1fr 1fr memaksa dua kartu berdampingan — tabel 7 kolom terjepit di
+   ±460px (tanggal dan nomor sesi wrap dua baris) sementara form
+   buat-sesi yang jarang datanya justru memakan tinggi kartu. Band penuh
+   memberi tabel ruang; form cukup jadi strip ringkas (.strip-sesi). */
+.daftar-anak {{ display: grid; gap: 1.2rem; }}
+.kolom-sesi, .kolom-tanggal {{ white-space: nowrap; }}
+
+/* Strip buat-sesi: satu baris di bawah tabel, tombol tidak lagi
+   memakan lebar penuh kartu. Pengaturan timer mengambil satu baris
+   sendiri saat muncul (mode Latihan Cepat). */
+.strip-sesi {{
+  display: flex; flex-wrap: wrap; gap: .7rem 1.2rem; align-items: flex-end;
+  margin-top: .8rem; padding-top: .8rem;
+  border-top: 1px dashed {T.BORDER_HALUS};
+}}
+.strip-sesi .strip-kolom {{ display: flex; flex-direction: column; gap: .2rem; }}
+.strip-sesi label {{ margin: 0; }}
+.strip-sesi select {{ width: auto; min-width: 13rem; }}
+.strip-sesi .pengaturan-timer {{ flex-basis: 100%; }}
+.strip-sesi button {{ padding: .55rem 1.2rem; }}
 .kartu-siswa {{ margin-bottom: 0; }}
 .siswa-kepala {{
   display: flex; align-items: center; justify-content: space-between;

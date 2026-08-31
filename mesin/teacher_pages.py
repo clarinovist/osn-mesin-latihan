@@ -214,9 +214,9 @@ def halaman_utama(
         ).fetchall()
 
         item = "".join(
-            f'<tr><td><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
+            f'<tr><td class="kolom-sesi"><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
             f'{_badge_mode(r)}</td>'
-            f'<td>{r["tanggal"]}</td>'
+            f'<td class="kolom-tanggal">{r["tanggal"]}</td>'
             f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
             f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
@@ -232,6 +232,31 @@ def halaman_utama(
                 f'<span class="badge-keluarga">keluarga: {html.escape(siapa)}</span>'
             )
 
+        strip_sesi = (
+            f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
+            f'<div class="strip-kolom"><label>Topik</label>'
+            f'<select name="topik">{opsi_topik}</select></div>'
+            f'<div class="strip-kolom"><label>Mode</label>'
+            f'<div class="mode-pilih">'
+            f'<label class="mode-opsi"><input type="radio" name="mode" '
+            f'value="diagnostik" checked> Diagnosa</label>'
+            f'<label class="mode-opsi"><input type="radio" name="mode" '
+            f'value="drill"> Latihan Cepat</label>'
+            f'</div></div>'
+            f'<div class="pengaturan-timer" style="display:none">'
+            f'<label>Durasi '
+            f'<input type="number" name="durasi_menit" value="15" '
+            f'min="1" max="180" style="width:4.5rem"> menit</label>'
+            f'<label class="mode-opsi"><input type="radio" name="timer_mode" '
+            f'value="sesi" checked> per sesi (tampil)</label>'
+            f'<label class="mode-opsi"><input type="radio" name="timer_mode" '
+            f'value="soal"> per soal (internal)</label>'
+            f'<label class="mode-opsi"><input type="checkbox" '
+            f'name="timer_auto" value="1"> auto-submit</label>'
+            f'</div>'
+            f'<button type="submit" class="tombol-coral">Buat sesi baru</button>'
+            f'</form>'
+        )
         baris.append(
             f'<div class="kartu kartu-siswa">'
             f'<div class="siswa-kepala">'
@@ -245,31 +270,7 @@ def halaman_utama(
             f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Benar</th>"
             f"<th>Waktu</th></tr>"
             f"{item}</table></div>"
-            f'<form method="post" action="/sesi-baru/{s["id"]}" '\
-                        f'class="baris" style="margin-top:.9rem">'\
-                        f'<div><label>Topik</label>'\
-                        f'<select name="topik">{opsi_topik}</select></div>'\
-                        f'<div><label>Mode</label>'\
-                        f'<div class="mode-pilih">'\
-                        f'<label class="mode-opsi"><input type="radio" name="mode" '\
-                        f'value="diagnostik" checked> Diagnosa</label>'\
-                        f'<label class="mode-opsi"><input type="radio" name="mode" '\
-                        f'value="drill"> Latihan Cepat</label>'\
-                        f'</div></div>'\
-                        f'<div class="pengaturan-timer" style="display:none">'\
-                        f'<label>Durasi '\
-                        f'<input type="number" name="durasi_menit" value="15" '\
-                        f'min="1" max="180" style="width:4.5rem"> menit</label>'\
-                        f'<label class="mode-opsi"><input type="radio" name="timer_mode" '\
-                        f'value="sesi" checked> per sesi (tampil)</label>'\
-                        f'<label class="mode-opsi"><input type="radio" name="timer_mode" '\
-                        f'value="soal"> per soal (internal)</label>'\
-                        f'<label class="mode-opsi"><input type="checkbox" '\
-                        f'name="timer_auto" value="1"> auto-submit</label>'\
-                        f'</div>'\
-                        f'<div style="display:flex;align-items:flex-end">'\
-                        f'<button type="submit" class="tombol-coral" style="width:100%">'\
-                        f"Buat sesi baru</button></div></form>"
+            f"{strip_sesi}"
             f"</div>"
         )
 
@@ -286,7 +287,7 @@ def halaman_utama(
         f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
         f"untuk melihat tren.</p>"
         f"{kabar}"
-        f'<div class="grid-utama">{isi_utama}</div>'
+        f'<div class="daftar-anak">{isi_utama}</div>'
         f'<script>'
         f'(function(){{'
         f'var r=document.querySelectorAll(\'input[name="mode"]\');'
