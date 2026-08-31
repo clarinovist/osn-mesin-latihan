@@ -137,7 +137,7 @@ def test_fasad_cetak_tetap_mengekspor_nama_lama():
     assert worksheets.CSS is GAYA_CETAK
     assert hasattr(worksheets, "_badan_soal")
     # Diagram SVG kini milik paket topik, bukan renderer
-    from topic_number_patterns import _svg_korek  # noqa: F401
+    from topic_number_patterns_svg import _svg_korek  # noqa: F401
 
 
 def test_soal_bagian_f_terender_dengan_kotak_caraku_besar():

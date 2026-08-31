@@ -138,7 +138,7 @@ def test_diagram_digambar_sebagai_svg_bukan_ascii():
 def test_svg_korek_api_jumlah_batangnya_benar():
     """Label pada gambar harus cocok dengan pola 3, 5, 7 — kalau tidak,
     anak melihat gambar yang bertentangan dengan soalnya."""
-    from topic_number_patterns import _svg_korek
+    from topic_number_patterns_svg import _svg_korek
 
     svg = _svg_korek(3, 3, 2)
     assert "Gbr 1 — 3" in svg
@@ -147,7 +147,7 @@ def test_svg_korek_api_jumlah_batangnya_benar():
 
 
 def test_svg_titik_segitiga_jumlahnya_benar():
-    from topic_number_patterns import _svg_titik
+    from topic_number_patterns_svg import _svg_titik
 
     svg = _svg_titik(4)
     for n, jml in ((1, 1), (2, 3), (3, 6), (4, 10)):
