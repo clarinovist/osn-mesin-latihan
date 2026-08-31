@@ -64,7 +64,10 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
             baris += (
                 f"<tr><td>{nama_esc}</td><td>{status}</td><td>"
                 f'<div class="baris-aksi">'
-                f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center">'
+                f'<form method="post" action="/akun" '
+                f'style="display:inline-flex;gap:.3rem;align-items:center" '
+                f'onsubmit="return confirm(\'Hapus akun ini? Anaknya tetap '
+                f'ada — hanya loginnya yang hilang.\')">'
                 f'<input type="hidden" name="aksi" value="akun_murid_hapus">'
                 f'<input type="hidden" name="nama" value="{nama_esc}">'
                 f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus</button>'
@@ -81,32 +84,52 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
     else:
         baris = '<tr><td colspan="3" class="kosong">belum ada akun murid</td></tr>'
 
-    if daftar_siswa:
+    # Form pembuat akun sengaja kontekstual: alur normal (Tambah anak)
+    # sudah membuatkan akun sekaligus, jadi form permanen cuma jadi
+    # duplikasi yang membingungkan — dan memungkinkan akun kedua untuk
+    # anak yang sama. Ia hanya tampil bila ada anak yang belum
+    # terhubung: warisan lama, atau akun yang terhapus tanpa sengaja.
+    belum_terhubung = [
+        s
+        for s in daftar_siswa
+        if _murid.akun_murid_dari_siswa(kon, s["id"]) is None
+    ]
+
+    if belum_terhubung:
         opsi = "".join(
             f'<option value="{s["id"]}">{html.escape(s["nama"])}</option>'
-            for s in daftar_siswa
+            for s in belum_terhubung
         )
-        pilih = f'<select name="siswa_id" required><option value="">— pilih siswa —</option>{opsi}</select>'
-        dis = ""
+        pilih = (
+            '<select name="siswa_id" required>'
+            '<option value="">— pilih anak —</option>' + opsi + "</select>"
+        )
+        tambah = (
+            f'<form method="post" action="/akun" style="margin-top:.8rem">'
+            f'<input type="hidden" name="aksi" value="akun_murid_tambah">'
+            f'<p class="sub">Anak berikut belum punya akun masuk — '
+            f"buatkan di sini:</p>"
+            f'<div class="baris">'
+            f"<div><label>Anak</label>"
+            f"{pilih}</div>"
+            f"<div><label>Nama untuk masuk</label>"
+            f'<input type="text" name="nama_akun" placeholder="mis. bima-santoso" required></div>'
+            f"</div>"
+            f'<div><label>Sandi baru (minimal 8 karakter)</label>'
+            f'<input type="password" name="sandi" placeholder="sandi untuk murid" required minlength="8">'
+            f"</div>"
+            f'<p style="margin-top:.6rem"><button type="submit">Buat akun masuk</button></p>'
+            f"</form>"
+        )
+    elif daftar_siswa:
+        tambah = (
+            '<p class="sub" style="margin-top:.8rem">Semua anak sudah '
+            "punya akun masuk.</p>"
+        )
     else:
-        pilih = '<select name="siswa_id" disabled><option>belum ada siswa</option></select>'
-        dis = " disabled"
-
-    tambah = (
-        f'<form method="post" action="/akun" style="margin-top:.8rem">'
-        f'<input type="hidden" name="aksi" value="akun_murid_tambah">'
-        f'<div class="baris">'
-        f"<div><label>Siswa</label>"
-        f"{pilih}</div>"
-        f"<div><label>Nama untuk masuk</label>"
-        f'<input type="text" name="nama_akun" placeholder="mis. bima-santoso" required></div>'
-        f"</div>"
-        f'<div><label>Sandi baru (minimal 8 karakter)</label>'
-        f'<input type="password" name="sandi" placeholder="sandi untuk murid" required minlength="8">'
-        f"</div>"
-        f'<p style="margin-top:.6rem"><button type="submit"{dis}>Tambah akun murid</button></p>'
-        f"</form>"
-    )
+        # Belum ada anak sama sekali: jalurnya kartu Tambah anak di
+        # section Siswa, bukan di sini.
+        tambah = ""
 
     return (
         f'<div class="kartu"><h2>Akun murid</h2>'
@@ -123,13 +146,19 @@ def status_akun_latihan(kon, siswa_id: int) -> str:
 
     Nama login bila anaknya sudah punya akun, penanda jelas bila belum —
     supaya jelas bahwa menghapus akun latihan tidak menghapus anaknya.
+    Penandanya sekaligus tautan ke section Akun latihan, tempat satu-
+    satunya form pembuat akun (kontekstual) tinggal — jadi status
+    langsung mengarahkan ke alat perbaikannya.
     """
     import students as _murid
 
     nama = _murid.akun_murid_dari_siswa(kon, siswa_id)
     if nama:
         return f'<span class="status-ok">{html.escape(nama)}</span>'
-    return '<span class="status-buruk">belum ada login</span>'
+    return (
+        '<a class="status-buruk" href="/akun?section=akun-murid">'
+        "belum ada login</a>"
+    )
 
 def halaman_akun(
     kon,
@@ -527,6 +556,16 @@ def proses_akun(
             siswa_id = int(baris["id"])
         else:
             return "", "Pilih siswanya dulu."
+
+        import students as _murid
+
+        # Satu anak satu akun: dropdown form kontekstual sudah menyaring,
+        # tetapi POST tidak boleh dipercaya — tanpa pagar ini anak yang
+        # sudah terhubung bisa diam-diam dapat akun kedua, padahal
+        # seluruh aplikasi mengasumsikan satu akun satu anak.
+        login_lama = _murid.akun_murid_dari_siswa(kon, siswa_id)
+        if login_lama:
+            return "", f"{nama_siswa} sudah punya akun masuk ({login_lama})."
 
         if not nama_akun:
             nama_akun = nama_siswa

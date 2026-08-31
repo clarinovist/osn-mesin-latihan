@@ -332,7 +332,9 @@ def test_tambah_akun_murid_berhasil(siap):
     assert auth.periksa_peran("Budi", "rahasia-budi-123", "murid") is True
 
 
-def test_tambah_akun_murid_nama_ganda_galat(siap):
+def test_tambah_akun_murid_dua_kali_ditolak(siap):
+    """Anak yang sudah terhubung ditolak di handler — palangnya bukan di
+    dropdown form saja, karena POST tidak boleh dipercaya."""
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Citra", pemilik="guru")
         account_pages.proses_akun(kon, {
@@ -342,8 +344,26 @@ def test_tambah_akun_murid_nama_ganda_galat(siap):
             "aksi": "akun_murid_tambah", "nama": "Citra", "sandi": "rahasia-lain-123",
         }, "guru")
     assert not pesan
-    assert galat  # ValueError ditangkap jadi galat, bukan 500
-    assert "sudah dipakai" in galat.lower() or "sudah ada" in galat.lower() or "ganda" in galat.lower() or "dipakai" in galat.lower()
+    assert galat  # ditolak rapi, bukan 500
+    assert "sudah punya akun" in galat.lower()
+
+
+def test_nama_akun_sudah_dipakai_anak_lain_galat(siap):
+    """Nama login unik GLOBAL — bentrok lintas anak tetap galat rapi
+    (ValueError dari auth), bukan 500."""
+    with database.buka(siap) as kon:
+        database.tambah_siswa(kon, "Budi", pemilik="guru")
+        database.tambah_siswa(kon, "Wati", pemilik="guru")
+        account_pages.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Budi", "sandi": "rahasia-budi-123",
+        }, "guru")
+        pesan, galat = account_pages.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Wati", "nama_akun": "Budi",
+            "sandi": "rahasia-wati-123",
+        }, "guru")
+    assert not pesan
+    assert galat
+    assert "sudah dipakai" in galat.lower()
 
 
 def test_tambah_akun_murid_sandi_pendek_ditolak(siap):
@@ -413,6 +433,67 @@ def test_sandi_murid_tidak_muncul_di_html(siap):
         h2 = account_pages.halaman_akun(kon, section="akun-murid").decode()
     assert "<b>Hacker</b>" not in h2
     assert "&lt;b&gt;Hacker&lt;/b&gt;" in h2
+
+
+# ── Form akun murid kontekstual: hanya untuk anak yang belum terhubung ──
+
+
+def test_semua_anak_terhubung_form_pembuat_tidak_tampil(siap):
+    """Alur normal (Tambah anak) sudah membuatkan akun sekaligus — form
+    pembuat permanen cuma duplikasi yang membingungkan, bahkan bisa
+    membuat akun kedua untuk anak yang sama."""
+    with database.buka(siap) as kon:
+        database.tambah_siswa(kon, "Sinta", pemilik="guru")
+        auth.tambah_akun("Sinta", "rahasia-sinta-123", "murid")
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
+    assert "Tambah akun murid" not in h
+    assert "Buat akun masuk" not in h
+    assert "Semua anak sudah punya akun masuk" in h
+    # Penghapusan akun tetap konfirmasi dulu — sekali klik tidak boleh
+    # langsung mencabut login anak.
+    assert "confirm(" in h
+
+
+def test_form_muncul_hanya_untuk_anak_belum_terhubung(siap):
+    with database.buka(siap) as kon:
+        database.tambah_siswa(kon, "Sinta", pemilik="guru")
+        database.tambah_siswa(kon, "Tono", pemilik="guru")
+        auth.tambah_akun("Sinta", "rahasia-sinta-123", "murid")
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
+    assert "belum punya akun masuk" in h
+    assert "Buat akun masuk" in h
+    # Dropdown hanya berisi anak yang belum terhubung, bukan semua anak.
+    assert ">Tono</option>" in h
+    assert ">Sinta</option>" not in h
+
+
+def test_akun_terhapus_form_perbaikan_muncul_lagi(siap):
+    """Jalur pemulihan: akun terhapus (salah klik) tapi anaknya tetap
+    ada — form pembuat muncul kembali untuk anak itu, dan login barunya
+    berfungsi. Tanpa jalur ini anak ber-riwayat tidak pernah bisa masuk
+    lagi (Tambah anak menolak nama yang sudah ada)."""
+    with database.buka(siap) as kon:
+        database.tambah_siswa(kon, "Sinta", pemilik="guru")
+        auth.tambah_akun("Sinta", "rahasia-sinta-123", "murid")
+        account_pages.proses_akun(kon, {
+            "aksi": "akun_murid_hapus", "nama": "Sinta",
+        }, "guru")
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
+        assert "belum punya akun masuk" in h
+        pesan, galat = account_pages.proses_akun(kon, {
+            "aksi": "akun_murid_tambah", "nama": "Sinta",
+            "sandi": "sinta-baru-12345",
+        }, "guru")
+        assert not galat, galat
+    assert auth.periksa_peran("Sinta", "sinta-baru-12345", "murid") is True
+
+
+def test_status_belum_ada_login_menuju_section_perbaikan(siap):
+    with database.buka(siap) as kon:
+        database.tambah_siswa(kon, "Sinta", pemilik="guru")
+        h = account_pages.halaman_akun(kon, section="siswa").decode()
+    assert "belum ada login" in h
+    assert 'href="/akun?section=akun-murid"' in h
 
 
 # ── Sidebar + section (plan 2026-08-30) ───────────────────────────────
