@@ -225,10 +225,10 @@ def test_ringkasan_memuat_kolom_topik(db):
 
 def test_buat_sesi_seed_baru_meneruskan_topik(db):
     import database
-    import web
+    import teacher_pages
 
     siswa = database.daftar_siswa(db)[0]
-    sesi_id = web.buat_sesi_seed_baru(db, siswa["id"], topik="pola-bilangan")
+    sesi_id = teacher_pages.buat_sesi_seed_baru(db, siswa["id"], topik="pola-bilangan")
     topik = db.execute(
         "SELECT topik FROM sesi WHERE id = ?", (sesi_id,)
     ).fetchone()["topik"]

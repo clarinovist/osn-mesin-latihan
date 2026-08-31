@@ -24,6 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import database  # noqa: E402
 import students  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
+import reports  # noqa: E402
 from http_test_kit import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
 
@@ -45,7 +47,7 @@ def server(tmp_path, monkeypatch):
 def _simpan_sebagai_murid(kon, siswa_id, sesi_id, nomor: int, isi: dict):
     """Kirim form persis seperti yang HP anak kirim: kunci field pakai
     sesi_soal_id, bukan nomor. Diagnosisnya dijalankan terpisah lewat
-    web.diagnosa_murid — persis urutan yang dilakukan handler POST
+    reports.diagnosa_murid — persis urutan yang dilakukan handler POST
     /murid/kerjakan/ (wiring otomatisnya diuji test HTTP di bawah)."""
     baris = next(
         b for b in database.isi_sesi(kon, sesi_id) if b["nomor"] == nomor
@@ -56,7 +58,7 @@ def _simpan_sebagai_murid(kon, siswa_id, sesi_id, nomor: int, isi: dict):
         data[k.replace("<ssid>", str(ssid))] = v
     hasil = students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
     if hasil:
-        web.diagnosa_murid(kon, sesi_id)
+        reports.diagnosa_murid(kon, sesi_id)
     return hasil
 
 
@@ -137,7 +139,7 @@ def test_kode_manual_guru_bertahan_saat_murid_perbarui_jawaban(db):
             kon, sid, sesi_id, {f"jwb_{ssid}": jwb, f"cara_{ssid}": "coba"}
         )
         # 2) guru menimpa: kode E manual
-        web.simpan_sesi(
+        teacher_pages.simpan_sesi(
             kon, sesi_id,
             {f"jwb_{ssid}": jwb, f"cara_{ssid}": "coba", f"kode_{ssid}": "E"},
         )
@@ -148,7 +150,7 @@ def test_kode_manual_guru_bertahan_saat_murid_perbarui_jawaban(db):
         students.simpan_jawaban_murid(
             kon, sid, sesi_id, {f"jwb_{ssid}": jwb, f"cara_{ssid}": "coba"}
         )
-        web.diagnosa_murid(kon, sesi_id)
+        reports.diagnosa_murid(kon, sesi_id)
         hasil = database.isi_sesi(kon, sesi_id)[0]
 
     assert hasil["kode_final"] == "E", "keputusan guru tertimpa mesin!"

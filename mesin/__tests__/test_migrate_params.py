@@ -2,7 +2,7 @@
 
 Sumber insiden yang ditutup: parameter berstruktur pernah disimpan sebagai
 string per-template ("ABCC", "hijau,kuning", "2,3,4") lalu dibongkar lagi
-dengan cabang `if template_id` di web._soal_dari_baris. Template baru dengan
+dengan cabang `if template_id` di teacher_pages._soal_dari_baris. Template baru dengan
 parameter berstruktur harus MENAMBAH cabang itu untuk bisa direstorasi — dan
 yang lupa tidak gagal saat test, tapi saat halaman guru menampilkan soal
 yang salah. Kontrak baru: parameter tersimpan apa adanya (list = list), dan
@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
 from generator import buat_lembar  # noqa: E402
 from migrate_params import KLAUSUL, jalankan  # noqa: E402
 
@@ -82,7 +83,7 @@ def test_soal_baru_terrestorasi_identik_tanpa_cabang(db):
         sesi_id = database.buat_sesi(kon, sid, seed=77)
         asli = buat_lembar(77).soal
         ulang = [
-            web._soal_dari_baris(b) for b in database.isi_sesi(kon, sesi_id)
+            teacher_pages._soal_dari_baris(b) for b in database.isi_sesi(kon, sesi_id)
         ]
     for a, u in zip(asli, ulang):
         assert u.teks == a.teks
@@ -92,7 +93,7 @@ def test_soal_baru_terrestorasi_identik_tanpa_cabang(db):
 
 def test_soal_dari_baris_tanpa_cabang_per_template():
     """Gerbang struktural: fungsi restorasi tidak boleh mengenal template."""
-    sumber = inspect.getsource(web._soal_dari_baris)
+    sumber = inspect.getsource(teacher_pages._soal_dari_baris)
     assert "split(" not in sumber, "ada pembongkaran string per template"
     assert 'template_id"] ==' not in sumber, "ada cabang per template"
 
@@ -144,7 +145,7 @@ def test_migrasi_mengubah_baris_lama_jadi_list_dan_re_sign(db):
         # tanda_tangan dihitung ulang dari bentuk baru.
         assert "pola=['A', 'B', 'C', 'C']" in baris["tanda_tangan"]
         # Baris sesi lama masih bisa direstorasi lewat jalur baru.
-        soal = web._soal_dari_baris(baris)
+        soal = teacher_pages._soal_dari_baris(baris)
         assert soal.kunci == "A"
         assert soal.parameter["pola"] == ["A", "B", "C", "C"]
 

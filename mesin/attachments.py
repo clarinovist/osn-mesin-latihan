@@ -8,7 +8,7 @@ Alur lengkapnya:
   3. Guru membuka halaman konfirmasi, melihat foto + usulan AI per soal,
      mengoreksi bila AI salah baca, lalu menekan Terapkan.
   4. Terapkan menulis jawaban lewat database.simpan_jawaban — jalur yang SAMA
-     dengan semua alur lain — lalu web.diagnosa_murid menilainya. Data
+     dengan semua alur lain — lalu reports.diagnosa_murid menilainya. Data
      hasil bacaan AI TIDAK PERNAH masuk laporan tanpa lewat guru.
 
 Garis yang tidak boleh dilanggar modul ini:
@@ -189,7 +189,7 @@ def proses_upload(
 
 def _soal_konteks(kon, sesi_id: int) -> list[dict]:
     """Soal sesi untuk konteks AI dan halaman konfirmasi (teks + kunci)."""
-    from web import _soal_dari_baris  # late import: hindari siklus
+    from teacher_pages import _soal_dari_baris  # late import: hindari siklus
 
     keluar = []
     for b in database.isi_sesi(kon, sesi_id):
@@ -215,7 +215,7 @@ def terapkan(kon, lampiran_id: int, data: dict) -> tuple[int, str]:
 
     Form mengirim per soal: jwb_<ssid>, cara_<ssid>, blm_<ssid>.
     Mengembalikan (jumlah_soal, pesan). Setelah menulis, diagnosis dijalankan
-    lewat web.diagnosa_murid (satu jalur untuk semua sumber jawaban).
+    lewat reports.diagnosa_murid (satu jalur untuk semua sumber jawaban).
     """
     lampiran = database.ambil_lampiran(kon, lampiran_id)
     if not lampiran:
@@ -237,9 +237,9 @@ def terapkan(kon, lampiran_id: int, data: dict) -> tuple[int, str]:
         )
         jumlah += 1
     if jumlah:
-        import web  # late: diagnosa_murid tinggal di web
+        import reports  # late: diagnosa_murid tinggal di reports
 
-        web.diagnosa_murid(kon, sesi_id)
+        reports.diagnosa_murid(kon, sesi_id)
         database.tandai_lampiran(kon, lampiran_id, "diterapkan")
     return jumlah, f"{jumlah} soal dari foto masuk dan didiagnosis."
 

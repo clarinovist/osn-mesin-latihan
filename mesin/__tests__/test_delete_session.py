@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import database  # noqa: E402
 import attachments  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
 from diagnosis import diagnosa  # noqa: E402
 from http_test_kit import SANDI_GURU, ServerUji  # noqa: E402
 
@@ -130,7 +131,7 @@ def test_konfirmasi_hapus_menampilkan_angka_nyata(db):
     hilang — bukan kata-kata generik yang membuat hapus terasa ringan."""
     with database.buka(db) as kon:
         sesi_id = _sesi_dengan_hasil(kon)
-        isi = web.halaman_konfirmasi_hapus(kon, sesi_id).decode()
+        isi = teacher_pages.halaman_konfirmasi_hapus(kon, sesi_id).decode()
     assert "2 jawaban" in isi
     assert "2 diagnosis" in isi
     assert "1 foto" in isi
@@ -141,21 +142,21 @@ def test_konfirmasi_hapus_menampilkan_angka_nyata(db):
 
 def test_konfirmasi_hapus_sesi_tak_dikenal_mengembalikan_none(db):
     with database.buka(db) as kon:
-        assert web.halaman_konfirmasi_hapus(kon, 99999) is None
+        assert teacher_pages.halaman_konfirmasi_hapus(kon, 99999) is None
 
 
 def test_halaman_sesi_memuat_tombol_hapus(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Tombol")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
-        isi = web.halaman_sesi(kon, sesi_id).decode()
+        isi = teacher_pages.halaman_sesi(kon, sesi_id).decode()
     assert f'action="/sesi/{sesi_id}/hapus"' in isi
 
 
 def test_halaman_utama_menampilkan_pesan_hapus(db):
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "Pesan")
-        isi = web.halaman_utama(kon, pesan="Sesi 3 dihapus.").decode()
+        isi = teacher_pages.halaman_utama(kon, pesan="Sesi 3 dihapus.").decode()
     assert "Sesi 3 dihapus." in isi
 
 

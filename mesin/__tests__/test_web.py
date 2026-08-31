@@ -20,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
+import reports  # noqa: E402
 from generator import buat_lembar  # noqa: E402
 
 
@@ -45,7 +47,7 @@ def test_soal_dibangun_ulang_persis_sama(db, seed):
         sid = database.tambah_siswa(kon, "Rekon")
         sesi_id = database.buat_sesi(kon, sid, seed=seed)
         for a, b in zip(asli, database.isi_sesi(kon, sesi_id)):
-            ulang = web._soal_dari_baris(b)
+            ulang = teacher_pages._soal_dari_baris(b)
             assert ulang.teks == a.teks, f"teks {a.template_id} berbeda"
             assert ulang.kunci == a.kunci
             assert ulang.minta_restatement == a.minta_restatement
@@ -60,7 +62,7 @@ def test_pola_siklus_terrestorasi_tanpa_konversi_khusus(db):
         sesi_id = database.buat_sesi(kon, sid, seed=88)
         for b in database.isi_sesi(kon, sesi_id):
             if b["template_id"] in ("siklus_huruf", "siklus_warna", "jumlah_siklus"):
-                s = web._soal_dari_baris(b)
+                s = teacher_pages._soal_dari_baris(b)
                 assert s.kunci == b["kunci"]
 
 
@@ -87,7 +89,7 @@ def test_jawaban_benar_tercatat_benar(db):
         isi = database.isi_sesi(kon, sesi_id)
         data = _isi(kon, sesi_id, {b["nomor"]: b["kunci"] for b in isi})
 
-        web.simpan_sesi(kon, sesi_id, data)
+        teacher_pages.simpan_sesi(kon, sesi_id, data)
         r = database.ringkasan(kon, sid)[0]
 
     assert r["benar"] == 12
@@ -106,7 +108,7 @@ def test_malrule_menghasilkan_kode_otomatis(db):
                 jawaban[b["nomor"]] = mal[0]["jawaban"]
                 harapan[b["nomor"]] = mal[0]["kode"]
 
-        web.simpan_sesi(kon, sesi_id, _isi(kon, sesi_id, jawaban))
+        teacher_pages.simpan_sesi(kon, sesi_id, _isi(kon, sesi_id, jawaban))
 
         for b in database.isi_sesi(kon, sesi_id):
             if b["nomor"] in harapan:
@@ -129,7 +131,7 @@ def test_guru_bisa_menimpa_usulan_mesin(db):
             f"cara_{b['sesi_soal_id']}": "coretan",
             f"kode_{b['sesi_soal_id']}": "E",  # guru memutuskan lain
         }
-        web.simpan_sesi(kon, sesi_id, data)
+        teacher_pages.simpan_sesi(kon, sesi_id, data)
         hasil = database.isi_sesi(kon, sesi_id)[0]
 
     assert hasil["kode_final"] == "E"
@@ -148,7 +150,7 @@ def test_guru_bisa_menandai_benar_walau_mesin_bilang_salah(db):
             f"cara_{b['sesi_soal_id']}": "cara alternatif",
             f"kode_{b['sesi_soal_id']}": "benar",
         }
-        web.simpan_sesi(kon, sesi_id, data)
+        teacher_pages.simpan_sesi(kon, sesi_id, data)
         hasil = database.isi_sesi(kon, sesi_id)[0]
 
     assert hasil["benar"] == 1
@@ -166,7 +168,7 @@ def test_soal_dilewati_tidak_membuat_baris_kosong(db):
             f"jwb_{isi[0]['sesi_soal_id']}": isi[0]["kunci"],
             f"cara_{isi[0]['sesi_soal_id']}": "coretan",
         }
-        web.simpan_sesi(kon, sesi_id, data)
+        teacher_pages.simpan_sesi(kon, sesi_id, data)
         n = kon.execute("SELECT COUNT(*) AS n FROM jawaban").fetchone()["n"]
 
     assert n == 1
@@ -177,7 +179,7 @@ def test_centang_belum_pernah_lihat_jadi_kode_t(db):
         sid = database.tambah_siswa(kon, "Tidak")
         sesi_id = database.buat_sesi(kon, sid, seed=10)
         b = database.isi_sesi(kon, sesi_id)[-1]
-        web.simpan_sesi(kon, sesi_id, {f"belum_{b['sesi_soal_id']}": "on"})
+        teacher_pages.simpan_sesi(kon, sesi_id, {f"belum_{b['sesi_soal_id']}": "on"})
         hasil = database.isi_sesi(kon, sesi_id)[-1]
 
     assert hasil["kode_final"] == "T"
@@ -190,7 +192,7 @@ def test_halaman_utama_menampilkan_siswa(db):
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "Andi")
         database.tambah_siswa(kon, "Bila")
-        h = web.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
     assert "Andi" in h
     assert "Bila" in h
 
@@ -201,7 +203,7 @@ def test_halaman_sesi_menampilkan_kunci_untuk_guru(db):
         sid = database.tambah_siswa(kon, "Lihat")
         sesi_id = database.buat_sesi(kon, sid, seed=13)
         isi = database.isi_sesi(kon, sesi_id)
-        h = web.halaman_sesi(kon, sesi_id).decode()
+        h = teacher_pages.halaman_sesi(kon, sesi_id).decode()
     for b in isi:
         assert b["kunci"] in h
 
@@ -212,7 +214,7 @@ def test_laporan_menonjolkan_k_bukan_skor(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Lapor")
         database.buat_sesi(kon, sid, seed=14)
-        h = web.halaman_laporan(kon, sid).decode()
+        h = reports.halaman_laporan(kon, sid).decode()
     assert "jumlah <b>K</b>" in h or "jumlah K" in h
     assert "bukan skor" in h.lower()
 
@@ -220,7 +222,7 @@ def test_laporan_menonjolkan_k_bukan_skor(db):
 def test_halaman_tidak_error_saat_sesi_kosong(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Kosong")
-        h = web.halaman_laporan(kon, sid).decode()
+        h = reports.halaman_laporan(kon, sid).decode()
     assert "belum ada" in h.lower()
 
 
@@ -228,7 +230,7 @@ def test_nama_siswa_di_html_di_escape(db):
     """Nama anak masuk HTML; karakter khusus tidak boleh merusak halaman."""
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "A<script>x</script>")
-        h = web.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
     assert "<script>x</script>" not in h
     assert "&lt;script&gt;" in h
 
@@ -251,8 +253,8 @@ def test_dashboard_menampilkan_skor_benar(db):
             {1: isi[0]["kunci"], 2: isi[1]["kunci"], 3: "pasti salah"},
             {3: {"kode": "H"}},  # guru paksa salah hitung
         )
-        web.simpan_sesi(kon, sesi_id, data)
-        h = web.halaman_utama(kon).decode()
+        teacher_pages.simpan_sesi(kon, sesi_id, data)
+        h = teacher_pages.halaman_utama(kon).decode()
     assert ">3/12<" in h, "Terisi harus 3/12"
     assert ">2/12<" in h, "Benar harus 2/12"
 
@@ -263,8 +265,8 @@ def test_dashboard_tanpa_kolom_lembar(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Lembar")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
-        h = web.halaman_utama(kon).decode()
-        hs = web.halaman_sesi(kon, sesi_id).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
+        hs = teacher_pages.halaman_sesi(kon, sesi_id).decode()
     assert 'href="/lembar/' not in h
     assert 'href="/lembar/' in hs
 
@@ -274,7 +276,7 @@ def test_dashboard_badge_mode_hanya_untuk_drill(db):
         sid = database.tambah_siswa(kon, "ModeDrill")
         database.buat_sesi(kon, sid, seed=5, mode="drill")
         database.buat_sesi(kon, sid, seed=6)  # diagnostik
-        h = web.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
     assert h.count('class="badge-mode"') == 1
 
 
@@ -287,7 +289,7 @@ def test_dashboard_menampilkan_durasi_sesi_selesai(db):
             "UPDATE sesi SET mulai = '2026-08-30 10:00:00', "
             "selesai = '2026-08-30 10:12:30'"
         )
-        h = web.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
     assert "12:30" in h
 
 
@@ -295,5 +297,5 @@ def test_dashboard_tanpa_waktu_menampilkan_strip(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "TanpaWaktu")
         database.buat_sesi(kon, sid, seed=5)
-        h = web.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
     assert ">12:30<" not in h

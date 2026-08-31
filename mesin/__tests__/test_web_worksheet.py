@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
 
 
 @pytest.fixture()
@@ -44,7 +45,7 @@ def test_lembar_soal_bisa_dibangkitkan_dari_sesi(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Cetak")
         sesi_id = database.buat_sesi(kon, sid, seed=1234)
-        isi = web.halaman_lembar(kon, sesi_id, untuk_guru=False)
+        isi = teacher_pages.halaman_lembar(kon, sesi_id, untuk_guru=False)
 
     assert isi is not None
     h = isi.decode()
@@ -58,7 +59,7 @@ def test_lembar_anak_tidak_memuat_kunci_di_posisi_jawaban(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         sesi_id = database.buat_sesi(kon, sid, seed=555)
-        h = html_dari(web.halaman_lembar(kon, sesi_id, untuk_guru=False))
+        h = html_dari(teacher_pages.halaman_lembar(kon, sesi_id, untuk_guru=False))
 
     for potongan in re.findall(r'class="jawab">(.*?)</div>', h, flags=re.S):
         terbaca = teks(potongan.encode()).replace("Jawabanku:", "")
@@ -70,7 +71,7 @@ def test_lembar_anak_tidak_memuat_kata_kunci_atau_kode(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak2")
         sesi_id = database.buat_sesi(kon, sid, seed=77)
-        t = teks(web.halaman_lembar(kon, sesi_id, untuk_guru=False)).lower()
+        t = teks(teacher_pages.halaman_lembar(kon, sesi_id, untuk_guru=False)).lower()
 
     for terlarang in ("kunci", "malrule", "miskonsepsi", "salah konsep",
                       "jangan diperlihatkan"):
@@ -83,7 +84,7 @@ def test_lembar_penilaian_justru_memuat_kunci(db):
         sid = database.tambah_siswa(kon, "Guru")
         sesi_id = database.buat_sesi(kon, sid, seed=99)
         kunci = [b["kunci"] for b in database.isi_sesi(kon, sesi_id)]
-        h = html_dari(web.halaman_lembar(kon, sesi_id, untuk_guru=True))
+        h = html_dari(teacher_pages.halaman_lembar(kon, sesi_id, untuk_guru=True))
 
     for k in kunci:
         assert k in h
@@ -97,7 +98,7 @@ def test_lembar_cocok_dengan_soal_yang_tercatat_di_sesi(db):
         sid = database.tambah_siswa(kon, "Cocok")
         sesi_id = database.buat_sesi(kon, sid, seed=31337)
         tercatat = database.isi_sesi(kon, sesi_id)
-        h = html_dari(web.halaman_lembar(kon, sesi_id, untuk_guru=True))
+        h = html_dari(teacher_pages.halaman_lembar(kon, sesi_id, untuk_guru=True))
 
     for b in tercatat:
         assert b["kunci"] in h, f"kunci soal {b['nomor']} tidak ada di lembar"
@@ -105,7 +106,7 @@ def test_lembar_cocok_dengan_soal_yang_tercatat_di_sesi(db):
 
 def test_sesi_tidak_ada_mengembalikan_none(db):
     with database.buka(db) as kon:
-        assert web.halaman_lembar(kon, 99999) is None
+        assert teacher_pages.halaman_lembar(kon, 99999) is None
 
 
 # ── Buat sesi baru dari web ─────────────────────────────────────────────
@@ -115,7 +116,7 @@ def test_sesi_baru_memakai_seed_yang_belum_pernah_dipakai(db):
     """Seed berulang = soal persis sama = anak bisa hafal jawabannya."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Seed")
-        dibuat = [web.buat_sesi_seed_baru(kon, sid) for _ in range(12)]
+        dibuat = [teacher_pages.buat_sesi_seed_baru(kon, sid) for _ in range(12)]
         seeds = [
             r["seed"]
             for r in kon.execute(
@@ -130,7 +131,7 @@ def test_sesi_baru_memakai_seed_yang_belum_pernah_dipakai(db):
 def test_sesi_baru_langsung_berisi_dua_belas_soal(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Isi")
-        sesi_id = web.buat_sesi_seed_baru(kon, sid)
+        sesi_id = teacher_pages.buat_sesi_seed_baru(kon, sid)
         assert len(database.isi_sesi(kon, sesi_id)) == 12
 
 
@@ -139,8 +140,8 @@ def test_dua_siswa_dapat_soal_berbeda(db):
     with database.buka(db) as kon:
         a = database.tambah_siswa(kon, "A")
         b = database.tambah_siswa(kon, "B")
-        sa = web.buat_sesi_seed_baru(kon, a)
-        sb = web.buat_sesi_seed_baru(kon, b)
+        sa = teacher_pages.buat_sesi_seed_baru(kon, a)
+        sb = teacher_pages.buat_sesi_seed_baru(kon, b)
         soal_a = [r["soal_id"] for r in database.isi_sesi(kon, sa)]
         soal_b = [r["soal_id"] for r in database.isi_sesi(kon, sb)]
 
@@ -154,8 +155,8 @@ def test_halaman_utama_tautan_lembar_pindah_ke_halaman_sesi(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Tautan")
         sesi_id = database.buat_sesi(kon, sid, seed=42)
-        h = web.halaman_utama(kon).decode()
-        hs = web.halaman_sesi(kon, sesi_id).decode()
+        h = teacher_pages.halaman_utama(kon).decode()
+        hs = teacher_pages.halaman_sesi(kon, sesi_id).decode()
 
     assert f'href="/lembar/{sesi_id}"' not in h
     assert f'href="/lembar/{sesi_id}/penilaian"' not in h

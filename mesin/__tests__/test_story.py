@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import database  # noqa: E402
 import llm  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
 
 
 @pytest.fixture()
@@ -36,7 +37,7 @@ def test_cerita_mengganti_kalimat_tanpa_menyentuh_kunci(db, monkeypatch):
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
         sebelum = {b["nomor"]: b["kunci"] for b in database.isi_sesi(kon, ses)}
-        n, dicoba, _ = llm.bungkus_sesi(kon, ses, web._soal_dari_baris)
+        n, dicoba, _ = llm.bungkus_sesi(kon, ses, teacher_pages._soal_dari_baris)
         assert n == dicoba == 12
         sesudah = {b["nomor"]: b["kunci"] for b in database.isi_sesi(kon, ses)}
     assert sebelum == sesudah, "kunci berubah — diagnosis akan menilai salah"
@@ -49,8 +50,8 @@ def test_soal_bercerita_tidak_dibayar_dua_kali(db, monkeypatch):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        llm.bungkus_sesi(kon, ses, web._soal_dari_baris)
-        n2, dicoba2, catatan = llm.bungkus_sesi(kon, ses, web._soal_dari_baris)
+        llm.bungkus_sesi(kon, ses, teacher_pages._soal_dari_baris)
+        n2, dicoba2, catatan = llm.bungkus_sesi(kon, ses, teacher_pages._soal_dari_baris)
     assert dicoba2 == 0
     assert "sudah punya" in catatan
 
@@ -61,7 +62,7 @@ def test_fitur_mati_tanpa_kunci_api(db, monkeypatch):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        n, dicoba, catatan = llm.bungkus_sesi(kon, ses, web._soal_dari_baris)
+        n, dicoba, catatan = llm.bungkus_sesi(kon, ses, teacher_pages._soal_dari_baris)
     assert n == 0 and dicoba == 0
     assert "tidak aktif" in catatan
 
@@ -73,7 +74,7 @@ def test_tombol_tidak_muncul_kalau_fitur_mati(db, monkeypatch):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = web.halaman_sesi(kon, ses).decode()
+        html = teacher_pages.halaman_sesi(kon, ses).decode()
     assert "Variasi cerita" not in html
 
 
@@ -81,7 +82,7 @@ def test_tombol_muncul_kalau_fitur_hidup(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html = web.halaman_sesi(kon, ses).decode()
+        html = teacher_pages.halaman_sesi(kon, ses).decode()
     assert "Variasi cerita" in html
     assert "0 dari 12" in html
 
@@ -92,6 +93,6 @@ def test_kalimat_cerita_tampil_di_lembar_anak(db, monkeypatch):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        llm.bungkus_sesi(kon, ses, web._soal_dari_baris)
-        lembar = web.halaman_lembar(kon, ses).decode()
+        llm.bungkus_sesi(kon, ses, teacher_pages._soal_dari_baris)
+        lembar = teacher_pages.halaman_lembar(kon, ses).decode()
     assert "Kebun Pak Tani" in lembar

@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import account_pages  # noqa: E402
 import design_tokens as T  # noqa: E402
 import web  # noqa: E402
 from landing import halaman_daftar, halaman_kebijakan, halaman_landing  # noqa: E402
@@ -84,10 +85,11 @@ def test_landing_hero_single_cta():
 
 def test_kebijakan_tautan_sumber_aktif():
     """Tiga sumber menaut /kebijakan-privasi: footer landing, consent
-    /daftar, dan consent anak-baru (web.py). Halaman tujuannya wajib ada."""
+    /daftar, dan consent anak-baru (account_pages.py). Halaman tujuannya
+    wajib ada."""
     assert 'href="/kebijakan-privasi"' in _html(halaman_landing)
     assert 'href="/kebijakan-privasi"' in _html(halaman_daftar)
-    sumber = Path(web.__file__).read_text(encoding="utf-8")
+    sumber = Path(account_pages.__file__).read_text(encoding="utf-8")
     assert 'href="/kebijakan-privasi"' in sumber
 
 

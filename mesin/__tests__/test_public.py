@@ -49,7 +49,7 @@ def test_halaman_masuk_pakai_brand_baru():
     # _halaman_masuk dipanggil tanpa instance server — akses lewat kelas.
     # Yang dites: halaman login tidak lagi menyebut topik lama.
     sumber = Path(web.__file__).read_text(encoding="utf-8")
-    assert T.NAMA_PRODUK in sumber, "web.py harus merujuk brand dari tokens"
+    assert "T.NAMA_PRODUK" in sumber, "web.py harus merujuk brand dari tokens"
 
 
 # ───────────────── Fase A: landing vs dashboard di rute / ─────────────────

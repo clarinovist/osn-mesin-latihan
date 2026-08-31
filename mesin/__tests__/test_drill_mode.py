@@ -23,6 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import database  # noqa: E402
 import students  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
+import reports  # noqa: E402
 from http_test_kit import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
 
@@ -126,7 +128,7 @@ def test_buat_sesi_timer_mode_asing_ditolak(db):
 def test_buat_sesi_seed_baru_drill_via_web(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Uji")
-        sesi_id = web.buat_sesi_seed_baru(
+        sesi_id = teacher_pages.buat_sesi_seed_baru(
             kon, sid, mode="drill", timer_mode="soal",
             durasi_menit=5, timer_auto=0,
         )
@@ -147,7 +149,7 @@ def test_form_buat_sesi_memuat_pilihan_mode_dan_timer(db):
     """Halaman utama guru: radio Diagnosa/Latihan Cepat + timer fields."""
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "AnakUji", pemilik="guru")
-        html = web.halaman_utama(kon).decode()
+        html = teacher_pages.halaman_utama(kon).decode()
         assert 'name="mode"' in html
         assert 'value="diagnostik"' in html
         assert 'value="drill"' in html
@@ -299,7 +301,7 @@ def _simpan_sebagai_murid(kon, siswa_id, sesi_id, nomor: int, isi: dict):
     data = {k.replace("<ssid>", str(ssid)): v for k, v in isi.items()}
     hasil = students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
     if hasil:
-        web.diagnosa_murid(kon, sesi_id)
+        reports.diagnosa_murid(kon, sesi_id)
     return hasil
 
 
@@ -360,14 +362,14 @@ def test_halaman_sesi_guru_menampilkan_badge_latihan_cepat(db):
     'Latihan Cepat' di komentar, jadi string global tidak bisa dipakai."""
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakBadge", 7, mode="drill")
-        html = web.halaman_sesi(kon, sesi_id).decode()
+        html = teacher_pages.halaman_sesi(kon, sesi_id).decode()
     assert 'class="badge-mode"' in html
 
 
 def test_halaman_sesi_guru_diagnostik_tanpa_badge_drill(db):
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakBadgeDiag", 7)
-        html = web.halaman_sesi(kon, sesi_id).decode()
+        html = teacher_pages.halaman_sesi(kon, sesi_id).decode()
     assert 'class="badge-mode"' not in html
 
 

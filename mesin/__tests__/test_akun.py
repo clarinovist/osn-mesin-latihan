@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import database  # noqa: E402
 import auth  # noqa: E402
 import web  # noqa: E402
+import account_pages  # noqa: E402
 
 
 @pytest.fixture()
@@ -37,7 +38,7 @@ def test_sandi_lama_salah_ditolak(siap):
     """Peramban mengirim kredensial otomatis, jadi lolos palang bukan bukti
     orangnya tahu sandi. Verifikasi ulang wajib."""
     with database.buka(siap) as kon:
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "tebakan-salah",
             "baru": "sandi-baru-panjang", "ulang": "sandi-baru-panjang",
         }, "guru")
@@ -50,7 +51,7 @@ def test_sandi_lama_salah_ditolak(siap):
 def test_ulangan_tidak_sama_ditolak(siap):
     """Salah ketik sandi baru = terkunci dari sistem sendiri."""
     with database.buka(siap) as kon:
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "sandi-lama-panjang",
             "baru": "sandi-baru-panjang", "ulang": "sandi-baru-panjanh",
         }, "guru")
@@ -62,7 +63,7 @@ def test_ulangan_tidak_sama_ditolak(siap):
 
 def test_sandi_terlalu_pendek_ditolak(siap):
     with database.buka(siap) as kon:
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "sandi-lama-panjang",
             "baru": "pendek", "ulang": "pendek",
         }, "guru")
@@ -74,7 +75,7 @@ def test_sandi_terlalu_pendek_ditolak(siap):
 
 def test_sandi_baru_sama_dengan_lama_ditolak(siap):
     with database.buka(siap) as kon:
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "sandi-lama-panjang",
             "baru": "sandi-lama-panjang", "ulang": "sandi-lama-panjang",
         }, "guru")
@@ -83,7 +84,7 @@ def test_sandi_baru_sama_dengan_lama_ditolak(siap):
 
 def test_ganti_sandi_berhasil(siap):
     with database.buka(siap) as kon:
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "sandi-lama-panjang",
             "baru": "sandi-baru-yang-panjang", "ulang": "sandi-baru-yang-panjang",
         }, "guru")
@@ -96,7 +97,7 @@ def test_ganti_sandi_berhasil(siap):
 
 def test_sandi_baru_tidak_tersimpan_sebagai_teks(siap):
     with database.buka(siap) as kon:
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "sandi-lama-panjang",
             "baru": "rahasia-sekali-panjang", "ulang": "rahasia-sekali-panjang",
         }, "guru")
@@ -108,7 +109,7 @@ def test_sandi_baru_tidak_tersimpan_sebagai_teks(siap):
 
 def test_tambah_siswa_berhasil(siap):
     with database.buka(siap) as kon:
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "Rara", "tingkat": "P4",
             "sandi_anak": "sandi-rara-12345",
         }, "guru")
@@ -122,7 +123,7 @@ def test_tambah_siswa_berhasil(siap):
 
 def test_nama_kosong_ditolak(siap):
     with database.buka(siap) as kon:
-        _, galat = web.proses_akun(
+        _, galat = account_pages.proses_akun(
             kon,
             {"aksi": "anak_baru", "nama": "   ", "sandi_anak": "sandi-rara-12345"},
             "guru",
@@ -134,10 +135,10 @@ def test_nama_kosong_ditolak(siap):
 def test_nama_duplikat_ditolak_tanpa_pandang_huruf(siap):
     """Dua siswa bernama sama membuat laporan tidak bisa dibedakan."""
     with database.buka(siap) as kon:
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "Rara", "sandi_anak": "sandi-rara-12345",
         }, "guru")
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "rara", "sandi_anak": "sandi-rara-12345",
         }, "guru")
         assert "sudah ada" in galat.lower()
@@ -146,7 +147,7 @@ def test_nama_duplikat_ditolak_tanpa_pandang_huruf(siap):
 
 def test_tingkat_kosong_memakai_bawaan(siap):
     with database.buka(siap) as kon:
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "Tanpa", "tingkat": "",
             "sandi_anak": "sandi-tanpa-1234",
         }, "guru")
@@ -156,7 +157,7 @@ def test_tingkat_kosong_memakai_bawaan(siap):
 
 def test_aksi_tidak_dikenal_tidak_mengubah_apa_pun(siap):
     with database.buka(siap) as kon:
-        _, galat = web.proses_akun(kon, {"aksi": "hapus-semua"}, "guru")
+        _, galat = account_pages.proses_akun(kon, {"aksi": "hapus-semua"}, "guru")
         assert "tidak dikenal" in galat.lower()
         assert auth.periksa("guru", "sandi-lama-panjang")
 
@@ -167,7 +168,7 @@ def test_aksi_tidak_dikenal_tidak_mengubah_apa_pun(siap):
 def test_halaman_akun_tidak_membocorkan_sandi(siap):
     """Halaman ini menampilkan info akun; hash pun tidak perlu ada di HTML."""
     with database.buka(siap) as kon:
-        h = web.halaman_akun(kon).decode()
+        h = account_pages.halaman_akun(kon).decode()
     d = auth.muat_sandi()
     assert d is not None, "berkas sandi hilang"
     assert d["kunci"] not in h
@@ -180,7 +181,7 @@ def test_halaman_akun_menampilkan_siswa_dan_jumlah_sesi(siap):
         sid = database.tambah_siswa(kon, "Andi")
         database.buat_sesi(kon, sid, seed=1)
         database.buat_sesi(kon, sid, seed=2)
-        h = web.halaman_akun(kon, section="siswa").decode()
+        h = account_pages.halaman_akun(kon, section="siswa").decode()
 
     assert "Andi" in h
     assert ">2<" in h  # jumlah sesi
@@ -193,7 +194,7 @@ def test_tabel_siswa_menampilkan_status_akun_latihan(siap):
         sid = database.tambah_siswa(kon, "Tertaut", pemilik="guru")
         auth.tambah_akun("taut-login", "rahasia-taut-123", "murid", siswa_id=sid)
         database.tambah_siswa(kon, "Telanjang")
-        h = web.halaman_akun(kon, section="siswa").decode()
+        h = account_pages.halaman_akun(kon, section="siswa").decode()
     assert "taut-login" in h
     assert "belum ada login" in h
 
@@ -220,7 +221,7 @@ def test_section_siswa_memuat_hapus_dan_penjelasannya(siap):
     """Tombol hapus ada, dan aturannya dijelaskan — bukan teka-teki."""
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Berhapus", pemilik="guru")
-        h = web.halaman_akun(kon, section="siswa").decode()
+        h = account_pages.halaman_akun(kon, section="siswa").decode()
     assert 'value="siswa_hapus"' in h
     assert "tidak bisa dihapus" in h.lower()
     assert "riwayat" in h.lower()
@@ -235,7 +236,7 @@ def test_hapus_siswa_berriwayat_ditolak(siap):
     with database.buka(siap) as kon:
         sid = database.tambah_siswa(kon, "Berriwayat", pemilik="guru")
         database.buat_sesi(kon, sid, seed=1)
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "siswa_hapus", "siswa_id": str(sid),
         }, "guru")
         sisa = kon.execute(
@@ -251,7 +252,7 @@ def test_hapus_siswa_tanpa_riwayat_beserta_akunnya(siap):
     """Salah ketik / data uji harus bisa dibersihkan: siswa dan akun
     latihannya hilang bersama, tanpa menyisakan anak yatim."""
     with database.buka(siap) as kon:
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "UjiHapus", "tingkat": "P3",
             "sandi_anak": "sandi-uji-12345",
         }, "guru")
@@ -259,7 +260,7 @@ def test_hapus_siswa_tanpa_riwayat_beserta_akunnya(siap):
         sid = kon.execute(
             "SELECT id FROM siswa WHERE nama='UjiHapus'"
         ).fetchone()["id"]
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "siswa_hapus", "siswa_id": str(sid),
         }, "guru")
         sisa = kon.execute(
@@ -274,7 +275,7 @@ def test_hapus_siswa_tanpa_riwayat_beserta_akunnya(siap):
 def test_hapus_siswa_keluarga_lain_ditolak(siap):
     with database.buka(siap) as kon:
         sid = database.tambah_siswa(kon, "AnakA", pemilik="ortu-a")
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "siswa_hapus", "siswa_id": str(sid),
         }, "ortu-b")
         sisa = kon.execute(
@@ -287,13 +288,13 @@ def test_hapus_siswa_keluarga_lain_ditolak(siap):
 def test_pesan_galat_di_escape(siap):
     """Nama siswa masuk pesan galat; karakter khusus tidak boleh merusak HTML."""
     with database.buka(siap) as kon:
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "<b>X</b>", "sandi_anak": "sandi-eks-12345",
         }, "guru")
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "<b>X</b>", "sandi_anak": "sandi-eks-12345",
         }, "guru")
-        h = web.halaman_akun(kon, "", galat, section="siswa").decode()
+        h = account_pages.halaman_akun(kon, "", galat, section="siswa").decode()
 
     assert "<b>X</b>" not in h
     assert "&lt;b&gt;" in h
@@ -306,7 +307,7 @@ def test_kartu_akun_murid_tampil_dan_memuat_nama(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Sinta")
         auth.tambah_akun("Sinta", "rahasia-sinta-123", "murid")
-        h = web.halaman_akun(kon, section="akun-murid").decode()
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
     assert "Akun murid" in h
     assert "Sinta" in h
 
@@ -315,7 +316,7 @@ def test_akun_tidak_cocok_ditandai_belum_terhubung(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Andi")
         auth.tambah_akun("Hantu", "rahasia-hantu-123", "murid")
-        h = web.halaman_akun(kon, section="akun-murid").decode()
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
     assert "Hantu" in h
     assert "belum terhubung ke siswa" in h.lower()
 
@@ -323,7 +324,7 @@ def test_akun_tidak_cocok_ditandai_belum_terhubung(siap):
 def test_tambah_akun_murid_berhasil(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Budi", pemilik="guru")
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Budi", "sandi": "rahasia-budi-123",
         }, "guru")
         assert not galat, galat
@@ -334,10 +335,10 @@ def test_tambah_akun_murid_berhasil(siap):
 def test_tambah_akun_murid_nama_ganda_galat(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Citra", pemilik="guru")
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Citra", "sandi": "rahasia-citra-123",
         }, "guru")
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Citra", "sandi": "rahasia-lain-123",
         }, "guru")
     assert not pesan
@@ -348,7 +349,7 @@ def test_tambah_akun_murid_nama_ganda_galat(siap):
 def test_tambah_akun_murid_sandi_pendek_ditolak(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Dina", pemilik="guru")
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Dina", "sandi": "pendek",
         }, "guru")
         assert not pesan
@@ -359,11 +360,11 @@ def test_tambah_akun_murid_sandi_pendek_ditolak(siap):
 def test_hapus_akun_murid(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Eka", pemilik="guru")
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Eka", "sandi": "rahasia-eka-12345",
         }, "guru")
         assert auth.periksa_peran("Eka", "rahasia-eka-12345", "murid") is True
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_hapus", "nama": "Eka",
         }, "guru")
         assert not galat, galat
@@ -374,10 +375,10 @@ def test_hapus_akun_murid(siap):
 def test_setel_sandi_murid(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Fani", pemilik="guru")
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Fani", "sandi": "lama-fani-12345",
         }, "guru")
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_sandi", "nama": "Fani", "baru": "baru-fani-67890",
         }, "guru")
         assert not galat, galat
@@ -390,10 +391,10 @@ def test_sandi_murid_tidak_muncul_di_html(siap):
     rahasia = "super-rahasia-murid-999"
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Gina", pemilik="guru")
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Gina", "sandi": rahasia,
         }, "guru")
-        h = web.halaman_akun(kon, section="akun-murid").decode()
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
     assert rahasia not in h
     assert rahasia not in auth.BERKAS_SANDI.read_text() or rahasia not in h  # hash, bukan teks
     # pastikan berkas sandi di disk tidak bocor ke HTML (cek kunci/garam juga tidak ada)
@@ -409,7 +410,7 @@ def test_sandi_murid_tidak_muncul_di_html(siap):
         database.tambah_siswa(kon, "<b>Hacker</b>")
         # akun murid dengan nama yang sama — harus di-escape di HTML
         auth.tambah_akun("<b>Hacker</b>", "rahasia-hacker-123", "murid")
-        h2 = web.halaman_akun(kon, section="akun-murid").decode()
+        h2 = account_pages.halaman_akun(kon, section="akun-murid").decode()
     assert "<b>Hacker</b>" not in h2
     assert "&lt;b&gt;Hacker&lt;/b&gt;" in h2
 
@@ -419,7 +420,7 @@ def test_sandi_murid_tidak_muncul_di_html(siap):
 
 def test_section_bawaan_akun_dengan_navigasi_samping(siap):
     with database.buka(siap) as kon:
-        h = web.halaman_akun(kon).decode()
+        h = account_pages.halaman_akun(kon).decode()
     assert "Ganti sandi" in h
     assert "nav-samping" in h
     assert 'href="/akun?section=siswa"' in h
@@ -431,7 +432,7 @@ def test_section_bawaan_akun_dengan_navigasi_samping(siap):
 def test_section_siswa_memuat_daftar_dan_form(siap):
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Andi")
-        h = web.halaman_akun(kon, section="siswa").decode()
+        h = account_pages.halaman_akun(kon, section="siswa").decode()
     assert "Andi" in h
     assert "Tambah siswa" not in h, "form tambah siswa sudah tidak ada"
     assert "Tambah anak" in h
@@ -441,7 +442,7 @@ def test_section_siswa_memuat_daftar_dan_form(siap):
 
 def test_section_akun_murid_memuat_kartunya(siap):
     with database.buka(siap) as kon:
-        h = web.halaman_akun(kon, section="akun-murid").decode()
+        h = account_pages.halaman_akun(kon, section="akun-murid").decode()
     assert "Akun murid" in h
     assert "Ganti sandi" not in h
     assert "Tambah siswa" not in h
@@ -449,15 +450,15 @@ def test_section_akun_murid_memuat_kartunya(siap):
 
 def test_section_tak_dikenal_jatuh_ke_akun(siap):
     with database.buka(siap) as kon:
-        h = web.halaman_akun(kon, section="hxhx").decode()
+        h = account_pages.halaman_akun(kon, section="hxhx").decode()
     assert "Ganti sandi" in h
     assert "Tambah siswa" not in h
 
 
 def test_admin_hanya_section_akun(siap):
     with database.buka(siap) as kon:
-        h = web.halaman_akun(kon, pengguna="pengelola", peran="admin").decode()
-        h2 = web.halaman_akun(
+        h = account_pages.halaman_akun(kon, pengguna="pengelola", peran="admin").decode()
+        h2 = account_pages.halaman_akun(
             kon, pengguna="pengelola", peran="admin", section="siswa"
         ).decode()
     assert "Ganti sandi" in h
@@ -493,11 +494,11 @@ def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):
     auth.simpan_sandi("sandi-guru-lama1", "guru")
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "Feby", pemilik="guru")
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Feby", "sandi": "rahasia8",
         }, "guru")
 
-        pesan, galat = web.proses_akun(kon, {
+        pesan, galat = account_pages.proses_akun(kon, {
             "aksi": "sandi", "lama": "sandi-guru-lama1",
             "baru": "sandi-guru-baru1", "ulang": "sandi-guru-baru1",
         }, "guru")
@@ -515,7 +516,7 @@ def test_guru_tetap_bisa_ganti_sandi_setelah_ada_akun_murid(siap):
 
 def test_siswa_baru_ber_pemilik_pembuatnya(siap):
     with database.buka(siap) as kon:
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "MilikA", "tingkat": "P3",
             "sandi_anak": "sandi-milka-1234",
         }, "ortu-a")
@@ -528,15 +529,15 @@ def test_dobel_nama_antar_keluarga_sah_dalam_keluarga_ditolak(siap):
     ditolak tanpa pandang huruf besar-kecil. Login keluarga kedua memakai
     variasi karena nama login unik global."""
     with database.buka(siap) as kon:
-        _, g1 = web.proses_akun(kon, {
+        _, g1 = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "Bima", "tingkat": "P3",
             "sandi_anak": "sandi-bima-12345",
         }, "ortu-a")
-        _, g2 = web.proses_akun(kon, {
+        _, g2 = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "Bima", "tingkat": "P3",
             "sandi_anak": "sandi-bima-67890", "nama_akun": "bima-kedua",
         }, "ortu-b")
-        _, g3 = web.proses_akun(kon, {
+        _, g3 = account_pages.proses_akun(kon, {
             "aksi": "anak_baru", "nama": "BIMA", "tingkat": "P3",
             "sandi_anak": "sandi-bima-abcde",
         }, "ortu-a")
@@ -549,7 +550,7 @@ def test_dobel_nama_antar_keluarga_sah_dalam_keluarga_ditolak(siap):
 def test_akun_murid_tambah_menyimpan_siswa_id(siap):
     with database.buka(siap) as kon:
         sid = database.tambah_siswa(kon, "Taut", pemilik="guru")
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "Taut", "sandi": "rahasia-taut-123",
         }, "guru")
         akun = auth.cari_akun("Taut")
@@ -563,7 +564,7 @@ def test_akun_murid_tambah_via_siswa_id_dan_nama_akun_beda(siap):
     Nama tampilan dan nama login tidak harus sama lagi."""
     with database.buka(siap) as kon:
         sid = database.tambah_siswa(kon, "Bima", pemilik="guru")
-        _, galat = web.proses_akun(kon, {
+        _, galat = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "siswa_id": str(sid),
             "nama_akun": "bima-santoso", "sandi": "rahasia-bima-123",
         }, "guru")
@@ -579,16 +580,16 @@ def test_akun_murid_anak_keluarga_lain_tak_bisa_disetel(siap):
     admin tetap bisa."""
     with database.buka(siap) as kon:
         database.tambah_siswa(kon, "AnakA", pemilik="ortu-a")
-        web.proses_akun(kon, {
+        account_pages.proses_akun(kon, {
             "aksi": "akun_murid_tambah", "nama": "AnakA", "sandi": "rahasia-anak-1",
         }, "ortu-a")
-        _, g1 = web.proses_akun(kon, {
+        _, g1 = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_sandi", "nama": "AnakA", "baru": "diserang-99999",
         }, "ortu-b")
-        _, g2 = web.proses_akun(kon, {
+        _, g2 = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_hapus", "nama": "AnakA",
         }, "ortu-b")
-        _, g3 = web.proses_akun(kon, {
+        _, g3 = account_pages.proses_akun(kon, {
             "aksi": "akun_murid_sandi", "nama": "AnakA", "baru": "disetel-admin-1",
         }, "pengelola", "admin")
     assert g1 != ""
@@ -600,10 +601,10 @@ def test_akun_murid_anak_keluarga_lain_tak_bisa_disetel(siap):
 def test_tingkat_anak_keluarga_lain_ditolak(siap):
     with database.buka(siap) as kon:
         sid_a = database.tambah_siswa(kon, "AnakX", pemilik="ortu-a")
-        _, g1 = web.proses_akun(kon, {
+        _, g1 = account_pages.proses_akun(kon, {
             "aksi": "tingkat", "siswa_id": str(sid_a), "tingkat": "P5",
         }, "ortu-b")
-        _, g2 = web.proses_akun(kon, {
+        _, g2 = account_pages.proses_akun(kon, {
             "aksi": "tingkat", "siswa_id": str(sid_a), "tingkat": "P5",
         }, "pengelola", "admin")
         baris = kon.execute("SELECT tingkat FROM siswa WHERE id = ?", (sid_a,)).fetchone()

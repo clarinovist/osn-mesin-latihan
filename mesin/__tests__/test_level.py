@@ -17,6 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import web  # noqa: E402
+import teacher_pages  # noqa: E402
+import account_pages  # noqa: E402
 from generator import buat_lembar, buat_soal, profil  # noqa: E402
 from schema import MIGRASI  # noqa: E402
 from templates import LEVEL, URUTAN_PER_LEVEL, level_valid, susun_lembar  # noqa: E402
@@ -237,7 +239,7 @@ def test_sesi_menyimpan_levelnya(db, level):
 def test_sesi_baru_memakai_tingkat_siswa(db):
     """Ini yang membuat kolom siswa.tingkat akhirnya berarti."""
     sid = database.tambah_siswa(db, "Naik", "P5")
-    sesi_id = web.buat_sesi_seed_baru(db, sid)
+    sesi_id = teacher_pages.buat_sesi_seed_baru(db, sid)
     baris = db.execute("SELECT level FROM sesi WHERE id = ?", (sesi_id,)).fetchone()
     assert baris["level"] == "P5"
 
@@ -245,15 +247,15 @@ def test_sesi_baru_memakai_tingkat_siswa(db):
 def test_menaikkan_tingkat_tidak_mengubah_sesi_lama(db):
     """Riwayat tidak boleh berubah surut saat anak naik level."""
     sid = database.tambah_siswa(db, "Riwayat", "P3", pemilik="guru")
-    lama = web.buat_sesi_seed_baru(db, sid)
+    lama = teacher_pages.buat_sesi_seed_baru(db, sid)
 
-    pesan, galat = web.proses_akun(
+    pesan, galat = account_pages.proses_akun(
         db, {"aksi": "tingkat", "siswa_id": str(sid), "tingkat": "P6"}, "guru"
     )
     assert galat == ""
     assert "P6" in pesan
 
-    baru = web.buat_sesi_seed_baru(db, sid)
+    baru = teacher_pages.buat_sesi_seed_baru(db, sid)
 
     level_lama = db.execute("SELECT level FROM sesi WHERE id = ?", (lama,)).fetchone()
     level_baru = db.execute("SELECT level FROM sesi WHERE id = ?", (baru,)).fetchone()
@@ -267,14 +269,14 @@ def test_lembar_sesi_lama_tetap_dirender_pada_levelnya(db):
     db.execute("UPDATE siswa SET tingkat = 'P6' WHERE id = ?", (sid,))
 
     for b in database.isi_sesi(db, sesi_id):
-        assert web._soal_dari_baris(b).level == "P3"
+        assert teacher_pages._soal_dari_baris(b).level == "P3"
 
 
 # -- Validasi lewat halaman akun -----------------------------------------
 
 
 def test_tambah_siswa_menolak_tingkat_ngawur(db):
-    pesan, galat = web.proses_akun(
+    pesan, galat = account_pages.proses_akun(
         db, {"aksi": "anak_baru", "nama": "Salah", "tingkat": "kelas 4",
              "sandi_anak": "sandi-uji-12345"}, "guru"
     )
@@ -285,7 +287,7 @@ def test_tambah_siswa_menolak_tingkat_ngawur(db):
 
 def test_ubah_tingkat_menolak_nilai_ngawur(db):
     sid = database.tambah_siswa(db, "Tetap", "P3")
-    pesan, galat = web.proses_akun(
+    pesan, galat = account_pages.proses_akun(
         db, {"aksi": "tingkat", "siswa_id": str(sid), "tingkat": "p4"}, "guru"
     )
     assert pesan == ""
@@ -295,7 +297,7 @@ def test_ubah_tingkat_menolak_nilai_ngawur(db):
 
 
 def test_ubah_tingkat_menolak_siswa_tak_dikenal(db):
-    pesan, galat = web.proses_akun(
+    pesan, galat = account_pages.proses_akun(
         db, {"aksi": "tingkat", "siswa_id": "9999", "tingkat": "P4"}, "guru"
     )
     assert pesan == ""
