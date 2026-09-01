@@ -11,12 +11,9 @@ masih bertugas di halaman yang belum difase-in.
 import design_tokens as T
 
 GAYA_STITCH = f"""
-/* ── Font CDN (diizinkan 2026-09-01) ──────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?'
-  'family=Be+Vietnam+Pro:wght@400;600;700'
-  '&family=Plus+Jakarta+Sans:wght@400;500;600;700;800'
-  '&family=Material+Symbols+Outlined'
-  '&display=swap');
+/* ── Font CDN (diizinkan 2026-09-01) — satu baris utuh; @import multi-baris
+   memutus URL dan membuat font gagal dimuat tanpa jejak di konsol. ── */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 * {{ box-sizing: border-box; }}
 html {{ -webkit-text-size-adjust: 100%; }}
@@ -119,6 +116,46 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 .st-badge.baru       {{ background: {T.AKSEN_MURID_KORAL};    color: #fff; }}
 .st-badge.selesai    {{ background: {T.LATAR_ELEVASI};        color: {T.TEKS_VARIAN}; }}
 
+/* Badge peran di topbar — dipakai _topbar_stitch lewat _badge_peran lama */
+.badge-peran {{
+  display: inline-flex; align-items: center;
+  border-radius: {T.RADIUS_PIL};
+  padding: 0.15rem 0.55rem;
+  font-family: {T.FONT_HEADLINE};
+  font-weight: 700; font-size: .72rem; letter-spacing: .02em;
+}}
+.badge-peran-admin {{ background: {T.BADGE_ADMIN_BG}; color: {T.BADGE_ADMIN_TEKS}; }}
+.badge-peran-guru  {{ background: {T.BADGE_GURU_BG};  color: {T.BADGE_GURU_TEKS}; }}
+
+/* Menu pengguna CSS-only di topbar */
+.topbar-navigasi {{ display: flex; align-items: center; gap: {T.SP_3}; }}
+.menu-pengguna {{ position: relative; }}
+.menu-pengguna summary {{
+  list-style: none; cursor: pointer; min-height: {T.TARGET_SENTUH};
+  display: flex; align-items: center; padding: 0 {T.SP_2};
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; color: {T.TEKS_JUDUL};
+  border-radius: {T.RADIUS_SEDANG};
+}}
+.menu-pengguna summary::-webkit-details-marker {{ display: none; }}
+.menu-pengguna summary:hover {{ background: {T.LATAR_SEKUNDER_NETRAL}; }}
+.menu-pengguna[open] summary {{ background: {T.LATAR_SEKUNDER_NETRAL}; }}
+.menu-isi {{
+  position: absolute; right: 0; top: calc(100% + 6px);
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_SEDANG}; min-width: 12rem; max-width: min(12rem, calc(100vw - 1.2rem));
+  box-shadow: 0 8px 24px rgba(0,0,0,.10); padding: {T.SP_2};
+  display: flex; flex-direction: column; gap: {T.SP_1}; z-index: 60;
+}}
+.menu-isi a, .menu-isi button {{
+  display: block; width: 100%; text-align: left;
+  padding: {T.SP_2} {T.SP_3}; border-radius: {T.RADIUS_KECIL};
+  color: {T.TEKS_UTAMA}; text-decoration: none; background: none; border: 0;
+  font: inherit; font-size: .92rem; cursor: pointer;
+  min-height: {T.TARGET_SENTUH};
+}}
+.menu-isi a:hover, .menu-isi button:hover {{ background: {T.LATAR_SEKUNDER_LEMBUT}; }}
+.menu-pisah {{ border-top: 1px solid {T.BORDER_VARIAN}; margin: {T.SP_1} 0; }}
+
 /* Input + tombol */
 .st-input {{
   font: inherit; font-size: 1rem;
@@ -143,7 +180,7 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 }}
 .st-tombol-coral:hover {{ filter: brightness(1.06); }}
 
-/* Baris kartu ( sesi / hasil / item list — dipakai dashboard, murid, dsb ) */
+/* Baris kartu (dipakai daftar sesi guru & murid di Stitch) */
 .st-kartu-baris {{
   display: flex; align-items: center; gap: {T.SP_4};
   background: {T.LATAR_KARTU};
@@ -176,6 +213,10 @@ tr.sorot-baru, div.sorot-baru {{
 
 /* Meta info: tanggal, waktu */
 .st-meta {{ color: {T.TEKS_SUBTLE}; font-size: .9rem; }}
+
+/* Kanvas konten Stitch — _halaman_stitch dan seterusnya tidak lagi bergantung
+   pada .bungkus milik teacher_style lama */
+.bungkus-st {{ max-width: {T.LEBAR_KONTEN}; margin: 0 auto; padding: {T.SP_4} 0.9rem 3rem; }}
 
 /* Form "buat sesi" dalam satu baris */
 .strip-sesi {{ display: flex; gap: {T.SP_3}; flex-wrap: wrap; align-items: flex-end; }}
