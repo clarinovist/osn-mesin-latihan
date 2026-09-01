@@ -277,6 +277,9 @@ def _blok_jawaban_lama(s: dict) -> str:
 
 def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
     """Foto + usulan AI per soal + form koreksi + tombol Terapkan."""
+    from style_stitch import gaya_stitch, CSS_SESI
+    from teacher_pages import _topbar_stitch
+
     lampiran = database.ambil_lampiran(kon, lampiran_id)
     if not lampiran:
         return None
@@ -324,18 +327,24 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
 
     isi = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Konfirmasi lembar foto</title><style>{GAYA_KONFIRMASI}</style></head>
-<body><div class="bungkus">
+<title>Konfirmasi lembar foto — {T.NAMA_PRODUK}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{GAYA_KONFIRMASI}{gaya_stitch()}{CSS_SESI}</style></head>
+<body class="st"><div class="bungkus-st">
+{_topbar_stitch("", "guru")}
+<div class="sesi-badan-st">
 <div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke sesi</a></div>
-<h1>Konfirmasi bacaan AI — Sesi #{sesi_id}</h1>
+<h1 class="sesi-judul-st">Konfirmasi bacaan AI — Sesi #{sesi_id}</h1>
 {kabar}{catatan_status}
 <div class="kartu"><img class="foto-lembar"
   src="/lampiran/berkas/{lampiran_id}" alt="Foto lembar anak"></div>
 <form method="post" action="/lampiran/{lampiran_id}/terapkan">
 {''.join(kartu)}
-<div class="simpan-strip"><button type="submit">Terapkan &amp; diagnosis</button></div>
+<div class="koreksi-simpan-st"><button type="submit">Terapkan &amp; diagnosis</button></div>
 </form>
-</div></body></html>"""
+</div></div></body></html>"""
     return isi.encode()
 
 

@@ -340,6 +340,7 @@ def halaman_akun(
         f"<div>{isi_section}</div>"
         f"</div>",
         ident=(pengguna or "guru", peran),
+        stitch=True,
     )
 
 def _akun_murid_milik(kon, pengguna: str, peran: str, nama: str) -> bool:
@@ -777,4 +778,5 @@ def halaman_admin(
         f"</div>"
         f"{kartu_sandi_guru}",
         ident=(pengguna, "admin") if pengguna else None,
+        stitch=True,
     )

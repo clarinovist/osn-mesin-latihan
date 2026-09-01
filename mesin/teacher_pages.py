@@ -38,10 +38,25 @@ KODE_PILIHAN = [
 ]
 
 def _halaman(
-    judul: str, isi: str, ident: tuple[str, str] | None = None
+    judul: str, isi: str, ident: tuple[str, str] | None = None,
+    stitch: bool = False,
 ) -> bytes:
     """Bingkai semua halaman pengelola. `ident=(pengguna, peran)` menampilkan
-    topbar dengan menu pengguna di atas isi — satu pintu agar konsisten."""
+    topbar dengan menu pengguna di atas isi — satu pintu agar konsisten.
+
+    stitch=True: pakai GAYA_STITCH + body.st + <link> font CDN (S11-S17).
+    """
+    if stitch:
+        from style_stitch import gaya_stitch, CSS_SESI
+        batang = _topbar_stitch(*ident) if ident else ""
+        return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(judul)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{GAYA}{gaya_stitch()}{CSS_SESI}</style></head>
+<body class="st"><div class="bungkus-st">{batang}<div class="sesi-badan-st">{isi}</div></div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
     batang = _topbar(*ident) if ident else ""
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -92,11 +107,27 @@ def _ambil(baris, kolom: str, bawaan):
 def _topik_untuk_level(level: str) -> list[str]:
     """ID topik yang tersedia pada level resmi atau fallback data lama."""
     level_efektif = level if level in LEVEL else LEVEL_BAWAAN
-    return [
+    daftar = [
         topik_id
         for topik_id in daftar_topik()
-        if level_efektif in ambil(topik_id).komposisi
+        if level_efektif in ambil(topik_id).komposisi and topik_id != "campuran"
     ]
+    if "campuran" in daftar_topik():
+        daftar = ["campuran"] + daftar
+    return daftar
+
+def _badge_review_status(baris) -> str:
+    direview = _ambil(baris, "direview", None)
+    terisi = _ambil(baris, "terisi", 0)
+    n = _ambil(baris, "n", 0)
+    if direview is not None:
+        return '<span class="badge-direview sudah" style="background:#d4edda;color:#155724;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;font-weight:bold;">✓ Sudah Direview</span>'
+    elif terisi == n and n > 0:
+        return '<span class="badge-direview perlu" style="background:#fff3cd;color:#856404;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;font-weight:bold;">⏳ Belum Direview</span>'
+    elif terisi > 0:
+        return '<span class="badge-direview proses" style="background:#e2e8f0;color:#2d3748;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;">✏️ Sedang Dikerjakan</span>'
+    else:
+        return '<span class="badge-direview belum" style="background:#edf2f7;color:#718096;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;">Belum Dikerjakan</span>'
 
 def _badge_mode(baris) -> str:
     """Badge 'Latihan Cepat' untuk sesi drill; kosong untuk diagnostik.
@@ -252,7 +283,7 @@ def halaman_utama_stitch(
             for t in _topik_untuk_level(s["tingkat"])
         )
         sesi = kon.execute(
-            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.mulai, s.selesai,
+            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.mulai, s.selesai, s.direview,
                       (SELECT MIN(j.dicatat) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS dicatat_awal,
                       (SELECT MAX(j.dicatat) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS dicatat_akhir,
                       (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
@@ -275,12 +306,15 @@ def halaman_utama_stitch(
                 f'&middot; {html.escape(_ambil(r, "level", LEVEL_BAWAAN))}'
                 f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
                 f"</div>"
-                f'<div style="text-align:right;font-variant-numeric:tabular-nums">'
+                f'<div style="text-align:right;font-variant-numeric:tabular-nums;margin-right:0.6rem">'
                 f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
                 f'<div>Benar {r["benar"]}/{r["n"]}</div>'
                 f'<div>Waktu {_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</div>'
                 f"</div>"
-                f"{_badge_mode_stitch(r)}"
+                f'<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end">'
+                f'{_badge_review_status(r)}'
+                f'{_badge_mode_stitch(r)}'
+                f"</div>"
                 f"</div>"
                 for r, kelas in (
                     (r, _kelas_sorot(r["id"])) for r in sesi
@@ -301,6 +335,15 @@ def halaman_utama_stitch(
             f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
             f'<div class="strip-kolom"><label>Topik</label>'
             f'<select name="topik" class="st-input">{opsi_topik}</select></div>'
+            f'<div class="strip-kolom"><label>Jumlah Soal</label>'
+            f'<select name="jumlah_soal" class="st-input">'
+            f'<option value="" selected>Default (sesuai topik)</option>'
+            f'<option value="10">10 soal</option>'
+            f'<option value="15">15 soal</option>'
+            f'<option value="20">20 soal (1 jam)</option>'
+            f'<option value="25">25 soal</option>'
+            f'<option value="30">30 soal</option>'
+            f'</select></div>'
             '<div class="strip-kolom"><label>Mode Sesi</label>'
             '<div class="mode-pilih">'
             '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked>'
@@ -373,18 +416,9 @@ def halaman_utama(
     peran: str = "guru",
     sorot: int | None = None,
 ) -> bytes:
-    """Dashboard pengelola. `pemilik=None` = semua keluarga (admin);
-    string = hanya keluarga itu. Panggilan lama tanpa argumen tetap
-    melihat semuanya — perilaku mode lokal dan test langsung.
-
-    `sorot` = id sesi yang baru dibuat — barisnya diberi sorotan supaya
-    guru langsung tahu sesi mana yang baru (opsi 1: tetap di dashboard,
-    jangan lompat ke /sesi/ yang kosong).
-    """
+    """Dashboard pengelola."""
     baris = []
     admin = peran == "admin"
-    # Opsi topik disaring per tingkat: paket P5/P6 tidak boleh ditawarkan
-    # pada kartu siswa P3 lalu gagal ketika form dikirim.
     for s in database.daftar_siswa(kon, pemilik):
         opsi_topik = "".join(
             f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
@@ -392,7 +426,7 @@ def halaman_utama(
         )
         sesi = kon.execute(
             """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
-                      s.mulai, s.selesai,
+                      s.mulai, s.selesai, s.direview,
                       (SELECT MIN(j.dicatat) FROM sesi_soal ss
                        JOIN jawaban j ON j.sesi_soal_id = ss.id
                        WHERE ss.sesi_id = s.id) AS dicatat_awal,
@@ -422,9 +456,10 @@ def halaman_utama(
             f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
             f'<td class="angka">{r["benar"]}/{r["n"]}</td>'
-            f'<td class="angka">{_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</td></tr>'
+            f'<td class="angka">{_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</td>'
+            f'<td class="kolom-status">{_badge_review_status(r)}</td></tr>'
             for r in sesi
-        ) or '<tr><td colspan="7" class="kosong">belum ada sesi</td></tr>'
+        ) or '<tr><td colspan="8" class="kosong">belum ada sesi</td></tr>'
 
         label_keluarga = ""
         if admin:
@@ -437,6 +472,15 @@ def halaman_utama(
             f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
             f'<div class="strip-kolom"><label>Topik</label>'
             f'<select name="topik">{opsi_topik}</select></div>'
+            f'<div class="strip-kolom"><label>Jumlah Soal</label>'
+            f'<select name="jumlah_soal">'
+            f'<option value="" selected>Default (sesuai topik)</option>'
+            f'<option value="10">10 soal</option>'
+            f'<option value="15">15 soal</option>'
+            f'<option value="20">20 soal (1 jam)</option>'
+            f'<option value="25">25 soal</option>'
+            f'<option value="30">30 soal</option>'
+            f'</select></div>'
             f'<div class="strip-kolom"><label>Mode</label>'
             f'<div class="mode-pilih">'
             f'<label class="mode-opsi"><input type="radio" name="mode" '
@@ -469,7 +513,7 @@ def halaman_utama(
             f"</div>"
             f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
             f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Benar</th>"
-            f"<th>Waktu</th></tr>"
+            f"<th>Waktu</th><th>Status Review</th></tr>"
             f"{item}</table></div>"
             f"{strip_sesi}"
             f"</div>"
@@ -653,6 +697,7 @@ def halaman_sesi_cetak(
         f'<p class="sub">Dibuka di tab baru — siap cetak.</p></div>'
         f"{blok_cerita}",
         ident=(pengguna, peran) if pengguna else None,
+        stitch=True,
     )
 
 
@@ -718,6 +763,7 @@ def halaman_sesi_lampiran(
         f"{pil}"
         f"{blok_lampiran}",
         ident=(pengguna, peran) if pengguna else None,
+        stitch=True,
     )
 
 
@@ -732,7 +778,7 @@ def halaman_sesi(
     menabrak 404 dari UI-nya sendiri."""
     admin = peran == "admin"
     info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.direview,
                    w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
@@ -779,6 +825,16 @@ def halaman_sesi(
             for v, t in KODE_PILIHAN
         )
 
+        pembahasan_html = ""
+        if getattr(soal, "pembahasan", ""):
+            pembahasan_html = (
+                f'<div class="pembahasan-soal" style="margin-top:0.35rem;font-size:0.88rem;'
+                f'background:#f0f7ff;border-left:3px solid #3182ce;padding:0.4rem 0.6rem;border-radius:4px;'
+                f'color:#2b6cb0;">'
+                f'<b>Perhitungan/Langkah:</b> {html.escape(soal.pembahasan)}'
+                f'</div>'
+            )
+
         kartu.append(f"""
 <div class="kartu soal-kartu {kelas}">
   <div class="kartu-kepala">
@@ -787,6 +843,7 @@ def halaman_sesi(
   </div>
   <div class="teks-soal">{html.escape(soal.teks)}</div>
   <div>Kunci: <span class="kunci">{html.escape(b["kunci"])}</span></div>
+  {pembahasan_html}
   {restate}
   <div class="baris">
     <div><label>Jawaban anak</label>
@@ -811,6 +868,11 @@ def halaman_sesi(
 
     # Badge mode sesi (Latihan Cepat / drill)
     badge_mode = _badge_mode(info)
+    badge_review_hdr = (
+        '<span class="badge-direview sudah" style="background:#d4edda;color:#155724;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.85rem;font-weight:bold;margin-left:0.5rem">✓ Sudah Direview</span>'
+        if _ambil(info, "direview", None)
+        else '<span class="badge-direview perlu" style="background:#fff3cd;color:#856404;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.85rem;font-weight:bold;margin-left:0.5rem">⏳ Belum Direview</span>'
+    )
 
     pil = _pil_sesi(kon, sesi_id, "koreksi")
 
@@ -825,8 +887,6 @@ def halaman_sesi(
         )
     )
     if admin:
-        # fieldset disabled mematikan semua input tanpa JS — admin tetap
-        # bisa MEMBACA nilai tersimpan, tapi tak ada yang bisa dikirim.
         blok_isi = f'<fieldset disabled>{"".join(kartu)}</fieldset>'
     else:
         blok_isi = (
@@ -839,7 +899,7 @@ def halaman_sesi(
     return _halaman(
         f"Sesi #{sesi_id}",
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
-        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id} {badge_review_hdr}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
@@ -855,8 +915,7 @@ def halaman_sesi(
 
 
 def _pil_sesi_stitch(kon, sesi_id: int, aktif: str) -> str:
-    """Pil navigasi sesi versi Stitch — kelas .pil-sesi-st supaya CSS
-    halaman sesi (bukan teacher_style lama) yang menanganinya."""
+    """Pil navigasi sesi versi Stitch."""
     n_lamp = kon.execute(
         "SELECT COUNT(*) FROM lampiran WHERE sesi_id = ?", (sesi_id,)
     ).fetchone()[0]
@@ -876,22 +935,12 @@ def halaman_sesi_stitch(
     kon, sesi_id: int, pesan: str = "", peran: str = "guru",
     pengguna: str = "",
 ) -> bytes:
-    """Detail sesi versi Stitch — HANYA koreksi (opsi 3).
-
-    Logika data, query, field form (jwb_/kode_/cara_/restate_/belum_), badge
-    mode, pil navigasi, danger zone — SEMUA persis sama dengan halaman_sesi;
-    hanya markup + kelas CSS berubah (GAYA_STITCH + CSS_SESI).
-
-    Kontrak yang dipertahankan (dijaga test): kunci TAMPIL untuk guru;
-    class="badge-mode" hadir hanya untuk drill; 'action="/sesi/{id}/hapus"';
-    'action="/sesi/{id}"' (form POST); admin = fieldset disabled + tanpa
-    tombol hapus; tidak ada form upload foto / link lembar.
-    """
+    """Detail sesi versi Stitch — HANYA koreksi (opsi 3)."""
     from style_stitch import gaya_stitch, CSS_SESI
 
     admin = peran == "admin"
     info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.direview,
                    w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
@@ -909,9 +958,6 @@ def halaman_sesi_stitch(
         if sudah and (benar or kode):
             kelas_isi = "sudah"
             bulat_cls = "benar" if benar else (kode or "N")
-            # Marker span class="kode ..." dipertahankan supaya test yang
-            # meng-assert markup spesifik tetap hijau; bulat-st menggantinya
-            # secara visual lewat CSS (display:flex, lingkaran warna).
             lencana = (
                 '<span class="kode benar">BENAR</span>' if benar
                 else f'<span class="kode {kode}">{kode}</span>'
@@ -966,12 +1012,23 @@ def halaman_sesi_stitch(
         nomor = f'<span class="koreksi-nomor-st">{b["nomor"]}</span>'
         tipe = f'<span class="koreksi-tipe-st">{b["template_id"]}</span>'
 
+        pembahasan_html = ""
+        if getattr(soal, "pembahasan", ""):
+            pembahasan_html = (
+                f'<div class="pembahasan-soal-st" style="margin-top:0.35rem;font-size:0.88rem;'
+                f'background:#f0f7ff;border-left:3px solid #3182ce;padding:0.4rem 0.6rem;border-radius:4px;'
+                f'color:#2b6cb0;">'
+                f'<b>Perhitungan/Langkah:</b> {html.escape(soal.pembahasan)}'
+                f'</div>'
+            )
+
         kartu.append(f"""
 <div class="koreksi-kartu-st">
   <div class="koreksi-isi-st {kelas_isi}">
     <div class="koreksi-kepala-st">{nomor}{tipe}</div>
     <div class="teks-soal-st">{html.escape(soal.teks)}</div>
     <div class="kunci-baris-st">Kunci: <span class="kunci-val">{html.escape(b["kunci"])}</span></div>
+    {pembahasan_html}
     {restate}
     <div class="koreksi-baris-st">
       <div>
@@ -1104,25 +1161,9 @@ def buat_sesi_seed_baru(
     timer_mode: str = "tanpa",
     durasi_menit: int = 15,
     timer_auto: int = 0,
+    jumlah_soal: int | None = None,
 ) -> int:
-    """Sesi baru dengan seed yang belum pernah dipakai siswa ini.
-
-    Mengulang seed berarti mengulang soal yang persis sama — anak bisa
-    mengingat jawabannya, dan diagnosisnya berubah jadi menilai hafalan,
-    bukan pemahaman.
-
-    Level diambil dari tingkat siswa kalau tidak disebut. Inilah yang membuat
-    kolom `siswa.tingkat` akhirnya berarti: sebelum ini kolom itu tersimpan
-    rapi dan tidak pernah dibaca siapa pun, sehingga mengubahnya jadi P4
-    tidak mengubah satu soal pun.
-
-    Topik TIDAK fallback diam-diam: id yang tidak dikenal dilempar sebagai
-    KeyError oleh ambil() — salah ketik id topik adalah bug pemanggil, bukan
-    data produksi yang perlu dimaafkan (kontraknya beda dari level).
-
-    `mode` dan `timer_*` diteruskan ke database.buat_sesi; nilai asing ditolak
-    di sana (ValueError) — pemanggil wajib validasi sebelum menyentuh DB.
-    """
+    """Sesi baru dengan seed yang belum pernah dipakai siswa ini."""
     if level is None:
         baris = kon.execute(
             "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
@@ -1145,7 +1186,7 @@ def buat_sesi_seed_baru(
             return database.buat_sesi(
                 kon, siswa_id, seed, level=level, topik=topik, mode=mode,
                 timer_mode=timer_mode, durasi_menit=durasi_menit,
-                timer_auto=timer_auto,
+                timer_auto=timer_auto, jumlah_soal=jumlah_soal,
             )
     raise RuntimeError("gagal menemukan seed baru")
 

@@ -244,57 +244,69 @@ def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
     isi = f"""
-<div class="topbar"><a class="brand" href="/">{n}</a>
+<div class="publik-topbar-st"><a class="brand" href="/"><span class="material-symbols-outlined">school</span><span>{n}</span></a>
 <nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
 
-<section class="kartu hero-landing">
-  <img src="{icons.OWL}" alt="" width="120" height="120">
-  <h1>{n}</h1>
-  <p class="sub">{tag}</p>
-  <p>Anak berlatih matematika, menuliskan <b>caranya</b>, dan sistem
+<div class="publik-bungkus-st">
+<section class="publik-kartu-st" style="text-align:center;align-items:center">
+  <span class="material-symbols-outlined fill" style="font-size:5rem;color:{T.AKSEN_MURID_UTAMA}">pets</span>
+  <h1 class="publik-judul-st" style="font-size:2rem">{n}</h1>
+  <p class="publik-sub-st" style="font-size:1.05rem">{tag}</p>
+  <p class="publik-isi-st">Anak berlatih matematika, menuliskan <b>caranya</b>, dan sistem
   menunjukkan letak kesalahannya — salah baca, salah konsep, salah hitung,
   atau salah tulis. Orang tua dan guru melihat peta belajarnya, bukan
   sekadar nilai.</p>
-  <p><a class="tombol-coral" href="/daftar">Mulai — daftar sekarang</a></p>
+  <p style="margin-top:1rem"><a class="tombol-coral" href="/daftar">
+  <span class="material-symbols-outlined" style="font-size:1.1rem">rocket_launch</span>
+  Mulai — daftar sekarang</a></p>
 </section>
 
-<div class="grid-utama">
-<section class="kartu">
-  <h2>Untuk siapa</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:{T.SP_5};margin-top:{T.SP_5}">
+<section class="publik-kartu-st">
+  <h2 class="publik-judul-st" style="font-size:1.1rem">Untuk siapa</h2>
+  <div class="publik-isi-st">
   <p><b>Orang tua</b> — temani anak belajar di rumah, lihat perkembangannya
   dari laporan mingguan.</p>
   <p><b>Guru &amp; les privat</b> — kelola banyak murid, beri latihan sesuai
   tingkat, dan ketahui topik mana yang perlu diulang.</p>
+  </div>
 </section>
 
-<section class="kartu">
-  <h2>Cara kerja</h2>
+<section class="publik-kartu-st">
+  <h2 class="publik-judul-st" style="font-size:1.1rem">Cara kerja</h2>
+  <div class="publik-isi-st">
   <ol>
     <li>Buat sesi latihan — pilih topik &amp; tingkat (P3–P6).</li>
     <li>Anak mengerjakan, lalu menuliskan caranya sendiri.</li>
     <li>Sistem mendiagnosis: jawaban benar, salah hitung, atau salah konsep
     — dan topik mana yang perlu diulang.</li>
   </ol>
+  </div>
 </section>
 
-<section class="kartu">
-  <h2>Topik latihan</h2>
+<section class="publik-kartu-st">
+  <h2 class="publik-judul-st" style="font-size:1.1rem">Topik latihan</h2>
+  <div class="publik-isi-st">
   <p>Pola bilangan, aritmetika dasar, geometri datar, kombinatorik — dengan
   soal yang dibuat otomatis sehingga tiap sesi berbeda dari sebelumnya.</p>
+  </div>
 </section>
 
-<section class="kartu">
-  <h2>Ke arah kompetisi</h2>
+<section class="publik-kartu-st">
+  <h2 class="publik-judul-st" style="font-size:1.1rem">Ke arah kompetisi</h2>
+  <div class="publik-isi-st">
   <p>Materi disusun mengikuti silabus OSN Matematika SD (Bilangan,
   Aritmatika, Geometri, Statistika &amp; Pengukuran, Kombinatorik) dan cocok
   juga untuk persiapan SASMO. Berlatih teratur di sini adalah fondasi kuat
   untuk olimpiade — tapi produk ini untuk semua anak yang ingin kuat
   matematika, bukan hanya calon peserta olimpiade.</p>
+  </div>
 </section>
 </div>
 
-<footer class="sub" style="text-align:center;margin-top:1.5rem">
+<footer class="publik-sub-st" style="text-align:center;margin-top:2rem">
   <a href="/kebijakan-privasi">Kebijakan Privasi</a>
 </footer>
+</div>
 """
-    return _halaman_publik(T.NAMA_PRODUK, isi)
+    return _halaman_publik_stitch(T.NAMA_PRODUK, isi)

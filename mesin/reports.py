@@ -262,4 +262,5 @@ def halaman_laporan(
         f"<tr><th>Tipe soal</th><th>Topik</th><th>Berapa kali</th><th>Terakhir</th></tr>"
         f"{daftar_peta}</table></div></div>",
         ident=(pengguna, peran) if pengguna else None,
+        stitch=True,
     )
