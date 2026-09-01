@@ -61,6 +61,7 @@ class Soal:
     bagian: str = ""
     tantangan: bool = False
     level: str = "P3"
+    pembahasan: str = ""
 
     @property
     def tanda_tangan(self) -> str:

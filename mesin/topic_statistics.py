@@ -33,6 +33,7 @@ def rata_rata(varian: str, data: list[int], rata: int = 0) -> Soal:
             Malrule("rata.salah_n", k_salah_n, "K", "membagi dengan banyak data yang salah"),
             Malrule("rata.kurang_satu", str(int(kunci) - 1), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
+        pembahasan = f"Langkah: Jumlah data ({' + '.join(str(x) for x in data)}) = {jumlah}. Banyak data = {n}. Rata-rata = {jumlah} ÷ {n} = {kunci}."
         param = {"varian": varian, "data": data}
     else:
         # cari_data_ke_n: data terakhir sudah dihitung di _parameter
@@ -48,6 +49,8 @@ def rata_rata(varian: str, data: list[int], rata: int = 0) -> Soal:
             Malrule("rata.kurang_satu_data", k_salah, "K", "melakukan perhitungan yang salah pada data terakhir"),
             Malrule("rata.kurang_satu", str(int(kunci) - 1), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
+        sum_n_min_1 = sum(data[:-1])
+        pembahasan = f"Langkah: Total seluruh data = {n} × {rata} = {rata * n}. Jumlah {n-1} data pertama = {sum_n_min_1}. Data terakhir = {rata * n} - {sum_n_min_1} = {kunci}."
         param = {"varian": varian, "data": data, "rata": rata}
     return Soal(
         "rata_rata",
@@ -57,6 +60,7 @@ def rata_rata(varian: str, data: list[int], rata: int = 0) -> Soal:
         saring_malrule(kunci, mal),
         minta_restatement=True,
         bagian="A",
+        pembahasan=pembahasan,
     )
 
 
@@ -81,6 +85,11 @@ def rata_rata_gabungan(n1: int, n2: int, x1: int, x2: int) -> Soal:
         f"Kelompok A: {n1} anak dengan rata-rata {x1}. Kelompok B: {n2} anak "
         f"dengan rata-rata {x2}. Berapa rata-rata gabungan keduanya?"
     )
+    pembahasan = (
+        f"Langkah: Total A = {n1} × {x1} = {total1}. Total B = {n2} × {x2} = {total2}. "
+        f"Total gabungan = {total1} + {total2} = {total1 + total2}. "
+        f"Rata-rata gabungan = {total1 + total2} ÷ ({n1} + {n2}) = {kunci}."
+    )
     return Soal(
         "rata_rata_gabungan",
         {"n1": n1, "n2": n2, "x1": x1, "x2": x2},
@@ -89,6 +98,7 @@ def rata_rata_gabungan(n1: int, n2: int, x1: int, x2: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         bagian="A",
+        pembahasan=pembahasan,
     )
 
 
@@ -120,6 +130,7 @@ def median_modus(varian: str, data: list[int]) -> Soal:
             Malrule("median.kurang_satu", str(h), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
         teks = f"Data: {', '.join(str(x) for x in data)}. Berapa mediannya?"
+        pembahasan = f"Langkah: Data diurutkan ({', '.join(str(x) for x in urut)}). Nilai tengah (median) = {kunci}."
         param = {"varian": varian, "data": data}
     else:
         # modus: nilai paling sering muncul
@@ -143,6 +154,7 @@ def median_modus(varian: str, data: list[int]) -> Soal:
             Malrule("modus.kurang_satu", str(h), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
         teks = f"Data: {', '.join(str(x) for x in data)}. Berapa modusnya (nilai yang paling sering muncul)?"
+        pembahasan = f"Langkah: Kemunculan data ({', '.join(f'{k}:{v}x' for k, v in hitung.items())}). Modus (paling sering muncul) = {kunci}."
         param = {"varian": varian, "data": data}
     return Soal(
         "median_modus",
@@ -151,6 +163,7 @@ def median_modus(varian: str, data: list[int]) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         bagian="B",
+        pembahasan=pembahasan,
     )
 
 
@@ -170,6 +183,7 @@ def diagram_lingkaran(varian: str, s: int, total: int, nilai: int = 0) -> Soal:
             Malrule("lingkaran.salah_360", k_dobel, "K", "memakai sudut/180 bukan sudut/360"),
             Malrule("lingkaran.kurang_satu", str(int(kunci) - 1), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
+        pembahasan = f"Langkah: Banyak siswa = ({s}° ÷ 360°) × {total} = {kunci} siswa."
         param = {"varian": varian, "s": s, "total": total}
     else:
         # cari_sudut: sudut = nilai/total×360
@@ -186,6 +200,7 @@ def diagram_lingkaran(varian: str, s: int, total: int, nilai: int = 0) -> Soal:
             Malrule("lingkaran.bagian_lain", k_balik, "K", "menghitung sudut bagian yang lain"),
             Malrule("lingkaran.kurang_satu", str(int(kunci) - 1), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
+        pembahasan = f"Langkah: Sudut = ({nilai} ÷ {total}) × 360° = {kunci}°."
         param = {"varian": varian, "s": nilai * 360 // total, "total": total, "nilai": nilai}
     return Soal(
         "diagram_lingkaran",
@@ -194,6 +209,75 @@ def diagram_lingkaran(varian: str, s: int, total: int, nilai: int = 0) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         bagian="B",
+        pembahasan=pembahasan,
+    )
+
+
+def diagram_batang_garis(varian: str, data: list[int], i: int = 0) -> Soal:
+    """Dari diagram batang: baca nilai, jumlah, selisih, atau total."""
+    n = len(data)
+    nama = [f"B{i+1}" for i in range(n)]
+    teks_data = ", ".join(f"{nama[k]}: {data[k]}" for k in range(n))
+    if varian == "baca":
+        kunci = data[i]
+        k1 = data[(i + 1) % n]
+        k2 = data[(i + 2) % n]
+        h = kunci - 1
+        if k1 == kunci or k1 == h:
+            k1 = kunci + 1
+        if k2 == kunci or k2 == h or k2 == k1:
+            k2 = kunci + 2
+        mal = [
+            Malrule("batang.baca_tetangga", str(k1), "K", f"membaca batang yang berdekatan, bukan {nama[i]}"),
+            Malrule("batang.baca_lain", str(k2), "K", "membaca batang yang salah"),
+            Malrule("batang.kurang_satu", str(h), "H", "membaca benar, nilainya meleset satu"),
+        ]
+        teks = f"Diagram batang: {teks_data}. Berapa nilai {nama[i]}?"
+        pembahasan = f"Langkah: Membaca nilai {nama[i]} langsung pada data = {kunci}."
+        param = {"varian": varian, "data": data, "i": i}
+    elif varian == "jumlah":
+        kunci = sum(data)
+        k1 = max(data)  # menjawab batang terbesar
+        k2 = sum(data) - data[0]  # lupa menjumlahkan batang pertama
+        h = kunci - 1
+        if k1 == kunci or k1 == h:
+            k1 = kunci + 1
+        if k2 == kunci or k2 == h or k2 == k1:
+            k2 = kunci + 2
+        mal = [
+            Malrule("batang.terbesar", str(k1), "K", "menjawab batang terbesar, bukan jumlah"),
+            Malrule("batang.lupa_pertama", str(k2), "K", "menjumlahkan dengan melupakan satu batang"),
+            Malrule("batang.kurang_satu", str(h), "H", "perhitungan benar, hasilnya meleset satu"),
+        ]
+        teks = f"Diagram batang: {teks_data}. Berapa jumlah seluruh nilai?"
+        pembahasan = f"Langkah: Jumlah seluruh batang = {' + '.join(str(x) for x in data)} = {kunci}."
+        param = {"varian": varian, "data": data}
+    elif varian == "selisih":
+        a, b = data[i], data[(i + 1) % n]
+        kunci = abs(a - b)
+        k1 = a + b  # menjumlahkan dua batang
+        k2 = abs(a - data[(i + 2) % n])  # selisih batang yang berbeda
+        h = kunci - 1
+        if k1 == kunci or k1 == h:
+            k1 = kunci + 1
+        if k2 == kunci or k2 == h or k2 == k1:
+            k2 = kunci + 2
+        mal = [
+            Malrule("batang.jumlah_dua", str(k1), "K", "menjumlahkan dua batang padahal yang diminta selisih"),
+            Malrule("batang.selisih_lain", str(k2), "K", "menghitung selisih batang yang berbeda"),
+            Malrule("batang.kurang_satu", str(h), "H", "perhitungan benar, hasilnya meleset satu"),
+        ]
+        teks = f"Diagram batang: {teks_data}. Berapa selisih {nama[i]} dan {nama[(i+1)%n]}?"
+        pembahasan = f"Langkah: Selisih |{a} - {b}| = {kunci}."
+        param = {"varian": varian, "data": data, "i": i}
+    return Soal(
+        "diagram_batang_garis",
+        param,
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        bagian="B",
+        pembahasan=pembahasan,
     )
 
 
