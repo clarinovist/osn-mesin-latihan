@@ -86,8 +86,10 @@ tidak bercabang.
 ## Masuk & akun
 
 Buka **/masuk**, isi nama & sandi. Sesi disimpan sebagai kuki HttpOnly
-(`osn_sesi`, TTL 14 hari, SameSite=Lax, Secure di produksi) — tidak ada
-popup peramban. Admin diarahkan ke **/admin** setelah masuk; guru ke beranda;
+(`osn_sesi`, TTL 14 hari, SameSite=Lax; atribut Secure hanya dipasang saat
+permintaan benar-benar lewat HTTPS — terdeteksi dari `X-Forwarded-Proto`
+proxy atau env `OSN_HTTPS=1`, bukan nama host, supaya kuki tetap tersimpan
+di peramban anak yang membuka lewat HTTP LAN) — tidak ada popup peramban. Admin diarahkan ke **/admin** setelah masuk; guru ke beranda;
 murid ke halaman kerja. Keluar lewat tombol **Keluar** (POST /keluar) yang
 menghapus sesi di server dan kuki di peramban. Percobaan masuk yang gagal
 dibatasi 5 kali / 15 menit per nama+IP; akun yang tidak ada tetap menjalankan

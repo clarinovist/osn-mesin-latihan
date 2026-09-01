@@ -109,6 +109,51 @@ def test_murid_rutenya_sendiri_tetap_jalan(server):
     assert kode == 200
 
 
+def test_murid_get_tanpa_sesi_diarahkan_ke_halaman_masuk(server):
+    """Muat-ulang dengan kuki hilang/kedaluwarsa dulu menjatuhkan anak ke
+    halaman 401 polos; kini GET dibawa ke /masuk dengan pesan yang jelas."""
+    s, _, _ = server
+    kode, isi, _ = s.minta("/murid")
+    # urllib mengikuti 303: ujungnya halaman masuk + pesan, bukan halaman murid.
+    assert kode == 200
+    assert "Pilih sesi" not in isi
+    assert "Masuk lagi dengan nama" in isi
+
+
+def test_murid_get_tanpa_sesi_303_ke_masuk(server):
+    """Bentuk mentahnya: 303 ke /masuk?galat=..., bukan 401 polos."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    s, _, _ = server
+
+    class TanpaIkut(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    opener = urllib.request.build_opener(TanpaIkut)
+    req = urllib.request.Request(s.alamat + "/murid")
+    try:
+        opener.open(req)
+        raise AssertionError("GET /murid tanpa sesi harusnya 303")
+    except urllib.error.HTTPError as e:
+        assert e.code == 303
+        # unquote_plus: urlencode memakai '+' untuk spasi.
+        lokasi = urllib.parse.unquote_plus(dict(e.headers).get("Location", ""))
+        assert lokasi.startswith("/masuk?")
+        assert "galat=" in lokasi
+        assert "Masuk lagi" in lokasi
+
+
+def test_murid_post_tanpa_sesi_tetap_401(server):
+    """Kirim jawaban tanpa sesi tetap ditolak 401 — palang tulis tidak
+    boleh melemah karena pengalihan ramah di jalur GET."""
+    s, _, _ = server
+    kode, _, _ = s.minta("/murid/kerjakan/1", data={})
+    assert kode == 401
+
+
 def test_tanpa_kredensial_rute_guru_tetap_401(server):
     """Palang pindah ke rute data; / kini landing publik (200)."""
     s, sesi_id, _ = server

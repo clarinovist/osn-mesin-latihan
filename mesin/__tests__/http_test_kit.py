@@ -75,6 +75,7 @@ class ServerUji:
         cookie: str | None = None,
         method: str | None = None,
         biner: bool = False,
+        headers: dict[str, str] | None = None,
     ) -> tuple[int, str | bytes, dict]:
         """Satu permintaan HTTP -> (kode, isi_str, header_respons).
 
@@ -82,6 +83,8 @@ class ServerUji:
         mentah untuk header Cookie (tanpa 'osn_sesi=' — itu ditambahkan di sini
         bila diberikan sebagai string token; boleh juga string penuh).
         biner=True -> isi dikembalikan sebagai bytes (untuk rute berkas).
+        headers -> header mentah tambahan (mis. X-Forwarded-Proto untuk
+        menguji keputusan kuki Secure).
         """
         isi = None
         metode = method
@@ -98,6 +101,8 @@ class ServerUji:
             if "=" not in cookie:
                 cookie = f"osn_sesi={cookie}"
             req.add_header("Cookie", cookie)
+        for k, v in (headers or {}).items():
+            req.add_header(k, v)
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 mentah = r.read()

@@ -718,6 +718,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
       <div>
         <h1 class="st" style="margin:0">Halo, {_escape(nama)}!</h1>
         <div style="font-size:0.95rem;color:{T.TEKS_VARIAN}">{T.TAGLINE}</div>
+        <div style="font-size:0.8rem;color:{T.TEKS_VARIAN}">Bukan kamu? Tekan Keluar dulu.</div>
       </div>
     </div>
 

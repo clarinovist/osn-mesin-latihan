@@ -17,6 +17,7 @@ from http.server import ThreadingHTTPServer
 
 import database
 import auth
+import sessions
 from web import Penangan
 
 PORT = 8724
@@ -70,6 +71,9 @@ def main() -> int:
         return 0
 
     database.siapkan()
+    # Token kedaluwarsa yang menumpuk di sesi.json ikut terbuang tiap kali
+    # server dinyalakan (tanda lapangan: belasan token dari masuk-ulang).
+    sessions.bersihkan()
     admin = siapkan_admin_dan_pemilik()
     inang = "0.0.0.0" if arg.jaringan else "127.0.0.1"
 
