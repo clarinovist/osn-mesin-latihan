@@ -176,6 +176,11 @@ def sudut_pelurus_berpenyiku(varian: str, x: int | None = None, kali: int | None
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -252,6 +257,11 @@ def jumlah_sudut_segitiga(
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -295,6 +305,11 @@ def sudut_luar_segitiga(a: int, b: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -369,6 +384,11 @@ def keliling_luas_datar(
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -440,6 +460,11 @@ def luas_segitiga_jajargenjang(varian: str, a: int, t: int, s: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -541,6 +566,11 @@ def luas_segiempat_lain(varian: str, **nilai: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -624,6 +654,11 @@ def lingkaran_keliling_luas(varian: str, r: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
@@ -705,6 +740,11 @@ def juring(varian: str, s: int, r: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
@@ -790,6 +830,11 @@ def luas_arsiran(varian: str, **nilai: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 
@@ -886,6 +931,11 @@ def perbandingan_ukuran(varian: str, k: int, ukuran: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 
@@ -947,6 +997,11 @@ def luas_kotak_satuan(p: int, l: int, satuan: str = "cm", konteks: str = "kotak"
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="E",
     )
 
@@ -1094,6 +1149,11 @@ def simetri_bangun(
         teks,
         str(kunci),
         saring_malrule(str(kunci), mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="E",
     )
 

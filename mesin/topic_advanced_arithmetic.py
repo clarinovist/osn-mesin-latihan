@@ -64,6 +64,11 @@ def satuan_konversi(varian: str, nilai: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -102,6 +107,11 @@ def kecepatan_jarak_waktu(varian: str, s: int, t: int, v: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -126,6 +136,11 @@ def berpapasan(jarak: int, v1: int, v2: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -158,6 +173,11 @@ def menyusul(jarak: int, v1: int, v2: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -190,6 +210,11 @@ def debit(varian: str, volume: int, waktu: int, d: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -217,6 +242,11 @@ def perbandingan_senilai(p: int, q: int, n: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -244,6 +274,11 @@ def perbandingan_berbalik(a1: int, b1: int, a2: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -267,6 +302,11 @@ def kerja_bersama(a: int, b: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
@@ -291,6 +331,11 @@ def persen_diskon(harga: int, d: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 
@@ -316,6 +361,11 @@ def persen_untung_rugi(jenis: str, modal: int, persen: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 
@@ -339,6 +389,11 @@ def persen_bertingkat(harga: int, d1: int, d2: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 

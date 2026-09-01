@@ -116,6 +116,11 @@ def urutan_operasi_1(a: int, b: int, c: int, d: int, e: int) -> Soal:
         str(jawab),
         saring_malrule(str(jawab), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(jawab)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -151,6 +156,11 @@ def fpb_dua_bilangan(a: int, b: int) -> Soal:
         str(jawab),
         saring_malrule(str(jawab), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(jawab)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -193,6 +203,11 @@ def pecahan_operasi_campuran(
         _teks_pecahan(hasil),
         saring_malrule(_teks_pecahan(hasil), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(hasil)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
         tantangan=True,
     )

@@ -73,6 +73,11 @@ def keterbagian(d: int, a: int, b: int, c: int, jawab: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -131,6 +136,11 @@ def prima_faktorisasi(n: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -166,6 +176,11 @@ def kpk_dua_bilangan(a: int, b: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -204,6 +219,11 @@ def fpb_kpk_hubungan(a: int, b: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -245,6 +265,11 @@ def sisa_pembagian(N: int, d: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
@@ -291,6 +316,11 @@ def paritas(a: int, n: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
@@ -336,6 +366,11 @@ def angka_satuan_pangkat(a: int, b: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 
@@ -371,6 +406,11 @@ def gauss_deret(n: int) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="D",
     )
 

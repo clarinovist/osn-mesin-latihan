@@ -73,6 +73,11 @@ def benar_salah_pengandaian(
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -162,6 +167,11 @@ def tabel_penalaran(urutan: list[str], tanya: str) -> Soal:
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -205,6 +215,11 @@ def jumlah_selisih(jumlah: int, selisih: int, tanya: str) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -247,6 +262,11 @@ def soal_umur(a: int, b: int, k: int, n: int, tanya: str) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -289,6 +309,11 @@ def soal_uang(total: int, k: int, tanya: str) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -331,6 +356,11 @@ def dua_besaran_selisih(selisih: int, k: int, tanya: str) -> Soal:
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 

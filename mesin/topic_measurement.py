@@ -61,6 +61,11 @@ def skala_peta(varian: str, sebenarnya: int, peta: int, skala: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -110,6 +115,11 @@ def satuan_waktu_lama(varian: str, nilai: int, hasil: int) -> Soal:
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -173,6 +183,11 @@ def jam_menit_detik(varian: str, jam: int, menit: int, detik: int) -> Soal:
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 

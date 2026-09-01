@@ -122,6 +122,11 @@ def unsur_bangun(bangun: str, tanya: str, n: int = 1) -> Soal:
             teks,
             kunci,
             saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
             bagian="A",
         )
 
@@ -161,6 +166,11 @@ def unsur_bangun(bangun: str, tanya: str, n: int = 1) -> Soal:
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -208,6 +218,11 @@ def volume_kubus_balok(varian: str, s: int = 0, p: int = 0,
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -278,6 +293,11 @@ def volume_prisma_tabung(varian: str, a: int = 0, t_segitiga: int = 0,
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="A",
     )
 
@@ -361,6 +381,11 @@ def luas_permukaan(varian: str, s: int = 0,
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -421,6 +446,11 @@ def jaring_jaring(pilihan_benar: int, urutan: tuple[int, ...]) -> Soal:
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="B",
     )
 
@@ -472,6 +502,11 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
             teks,
             kunci,
             saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
             bagian="C",
         )
     else:
@@ -520,6 +555,11 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
         teks,
         kunci,
         saring_malrule(kunci, mal),
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
@@ -571,6 +611,11 @@ def perbandingan_volume(varian: str, k: int, s: int = 0,
         kunci,
         saring_malrule(kunci, mal),
         minta_restatement=True,
+        pembahasan=(
+            f"Langkah: jawaban benar = "
+            + str(kunci)
+            + ". Perhatikan malrule di halaman koreksi."
+        ),
         bagian="C",
     )
 
