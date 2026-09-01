@@ -550,7 +550,7 @@ class Penangan(BaseHTTPRequestHandler):
             if students.sesi_murid(kon, siswa_id, sesi_id_kerja):
                 database.tandai_mulai(kon, sesi_id_kerja)
                 kon.commit()
-            isi = student_pages.halaman_kerja(kon, siswa_id, sesi_id_kerja, tersimpan)
+            isi = student_pages.halaman_kerja_baru(kon, siswa_id, sesi_id_kerja, tersimpan)
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404

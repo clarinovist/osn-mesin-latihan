@@ -734,6 +734,321 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
     return isi.encode()
 
 
+def _badan_teks_st(teks: str) -> str:
+    """Saudara _badan_teks untuk kelas Stitch (.kerja-teks-st / .kerja-tanya-st).
+
+    Dipisah supaya kartu Stitch memakai kelasnya sendiri — kelas lama (.teks /
+    .tanya) hidup di CSS_MURID yang TIDAK diimpor halaman Stitch.
+    """
+    baris = [b.strip() for b in teks.split("\n") if b.strip()]
+    if len(baris) == 1:
+        return f'<div class="kerja-teks-st">{_escape(baris[0])}</div>'
+    return "".join(
+        f'<div class="{"kerja-tanya-st" if i == len(baris) - 1 else "kerja-teks-st"}">'
+        f"{_escape(b)}</div>"
+        for i, b in enumerate(baris)
+    )
+
+
+def halaman_kerja_baru(
+    kon, siswa_id: int, sesi_id: int, tersimpan: int = 0,
+    topik_paket: Topik | None = None,
+) -> bytes | None:
+    """Versi Stitch dari halaman kerja murid (S4).
+
+    Logika data, struktur kartu, mode drill, timer, jaga (guard submit/
+    beforeunload) — SEMUA persis sama dengan halaman_kerja; yang berubah hanya
+    markup + kelas CSS (mengadopsi GAYA_STITCH). Palang mutlak: TIDAK memuat
+    kata kunci/malrule/diagnosa.
+
+    Sumber visual: desain-ui/stitch/murid_kerjakan_soal_mobile/screen.png
+    — topbar sticky teal+coral, timer strip teal, kartu soal putih dgn nomor
+    badge bulat teal menggantung, Jawabanku input pusat, Caraku pil 2-kolom
+    radio, save strip sticky bawah coral penuh.
+    """
+    from style_stitch import gaya_stitch
+
+    info = sesi_murid(kon, siswa_id, sesi_id)
+    if not info:
+        return None
+    if topik_paket is None:
+        topik_paket = dari_sesi(info.get("topik"))
+    daftar = soal_murid(kon, sesi_id, siswa_id)
+
+    drill = info.get("mode", "diagnostik") == "drill"
+    timer_mode = info.get("timer_mode", "tanpa") or "tanpa"
+    durasi_menit = int(info.get("durasi_menit") or 15)
+    timer_auto = 1 if info.get("timer_auto") else 0
+
+    kartu: list[str] = []
+    bagian_kini = None
+    for s in daftar:
+        if s["bagian"] != bagian_kini:
+            bagian_kini = s["bagian"]
+            judul = topik_paket.judul_bagian.get(
+                bagian_kini, f"Bagian {bagian_kini}"
+            )
+            kartu.append(f'<div class="kerja-bagian-st">{judul}</div>')
+            if bagian_kini in topik_paket.catatan_bagian:
+                kartu.append(
+                    f'<div class="kerja-catatan-bagian-st">'
+                    f"{topik_paket.catatan_bagian[bagian_kini]}</div>"
+                )
+        t = s["terjawab"] or {}
+        ssid = s["sesi_soal_id"]
+        belum = " checked" if t.get("belum_pernah") else ""
+        bintang = '<span class="kerja-bintang-st">★</span>' if s["tantangan"] else ""
+        nomor = f'<span class="kerja-nomor-st">{s["nomor"]}</span>'
+        teks = _badan_teks_st(s["teks"])
+
+        if drill:
+            catatan_soal = ""
+            if timer_mode == "soal":
+                catatan_soal = (
+                    '<div class="catatan-soal-timer-st" style="display:none">'
+                    "Waktu untuk soal ini habis — lanjut ke soal berikutnya.</div>"
+                )
+            kartu.append(f"""
+<div class="kerja-soal-st drill">
+  {nomor}{bintang}
+  {teks}
+  <div class="kerja-jawab-st">
+    <span class="head-jawab"><span class="material-symbols-outlined">edit</span> Jawabanku</span>
+    <input type="text" name="jwb_{ssid}"
+           value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
+  </div>
+  <label class="kerja-centang-st">
+    <input type="checkbox" name="blm_{ssid}"{belum}>
+    belum pernah lihat soal seperti ini
+  </label>
+  {catatan_soal}
+</div>""")
+            continue
+
+        restate = ""
+        if s["minta_restatement"]:
+            nilai = _escape(t.get("restatement", ""))
+            restate = (
+                '<label class="kerja-label-st">Soal ini mintanya apa? '
+                "(tulis pakai kalimatmu sendiri)</label>"
+                f'<textarea class="kerja-restate-st" name="restate_{ssid}">{nilai}</textarea>'
+            )
+
+        cara_tersimpan = t.get("cara", "") or ""
+        pilihan_kini = ""
+        teks_cara = cara_tersimpan
+        if cara_tersimpan.startswith(AWALAN_PILIHAN):
+            sisa = cara_tersimpan[len(AWALAN_PILIHAN):]
+            pilihan_kini, _, teks_cara = sisa.partition(" — ")
+            pilihan_kini = pilihan_kini.strip()
+            teks_cara = teks_cara.strip()
+
+        tombol = "".join(
+            f'<label class="kerja-pill-st">'
+            f'<input type="radio" name="pilih_{ssid}" value="{kode}"'
+            f'{" checked" if kode == pilihan_kini else ""}>'
+            f"<span>{_escape(teks)}</span></label>"
+            for kode, teks in PILIHAN_CARA
+        )
+
+        kartu.append(f"""
+<div class="kerja-soal-st">
+  {nomor}{bintang}
+  {teks}
+  {restate}
+  <label class="kerja-label-st"><span class="material-symbols-outlined">psychology</span> Caraku — pilih dulu yang paling mirip:</label>
+  <div class="kerja-pill-grup-st">{tombol}</div>
+  <label class="kerja-label-st">Kalau mau, tulis lebih jelas di sini (boleh dikosongkan):</label>
+  <textarea class="kerja-cara-st" name="cara_{ssid}">{_escape(teks_cara)}</textarea>
+  <div class="kerja-jawab-st">
+    <span class="head-jawab"><span class="material-symbols-outlined">edit</span> Jawabanku</span>
+    <input type="text" name="jwb_{ssid}"
+           value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
+  </div>
+  <label class="kerja-centang-st">
+    <input type="checkbox" name="blm_{ssid}"{belum}>
+    belum pernah lihat soal seperti ini
+  </label>
+</div>""")
+
+    # Konfirmasi setelah simpan.
+    kabar = ""
+    if tersimpan:
+        kabar = (
+            '<div class="kerja-tersimpan-st">'
+            '<span class="ikon">✓</span>'
+            f"<span>Tersimpan ✓ — {tersimpan} soal sudah "
+            f"masuk. Boleh lanjut, atau tutup halaman ini.</span></div>"
+        )
+
+    if drill:
+        petunjuk = (
+            "<p><b>Cara mengerjakan — baca dulu:</b></p>"
+            "<p>Kerjakan sebisamu, tulis jawaban di kotak <b>Jawabanku</b>."
+            + (" Perhatikan waktunya." if timer_mode == "sesi" else "")
+            + "</p>"
+            "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
+            "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
+            "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
+            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+        )
+    else:
+        petunjuk = (
+            "<p><b>Cara mengerjakan — baca dulu:</b></p>"
+            "<p>Tiap soal ada bagian <b>Caraku</b>. Pilih satu yang paling mirip dengan "
+            "caramu mendapat jawaban. Kalau mau, tulis juga caranya di kotak tulisan.</p>"
+            "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
+            "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
+            "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
+            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+        )
+
+    # Timer Latihan Cepat — strip id timer-strip & timer-tampil dipertahankan
+    # supaya test drill & JS tetap mengenali elemen yang sama.
+    strip = ""
+    if drill and timer_mode == "sesi":
+        strip = (
+            '<div class="kerja-timer-st hanya-layar" id="timer-strip">'
+            '<span class="material-symbols-outlined" style="font-size:1.1rem">schedule</span>'
+            "Sisa waktu: <b id=\"timer-tampil\">"
+            f"{durasi_menit:02d}:00</b>"
+            '<span id="timer-pesan" style="display:none">'
+            " — waktu habis, kerjakan sebisanya dan simpan</span></div>"
+        )
+
+    # JS timer & jaga — persis sama dengan halaman_kerja (perilaku tidak berubah).
+    skrip = ""
+    if drill and timer_mode in ("sesi", "soal"):
+        skrip = f"""
+<script>
+(function(){{
+  var MODE = {json.dumps(timer_mode)};
+  var DETIK = {durasi_menit * 60};
+  var AUTO = {1 if timer_auto else 0};
+  var mulai = Date.now();
+  function fmt(s){{ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }}
+  if (MODE === "sesi") {{
+    var strip = document.getElementById("timer-strip");
+    var tampil = document.getElementById("timer-tampil");
+    function tick(){{
+      var sisa = DETIK - Math.floor((Date.now()-mulai)/1000);
+      if (sisa <= 0) {{
+        sisa = 0;
+        if (AUTO) {{
+          var f = document.querySelector("form");
+          if (f) {{ f.dataset.kirimOtomatis = "1"; f.submit(); }}
+          return;
+        }}
+        var p = document.getElementById("timer-pesan");
+        if (p) p.style.display = "";
+        if (strip) strip.className = "kerja-timer-st habis hanya-layar";
+      }}
+      if (tampil) tampil.textContent = fmt(sisa);
+    }}
+    tick();
+    setInterval(tick, 1000);
+  }} else if (MODE === "soal") {{
+    var kartu = document.querySelectorAll(".kerja-soal-st");
+    var mulaiSoal = {{}};
+    document.addEventListener("focusin", function(ev){{
+      var k = ev.target.closest ? ev.target.closest(".kerja-soal-st") : null;
+      if (!k) return;
+      var i = Array.prototype.indexOf.call(kartu, k);
+      if (i >= 0 && !(i in mulaiSoal)) mulaiSoal[i] = Date.now();
+    }});
+    function tick(){{
+      var t = Date.now();
+      kartu.forEach(function(k, i){{
+        if (!(i in mulaiSoal)) return;
+        var sisa = DETIK - Math.floor((t - mulaiSoal[i])/1000);
+        if (sisa > 0) return;
+        if (AUTO) {{
+          k.querySelectorAll("input, textarea, button").forEach(function(inp){{
+            inp.disabled = true;
+          }});
+        }}
+        var n = k.querySelector(".catatan-soal-timer-st");
+        if (n) n.style.display = "";
+      }});
+    }}
+    setInterval(tick, 1000);
+  }}
+}})();
+</script>
+"""
+
+    jaga = """
+<script>
+(function(){
+  var f = document.querySelector('form');
+  if (!f) return;
+  var kotor = false;
+  f.addEventListener('input', function(){ kotor = true; }, true);
+  f.addEventListener('change', function(){ kotor = true; }, true);
+  f.addEventListener('submit', function(){
+    kotor = false;
+    var b = f.querySelector('button[type=submit]');
+    if (b) { b.disabled = true; b.textContent = 'Menyimpan\\u2026'; }
+  });
+  window.addEventListener('pageshow', function(){
+    var b = f.querySelector('button[type=submit]');
+    if (b && b.disabled) { b.disabled = false; b.textContent = 'Simpan jawabanku'; }
+  });
+  window.addEventListener('beforeunload', function(e){
+    if (kotor && f.dataset.kirimOtomatis !== '1') {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+})();
+</script>
+"""
+
+    isi = f"""<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kerjakan — {_escape(topik_paket.judul_lembar)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{gaya_stitch()}</style></head><body class="st">
+<div class="kerja-topbar-st">
+  <div class="brand">
+    <span class="ik-owl material-symbols-outlined fill">pets</span>
+    <span class="nama-osn">{T.NAMA_PRODUK}</span>
+  </div>
+  <a class="cta-keluar hanya-layar" href="/murid"><span class="material-symbols-outlined" style="font-size:1.1rem">close</span> Tutup</a>
+</div>
+<div class="kerja-badan-st">
+<p class="kerja-meta-st"><b>Halo, {_escape(info['nama'])}</b> &middot; {_escape(info['tanggal'])}
+ &middot; level {_escape(info['level'])} &middot; {len(daftar)} soal
+ {'&middot; Latihan Cepat' if drill else ''}</p>
+{strip}
+{kabar}
+<div class="kerja-petunjuk-st">
+  <div class="baris-petunjuk">
+    <span class="material-symbols-outlined" style="color:{T.AKSEN_MURID_UTAMA};flex:none">lightbulb</span>
+    <div>
+      {petunjuk}
+    </div>
+  </div>
+</div>
+<form method="post" action="/murid/kerjakan/{sesi_id}">
+{" ".join(kartu)}
+<div class="kerja-simpan-strip-st hanya-layar"><button type="submit">Simpan jawabanku
+<span class="material-symbols-outlined">arrow_forward</span></button></div>
+</form>
+<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">
+  <button class="kerja-btn-sekunder-st" type="button" onclick="window.print()">
+    <span class="material-symbols-outlined" style="font-size:1.1rem">print</span> Cetak / PDF</button>
+  <a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a>
+</div>
+<form method="post" action="/keluar" class="hanya-layar" style="margin-top:0.7rem"><button class="kerja-btn-sekunder-st" type="submit">Keluar</button></form>
+{jaga}{skrip}
+</div></body></html>"""
+    return isi.encode()
+
+
 def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None = None) -> bytes:
     """Halaman /murid — daftar sesi milik murid ini saja.
 
