@@ -84,6 +84,7 @@ class Topik:
 
 PAKET: dict[str, Topik] = {}
 _SUDAH_DIMUAT = False
+_SEDANG_MEMUAT = False
 
 
 def daftarkan(topik: Topik) -> None:
@@ -93,12 +94,10 @@ def daftarkan(topik: Topik) -> None:
 
 
 def _pastikan_dimuat() -> None:
-    """Muat modul paket. Paket mendaftarkan dirinya sendiri saat impor
-    (satu mekanisme, bukan dua), jadi di sini cukup impor dan pastikan
-    registry tidak kosong."""
-    global _SUDAH_DIMUAT
-    if _SUDAH_DIMUAT:
+    global _SUDAH_DIMUAT, _SEDANG_MEMUAT
+    if _SUDAH_DIMUAT or _SEDANG_MEMUAT:
         return
+    _SEDANG_MEMUAT = True
     import topic_number_patterns  # noqa: F401  (mendaftarkan diri saat impor)
     import topic_basic_arithmetic  # noqa: F401  (mendaftarkan diri saat impor)
     import topic_plane_geometry  # noqa: F401  (mendaftarkan diri saat impor)
@@ -112,7 +111,51 @@ def _pastikan_dimuat() -> None:
 
     if not PAKET:
         raise RuntimeError("paket topik dimuat tapi tidak mendaftarkan diri")
+    _daftarkan_campuran()
     _SUDAH_DIMUAT = True
+    _SEDANG_MEMUAT = False
+
+
+def _daftarkan_campuran() -> None:
+    if "campuran" in PAKET:
+        return
+    gabungan_templates = {}
+    pemilik_param = {}
+    for t in list(PAKET.values()):
+        for tid, fn in t.templates.items():
+            gabungan_templates[tid] = fn
+        if t.parameter_untuk:
+            for tid in t.templates:
+                pemilik_param[tid] = t.parameter_untuk
+
+    def parameter_campuran(template_id: str, rng, level: str):
+        if template_id in pemilik_param:
+            return pemilik_param[template_id](template_id, rng, level)
+        raise KeyError(f"template {template_id} tidak punya pemilik parameter")
+
+    komposisi_campuran = {}
+    for lvl in LEVEL:
+        topik_level = [t for t in PAKET.values() if lvl in t.komposisi and t.id != "campuran"]
+        urutan_gabungan = []
+        max_len = max((len(t.komposisi[lvl]) for t in topik_level), default=0)
+        for idx in range(max_len):
+            for t in topik_level:
+                comp = t.komposisi[lvl]
+                if idx < len(comp):
+                    urutan_gabungan.append(comp[idx])
+        komposisi_campuran[lvl] = tuple(urutan_gabungan)
+
+    topik_campuran = Topik(
+        id="campuran",
+        nama="✨ Campuran Semua Topik (Simulasi Ujian)",
+        judul_lembar="Simulasi Ujian — Campuran Semua Topik",
+        judul_penilaian="Penilaian — Simulasi Ujian",
+        templates=gabungan_templates,
+        komposisi=komposisi_campuran,
+        profil={"P3": {}, "P4": {}, "P5": {}, "P6": {}},
+        parameter_untuk=parameter_campuran,
+    )
+    PAKET["campuran"] = topik_campuran
 
 
 def paket_bawaan() -> Topik:
@@ -158,6 +201,8 @@ def registri() -> dict[str, Callable[..., Soal]]:
     _pastikan_dimuat()
     gabungan: dict[str, Callable[..., Soal]] = {}
     for t in PAKET.values():
+        if t.id == "campuran":
+            continue
         for tid, fungsi in t.templates.items():
             if tid in gabungan:
                 raise ValueError(f"template_id duplikat lintas topik: {tid}")
