@@ -841,6 +841,207 @@ def halaman_sesi(
         ident=(pengguna, peran) if pengguna else None,
     )
 
+
+def _pil_sesi_stitch(kon, sesi_id: int, aktif: str) -> str:
+    """Pil navigasi sesi versi Stitch — kelas .pil-sesi-st supaya CSS
+    halaman sesi (bukan teacher_style lama) yang menanganinya."""
+    n_lamp = kon.execute(
+        "SELECT COUNT(*) FROM lampiran WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()[0]
+    def _a(kunci: str, label: str, href: str) -> str:
+        cls = "aktif" if kunci == aktif else ""
+        return f'<a class="{cls}" href="{href}">{label}</a>'
+    return (
+        '<nav class="pil-sesi-st">'
+        + _a("koreksi", "Koreksi", f"/sesi/{sesi_id}")
+        + _a("cetak", "Cetak &amp; Cerita", f"/sesi/{sesi_id}/cetak")
+        + _a("lampiran", f"Lampiran ({n_lamp})", f"/sesi/{sesi_id}/lampiran")
+        + "</nav>"
+    )
+
+
+def halaman_sesi_stitch(
+    kon, sesi_id: int, pesan: str = "", peran: str = "guru",
+    pengguna: str = "",
+) -> bytes:
+    """Detail sesi versi Stitch — HANYA koreksi (opsi 3).
+
+    Logika data, query, field form (jwb_/kode_/cara_/restate_/belum_), badge
+    mode, pil navigasi, danger zone — SEMUA persis sama dengan halaman_sesi;
+    hanya markup + kelas CSS berubah (GAYA_STITCH + CSS_SESI).
+
+    Kontrak yang dipertahankan (dijaga test): kunci TAMPIL untuk guru;
+    class="badge-mode" hadir hanya untuk drill; 'action="/sesi/{id}/hapus"';
+    'action="/sesi/{id}"' (form POST); admin = fieldset disabled + tanpa
+    tombol hapus; tidak ada form upload foto / link lembar.
+    """
+    from style_stitch import gaya_stitch, CSS_SESI
+
+    admin = peran == "admin"
+    info = kon.execute(
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                   w.nama, w.id AS siswa_id
+           FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
+        (sesi_id,),
+    ).fetchone()
+    if not info:
+        return _halaman("Tidak ada", "<h1>Sesi tidak ditemukan</h1>")
+
+    kartu = []
+    for b in database.isi_sesi(kon, sesi_id):
+        soal = _soal_dari_baris(b)
+        sudah = b["jawaban_id"] is not None
+        kode = b["kode_final"]
+        benar = b["benar"]
+
+        if sudah and (benar or kode):
+            kelas_isi = "sudah"
+            bulat_cls = "benar" if benar else (kode or "N")
+            # Marker span class="kode ..." dipertahankan supaya test yang
+            # meng-assert markup spesifik tetap hijau; bulat-st menggantinya
+            # secara visual lewat CSS (display:flex, lingkaran warna).
+            lencana = (
+                '<span class="kode benar">BENAR</span>' if benar
+                else f'<span class="kode {kode}">{kode}</span>'
+            )
+            bulat_label = (
+                "Tepat" if benar
+                else "Konsep" if kode == "K"
+                else "Baca" if kode == "B"
+                else "Hitung" if kode == "H"
+                else "Tulis" if kode == "E"
+                else "Belum lihat" if kode == "T"
+                else ""
+            )
+        elif sudah:
+            kelas_isi, bulat_cls, lencana, bulat_label = "", "N", '<span class="kode N">?</span>', "Belum dinilai"
+        else:
+            kelas_isi, bulat_cls, lencana, bulat_label = "", "", "", ""
+
+        kolom_status = ""
+        if lencana:
+            kolom_status = (
+                '<div class="koreksi-status-st">'
+                f'<div class="koreksi-bulat-st {bulat_cls}">{lencana}</div>'
+                f'<span class="koreksi-bulat-label-st">{bulat_label}</span>'
+                "</div>"
+            )
+
+        usulan = ""
+        if sudah and b["alasan"]:
+            ragu = "" if (benar or kode) else " ragu"
+            usulan = (
+                f'<div class="usulan-st{ragu}"><b>Mesin:</b> '
+                f'{html.escape(b["alasan"])}</div>'
+            )
+
+        restate = ""
+        if soal.minta_restatement:
+            restate = (
+                '<label class="koreksi-label-st">Kotak "mintanya apa" — '
+                "tulis ulang apa yang anak isi</label>"
+                f'<input type="text" class="koreksi-input-st"'
+                f' name="restate_{b["sesi_soal_id"]}" '
+                f'value="{html.escape(b["restatement"] or "")}">'
+            )
+
+        pilih = "".join(
+            f'<option value="{v}"{" selected" if (v == kode or (v == "benar" and benar)) else ""}>'
+            f"{html.escape(t)}</option>"
+            for v, t in KODE_PILIHAN
+        )
+
+        nomor = f'<span class="koreksi-nomor-st">{b["nomor"]}</span>'
+        tipe = f'<span class="koreksi-tipe-st">{b["template_id"]}</span>'
+
+        kartu.append(f"""
+<div class="koreksi-kartu-st">
+  <div class="koreksi-isi-st {kelas_isi}">
+    <div class="koreksi-kepala-st">{nomor}{tipe}</div>
+    <div class="teks-soal-st">{html.escape(soal.teks)}</div>
+    <div class="kunci-baris-st">Kunci: <span class="kunci-val">{html.escape(b["kunci"])}</span></div>
+    {restate}
+    <div class="koreksi-baris-st">
+      <div>
+        <label class="koreksi-label-st"><span class="material-symbols-outlined" style="font-size:1rem">edit</span> Jawaban anak</label>
+        <input type="text" class="koreksi-input-st" name="jwb_{b["sesi_soal_id"]}"
+               value="{html.escape(b["jawaban"] or "")}">
+      </div>
+      <div>
+        <label class="koreksi-label-st">Kode (kosongkan = pakai usulan mesin)</label>
+        <select class="koreksi-select-st" name="kode_{b["sesi_soal_id"]}">{pilih}</select>
+      </div>
+    </div>
+    <label class="koreksi-label-st">Isi kotak "Caraku" — ringkas saja, cukup yang menunjukkan caranya</label>
+    <textarea class="koreksi-textarea-st" name="cara_{b["sesi_soal_id"]}">{html.escape(b["cara"] or "")}</textarea>
+    <div class="koreksi-centang-st">
+      <input type="checkbox" id="bp{b["sesi_soal_id"]}"
+             name="belum_{b["sesi_soal_id"]}"
+             {"checked" if b["belum_pernah"] else ""}>
+      <label for="bp{b["sesi_soal_id"]}">anak mencentang "belum pernah lihat soal seperti ini"</label>
+    </div>
+    {usulan}
+  </div>
+  {kolom_status}
+</div>""")
+
+    kabar = f'<div class="pesan-st">{html.escape(pesan)}</div>' if pesan else ""
+    badge_mode = _badge_mode(info)
+    pil = _pil_sesi_stitch(kon, sesi_id, "koreksi")
+
+    tombol_hapus = (
+        ""
+        if admin
+        else (
+            f'<form method="get" action="/sesi/{sesi_id}/hapus" '
+            f'style="margin:.4rem 0">'
+            f'<button type="submit" class="tombol-kecil-st">'
+            f"Hapus sesi</button></form>"
+        )
+    )
+    if admin:
+        blok_isi = f'<fieldset disabled>{"".join(kartu)}</fieldset>'
+    else:
+        blok_isi = (
+            f'<form method="post" action="/sesi/{sesi_id}">'
+            f'{"".join(kartu)}'
+            f'<div class="koreksi-simpan-st"><button type="submit">'
+            "Simpan &amp; diagnosis</button></div></form>"
+        )
+
+    batang = _topbar_stitch(pengguna, peran) if pengguna else ""
+    isi = (
+        f'<div class="sesi-badan-st">'
+        f'<div class="sesi-jejak-st"><a href="/">&larr; Semua siswa</a></div>'
+        f'<h1 class="sesi-judul-st">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
+        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
+        f'seed {info["seed"]} {badge_mode}</p>'
+        f"{kabar}"
+        f"{pil}"
+        f"{blok_isi}"
+        f'<div class="danger-zone-st">'
+        f'<p class="sub">Zona bahaya — hapus tidak bisa dibatalkan.</p>'
+        f"{tombol_hapus}</div>"
+        f"</div>"
+    )
+    skrip_extra = (
+        f"<script>{SKRIP_MATA_SANDI}</script>"
+        f"<script>{SKRIP_CEGAH_KIRIM_GANDA}</script>"
+    )
+    return (
+        f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sesi #{sesi_id} &middot; {html.escape(T.NAMA_PRODUK)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{gaya_stitch()}{CSS_SESI}</style></head>
+<body class="st"><div class="bungkus-st">{batang}{isi}</div>{skrip_extra}</body></html>"""
+    ).encode()
+
+
 def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
     """Simpan jawaban lalu jalankan diagnosis otomatis.
 

@@ -472,6 +472,235 @@ tr.sorot-baru, div.sorot-baru {{
 }}
 """
 
+# Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa
+# diimpor utuh; dipanggil oleh halaman_sesi_stitch lewat gaya_stitch() + blok
+# tambahan ini.
+CSS_SESI = f"""
+/* ── Halaman koreksi sesi guru /sesi/<id> — S5 adopsi Stitch ── */
+
+.sesi-badan-st {{ max-width: {T.LEBAR_KONTEN}; margin: 0 auto; padding: {T.SP_4} 0.9rem 3rem; }}
+.sesi-jejak-st {{ margin-bottom: {T.SP_3}; font-size:.9rem; }}
+.sesi-jejak-st a {{ color: {T.AKSEN_MURID_UTAMA}; text-decoration: none; }}
+.sesi-jejak-st a:hover {{ text-decoration: underline; }}
+
+.sesi-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-size: 1.5rem; font-weight: 800;
+  color: {T.TEKS_JUDUL}; margin: 0 0 0.3rem; letter-spacing: -0.01em;
+}}
+.sesi-sub-st {{ font-size: .92rem; color: {T.TEKS_VARIAN}; margin: 0 0 {T.SP_1}; }}
+
+/* Pill mode Latihan Cepat — class badge-mode dipertahankan supaya test drill
+   tetap mengenalinya (marker kelas, bukan teks global). */
+.badge-mode {{
+  display: inline-block;
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .72rem;
+  background: {T.STATUS_LATIHAN_BG}; color: {T.STATUS_LATIHAN_TEKS};
+  padding: 0.15rem 0.5rem; border-radius: {T.RADIUS_PIL};
+  margin-left: 0.3rem; vertical-align: middle;
+}}
+
+/* Pesan flash (sukses setelah simpan). */
+.pesan-st {{
+  background: {T.LATAR_TERSIMPAN}; border: 1px solid {T.BORDER_TERSIMPAN};
+  color: {T.TEKS_TERSIMPAN}; border-radius: {T.RADIUS_KARTU};
+  padding: {T.SP_3} {T.SP_4}; margin: 0 0 {T.SP_4}; font-size: .95rem;
+}}
+
+/* Pil navigasi antar-alat sesi (Koreksi · Cetak & Cerita · Lampiran). */
+.pil-sesi-st {{
+  display: flex; gap: {T.SP_2}; flex-wrap: wrap;
+  margin: 0 0 {T.SP_4};
+  border-bottom: 1px solid {T.BORDER_VARIAN}; padding-bottom: {T.SP_2};
+}}
+.pil-sesi-st a {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .88rem;
+  color: {T.TEKS_VARIAN}; text-decoration: none;
+  padding: {T.SP_2} {T.SP_3}; border-radius: {T.RADIUS_SEDANG};
+  border: 1px solid transparent; min-height: {T.TARGET_SENTUH};
+  display: inline-flex; align-items: center; gap: {T.SP_1};
+}}
+.pil-sesi-st a:hover {{ background: {T.LATAR_SEKUNDER_LEMBUT}; color: {T.TEKS_JUDUL}; }}
+.pil-sesi-st a.aktif {{
+  background: {T.LATAR_SEKUNDER_NETRAL}; color: {T.TEKS_JUDUL};
+  border-color: {T.BORDER_VARIAN};
+}}
+
+/* Kartu soal koreksi — layout dua kolom (isi kiri, status kanan) di layar
+   lebar; tumpuk vertikal di HP. */
+.koreksi-kartu-st {{
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_5} {T.SP_4} {T.SP_4};
+  margin-bottom: {T.SP_5}; position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  display: flex; flex-direction: column; gap: {T.SP_5};
+}}
+@media (min-width: 40rem) {{
+  .koreksi-kartu-st {{ flex-direction: row; align-items: stretch; }}
+  .koreksi-kartu-st .koreksi-isi-st {{ flex: 1; min-width: 0; }}
+  .koreksi-kartu-st .koreksi-status-st {{ width: 6rem; flex: none;
+    border-left: 1px solid {T.BORDER_VARIAN}; padding-left: {T.SP_4}; }}
+}}
+.koreksi-isi-st {{ display: flex; flex-direction: column; gap: {T.SP_4}; }}
+.koreksi-isi-st.sudah {{ opacity: .85; }}
+
+/* Nomor + template_id badge. */
+.koreksi-kepala-st {{ display: flex; align-items: center; gap: {T.SP_3}; }}
+.koreksi-nomor-st {{
+  flex: none; width: 2rem; height: 2rem;
+  background: {T.AKSEN_MURID_UTAMA}; color: {T.TEKS_PUTIH};
+  border-radius: {T.RADIUS_BULAT}; border: 2px solid {T.LATAR_KARTU};
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .9rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}}
+.koreksi-tipe-st {{
+  font-family: {T.FONT_HEADLINE}; font-size: .78rem; font-weight: 600;
+  color: {T.TEKS_VARIAN}; background: {T.LATAR_SEKUNDER_NETRAL};
+  padding: 0.15rem 0.5rem; border-radius: {T.RADIUS_PIL};
+}}
+
+.teks-soal-st {{ color: {T.TEKS_UTAMA}; line-height: 1.5; }}
+
+.kunci-baris-st {{
+  background: {T.LATAR_SEKUNDER_LEMBUT}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_SEDANG}; padding: {T.SP_2} {T.SP_3};
+  font-size: .92rem;
+}}
+.kunci-baris-st .kunci-val {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; color: {T.TEKS_JUDUL};
+  background: {T.LATAR_KARTU}; padding: 0.1rem 0.5rem;
+  border-radius: {T.RADIUS_KECIL};
+}}
+
+/* Label kecil di kartu koreksi. */
+.koreksi-label-st {{
+  display: block; font-family: {T.FONT_HEADLINE}; font-weight: 600;
+  font-size: .82rem; color: {T.TEKS_VARIAN}; margin: 0 0 {T.SP_2};
+  display: flex; align-items: center; gap: {T.SP_1};
+}}
+
+/* Baris dua kolom: Jawaban anak | Kode (select). */
+.koreksi-baris-st {{
+  display: grid; grid-template-columns: 1fr;
+  gap: {T.SP_3};
+}}
+@media (min-width: 30rem) {{
+  .koreksi-baris-st {{ grid-template-columns: 1.4fr 1fr; }}
+}}
+.koreksi-input-st {{
+  font: inherit; font-size: 1rem; min-height: {T.TARGET_SENTUH};
+  border-radius: {T.RADIUS_SEDANG}; border: 1px solid {T.BORDER_VARIAN};
+  background: {T.LATAR_KARTU}; padding: 0 {T.SP_3}; width: 100%;
+}}
+.koreksi-input-st:focus {{
+  border-color: {T.FOKUS_AKSEN}; outline: 0;
+  box-shadow: 0 0 0 3px {T.AKSEN_MURID_UTAMA}55;
+}}
+.koreksi-select-st {{
+  font: inherit; font-size: .95rem; min-height: {T.TARGET_SENTUH};
+  border-radius: {T.RADIUS_SEDANG}; border: 1px solid {T.BORDER_VARIAN};
+  background: {T.LATAR_SEKUNDER_LEMBUT}; padding: 0 {T.SP_3}; width: 100%;
+  cursor: pointer;
+}}
+.koreksi-select-st:focus {{
+  border-color: {T.FOKUS_AKSEN}; outline: 0;
+  box-shadow: 0 0 0 3px {T.AKSEN_MURID_UTAMA}55;
+}}
+
+.koreksi-textarea-st {{
+  width: 100%; min-height: 70px;
+  border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
+  padding: .6rem; font-size: 1rem; font-family: inherit;
+  background: {T.LATAR_SEKUNDER_LEMBUT};
+}}
+.koreksi-textarea-st:focus {{
+  outline: none; border-color: {T.AKSEN_MURID_UTAMA};
+  box-shadow: 0 0 0 3px rgba(15,163,163,0.18);
+}}
+
+.koreksi-centang-st {{
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .9rem; color: {T.TEKS_VARIAN}; font-family: {T.FONT_HEADLINE};
+}}
+.koreksi-centang-st input {{ width: 1.3rem; height: 1.3rem; flex: none; accent-color: {T.AKSEN_MURID_UTAMA}; }}
+.koreksi-centang-st label {{ margin: 0; cursor: pointer; }}
+
+.usulan-st {{
+  background: {T.LATAR_SEKUNDER_NETRAL}; border-left: 3px solid {T.AKSEN_MURID_UTAMA};
+  border-radius: 0 {T.RADIUS_KECIL} {T.RADIUS_KECIL} 0;
+  padding: {T.SP_2} {T.SP_3}; font-size: .9rem; color: {T.TEKS_VARIAN};
+  margin-top: {T.SP_2};
+}}
+.usulan-st.ragu {{ border-left-color: {T.AKSEN_KORAL_TUA}; }}
+.usulan-st b {{ color: {T.TEKS_JUDUL}; }}
+
+/* Kolom status kanan (badge BENAR/?/K/H/E/T). */
+.koreksi-status-st {{
+  display: flex; align-items: center; justify-content: center;
+  padding-top: {T.SP_3};
+  border-top: 1px solid {T.BORDER_VARIAN};
+  gap: {T.SP_2}; flex-direction: column;
+}}
+@media (min-width: 40rem) {{
+  .koreksi-status-st {{ border-top: 0; border-left: 1px solid {T.BORDER_VARIAN}; padding-top: 0; }}
+}}
+.koreksi-bulat-st {{
+  width: 3rem; height: 3rem; border-radius: {T.RADIUS_BULAT};
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: {T.FONT_HEADLINE}; font-weight: 800; font-size: 1.1rem;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.08);
+}}
+/* Marker span.kode dipertahankan untuk test; di dalam bulat, warnanya
+   mewarisi lingkaran supaya BENAR putih di atas teal, dst. */
+.koreksi-bulat-st .kode {{ color: inherit; background: none; padding: 0; border: 0; font: inherit; }}
+.koreksi-bulat-st.benar {{ background: {T.AKSEN_MURID_UTAMA}; color: {T.TEKS_PUTIH}; }}
+.koreksi-bulat-st.N {{ background: {T.LATAR_ELEVASI}; color: {T.TEKS_VARIAN}; }}
+.koreksi-bulat-st.K {{ background: {T.KODE_SALAH_KONSEP_BG}; color: {T.KODE_SALAH_KONSEP_TEKS}; }}
+.koreksi-bulat-st.B {{ background: {T.KODE_SALAH_BACA_BG}; color: {T.KODE_SALAH_BACA_TEKS}; }}
+.koreksi-bulat-st.H {{ background: {T.KODE_SALAH_HITUNG_BG}; color: {T.KODE_SALAH_HITUNG_TEKS}; }}
+.koreksi-bulat-st.E {{ background: {T.KODE_SALAH_TULIS_BG}; color: {T.KODE_SALAH_TULIS_TEKS}; }}
+.koreksi-bulat-st.T {{ background: {T.KODE_BELUM_LIAT_BG}; color: {T.KODE_BELUM_LIAT_TEKS}; }}
+.koreksi-bulat-label-st {{ font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .76rem; color: {T.TEKS_VARIAN}; text-align: center; }}
+
+/* Simpan & diagnosis — tombol coral penuh. */
+.koreksi-simpan-st {{
+  position: sticky; bottom: 0; padding: {T.SP_3} 0 {T.SP_2};
+  background: linear-gradient(to top, {T.LATAR_SEKUNDER_LEMBUT} 70%, transparent);
+}}
+.koreksi-simpan-st button {{
+  width: 100%; font-size: 1.05rem; padding: .9rem;
+  background: {T.AKSEN_MURID_KORAL}; color: {T.TEKS_PUTIH};
+  border: 0; border-radius: {T.RADIUS_SEDANG};
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; cursor: pointer;
+  min-height: 48px;
+  display: flex; align-items: center; justify-content: center; gap: {T.SP_2};
+  box-shadow: 0 4px 12px rgba(255,107,91,.25);
+}}
+.koreksi-simpan-st button:hover {{ filter: brightness(1.06); }}
+
+/* Danger zone hapus sesi. */
+.danger-zone-st {{
+  margin-top: 1.2rem; border-top: 1px solid {T.BORDER_GALAT}; padding-top: .7rem;
+}}
+.danger-zone-st p.sub {{ margin: 0 0 .4rem; font-size: .85rem; color: {T.TEKS_VARIAN}; }}
+.tombol-kecil-st {{
+  font: inherit; font-family: {T.FONT_HEADLINE}; font-size: .85rem;
+  background: {T.LATAR_GALAT}; color: {T.TEKS_GALAT};
+  border: 1px solid {T.BORDER_GALAT}; border-radius: {T.RADIUS_SEDANG};
+  padding: .5rem {T.SP_4}; cursor: pointer;
+  min-height: {T.TARGET_SENTUH};
+}}
+.tombol-kecil-st:hover {{ filter: brightness(1.04); }}
+
+/* Cetak. */
+@media print {{
+  .sesi-badan-st {{ max-width: none; padding: 0; }}
+  .st-topbar, .koreksi-simpan-st, .pil-sesi-st, .danger-zone-st, .hanya-layar {{ display: none; }}
+  .koreksi-kartu-st {{ break-inside: avoid; box-shadow: none; border-color: #000; flex-direction: column; }}
+  .koreksi-status-st {{ border: 0; }}
+}}
+"""
+
 
 def gaya_stitch() -> str:
     """

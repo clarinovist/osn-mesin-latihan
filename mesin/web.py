@@ -43,6 +43,7 @@ from teacher_pages import (
     halaman_sesi,
     halaman_sesi_cetak,
     halaman_sesi_lampiran,
+    halaman_sesi_stitch,
     halaman_utama,
     halaman_utama_stitch,
     simpan_sesi,
@@ -423,7 +424,7 @@ class Penangan(BaseHTTPRequestHandler):
                             )
                             kon.commit()
                     return self._kirim(
-                        halaman_sesi(
+                        halaman_sesi_stitch(
                             kon, sesi_id,
                             peran=ident[1] if ident else "guru",
                             pengguna=ident[0] if ident else "",
@@ -843,7 +844,7 @@ class Penangan(BaseHTTPRequestHandler):
                 _, _, catatan = llm.bungkus_sesi(kon, sesi_id, _soal_dari_baris)
                 ident = self._identitas()
                 return self._kirim(
-                    halaman_sesi(
+                    halaman_sesi_stitch(
                         kon, sesi_id, catatan,
                         peran=ident[1] if ident else "guru",
                         pengguna=ident[0] if ident else "",
@@ -1076,7 +1077,7 @@ class Penangan(BaseHTTPRequestHandler):
             pesan = simpan_sesi(kon, sesi_id, data)
             ident = self._identitas()
             self._kirim(
-                halaman_sesi(
+                halaman_sesi_stitch(
                     kon, sesi_id, pesan,
                     peran=ident[1] if ident else "guru",
                     pengguna=ident[0] if ident else "",
