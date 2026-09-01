@@ -25,8 +25,11 @@ _jalur_dari_kunci_ip: dict[tuple[str, str], list[float]] = {}
 
 # Umpan waktu-tetap untuk akun tak dikenal (B3): PBKDF2 satu kali ini agar
 # jalur nama-salah memakan waktu serupa jalur nama-benar+sandi-salah.
+# Iterasinya mengikuti OSN_PBKDF2_ITERASI — lihat komentar _ITERASI di
+# auth.py; test menyetelnya rendah lewat __tests__/conftest.py.
+_ITERASI = int(os.environ.get("OSN_PBKDF2_ITERASI", "600000"))
 _garam_dummy = hashlib.pbkdf2_hmac(
-    "sha256", b"dummy", b"aaaaaaaaaaaaaaaa", 600_000, dklen=32
+    "sha256", b"dummy", b"aaaaaaaaaaaaaaaa", _ITERASI, dklen=32
 )  # dihitung saat import — tidak di hot path; nilai tidak dipakai selain untuk waktu
 
 _BATAS_JENDELA = 15 * 60  # hitung gagal dalam 15 menit

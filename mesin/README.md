@@ -179,6 +179,10 @@ seed, jadi selalu sama persis.
 ## Menjalankan test
 
 ```bash
+# paralel di semua inti CPU — butuh pytest-xdist (pip install pytest-xdist)
+./.venv/bin/python -m pytest __tests__/ -q -n auto
+
+# atau serial
 ./.venv/bin/python -m pytest __tests__/ -q
 ```
 

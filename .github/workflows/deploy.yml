@@ -34,10 +34,10 @@ jobs:
           python-version: "3.12"
 
       - name: Pasang pytest
-        run: pip install --quiet pytest
+        run: pip install --quiet pytest pytest-xdist
 
       - name: Jalankan seluruh test
-        run: python -m pytest mesin/__tests__/ -q
+        run: python -m pytest mesin/__tests__/ -q -n auto
 
       - name: Pastikan tidak ada data siswa ter-commit
         # Palang terakhir sebelum apa pun terbit. Basis data, hash sandi, dan

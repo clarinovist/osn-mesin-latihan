@@ -40,7 +40,11 @@ BERKAS_SANDI = Path(
 # pbkdf2_hmac tersedia di keduanya. 600.000 iterasi mengikuti anjuran OWASP
 # 2023 untuk SHA-256, dan diukur ~0,2 detik di mesin ini — tidak terasa saat
 # login, tapi mahal bila dicoba jutaan kali.
-_ITERASI = 600_000
+#
+# OSN_PBKDF2_ITERASI hanya untuk test (__tests__/conftest.py menyetelnya
+# rendah): jumlah iterasi ikut tersimpan di berkas sandi dan diverifikasi
+# dengan angka yang sama, jadi logika yang diuji tidak berubah.
+_ITERASI = int(os.environ.get("OSN_PBKDF2_ITERASI", "600000"))
 
 # Garam/kunci umpan untuk jalur akun-tak-dikenal agar waktu tetap.
 # Nilai konstan ini membuat PBKDF2 tetap dijalankan walau nama tidak ada.
