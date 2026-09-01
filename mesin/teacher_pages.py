@@ -301,19 +301,31 @@ def halaman_utama_stitch(
             f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
             f'<div class="strip-kolom"><label>Topik</label>'
             f'<select name="topik" class="st-input">{opsi_topik}</select></div>'
-            '<div class="strip-kolom"><label>Mode</label>'
+            '<div class="strip-kolom"><label>Mode Sesi</label>'
             '<div class="mode-pilih">'
-            '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked> Diagnosa</label>'
-            '<label class="mode-opsi"><input type="radio" name="mode" value="drill"> Latihan Cepat</label>'
+            '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked>'
+            '<span class="mode-teks">Mode Diagnosa'
+            '<span class="mode-desk">Identifikasi area kelemahan secara otomatis.</span>'
+            '</span></label>'
+            '<label class="mode-opsi"><input type="radio" name="mode" value="drill">'
+            '<span class="mode-teks">Mode Latihan Cepat'
+            '<span class="mode-desk">Latihan intensif dengan pengaturan waktu.</span>'
+            '</span></label>'
             "</div></div>"
             '<div class="pengaturan-timer" style="display:none">'
-            "<label>Durasi "
-            '<input type="number" name="durasi_menit" value="15" min="1" max="180" class="st-input" style="width:4.5rem;display:inline-block"> menit</label>'
-            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="sesi" checked> per sesi (tampil)</label>'
-            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="soal"> per soal (internal)</label>'
-            '<label class="mode-opsi"><input type="checkbox" name="timer_auto" value="1"> auto-submit</label>'
+            '<label>Pengaturan Waktu</label>'
+            '<div class="mode-pilih">'
+            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="tanpa" checked> Tanpa timer</label>'
+            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="sesi"> Per sesi (tampil)</label>'
+            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="soal"> Per soal (internal)</label>'
             "</div>"
-            '<button type="submit" class="st-tombol-coral">Buat sesi baru</button>'
+            '<label>Durasi '
+            '<input type="number" name="durasi_menit" value="15" min="1" max="180"> menit</label>'
+            '<label class="mode-opsi"><input type="checkbox" name="timer_auto" value="1"> Auto-submit ketika waktu habis</label>'
+            "</div>"
+            '<button type="submit" class="st-tombol-coral">'
+            '<span class="material-symbols-outlined" style="font-size:1.1rem">play_arrow</span>'
+            "Buat sesi baru</button>"
             "</form>"
         )
 

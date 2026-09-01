@@ -470,6 +470,70 @@ tr.sorot-baru, div.sorot-baru {{
 @media (prefers-reduced-motion: reduce) {{
   * {{ transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }}
 }}
+
+/* ── Form buat sesi (S6) — card radio mode + timer toggle ── */
+
+/* Wrapper form di kartu siswa dashboard. */
+.strip-sesi {{
+  margin-top: {T.SP_4};
+  padding: {T.SP_4};
+  background: {T.LATAR_SEKUNDER_LEMBUT};
+  border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU};
+  display: flex; flex-direction: column; gap: {T.SP_4};
+}}
+.strip-sesi .strip-kolom {{ display: flex; flex-direction: column; gap: {T.SP_2}; }}
+.strip-sesi .strip-kolom > label {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .82rem;
+  color: {T.TEKS_VARIAN};
+}}
+
+/* Card radio mode (Diagnosa / Latihan Cepat) — bukan radio kecil. */
+.mode-pilih {{ display: flex; flex-direction: column; gap: {T.SP_2}; }}
+.mode-opsi {{
+  display: flex; align-items: flex-start; gap: {T.SP_3};
+  border: 1.5px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_3}; min-height: {T.TARGET_SENTUH};
+  background: {T.LATAR_KARTU}; cursor: pointer;
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .92rem;
+  color: {T.TEKS_JUDUL};
+}}
+.mode-opsi input {{
+  flex: none; width: 1.3rem; height: 1.3rem; margin-top: 0.15rem;
+  accent-color: {T.AKSEN_MURID_UTAMA};
+}}
+.mode-opsi .mode-teks {{ display: flex; flex-direction: column; gap: 0.15rem; }}
+.mode-opsi .mode-teks .mode-desk {{
+  font-family: {T.FONT_BODY}; font-weight: 400; font-size: .82rem;
+  color: {T.TEKS_VARIAN};
+}}
+.mode-opsi:has(input:checked) {{
+  border-color: {T.AKSEN_MURID_UTAMA}; background: {T.LATAR_KARTU_SEKUNDER};
+  box-shadow: 0 0 0 3px rgba(15,163,163,0.12);
+}}
+
+/* Blok timer — default hidden, tampil saat Latihan Cepat dipilih. */
+.pengaturan-timer {{
+  background: {T.LATAR_SEKUNDER_NETRAL};
+  border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_3};
+  display: flex; flex-direction: column; gap: {T.SP_2};
+}}
+.pengaturan-timer > label {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .82rem;
+  color: {T.TEKS_VARIAN}; margin-bottom: {T.SP_1};
+}}
+.pengaturan-timer .mode-opsi {{
+  min-height: 0; padding: {T.SP_2} {T.SP_3};
+  font-weight: 500; font-size: .88rem;
+}}
+.pengaturan-timer input[type=number] {{
+  width: 4.5rem; display: inline-block;
+  font: inherit; font-size: 1rem; min-height: {T.TARGET_SENTUH};
+  border-radius: {T.RADIUS_SEDANG}; border: 1px solid {T.BORDER_VARIAN};
+  background: {T.LATAR_KARTU}; padding: 0 {T.SP_3};
+}}
 """
 
 # Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa

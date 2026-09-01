@@ -907,11 +907,11 @@ class Penangan(BaseHTTPRequestHandler):
                 timer_mode, durasi_menit, timer_auto = "tanpa", 15, 0
                 if pilihan_mode == "drill":
                     timer_mode = (data.get("timer_mode") or ["sesi"])[0].strip()
-                    if timer_mode not in ("sesi", "soal"):
+                    if timer_mode not in ("tanpa", "sesi", "soal"):
                         pesan = (
                             f"<h1>Timer tidak dikenal</h1>"
                             f"<p><code>{html.escape(timer_mode)}</code> tidak terdaftar. "
-                            f"Yang tersedia: sesi (per sesi, tampil jalan), "
+                            f"Yang tersedia: tanpa (tanpa timer), sesi (per sesi, tampil jalan), "
                             f"soal (per soal, internal).</p>"
                         )
                         return self._kirim(_halaman("Timer tidak dikenal", pesan), 400)
