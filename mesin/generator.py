@@ -60,6 +60,36 @@ def _level_efektif(paket: Topik, level: str) -> str:
     return level if level in paket.komposisi else next(iter(paket.komposisi))
 
 
+def _acak_urutan(
+    urutan: tuple[str, ...], rng: random.Random
+) -> tuple[str, ...]:
+    """Acak pemetaan posisi->template per lembar utk topik multi-template.
+
+    Feedback Filia (1 Sep 2026): komposisi terkunci menaruh template
+    BERULANG di posisi TETAP (mis. P3 statistika: modus di posisi ganjil,
+    diagram batang di genap), jadi antar-seed posisi yang sama bermodel
+    (template+varian) identik — cuma angkanya beda. Di sini urutan template
+    diacak ulang per lembar supaya posisi yang sama tidak lagi selalu
+    memakai template yang sama.
+
+    HANYA memakai `rng` (deterministik per seed) — TIDAK hash() (trap
+    PYTHONHASHSEED, lihat SKILL.md pitfall #14): seed yang sama harus
+    melahirkan lembar yang identik antar-proses. Karena shuffle menjaga
+    multiset, dan komposisi tiap level sudah berbobot paling banyak
+    ceil(n/3) per template (kecuali kasus yang secara matematis mustahil,
+    mis. P3 statistika yang cuma 2 template), batas ini otomatis terbawa.
+
+    Komposisi yang semua template-nya berbeda (mis. pola-bilangan: 12
+    template beda) DIBIARKAN — di sana urutan punya makna pedagogis
+    (bagian A..F naik, tiap template sekali).
+    """
+    if len(set(urutan)) == len(urutan):
+        return urutan
+    lst = list(urutan)
+    rng.shuffle(lst)
+    return tuple(lst)
+
+
 def buat_lembar(
     seed: int,
     urutan: tuple[str, ...] | None = None,
@@ -78,6 +108,7 @@ def buat_lembar(
         while len(base) < jumlah_soal:
             base.extend(urutan)
         urutan = tuple(base[:jumlah_soal])
+    urutan = _acak_urutan(urutan, rng)
     soal = tuple(_soal_layak(paket, t, rng, level_efektif) for t in urutan)
     return Lembar(seed=seed, soal=soal, level=level_efektif)
 
