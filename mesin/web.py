@@ -559,36 +559,6 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(isi)
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
-    def _halaman_masuk(self, galat: str = "") -> bytes:
-        import icons
-
-        kabar = (
-            f'<div class="pesan galat">{html.escape(galat)}</div>' if galat else ""
-        )
-        return _halaman(
-            T.NAMA_PRODUK,
-            f'<div class="layout-masuk">'
-            f'<div class="masuk-kiri">'
-            f'<img src="{icons.OWL}" alt="Burung hantu lulusan" width="200" height="200">'
-            f"<h1>{T.NAMA_PRODUK}</h1>"
-            f"<p>{T.TAGLINE}</p>"
-            f"</div>"
-            f'<div class="masuk-kanan">'
-            f'<div class="kartu kartu-masuk">'
-            f'<img src="{icons.GEMBOK}" alt="" class="ikon-gembok" width="44" height="44">'
-            f"{kabar}"
-            f'<form method="post" action="/masuk">'
-            f'<label>Nama</label>'
-            f'<input type="text" name="nama" autocomplete="username" required>'
-            f'<label>Sandi</label>'
-            f'<input type="password" name="sandi" autocomplete="current-password" required>'
-            f'<button type="submit">Masuk</button>'
-            f"</form>"
-            f'<p class="sub" style="text-align:center;margin-top:.8rem">'
-            f'<a href="/lupa-sandi">Lupa sandi?</a></p>'
-            f"</div></div></div>",
-        )
-
     def _halaman_masuk_stitch(self, galat: str = "") -> bytes:
         """Versi Stitch dari halaman masuk (S7).
 
@@ -974,10 +944,13 @@ class Penangan(BaseHTTPRequestHandler):
                         return self._kirim(_halaman("Durasi tidak wajar", pesan), 400)
                     durasi_menit = int(nilai_durasi)
                     timer_auto = 1 if (data.get("timer_auto") or ["0"])[0] == "1" else 0
+                nilai_jumlah = (data.get("jumlah_soal") or [""])[0].strip()
+                jumlah_soal = int(nilai_jumlah) if nilai_jumlah.isdigit() and 1 <= int(nilai_jumlah) <= 50 else None
                 sesi_id = buat_sesi_seed_baru(
                     kon, siswa_id, level=level, topik=pilihan_topik,
                     mode=pilihan_mode, timer_mode=timer_mode,
                     durasi_menit=durasi_menit, timer_auto=timer_auto,
+                    jumlah_soal=jumlah_soal,
                 )
             # Tetap di dashboard (opsi 1): sesi baru adalah tempat anak
             # mengerjakan, bukan halaman guru yang kosong. Banner + sorotan baris

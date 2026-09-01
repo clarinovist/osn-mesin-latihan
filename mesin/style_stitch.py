@@ -1,11 +1,13 @@
 """Style Stitch — CSS bersama untuk adopsi desain Stitch (16 halaman).
 
-Ditulis berdiri sendiri supaya setiap halaman yang difase-in memakai ini dan
-modul lama (teacher_style.GAYA_GURU, student_pages.CSS_MURID) TIDAK dihapus
-sampai cleanup Fase akhir. Semua nilai rujuk design_tokens (T.*).
+Semua 16 halaman kini diadopsi ke Stitch (S1-S17 selesai 1 Sep 2026).
+CSS lama (teacher_style.GAYA_GURU, student_pages.CSS_MURID) masih ada di
+kode karena kelas-kelasnya dipakai oleh markup yang belum di-restyle
+penuh (halaman guru memakai GAYA_GURU + GAYA_STITCH bersamaan lewat
+_halaman(stitch=True)), dan beberapa test meng-assert isi GAYA_GURU.
 
 Kelas dipisah dengan suffix "-st" agar tidak tabrakan dengan CSS lama yang
-masih bertugas di halaman yang belum difase-in.
+masih bertugas.
 """
 
 import design_tokens as T
