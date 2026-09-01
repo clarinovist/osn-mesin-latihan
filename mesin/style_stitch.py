@@ -117,6 +117,25 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 .st-badge.latihan    {{ background: {T.STATUS_LATIHAN_BG};    color: {T.STATUS_LATIHAN_TEKS}; }}
 .st-badge.baru       {{ background: {T.AKSEN_MURID_KORAL};    color: #fff; }}
 .st-badge.selesai    {{ background: {T.LATAR_ELEVASI};        color: {T.TEKS_VARIAN}; }}
+/* Status review (1 Sep, feedback orang tua): "masih direview" dan
+   "selesai" tidak boleh sama tampilannya — dulunya dua-duanya kelas
+   .selesai, orang tua tidak bisa membedakan. */
+.st-badge.review     {{
+  background: #fff0d6; color: #815600;
+  /* HP sempit: badge boleh pecah dua baris — min-content-nya tidak boleh
+     memaksa kartu melebihi layar (temuan screenshot 390px 1 Sep). */
+  white-space: normal; text-align: left; line-height: 1.3;
+  max-width: 100%; overflow-wrap: anywhere;
+}}
+/* Ukuran terkendali di HP: inline-flex + min-content menang atas
+   "max-width:100%" (pemegangnya sendiri tak terbatas). Klem eksplisit
+   dari piksel screenshot 390px. */
+@media (max-width: 36rem) {{
+  .st-badge.review {{
+    max-width: 9.5rem;
+    font-size: .72rem; padding: .2rem .5rem;  /* muat di baris meta */
+  }}
+}}
 
 /* Badge peran di topbar — dipakai _topbar_stitch lewat _badge_peran lama */
 .badge-peran {{
@@ -201,10 +220,30 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 /* Baris jadwal sesi (pasangan kekeluargaan untuk grid kel) */
 .st-kartu-baris {{
   display: flex; align-items: center; gap: {T.SP_4};
+  flex-wrap: wrap; /* 1 Sep: badge panjang mesti bisa pindah baris di HP */
   background: {T.LATAR_KARTU};
   border: 1px solid {T.BORDER_VARIAN};
   border-radius: {T.RADIUS_KARTU};
   padding: {T.SP_3} {T.SP_4};
+  /* 1 Sep: tanpa guard ini, kartu melebar mengikuti min-content anak
+     (badge panjang) → halaman menyamping di HP. max-width memaksa kartu
+     tetap selebar konten; dengan wrap di bawah, badge pindah baris. */
+  max-width: 100%;
+}}
+/* Pitas-vagasi 1 Sep: badge panjang ("Menunggu direview") + jumlah soal
+   mengoverflow di HP 360-420px → halaman menyamping. min-width:0 pada
+   anak fleksibel + wrap pada baris menjaga badge tetap di dalam layar.
+   !important diperlukan: markup kartu memakai inline style="flex:none"
+   yang tanpa ini menang atas media query. */
+.st-kartu-baris > span {{ min-width: 0; }}
+@media (max-width: 46rem) {{
+  .st-kartu-baris {{ flex-wrap: wrap; }}
+  .st-kartu-baris > span:first-child {{ flex: none; }}
+  .st-kartu-baris > span:nth-child(2) {{ flex: 1 1 10rem; }}
+  /* pemegang badge jumlah + status boleh menyusut & pindah baris */
+  .st-kartu-baris > span:nth-child(n+3) {{
+    flex: 0 1 auto !important; margin-left: 0;
+  }}
 }}
 
 /* Sorot-baru — sisip baris yang baru dibuat */

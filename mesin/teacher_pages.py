@@ -395,7 +395,7 @@ def halaman_anak(
             f'<div class="st-kartu-baris {kelas}">'
             f'<div class="kolom-sesi" style="flex:1">'
             f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
-            f'<div class="st-meta" style="font-size:.85rem;opacity:.75}}>{html.escape(r["tanggal"])}'
+            f'<div class="st-meta" style="font-size:.85rem;opacity:.75">{html.escape(r["tanggal"])}'
             f'&middot; {html.escape(_ambil(r, "level", LEVEL_BAWAAN))}'
             f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
             f"</div>"

@@ -643,7 +643,10 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
         elif b["selesai"] is None:
             badge = '<span class="st-badge selesai">Dikerjakan</span>'
         elif b["direview"] is None:
-            badge = '<span class="st-badge selesai">Masih di review</span>'
+            # Feedback orang tua 1 Sep 2026: status ini dulunya pakai kelas
+            # .selesai (abu) — TIDAK BISA dibedakan dari "Selesai X/Y benar".
+            # Kelas review (amber) + teks eksplisit, urutan if tetap.
+            badge = '<span class="st-badge review">Menunggu direview</span>'
         else:
             badge = (
                 f'<span class="st-badge diagnostik">Selesai &middot; '
@@ -667,11 +670,12 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
             f'<span style="font-weight:700;font-size:1rem;color:{T.TEKS_JUDUL}">{_escape(b["tanggal"])}</span>'
             f'<span style="font-size:0.85rem;color:{T.TEKS_VARIAN};display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
             f"level {_escape(b['level'])} &middot; {_escape(_ambil_topik(b))}"
-            f" {mode_label}</span>"
-            "</span>"
+            f" {mode_label}"
+            # 1 Sep:badge review = baris METANYA sendiri (flex-wrap) supaya
+            # selalu dalam viewport di HP — terukur lewat piksel screenshot.
+            f'<span style="flex-basis:100%;display:flex;align-items:center;">{badge}</span></span>'
             f'<span class="st-badge selesai" style="font-size:0.8rem">{b["jumlah"]} soal</span>'
-            '<span style="flex:none;display:flex;align-items:center;gap:0.4rem">'
-            f"{badge}</span>"
+            "</span>"
             "</a>"
         )
 
