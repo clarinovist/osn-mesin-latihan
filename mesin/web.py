@@ -39,6 +39,7 @@ from teacher_pages import (
     _topik_untuk_level,
     buat_sesi_seed_baru,
     halaman_konfirmasi_hapus,
+    halaman_anak,
     halaman_lembar,
     halaman_sesi,
     halaman_sesi_cetak,
@@ -428,6 +429,46 @@ class Penangan(BaseHTTPRequestHandler):
                             kon, sesi_id,
                             peran=ident[1] if ident else "guru",
                             pengguna=ident[0] if ident else "",
+                        )
+                    )
+                if jalur.startswith("/anak/") and jalur.count("/") >= 2:
+                    # History satu anak (feedback Filia 1 Sep 2026 no. 6):
+                    # kartu nama di dashboard menaut ke sini. Palang sama
+                    # ketatnya dengan /laporan/<id>.
+                    bagian = jalur.split("/")
+                    try:
+                        anak_id = int(bagian[2])
+                    except (ValueError, IndexError):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    if not self._bisa_lihat_siswa(kon, anak_id):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    siswa_baris = kon.execute(
+                        "SELECT * FROM siswa WHERE id = ?", (anak_id,)
+                    ).fetchone()
+                    if not siswa_baris:
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    ident = self._identitas()
+                    qs = urllib.parse.parse_qs(
+                        urllib.parse.urlparse(self.path).query
+                    ) if self.path else {}
+                    try:
+                        sorot = int(qs.get("sorot", ["0"])[0]) or None
+                    except (TypeError, ValueError):
+                        sorot = None
+                    pesan = (qs.get("pesan", [""])[0] or "")[:200]
+                    return self._kirim(
+                        halaman_anak(
+                            kon, siswa_baris,
+                            peran=ident[1] if ident else "guru",
+                            pengguna=ident[0] if ident else "",
+                            sorot=sorot,
+                            pesan=pesan,
                         )
                     )
                 if jalur.startswith("/laporan/"):
@@ -952,14 +993,14 @@ class Penangan(BaseHTTPRequestHandler):
                     durasi_menit=durasi_menit, timer_auto=timer_auto,
                     jumlah_soal=jumlah_soal,
                 )
-            # Tetap di dashboard (opsi 1): sesi baru adalah tempat anak
-            # mengerjakan, bukan halaman guru yang kosong. Banner + sorotan baris
-            # menunjukkan sesi mana yang baru, tanpa menampilkan lembar kosong.
-            # PRG tetap dijaga: refresh tidak membuat sesi ganda.
+            # Sesi baru = history anak (feedback Filia 1 Sep 2026 no. 6):
+            # PRG kini ke /anak/<id> tempat strip buat sesi & daftar sesi
+            # berada. Banner + sorotan menunjukkan sesi yang baru; PRG tetap
+            # dijaga: refresh tidak membuat sesi ganda.
             pesan_sukses = f"Sesi baru untuk {nama_siswa} berhasil dibuat — sesi #{sesi_id} siap dikerjakan."
             qs = urllib.parse.urlencode({"pesan": pesan_sukses, "sorot": sesi_id})
             self.send_response(303)
-            self.send_header("Location", f"/?{qs}")
+            self.send_header("Location", f"/anak/{siswa_id}?{qs}")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
@@ -1062,6 +1103,9 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                 return self._kirim(isi)
             with database.buka() as kon:
+                baris_sesi = kon.execute(
+                    "SELECT siswa_id FROM sesi WHERE id = ?", (sesi_id,)
+                ).fetchone()
                 dihapus = database.hapus_sesi(kon, sesi_id)
             if not dihapus:
                 return self._kirim(
@@ -1072,8 +1116,14 @@ class Penangan(BaseHTTPRequestHandler):
             lampiran_mod.bersihkan_berkas(sesi_id)
             tujuan = urllib.parse.urlencode({"pesan": f"Sesi {sesi_id} dihapus."})
             self.send_response(303)
-            self.send_header("Location", f"/?{tujuan}")
-            self.send_header("Content-Length", "0")
+            # Kembali ke history anak yang punya sesi itu (baris sudah hilang,
+            # jadi siswa_id diselamatkan sebelum hapus). Tanpa baris (kasus
+            # langka), fallback ke dashboard.
+            tujuan_anak = (
+                f"/anak/{baris_sesi['siswa_id']}?{tujuan}" if baris_sesi
+                else f"/?{tujuan}"
+            )
+            self.send_header("Location", tujuan_anak)
             self.end_headers()
             return
 

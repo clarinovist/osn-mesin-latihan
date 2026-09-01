@@ -43,6 +43,21 @@ def server(tmp_path, monkeypatch):
 # ── Rute POST /sesi-baru (socket sungguhan) ─────────────────────────────
 
 
+def test_post_sesi_baru_prg_ke_halaman_anak_dengan_banner(server):
+    """PRG buat sesi kini mendarat di /anak/<id> (feedback no. 6) — banner
+    sukses + sesi baru disorot di history anak, bukan dashboard semua anak."""
+    with server.buka() as kon:
+        siswa_id = database.tambah_siswa(kon, "Topik PRG", pemilik="guru")
+    kode, isi, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "pola-bilangan"},
+    )
+    assert kode == 200
+    assert "berhasil dibuat" in isi, "banner sukses harus tampil di /anak"
+    assert "Sesi #" in isi, "sesi yang baru harus tampak di history anak"
+
+
 def test_post_sesi_baru_menyimpan_topik_eksplisit(server):
     with server.buka() as kon:
         siswa_id = database.tambah_siswa(kon, "Topik Eksplisit", pemilik="guru")

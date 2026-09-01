@@ -75,6 +75,14 @@ def test_guru_lain_404_di_laporan_anak_orang(dua_keluarga):
     assert kode == 404
 
 
+def test_guru_lain_404_di_halaman_anak_orang(dua_keluarga):
+    """Rute /anak/<id> (feedback no. 6) wajib pakai palang yang sama dengan
+    /laporan/<id> — guru keluarga lain tidak boleh membaca history anak."""
+    s, ids = dua_keluarga
+    kode, _, _ = s.minta(f"/anak/{ids['b']}", auth=("ortu-a", SANDI_A))
+    assert kode == 404
+
+
 def test_guru_lain_tidak_bisa_hapus_sesi_orang(dua_keluarga):
     s, ids = dua_keluarga
     kode, _, _ = s.minta(

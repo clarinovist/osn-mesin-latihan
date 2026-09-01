@@ -278,51 +278,22 @@ def halaman_utama_stitch(
     baris = []
     admin = peran == "admin"
     for s in database.daftar_siswa(kon, pemilik):
-        opsi_topik = "".join(
-            f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
-            for t in _topik_untuk_level(s["tingkat"])
-        )
-        sesi = kon.execute(
-            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.mulai, s.selesai, s.direview,
-                      (SELECT MIN(j.dicatat) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS dicatat_awal,
-                      (SELECT MAX(j.dicatat) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS dicatat_akhir,
-                      (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
-                      (SELECT COUNT(*) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS terisi,
-                      (SELECT COUNT(*) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id JOIN diagnosis d ON d.jawaban_id = j.id WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
-               FROM sesi s WHERE s.siswa_id = ?
-               ORDER BY s.tanggal DESC, s.id DESC""",
+        # Dashboard ringkas (feedback Filia 1 Sep 2026 no. 6): satu kartu
+        # NAMA per anak — klik masuk ke /anak/<id> tempat history lengkap
+        # dan strip buat sesi. Ringkasan cukup angka, tanpa daftar sesi.
+        rekap = kon.execute(
+            """SELECT COUNT(*) AS jumlah,
+                      SUM(CASE WHEN direview IS NULL THEN 1 ELSE 0 END) AS belum_review
+               FROM sesi WHERE siswa_id = ?""",
             (s["id"],),
-        ).fetchall()
-
-        def _kelas_sorot(rid):
-            return "sorot-baru" if sorot is not None and rid == sorot else ""
-
-        if sesi:
-            item = "".join(
-                f'<div class="st-kartu-baris {kelas}">'
-                f'<div class="kolom-sesi" style="flex:1">'
-                f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
-                f'<div class="st-meta" style="font-size:.85rem;opacity:.75">{html.escape(r["tanggal"])}'
-                f'&middot; {html.escape(_ambil(r, "level", LEVEL_BAWAAN))}'
-                f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
-                f"</div>"
-                f'<div style="text-align:right;font-variant-numeric:tabular-nums;margin-right:0.6rem">'
-                f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
-                f'<div>Benar {r["benar"]}/{r["n"]}</div>'
-                f'<div>Waktu {_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</div>'
-                f"</div>"
-                f'<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end">'
-                f'{_badge_review_status(r)}'
-                f'{_badge_mode_stitch(r)}'
-                f"</div>"
-                f"</div>"
-                for r, kelas in (
-                    (r, _kelas_sorot(r["id"])) for r in sesi
-                )
-            )
-        else:
-            item = '<p class="sub">Belum ada sesi — coba buat yang pertama.</p>'
-
+        ).fetchone()
+        jumlah_sesi = rekap["jumlah"] or 0
+        belum_review = rekap["belum_review"] or 0
+        badge_review = (
+            f'<span class="st-badge review">{belum_review} belum direview</span>'
+            if belum_review
+            else '<span class="st-badge diagnostik">semua direview</span>'
+        )
         label_keluarga = ""
         if admin:
             siapa = s["pemilik"] or "warisan"
@@ -331,59 +302,24 @@ def halaman_utama_stitch(
                 f"{html.escape(siapa)}</span>"
             )
 
-        strip_sesi = (
-            f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
-            f'<div class="strip-kolom"><label>Topik</label>'
-            f'<select name="topik" class="st-input">{opsi_topik}</select></div>'
-            f'<div class="strip-kolom"><label>Jumlah Soal</label>'
-            f'<select name="jumlah_soal" class="st-input">'
-            f'<option value="" selected>Default (sesuai topik)</option>'
-            f'<option value="10">10 soal</option>'
-            f'<option value="15">15 soal</option>'
-            f'<option value="20">20 soal (1 jam)</option>'
-            f'<option value="25">25 soal</option>'
-            f'<option value="30">30 soal</option>'
-            f'</select></div>'
-            '<div class="strip-kolom"><label>Mode Sesi</label>'
-            '<div class="mode-pilih">'
-            '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked>'
-            '<span class="mode-teks">Mode Diagnosa'
-            '<span class="mode-desk">Identifikasi area kelemahan secara otomatis.</span>'
-            '</span></label>'
-            '<label class="mode-opsi"><input type="radio" name="mode" value="drill">'
-            '<span class="mode-teks">Mode Latihan Cepat'
-            '<span class="mode-desk">Latihan intensif dengan pengaturan waktu.</span>'
-            '</span></label>'
-            "</div></div>"
-            '<div class="pengaturan-timer" style="display:none">'
-            '<label>Pengaturan Waktu</label>'
-            '<div class="mode-pilih">'
-            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="tanpa" checked> Tanpa timer</label>'
-            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="sesi"> Per sesi (tampil)</label>'
-            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="soal"> Per soal (internal)</label>'
-            "</div>"
-            '<label>Durasi '
-            '<input type="number" name="durasi_menit" value="15" min="1" max="180"> menit</label>'
-            '<label class="mode-opsi"><input type="checkbox" name="timer_auto" value="1"> Auto-submit ketika waktu habis</label>'
-            "</div>"
-            '<button type="submit" class="st-tombol-coral">'
-            '<span class="material-symbols-outlined" style="font-size:1.1rem">play_arrow</span>'
-            "Buat sesi baru</button>"
-            "</form>"
-        )
-
         baris.append(
-            '<div class="st-kartu">'
-            '<div class="siswa-kepala" style="display:flex;align-items:center;gap:.6rem;justify-content:space-between">'
-            f"<h2 class=\"st\">{html.escape(s['nama'])}"
+            f'<a class="st-kartu kartu-anak" href="/anak/{s["id"]}" '
+            'style="display:flex;align-items:center;gap:.9rem;'
+            'text-decoration:none;color:inherit">'
+            '<span class="material-symbols-outlined" style="font-size:2rem;'
+            f'color:{T.AKSEN_MURID_UTAMA};flex:none">person</span>'
+            '<span style="flex:1;min-width:0">'
+            f'<h2 class="st" style="margin:0">{html.escape(s["nama"])}'
             f'<span class="st-badge selesai">({html.escape(str(s["tingkat"]))})</span>'
             f"{label_keluarga}"
-            f"</h2>"
-            f'<a class="st-tombol-coral" style="text-decoration:none;display:inline-block;min-height:0;padding:0.45rem 1rem;font-size:.9rem" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
-            "</div>"
-            f"{item}"
-            f"{strip_sesi}"
-            "</div>"
+            "</h2>"
+            f'<span style="font-size:.9rem;color:{T.TEKS_VARIAN}">'
+            f"{jumlah_sesi} sesi</span>"
+            "</span>"
+            f"{badge_review}"
+            '<span class="material-symbols-outlined" style="flex:none;'
+            f'color:{T.TEKS_SUBTLE}">chevron_right</span>'
+            "</a>"
         )
 
     isi_utama = "".join(baris) or (
@@ -401,13 +337,159 @@ def halaman_utama_stitch(
     return _halaman_stitch(
         T.NAMA_PRODUK,
         f'<h1 class="st">{T.NAMA_PRODUK} — Latihan Matematika SD</h1>'
-        '<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan untuk melihat tren.</p>'
+        '<p class="sub">Klik nama anak untuk melihat history dan membuat sesi latihan.</p>'
         f"{kabar}"
         f'<div class="daftar-anak">{isi_utama}</div>'
         "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
         ident=(pemilik if pemilik else "guru", peran),
     )
 
+
+
+def halaman_anak(
+    kon,
+    siswa,
+    peran: str = "guru",
+    pengguna: str = "",
+    sorot: int | None = None,
+    pesan: str = "",
+) -> bytes:
+    """History satu anak (feedback Filia 1 Sep 2026 no. 6).
+
+    Masuk dari kartu nama di dashboard. Berisi: daftar sesi anak (dengan
+    badge review & mode), strip buat sesi baru, dan pintasan laporan.
+    `siswa` baris sqlite dari tabel siswa.
+    """
+    admin = peran == "admin"
+    opsi_topik = "".join(
+        f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
+        for t in _topik_untuk_level(siswa["tingkat"])
+    )
+    sesi = kon.execute(
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                  s.mulai, s.selesai, s.direview,
+                  (SELECT MIN(j.dicatat) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   WHERE ss.sesi_id = s.id) AS dicatat_awal,
+                  (SELECT MAX(j.dicatat) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   WHERE ss.sesi_id = s.id) AS dicatat_akhir,
+                  (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   WHERE ss.sesi_id = s.id) AS terisi,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   JOIN diagnosis d ON d.jawaban_id = j.id
+                   WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
+           FROM sesi s WHERE s.siswa_id = ?
+           ORDER BY s.tanggal DESC, s.id DESC""",
+        (siswa["id"],),
+    ).fetchall()
+
+    def _kelas_sorot(rid):
+        return "sorot-baru" if sorot is not None and rid == sorot else ""
+
+    if sesi:
+        item = "".join(
+            f'<div class="st-kartu-baris {kelas}">'
+            f'<div class="kolom-sesi" style="flex:1">'
+            f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
+            f'<div class="st-meta" style="font-size:.85rem;opacity:.75}}>{html.escape(r["tanggal"])}'
+            f'&middot; {html.escape(_ambil(r, "level", LEVEL_BAWAAN))}'
+            f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
+            f"</div>"
+            f'<div style="text-align:right;font-variant-numeric:tabular-nums;margin-right:0.6rem">'
+            f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
+            f'<div>Benar {r["benar"]}/{r["n"]}</div>'
+            f'<div>Waktu {_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</div>'
+            f"</div>"
+            f'<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end">'
+            f'{_badge_review_status(r)}'
+            f'{_badge_mode_stitch(r)}'
+            f"</div>"
+            f"</div>"
+            for r, kelas in (
+                (r, _kelas_sorot(r["id"])) for r in sesi
+            )
+        )
+    else:
+        item = '<p class="sub">Belum ada sesi — buat yang pertama di bawah.</p>'
+
+    label_keluarga = ""
+    if admin:
+        siapa = siswa["pemilik"] or "warisan"
+        label_keluarga = (
+            '<span class="st-badge selesai">keluarga: '
+            f"{html.escape(siapa)}</span>"
+        )
+
+    strip_sesi = (
+        f'<form method="post" action="/sesi-baru/{siswa["id"]}" class="strip-sesi">'
+        f'<div class="strip-kolom"><label>Topik</label>'
+        f'<select name="topik" class="st-input">{opsi_topik}</select></div>'
+        f'<div class="strip-kolom"><label>Jumlah Soal (estimasi ±3 mnt/soal)</label>'
+        f'<select name="jumlah_soal" class="st-input">'
+        f'<option value="" selected>Default (sesuai topik)</option>'
+        f'<option value="10">10 soal (± 30 mnt)</option>'
+        f'<option value="15">15 soal (± 45 mnt)</option>'
+        f'<option value="20">20 soal (± 60 mnt)</option>'
+        f'<option value="25">25 soal (± 75 mnt)</option>'
+        f'<option value="30">30 soal (± 90 mnt)</option>'
+        f'</select></div>'
+        '<div class="strip-kolom"><label>Mode Sesi</label>'
+        '<div class="mode-pilih">'
+        '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked>'
+        '<span class="mode-teks">Mode Diagnosa'
+        '<span class="mode-desk">Identifikasi area kelemahan secara otomatis.</span>'
+        '</span></label>'
+        '<label class="mode-opsi"><input type="radio" name="mode" value="drill">'
+        '<span class="mode-teks">Mode Latihan Cepat'
+        '<span class="mode-desk">Latihan intensif dengan pengaturan waktu.</span>'
+        '</span></label>'
+        "</div></div>"
+        '<div class="pengaturan-timer" style="display:none">'
+        '<label>Pengaturan Waktu</label>'
+        '<div class="mode-pilih">'
+        '<label class="mode-opsi"><input type="radio" name="timer_mode" value="tanpa" checked> Tanpa timer</label>'
+        '<label class="mode-opsi"><input type="radio" name="timer_mode" value="sesi"> Per sesi (tampil)</label>'
+        '<label class="mode-opsi"><input type="radio" name="timer_mode" value="soal"> Per soal (internal)</label>'
+        "</div>"
+        '<label>Durasi '
+        '<input type="number" name="durasi_menit" value="15" min="1" max="180"> menit</label>'
+        '<label class="mode-opsi"><input type="checkbox" name="timer_auto" value="1"> Auto-submit ketika waktu habis</label>'
+        "</div>"
+        '<button type="submit" class="st-tombol-coral">'
+        '<span class="material-symbols-outlined" style="font-size:1.1rem">play_arrow</span>'
+        "Buat sesi baru</button>"
+        "</form>"
+    )
+
+    kabar = (
+        '<div class="st-banner-sukses"><span class="ikon">✓</span>'
+        f"<span>{html.escape(pesan)}</span></div>"
+        if pesan
+        else ""
+    )
+
+    return _halaman_stitch(
+        f"{siswa['nama']} — {T.NAMA_PRODUK}",
+        f'<div class="jejak"><a href="/">&larr; Semua anak</a></div>'
+        f'<h1 class="st">{html.escape(siswa["nama"])}'
+        f'<span class="st-badge selesai">({html.escape(str(siswa["tingkat"]))})</span>'
+        f"{label_keluarga}"
+        "</h1>"
+        f'<p class="sub">History latihan — '
+        f'<a href="/laporan/{siswa["id"]}">lihat laporan tren &rarr;</a></p>'
+        f"{kabar}"
+        f'<div class="daftar-anak">{item}</div>'
+        f"{strip_sesi}"
+        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');"
+        "for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\","
+        "function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");"
+        "if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
+        ident=(pengguna if pengguna else "guru", peran),
+    )
 
 def halaman_utama(
     kon,
@@ -472,14 +554,14 @@ def halaman_utama(
             f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
             f'<div class="strip-kolom"><label>Topik</label>'
             f'<select name="topik">{opsi_topik}</select></div>'
-            f'<div class="strip-kolom"><label>Jumlah Soal</label>'
+            f'<div class="strip-kolom"><label>Jumlah Soal (estimasi ±3 mnt/soal)</label>'
             f'<select name="jumlah_soal">'
             f'<option value="" selected>Default (sesuai topik)</option>'
-            f'<option value="10">10 soal</option>'
-            f'<option value="15">15 soal</option>'
-            f'<option value="20">20 soal (1 jam)</option>'
-            f'<option value="25">25 soal</option>'
-            f'<option value="30">30 soal</option>'
+            f'<option value="10">10 soal (± 30 mnt)</option>'
+            f'<option value="15">15 soal (± 45 mnt)</option>'
+            f'<option value="20">20 soal (± 60 mnt)</option>'
+            f'<option value="25">25 soal (± 75 mnt)</option>'
+            f'<option value="30">30 soal (± 90 mnt)</option>'
             f'</select></div>'
             f'<div class="strip-kolom"><label>Mode</label>'
             f'<div class="mode-pilih">'
