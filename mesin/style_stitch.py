@@ -616,6 +616,81 @@ tr.sorot-baru, div.sorot-baru {{
   color: {T.AKSEN_MURID_UTAMA}; text-decoration: none; font-weight: 600;
 }}
 .masuk-link-st a:hover {{ text-decoration: underline; }}
+
+/* ── Halaman publik (S8 daftar, S9 lupa-sandi, S10 kebijakan) ── */
+
+.publik-badan-st {{
+  min-height: 100vh; padding: {T.SP_5} {T.SP_4} 3rem;
+}}
+.publik-topbar-st {{
+  background: {T.LATAR_SEKUNDER_LEMBUT}; border-bottom: 1px solid {T.BORDER_VARIAN};
+  height: {T.TARGET_SENTUH}; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 {T.SP_4};
+  width: 100%; max-width: {T.LEBAR_KONTEN}; margin: 0 auto;
+  position: sticky; top: 0; z-index: 50; font-family: {T.FONT_HEADLINE};
+}}
+.publik-topbar-st .brand {{
+  display: flex; align-items: center; gap: {T.SP_2}; text-decoration: none;
+  font-weight: 800; font-size: 1.1rem; color: {T.AKSEN_MURID_UTAMA};
+}}
+.publik-topbar-st .brand .material-symbols-outlined {{
+  color: {T.AKSEN_MURID_UTAMA}; font-size: 1.3rem;
+}}
+.publik-topbar-st .tombol-putih {{
+  font: inherit; color: {T.AKSEN_TEAL_TUA}; background: none;
+  border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_2} {T.SP_4}; font-weight: 600; font-size: .9rem;
+  text-decoration: none; min-height: {T.TARGET_SENTUH};
+  display: inline-flex; align-items: center; gap: {T.SP_1};
+}}
+.publik-topbar-st .tombol-putih:hover {{
+  border-color: {T.AKSEN_MURID_UTAMA}; color: {T.AKSEN_MURID_UTAMA};
+}}
+
+.publik-bungkus-st {{
+  max-width: {T.LEBAR_KONTEN}; margin: 0 auto; padding: {T.SP_5} 0;
+}}
+.publik-kartu-st {{
+  max-width: 28rem; margin: 0 auto;
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_6} {T.SP_5} {T.SP_5};
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  display: flex; flex-direction: column; gap: {T.SP_4};
+}}
+.publik-kartu-st.lebar {{
+  max-width: {T.LEBAR_KONTEN};
+}}
+.publik-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 800; font-size: 1.4rem;
+  color: {T.TEKS_JUDUL}; margin: 0; letter-spacing: -0.01em;
+}}
+.publik-sub-st {{
+  font-family: {T.FONT_BODY}; font-size: .9rem; color: {T.TEKS_VARIAN};
+  margin: 0;
+}}
+.publik-isi-st {{
+  font-family: {T.FONT_BODY}; font-size: .95rem; color: {T.TEKS_UTAMA};
+  line-height: 1.6;
+}}
+.publik-isi-st h2 {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: 1.05rem;
+  color: {T.TEKS_JUDUL}; margin: {T.SP_5} 0 {T.SP_2};
+}}
+.publik-isi-st ul, .publik-isi-st ol {{
+  padding-left: 1.2rem; margin: {T.SP_2} 0;
+}}
+.publik-isi-st li {{ margin-bottom: 0.4rem; }}
+.publik-isi-st a {{ color: {T.AKSEN_MURID_UTAMA}; }}
+
+/* Tombol coral reusable di halaman publik. */
+a.tombol-coral {{
+  display: inline-block; padding: .7rem 1.4rem;
+  border-radius: {T.RADIUS_SEDANG}; text-decoration: none; font-weight: 700;
+  background: {T.AKSEN_MURID_KORAL}; color: {T.TEKS_PUTIH};
+  font-family: {T.FONT_HEADLINE}; min-height: {T.TARGET_SENTUH};
+  display: inline-flex; align-items: center; gap: {T.SP_2};
+}}
+a.tombol-coral:hover {{ filter: brightness(1.06); }}
 """
 
 # Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa

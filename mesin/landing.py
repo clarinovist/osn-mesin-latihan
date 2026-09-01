@@ -6,6 +6,11 @@ rujukan kompetisi (OSN/SASMO). Data anak TIDAK pernah muncul di sini —
 halaman ini statis, tidak membaca basis data sama sekali.
 
 Brand dari design_tokens (sumber tunggal) — jangan hardcode nama di sini.
+
+Sejak S8-S10 (1 Sep 2026): halaman publik diadopsi ke Stitch. Fungsi lama
+_halaman_publik tetap (dipanggil fungsi Stitch yang bungkus-nya beda);
+kontrak markup test (a.brand href=/, tombol-putih, href=/masuk tepat 1)
+dipertahankan persis.
 """
 from __future__ import annotations
 
@@ -14,6 +19,17 @@ import html
 import design_tokens as T
 import icons
 from teacher_style import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
+
+
+def _font_link() -> str:
+    """<link> Google Fonts CDN — dipakai semua halaman publik Stitch."""
+    return (
+        '<link rel="preconnect" href="https://fonts.googleapis.com">'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+        '<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700'
+        '&family=Plus+Jakarta+Sans:wght@400;600;700;800'
+        '&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">'
+    )
 
 
 def _halaman_publik(judul: str, isi: str) -> bytes:
@@ -36,6 +52,37 @@ def _halaman_publik(judul: str, isi: str) -> bytes:
 <body><div class="bungkus">{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
 
+def _halaman_publik_stitch(judul: str, isi: str) -> bytes:
+    """Kerangka halaman publik versi Stitch — GAYA_STITCH, body.st.
+
+    Dipakai oleh halaman_daftar, halaman_kebijakan, halaman_lupa_sandi
+    (S8-S10). Kontrak markup yang diuji test (a.brand href=/, tombol-putih
+    href=/masuk, href=/masuk tepat 1) dipertahankan di markup isi.
+    """
+    from style_stitch import gaya_stitch
+
+    return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(judul)}</title>
+{_font_link()}
+<style>{gaya_stitch()}</style></head>
+<body class="st"><div class="publik-badan-st">{isi}</div>
+<script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+
+
+def _topbar_publik_st() -> str:
+    """Topbar publik Stitch: brand owl + nama (link /), tombol Masuk."""
+    n = html.escape(T.NAMA_PRODUK)
+    return (
+        '<div class="publik-topbar-st">'
+        f'<a class="brand" href="/">'
+        '<span class="material-symbols-outlined">school</span>'
+        f'<span>{n}</span></a>'
+        '<nav class="topbar-navigasi">'
+        f'<a class="tombol-putih" href="/masuk">Masuk</a></nav></div>'
+    )
+
+
 def halaman_daftar(
     pesan: str = "", galat: bool = False, nama: str = ""
 ) -> bytes:
@@ -47,37 +94,43 @@ def halaman_daftar(
     n = html.escape(T.NAMA_PRODUK)
     kotak = ""
     if pesan:
-        kelas = "pesan galat" if galat else "pesan tersimpan"
+        kelas = "masuk-galat-st" if galat else "pesan-st"
         kotak = f'<div class="{kelas}">{html.escape(pesan)}</div>'
 
     isi = f"""
-<div class="topbar"><a class="brand" href="/">{n}</a>
-<nav class="topbar-navigasi">
-<a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
-
-<section class="kartu" style="max-width:26rem;margin:2rem auto">
-<h1>Daftar {n}</h1>
-<p class="sub">Buat akun pengelola — untuk orang tua yang menemani anak,
+{_topbar_publik_st()}
+<div class="publik-bungkus-st">
+<section class="publik-kartu-st">
+<h1 class="publik-judul-st">Daftar {n}</h1>
+<p class="publik-sub-st">Buat akun pengelola — untuk orang tua yang menemani anak,
 guru, atau les privat. Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
 {kotak}
-<form method="post" action="/daftar">
-<label>Nama pengguna</label>
-<input type="text" name="nama" autocomplete="username" required
- value="{html.escape(nama)}">
-<label>Kata sandi (minimal 8 karakter)</label>
-<input type="password" name="sandi" autocomplete="new-password" required minlength="8">
-<p style="font-size:.9rem">
- <label style="display:flex;gap:.5rem;align-items:flex-start">
-  <input type="checkbox" name="setuju" value="1" style="margin-top:.25rem">
-  <span>Saya orang tua/wali atau pendidik yang bertanggung jawab, dan saya
-  menyetujui <a href="/kebijakan-privasi">Kebijakan Privasi</a>.</span>
- </label>
-</p>
-<button type="submit" class="tombol-coral" style="width:100%">Buat akun</button>
+<form class="masuk-form-st" method="post" action="/daftar">
+  <div class="masuk-field-st">
+    <label for="nama">Nama pengguna</label>
+    <input type="text" id="nama" name="nama" autocomplete="username" required
+     value="{html.escape(nama)}">
+  </div>
+  <div class="masuk-field-st">
+    <label for="sandi">Kata sandi (minimal 8 karakter)</label>
+    <input type="password" id="sandi" name="sandi" autocomplete="new-password" required minlength="8">
+  </div>
+  <p style="font-size:.9rem">
+   <label class="koreksi-centang-st" style="font-weight:400">
+    <input type="checkbox" name="setuju" value="1">
+    <span>Saya orang tua/wali atau pendidik yang bertanggung jawab, dan saya
+    menyetujui <a href="/kebijakan-privasi">Kebijakan Privasi</a>.</span>
+   </label>
+  </p>
+  <button class="masuk-tombol-st" type="submit">
+    <span class="material-symbols-outlined" style="font-size:1.1rem">person_add</span>
+    Buat akun
+  </button>
 </form>
 </section>
+</div>
 """
-    return _halaman_publik(f"Daftar — {T.NAMA_PRODUK}", isi)
+    return _halaman_publik_stitch(f"Daftar — {T.NAMA_PRODUK}", isi)
 
 
 def halaman_kebijakan() -> bytes:
@@ -91,14 +144,14 @@ def halaman_kebijakan() -> bytes:
     """
     n = html.escape(T.NAMA_PRODUK)
     isi = f"""
-<div class="topbar"><a class="brand" href="/">{n}</a>
-<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
-
-<section class="kartu" style="max-width:46rem;margin:2rem auto">
+{_topbar_publik_st()}
+<div class="publik-bungkus-st">
+<section class="publik-kartu-st lebar">
 <h1>Kebijakan Privasi</h1>
-<p class="sub">Ringkas dan jujur, tanpa bahasa hukum.
+<p class="publik-sub-st">Ringkas dan jujur, tanpa bahasa hukum.
 Terakhir diperbarui 30 Agustus 2026.</p>
 
+<div class="publik-isi-st">
 <h2>Data yang dikumpulkan</h2>
 <ul>
 <li>Nama akun orang tua/guru dan kata sandinya (disimpan sebagai hash).</li>
@@ -143,10 +196,12 @@ pribadi lainnya.</li>
 bukan layanan cloud pihak ketiga. Dari aplikasi, kamu bisa menghapus
 sesi latihan dan akun login anak kapan saja. Untuk penghapusan yang
 lebih besar (seluruh data keluarga), hubungi pengelola server yang
-memberimu akun.</p>
+membermu akun.</p>
+</div>
 </section>
+</div>
 """
-    return _halaman_publik(f"Kebijakan Privasi — {T.NAMA_PRODUK}", isi)
+    return _halaman_publik_stitch(f"Kebijakan Privasi — {T.NAMA_PRODUK}", isi)
 
 
 def halaman_lupa_sandi() -> bytes:
@@ -161,13 +216,13 @@ def halaman_lupa_sandi() -> bytes:
     """
     n = html.escape(T.NAMA_PRODUK)
     isi = f"""
-<div class="topbar"><a class="brand" href="/">{n}</a>
-<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
-
-<section class="kartu" style="max-width:30rem;margin:2rem auto">
-<h1>Lupa sandi?</h1>
-<p class="sub">Tidak apa-apa — sandimu bisa disetel ulang, hanya saja tidak
+{_topbar_publik_st()}
+<div class="publik-bungkus-st">
+<section class="publik-kartu-st" style="max-width:30rem">
+<h1 class="publik-judul-st">Lupa sandi?</h1>
+<p class="publik-sub-st">Tidak apa-apa — sandimu bisa disetel ulang, hanya saja tidak
 lewat email.</p>
+<div class="publik-isi-st">
 <p>Aplikasi ini tidak menyimpan email, jadi sandi tidak bisa dikirim
 otomatis. Yang menyetel ulang adalah manusia yang tepat:</p>
 <ul>
@@ -178,9 +233,11 @@ baru — dari halaman Akun, kartu "Akun latihan", tombol
 membuatkan akunmu — untuk menyetel ulang sandimu.</li>
 </ul>
 <p><a href="/masuk">Kembali ke halaman masuk</a></p>
+</div>
 </section>
+</div>
 """
-    return _halaman_publik(f"Lupa sandi? — {T.NAMA_PRODUK}", isi)
+    return _halaman_publik_stitch(f"Lupa sandi? — {T.NAMA_PRODUK}", isi)
 
 
 def halaman_landing() -> bytes:
