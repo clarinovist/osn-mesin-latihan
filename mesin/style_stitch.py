@@ -534,6 +534,88 @@ tr.sorot-baru, div.sorot-baru {{
   border-radius: {T.RADIUS_SEDANG}; border: 1px solid {T.BORDER_VARIAN};
   background: {T.LATAR_KARTU}; padding: 0 {T.SP_3};
 }}
+
+/* ── Halaman masuk /masuk (S7) — single column card ── */
+
+.masuk-badan-st {{
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: {T.SP_5} {T.SP_4};
+}}
+.masuk-kartu-st {{
+  width: 100%; max-width: 26rem;
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU};
+  padding: {T.SP_6} {T.SP_5} {T.SP_5};
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+  display: flex; flex-direction: column; gap: {T.SP_4};
+}}
+.masuk-brand-st {{
+  display: flex; align-items: center; justify-content: center; gap: {T.SP_2};
+  margin-bottom: {T.SP_2};
+}}
+.masuk-brand-st .ik-owl {{
+  width: 2.5rem; height: 2.5rem; border-radius: {T.RADIUS_BULAT};
+  background: #d8f2f2; color: {T.AKSEN_MURID_UTAMA};
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+}}
+.masuk-brand-st .nama-brand {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 800; font-size: 1.5rem;
+  color: {T.AKSEN_MURID_UTAMA}; letter-spacing: -0.02em;
+}}
+.masuk-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: 1.2rem;
+  color: {T.TEKS_JUDUL}; text-align: center; margin: 0;
+}}
+.masuk-sub-st {{
+  font-family: {T.FONT_BODY}; font-size: .9rem; color: {T.TEKS_VARIAN};
+  text-align: center; margin: 0 0 {T.SP_2};
+}}
+
+/* Galat / error flash. */
+.masuk-galat-st {{
+  background: {T.LATAR_GALAT}; border: 1px solid {T.BORDER_GALAT};
+  color: {T.TEKS_GALAT}; border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_2} {T.SP_3}; font-size: .9rem; text-align: center;
+}}
+
+/* Form fields. */
+.masuk-form-st {{ display: flex; flex-direction: column; gap: {T.SP_3}; }}
+.masuk-field-st {{ display: flex; flex-direction: column; gap: {T.SP_1}; }}
+.masuk-field-st label {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .82rem;
+  color: {T.TEKS_VARIAN};
+}}
+.masuk-field-st input {{
+  font: inherit; font-size: 1rem; min-height: {T.TARGET_SENTUH};
+  border-radius: {T.RADIUS_SEDANG}; border: 1px solid {T.BORDER_VARIAN};
+  background: {T.LATAR_KARTU}; padding: 0 {T.SP_3}; width: 100%;
+}}
+.masuk-field-st input:focus {{
+  border-color: {T.FOKUS_AKSEN}; outline: 0;
+  box-shadow: 0 0 0 3px {T.AKSEN_MURID_UTAMA}55;
+}}
+
+.masuk-tombol-st {{
+  width: 100%; font-size: 1.05rem; padding: .9rem;
+  background: {T.AKSEN_MURID_KORAL}; color: {T.TEKS_PUTIH};
+  border: 0; border-radius: {T.RADIUS_SEDANG};
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; cursor: pointer;
+  min-height: 48px;
+  display: flex; align-items: center; justify-content: center; gap: {T.SP_2};
+  box-shadow: 0 4px 12px rgba(255,107,91,.25);
+}}
+.masuk-tombol-st:hover {{ filter: brightness(1.06); }}
+
+.masuk-link-st {{
+  text-align: center; font-size: .9rem; margin-top: {T.SP_2};
+  font-family: {T.FONT_HEADLINE};
+}}
+.masuk-link-st a {{
+  color: {T.AKSEN_MURID_UTAMA}; text-decoration: none; font-weight: 600;
+}}
+.masuk-link-st a:hover {{ text-decoration: underline; }}
 """
 
 # Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa

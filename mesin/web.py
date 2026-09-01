@@ -229,7 +229,7 @@ class Penangan(BaseHTTPRequestHandler):
             if q.get("galat"):
                 galat = q["galat"][0]
             # hilangkan sesi lain di URL supaya tidak membingungkan
-            return self._kirim(self._halaman_masuk(galat=galat))
+            return self._kirim(self._halaman_masuk_stitch(galat=galat))
         if jalur == "/":
             # Launch publik: / adalah landing untuk yang belum masuk.
             # Guru dengan sesi valid tetap dapat dashboard. Admin dialihkan
@@ -589,6 +589,55 @@ class Penangan(BaseHTTPRequestHandler):
             f"</div></div></div>",
         )
 
+    def _halaman_masuk_stitch(self, galat: str = "") -> bytes:
+        """Versi Stitch dari halaman masuk (S7).
+
+        Single-column card: brand owl + nama, judul + tagline, form nama/sandi,
+        tombol coral Masuk, link Lupa sandi. Markup mengikuti mockup
+        masuk_mobile. Logika auth TIDAK berubah — ini hanya render.
+        """
+        from style_stitch import gaya_stitch
+
+        kabar = (
+            f'<div class="masuk-galat-st">{html.escape(galat)}</div>' if galat else ""
+        )
+        body = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk &middot; {html.escape(T.NAMA_PRODUK)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{gaya_stitch()}</style></head>
+<body class="st">
+<div class="masuk-badan-st">
+  <div class="masuk-kartu-st">
+    <div class="masuk-brand-st">
+      <span class="ik-owl material-symbols-outlined fill">school</span>
+      <span class="nama-brand">{T.NAMA_PRODUK}</span>
+    </div>
+    <h1 class="masuk-judul-st">Masuk ke Akun Kamu</h1>
+    <p class="masuk-sub-st">{T.TAGLINE}</p>
+    {kabar}
+    <form class="masuk-form-st" method="post" action="/masuk">
+      <div class="masuk-field-st">
+        <label for="nama">Nama</label>
+        <input type="text" id="nama" name="nama" autocomplete="username" required>
+      </div>
+      <div class="masuk-field-st">
+        <label for="sandi">Sandi</label>
+        <input type="password" id="sandi" name="sandi" autocomplete="current-password" required>
+      </div>
+      <button class="masuk-tombol-st" type="submit">
+        <span class="material-symbols-outlined" style="font-size:1.1rem">login</span>
+        Masuk
+      </button>
+    </form>
+    <p class="masuk-link-st"><a href="/lupa-sandi">Lupa sandi?</a></p>
+  </div>
+</div>
+</body></html>"""
+        return body.encode()
+
     def _handle_daftar(self, data: dict) -> None:
         """Pendaftaran mandiri pengelola (guru les / orang tua).
 
@@ -633,13 +682,13 @@ class Penangan(BaseHTTPRequestHandler):
         pw = data.get("sandi") or ""
         ip = self.client_address[0] if self.client_address else "unknown"
         if not nama or not pw:
-            return self._kirim(self._halaman_masuk("Nama dan sandi wajib diisi."))
+            return self._kirim(self._halaman_masuk_stitch("Nama dan sandi wajib diisi."))
         if sessions.sedang_diblokir(nama, ip):
-            return self._kirim(self._halaman_masuk("Terlalu banyak percobaan. Coba lagi 15 menit lagi."), 429)
+            return self._kirim(self._halaman_masuk_stitch("Terlalu banyak percobaan. Coba lagi 15 menit lagi."), 429)
         peran = auth.peran_dari(nama, pw)
         if not peran:
             sessions.catat_gagal(nama, ip)
-            return self._kirim(self._halaman_masuk("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
+            return self._kirim(self._halaman_masuk_stitch("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
         sessions.catat_berhasil(nama, ip)
         token = sessions.buat(nama, peran)
         tujuan = "/murid" if peran == "murid" else (
