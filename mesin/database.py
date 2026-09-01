@@ -286,13 +286,9 @@ def buat_sesi(
     timer_mode: str = "tanpa",
     durasi_menit: int = 15,
     timer_auto: int = 0,
+    jumlah_soal: int | None = None,
 ) -> int:
-    """Bangkitkan lembar dari seed, simpan soalnya ke bank, rangkai jadi sesi.
-
-    `mode`: 'diagnostik' (default) | 'drill' (Latihan Cepat). Timer hanya
-    bermakna untuk drill; sesi diagnostik harus `timer_mode='tanpa'` — nilai
-    asing ditolak cepat, bukan disimpan diam-diam.
-    """
+    """Bangkitkan lembar dari seed, simpan soalnya ke bank, rangkai jadi sesi."""
     MODE_SAH = ("diagnostik", "drill")
     TIMER_SAH = ("tanpa", "sesi", "soal")
     if mode not in MODE_SAH:
@@ -306,7 +302,7 @@ def buat_sesi(
     if not isinstance(durasi_menit, int) or not 1 <= durasi_menit <= 180:
         raise ValueError(f"durasi_menit tidak wajar: {durasi_menit!r}")
 
-    lembar = buat_lembar(seed, level=level, topik=topik)
+    lembar = buat_lembar(seed, level=level, topik=topik, jumlah_soal=jumlah_soal)
 
     if tanggal:
         cur = kon.execute(

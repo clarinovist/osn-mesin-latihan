@@ -65,20 +65,19 @@ def buat_lembar(
     urutan: tuple[str, ...] | None = None,
     level: str = LEVEL_BAWAAN,
     topik: str = TOPIK_BAWAAN,
+    jumlah_soal: int | None = None,
 ) -> Lembar:
-    """Bangun satu lembar penuh dari seed. Deterministik.
-
-    Urutan soal ditentukan level kalau tidak disebut eksplisit. Argumen
-    `urutan` tetap ada supaya pemanggil bisa menyusun lembar khusus (mis.
-    drill satu tipe), dan supaya test bisa memaksa komposisi tertentu.
-    Topik tak dikenal melempar KeyError — salah ketik id topik adalah bug
-    pemanggil, bukan data produksi yang perlu dimaafkan.
-    """
+    """Bangun satu lembar penuh dari seed. Deterministik."""
     paket = ambil(topik)
     level_efektif = _level_efektif(paket, level)
     rng = random.Random(seed)
     if urutan is None:
         urutan = paket.komposisi_untuk(level_efektif)
+    if jumlah_soal is not None and jumlah_soal > 0:
+        base = list(urutan)
+        while len(base) < jumlah_soal:
+            base.extend(urutan)
+        urutan = tuple(base[:jumlah_soal])
     soal = tuple(_soal_layak(paket, t, rng, level_efektif) for t in urutan)
     return Lembar(seed=seed, soal=soal, level=level_efektif)
 
