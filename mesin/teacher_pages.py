@@ -23,7 +23,7 @@ from generator import LEVEL_BAWAAN
 from templates import LEVEL, REGISTRI, Soal
 from topics import TOPIK_BAWAAN, ambil, daftar_topik, dari_sesi
 from teacher_style import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
-
+from style_stitch import GAYA_STITCH
 
 
 KODE_PILIHAN = [
@@ -172,6 +172,183 @@ def _topbar(pengguna: str, peran: str) -> str:
         f'<button type="submit">Keluar</button>'
         f"</form></div></details></nav></div>"
     )
+
+def _badge_mode_stitch(baris) -> str:
+    """Badge 'Latihan Cepat' untuk sesi drill di dashboard Stitch."""
+    if _ambil(baris, "mode", "diagnostik") == "drill":
+        return '<span class="st-badge latihan">Latihan Cepat</span>'
+    return ""
+
+
+def _topbar_stitch(pengguna: str, peran: str) -> str:
+    """Topbar versi Stitch — pakai .st-topbar supaya CSS lama tidak dicampur.
+
+    Menu pengguna tetap CSS-only (<details>), satu pintu keluar, tautan
+    menyesuaikan peran. Logo ikon owl = Material Symbols 'school'.
+    """
+    if peran == "admin":
+        brand, item = "/admin", (
+            '<a href="/admin">Dashboard admin</a>'
+            '<a href="/akun?section=akun">Ganti sandi</a>'
+        )
+    else:
+        brand, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
+    siapa = html.escape(pengguna) if pengguna else ""
+    return (
+        '<div class="st-topbar">'
+        f'<a class="brand" href="{brand}">'
+        '<span class="owl material-symbols-outlined">school</span>'
+        f'<span class="nama">{html.escape(T.NAMA_PRODUK)}</span>'
+        "</a>"
+        '<nav class="topbar-navigasi">'
+        f'{_badge_peran(peran)}'           # badge peran lama (Pengelola/Orang Tua)
+        f'<details class="menu-pengguna">'
+        f"<summary>{siapa}</summary>"
+        f'<div class="menu-isi">{item}'
+        '<div class="menu-pisah"></div>'
+        '<form method="post" action="/keluar" style="margin:0">'
+        '<button type="submit" class="cta">Keluar</button>'
+        "</form></div></details></nav></div>"
+    )
+
+
+def _halaman_stitch(
+    judul: str, isi: str, ident: tuple[str, str] | None = None
+) -> bytes:
+    """Bingkai halaman versi Stitch — pakai GAYA_STITCH dan body.st.
+
+    Dipisah dari _halaman lama supaya halaman lama tetap utuh; fungsi ini
+    satu-satunya penghubung ke CSS Stitch di tree.
+    """
+    batang = _topbar_stitch(*ident) if ident else ""
+    return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(judul)}</title><style>{GAYA_STITCH}</style></head>
+<body class="st"><div class="bungkus">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+
+
+def halaman_utama_stitch(
+    kon,
+    pesan: str = "",
+    pemilik: str | None = None,
+    peran: str = "guru",
+    sorot: int | None = None,
+) -> bytes:
+    """Dashboard pengelola versi Stitch. Signature identik dengan
+    halaman_utama supaya bisa dipasang berdampingan (web.py beralih saat).
+
+    Perilaku data dan query DIPERTAHANKAN SAMA — hanya markup + kelas CSS
+    yang baru. Baris sesi baru tetap diberi kelas sorot-baru.
+    """
+    baris = []
+    admin = peran == "admin"
+    for s in database.daftar_siswa(kon, pemilik):
+        opsi_topik = "".join(
+            f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
+            for t in _topik_untuk_level(s["tingkat"])
+        )
+        sesi = kon.execute(
+            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.mulai, s.selesai,
+                      (SELECT MIN(j.dicatat) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS dicatat_awal,
+                      (SELECT MAX(j.dicatat) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS dicatat_akhir,
+                      (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
+                      (SELECT COUNT(*) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id WHERE ss.sesi_id = s.id) AS terisi,
+                      (SELECT COUNT(*) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id = ss.id JOIN diagnosis d ON d.jawaban_id = j.id WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
+               FROM sesi s WHERE s.siswa_id = ?
+               ORDER BY s.tanggal DESC, s.id DESC""",
+            (s["id"],),
+        ).fetchall()
+
+        def _kelas_sorot(rid):
+            return "sorot-baru" if sorot is not None and rid == sorot else ""
+
+        if sesi:
+            item = "".join(
+                f'<div class="st-kartu-baris {kelas}">'
+                f'<div class="kolom-sesi" style="flex:1">'
+                f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
+                f'<div class="st-meta" style="font-size:.85rem;opacity:.75">{html.escape(r["tanggal"])}'
+                f'&middot; {html.escape(_ambil(r, "level", LEVEL_BAWAAN))}'
+                f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
+                f"</div>"
+                f'<div style="text-align:right;font-variant-numeric:tabular-nums">'
+                f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
+                f'<div>Benar {r["benar"]}/{r["n"]}</div>'
+                f'<div>Waktu {_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</div>'
+                f"</div>"
+                f"{_badge_mode_stitch(r)}"
+                f"</div>"
+                for r, kelas in (
+                    (r, _kelas_sorot(r["id"])) for r in sesi
+                )
+            )
+        else:
+            item = '<p class="sub">Belum ada sesi — coba buat yang pertama.</p>'
+
+        label_keluarga = ""
+        if admin:
+            siapa = s["pemilik"] or "warisan"
+            label_keluarga = (
+                '<span class="st-badge selesai">keluarga: '
+                f"{html.escape(siapa)}</span>"
+            )
+
+        strip_sesi = (
+            f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
+            f'<div class="strip-kolom"><label>Topik</label>'
+            f'<select name="topik" class="st-input">{opsi_topik}</select></div>'
+            '<div class="strip-kolom"><label>Mode</label>'
+            '<div class="mode-pilih">'
+            '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked> Diagnosa</label>'
+            '<label class="mode-opsi"><input type="radio" name="mode" value="drill"> Latihan Cepat</label>'
+            "</div></div>"
+            '<div class="pengaturan-timer" style="display:none">'
+            "<label>Durasi "
+            '<input type="number" name="durasi_menit" value="15" min="1" max="180" class="st-input" style="width:4.5rem;display:inline-block"> menit</label>'
+            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="sesi" checked> per sesi (tampil)</label>'
+            '<label class="mode-opsi"><input type="radio" name="timer_mode" value="soal"> per soal (internal)</label>'
+            '<label class="mode-opsi"><input type="checkbox" name="timer_auto" value="1"> auto-submit</label>'
+            "</div>"
+            '<button type="submit" class="st-tombol-coral">Buat sesi baru</button>'
+            "</form>"
+        )
+
+        baris.append(
+            '<div class="st-kartu">'
+            '<div class="siswa-kepala" style="display:flex;align-items:center;gap:.6rem;justify-content:space-between">'
+            f"<h2 class=\"st\">{html.escape(s['nama'])}"
+            f'<span class="st-badge selesai">({html.escape(str(s["tingkat"]))})</span>'
+            f"{label_keluarga}"
+            f"</h2>"
+            f'<a class="st-tombol-coral" style="text-decoration:none;display:inline-block;min-height:0;padding:0.45rem 1rem;font-size:.9rem" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
+            "</div>"
+            f"{item}"
+            f"{strip_sesi}"
+            "</div>"
+        )
+
+    isi_utama = "".join(baris) or (
+        '<div class="st-kartu">Belum ada siswa. '
+        '<a href="/akun">Buat siswa</a> dari halaman Akun &amp; Siswa.</div>'
+    )
+
+    kabar = (
+        '<div class="st-banner-sukses"><span class="ikon">✓</span>'
+        f"<span>{html.escape(pesan)}</span></div>"
+        if pesan
+        else ""
+    )
+
+    return _halaman_stitch(
+        T.NAMA_PRODUK,
+        f'<h1 class="st">{T.NAMA_PRODUK} — Latihan Matematika SD</h1>'
+        '<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan untuk melihat tren.</p>'
+        f"{kabar}"
+        f'<div class="daftar-anak">{isi_utama}</div>'
+        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
+        ident=(pemilik if pemilik else "guru", peran),
+    )
+
 
 def halaman_utama(
     kon,

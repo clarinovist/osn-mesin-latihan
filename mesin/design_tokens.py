@@ -162,3 +162,29 @@ RADIUS_BULAT = "50%"       # nomor badge
 
 TARGET_SENTUH = "44px"     # pedoman aksesibilitas WCAG 2.5.5
 LEBAR_KONTEN = "46rem"     # maksimum lebar konten layar
+
+# ─────────────────────────────────────────────────────────────────────
+# Token Stitch (adopsi ui 2026-09-01 — lebih dekat Material 3 "surface")
+# ─────────────────────────────────────────────────────────────────────
+
+FONT_HEADLINE = (
+    '"Plus Jakarta Sans", -apple-system, "Segoe UI", Roboto, sans-serif'
+)
+FONT_BODY = (
+    '"Be Vietnam Pro", -apple-system, "Segoe UI", Roboto, sans-serif'
+)
+
+LATAR_SEKUNDER_LEMBUT = "#f6f3f2"   # surface-container-low (bg blok murid, grid halus)
+LATAR_SEKUNDER_NETRAL = "#f0edec"   # surface-container (elemen di dalam kartu)
+LATAR_ELEVASI         = "#ebe7e7"   # surface-container-high (hover ringan, level 2)
+TEKS_VARIAN           = "#3d4949"   # on-surface-variant — pengganti TEKS_SUBTLE untuk kartu
+BORDER_VARIAN         = "#bcc9c8"   # outline-variant (border kartu lembut)
+
+# Status
+STATUS_DIAGNOSTIK_BG  = AKSEN_MURID_UTAMA   # bg pill diagnostik (teal teks putih)
+STATUS_DIAGNOSTIK_TEKS = "#ffffff"
+STATUS_LATIHAN_BG     = "#ffba4b"           # broader "latihan" (amber gelap)
+STATUS_LATIHAN_TEKS   = "#291800"           # amber text on light pill
+
+# Glow/fokus aksen (border fokus 2px)
+FOKUS_AKSEN = "#0fa3a3"
