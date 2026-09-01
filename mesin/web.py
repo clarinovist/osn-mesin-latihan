@@ -15,6 +15,7 @@ impor terlambat di dalam handler (lihat _rute_murid_get).
 from __future__ import annotations
 
 import html
+import os
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
 
@@ -43,6 +44,7 @@ from teacher_pages import (
     halaman_sesi_cetak,
     halaman_sesi_lampiran,
     halaman_utama,
+    halaman_utama_stitch,
     simpan_sesi,
 )
 from templates import LEVEL
@@ -77,11 +79,25 @@ class Penangan(BaseHTTPRequestHandler):
         c["osn_sesi"]["path"] = "/"
         c["osn_sesi"]["httponly"] = True
         c["osn_sesi"]["samesite"] = "Lax"
-        host = (self.headers.get("Host") or "").split(":")[0].lower()
-        if host not in ("localhost", "127.0.0.1", ""):
+        if self._di_https():
             c["osn_sesi"]["secure"] = True
         c["osn_sesi"]["max-age"] = str(sessions.TTL_DETIK)
         return c.output(header="").strip()
+
+    def _di_https(self) -> bool:
+        """Benar bila permintaan ini memang lewat HTTPS.
+
+        Diputus dari petunjuk yang benar-benar menandai HTTPS —
+        X-Forwarded-Proto dari proxy (Caddy di VPS) atau env OSN_HTTPS=1 —
+        bukan dari nama host. Dulu Secure dipasang untuk semua host
+        non-localhost: di mode LAN (serve.py --jaringan, host 192.168.x.x
+        lewat HTTP biasa) peramban anak diam-diam membuang kuki Secure itu,
+        sehingga setiap muat-ulang tiba tanpa identitas dan halaman murid
+        jadi polos sampai masuk ulang (bug lapangan 1 Sep 2026).
+        """
+        if os.environ.get("OSN_HTTPS") == "1":
+            return True
+        return (self.headers.get("X-Forwarded-Proto") or "").strip().lower() == "https"
 
     def _kredensial(self):
         return auth.dari_header(self.headers.get("Authorization"))
@@ -240,7 +256,7 @@ class Penangan(BaseHTTPRequestHandler):
                         sorot = None
                     with database.buka() as kon:
                         return self._kirim(
-                            halaman_utama(
+                            halaman_utama_stitch(
                                 kon, pesan=pesan, pemilik=ident[0],
                                 peran=ident[1], sorot=sorot,
                             )
@@ -460,22 +476,27 @@ class Penangan(BaseHTTPRequestHandler):
 
         Guru sengaja TIDAK bisa membuka halaman murid: halamannya memuat
         form jawaban atas nama anak, dan guru mengerjakan lewat rutenya
-        sendiri. Kredensial salah/peran salah -> 401, bukan 404 — supaya
-        anak yang salah ketik sandi tidak mengira situsnya rusak.
+        sendiri. GET tanpa identitas murid (kuki hilang, kedaluwarsa, atau
+        ditimpa akun lain di perangkat bersama) -> 303 ke /masuk dengan
+        pesan yang jelas — anak dibawa ke pintu yang benar, bukan halaman
+        401 polos yang terlihat seperti situs rusak saat muat-ulang. POST
+        kirim jawaban tetap 401 di do_POST supaya palang tulis tidak
+        melemah.
         """
         import student_pages
         import students
 
         kredensial = self._sesi_atau_basic(peran_wajib="murid")
         if not kredensial:
-            return self._kirim(
-                _halaman(
-                    "Perlu masuk",
-                    "<h1>Halaman murid</h1>"
-                    "<p>Masuk dengan akun muridmu (nama &amp; sandi dari gurumu).</p>",
-                ),
-                401,
-            )
+            qs = urllib.parse.urlencode({
+                "galat": "Sesi kamu sudah habis atau akun lain masuk di "
+                         "perangkat ini. Masuk lagi dengan nama & sandimu, ya.",
+            })
+            self.send_response(303)
+            self.send_header("Location", f"/masuk?{qs}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         siswa_id = students.siswa_dari_akun(kon, kredensial[0])
         if siswa_id is None:
             nama = html.escape(kredensial[0])
@@ -500,7 +521,7 @@ class Penangan(BaseHTTPRequestHandler):
                 except (ValueError, TypeError):
                     sesi_selesai = None
             return self._kirim(
-                student_pages.halaman_daftar_sesi(
+                student_pages.halaman_daftar_sesi_baru(
                     kon, siswa_id, kredensial[0], sesi_selesai
                 )
             )

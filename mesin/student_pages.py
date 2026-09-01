@@ -203,6 +203,7 @@ input:disabled, textarea:disabled {{
 }}
 .keluar-form {{ margin: 0 0 1.2rem; }}
 .keluar-form .btn {{ padding: .4rem 1rem; font-size: 0.85rem; }}
+.hint-silap {{ font-size: .78rem; color: {T.TEKS_SUBTLE}; }}
 
 .daftar-sesi-grup {{ display: flex; flex-direction: column; gap: 0.7rem; }}
 
@@ -597,6 +598,141 @@ def halaman_kerja(
 </div></body></html>"""
     return isi.encode()
 
+def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | None = None) -> bytes:
+    """Halaman /murid versi Stitch — daftar sesi milik murid ini saja.
+
+    Perilaku data dan logika badge dipertahankan SAMA dengan versi lama;
+    yang berubah hanya markup + kelas CSS (mengadopsi GAYA_STITCH).
+
+    Palang mutlak: TIDAK memuat kata kunci/malrule/diagnosa.
+    Sumber visual: mockup mobile halaman_murid_mobile + Stitch terpadu.
+    """
+    from style_stitch import gaya_stitch
+
+    _WARNA_ICON = [
+        ("#d8f2f2", "#0a7d7d"),  # teal lembut
+        ("#ffe0dc", "#cc3f2b"),  # coral lembut
+        ("#fff0d6", "#815600"),  # amber lembut
+        ("#efe6fd", "#6a4bb0"),  # ungu lembut
+    ]
+    _IKON_SESI = ["quiz", "calculate", "schedule", "extension"]
+
+    baris = kon.execute(
+        """SELECT id, tanggal, level, topik, mode,
+                  (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
+                  s.selesai, s.direview,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   WHERE ss.sesi_id = s.id) AS terisi,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   JOIN diagnosis d ON d.jawaban_id = j.id
+                   WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
+           FROM sesi s WHERE s.siswa_id = ? ORDER BY s.id DESC""",
+        (siswa_id,),
+    ).fetchall()
+
+    kartu = []
+    for i, b in enumerate(baris):
+        bg, fg = _WARNA_ICON[i % len(_WARNA_ICON)]
+        ikon = _IKON_SESI[i % len(_IKON_SESI)]
+
+        # Badge status — urutan if persis sama dengan versi lama
+        if b["terisi"] == 0:
+            badge = '<span class="st-badge baru">Baru</span>'
+        elif b["selesai"] is None:
+            badge = '<span class="st-badge selesai">Dikerjakan</span>'
+        elif b["direview"] is None:
+            badge = '<span class="st-badge selesai">Masih di review</span>'
+        else:
+            badge = (
+                f'<span class="st-badge diagnostik">Selesai &middot; '
+                f'{b["benar"]}/{b["jumlah"]} benar</span>'
+            )
+
+        # Badge mode (terpisah, di baris meta)
+        if b["mode"] == "drill":
+            mode_label = '<span class="st-badge latihan">Latihan Cepat</span>'
+        else:
+            mode_label = '<span class="st-badge diagnostik">Diagnostik</span>'
+
+        kartu.append(
+            f'<a class="st-kartu-baris" href="/murid/kerjakan/{b["id"]}"'
+            ' style="text-decoration:none;color:inherit">'
+            f'<span style="flex:none;width:2.5rem;height:2.5rem;border-radius:50%;'
+            f"background:{bg};display:inline-flex;align-items:center;justify-content:center;\">"
+            f'<span class="material-symbols-outlined" style="font-size:1.2rem;color:{fg}">{ikon}</span>'
+            "</span>"
+            '<span style="flex:1;display:flex;flex-direction:column;min-width:0">'
+            f'<span style="font-weight:700;font-size:1rem;color:{T.TEKS_JUDUL}">{_escape(b["tanggal"])}</span>'
+            f'<span style="font-size:0.85rem;color:{T.TEKS_VARIAN};display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
+            f"level {_escape(b['level'])} &middot; {_escape(_ambil_topik(b))}"
+            f" {mode_label}</span>"
+            "</span>"
+            f'<span class="st-badge selesai" style="font-size:0.8rem">{b["jumlah"]} soal</span>'
+            '<span style="flex:none;display:flex;align-items:center;gap:0.4rem">'
+            f"{badge}</span>"
+            "</a>"
+        )
+
+    kartu_html = "\n".join(kartu) or (
+        '<div style="border:1.5px dashed; border-color:{T.BORDER_VARIAN}; '
+        f'border-radius:{T.RADIUS_KARTU}; padding:{T.SP_5}; text-align:center;'
+        f'color:{T.TEKS_VARIAN}; font-size:0.95rem">'
+        'Belum ada sesi. Minta gurumu membuatkan.</div>'
+    )
+
+    banner = ""
+    if sesi_selesai is not None:
+        banner = (
+            '<div class="st-banner-sukses">'
+            '<span class="ikon">✓</span>'
+            "<span>Selesai! Semua jawabanmu sudah masuk.</span></div>"
+        )
+
+    isi = f"""<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sesiku &middot; {T.NAMA_PRODUK}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{gaya_stitch()}</style>
+</head><body class="st">
+<div class="bungkus-st">
+  <div class="st-topbar">
+    <div class="brand">
+      <span class="owl material-symbols-outlined fill">school</span>
+      <span class="nama">{T.NAMA_PRODUK}</span>
+    </div>
+    <form method="post" action="/keluar" style="margin:0">
+      <button type="submit" class="cta">Keluar</button>
+    </form>
+  </div>
+
+  <div style="padding:{T.SP_4} 0">
+    <div style="display:flex;align-items:center;gap:{T.SP_4};margin:0.4rem 0 1.2rem">
+      <span style="flex:none;width:3.5rem;height:3.5rem;border-radius:50%;background:#d8f2f2;color:{T.AKSEN_MURID_UTAMA};display:inline-flex;align-items:center;justify-content:center;font-size:1.9rem">
+        <span class="material-symbols-outlined fill">pets</span>
+      </span>
+      <div>
+        <h1 class="st" style="margin:0">Halo, {_escape(nama)}!</h1>
+        <div style="font-size:0.95rem;color:{T.TEKS_VARIAN}">{T.TAGLINE}</div>
+      </div>
+    </div>
+
+    {banner}
+
+    <p style="margin:0.4rem 0 1rem;color:{T.TEKS_VARIAN};font-size:0.95rem">
+      Pilih sesi untuk mulai latihan</p>
+    <div style="display:flex;flex-direction:column;gap:0.7rem">
+      {kartu_html}
+    </div>
+  </div>
+</div></body></html>"""
+    return isi.encode()
+
+
 def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None = None) -> bytes:
     """Halaman /murid — daftar sesi milik murid ini saja.
 
@@ -687,6 +823,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
 <div class="murid-header">
   <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
   <h1>Halo, {_escape(nama)}!</h1>
+  <span class="hint-silap">Bukan kamu? Tekan Keluar dulu.</span>
 </div>
 {banner}
 <p class="sub-judul">Pilih sesi untuk mulai latihan</p>
