@@ -119,18 +119,23 @@ jobs:
         # belum berarti situsnya terjangkau — reverse proxy atau sertifikat
         # bisa jadi masalahnya, dan itu hanya terlihat dari luar.
         # Cek /murid/ (bukan /): sejak landing publik, / menjawab 200 untuk
-        # anonim. /murid/ tetap harus 401 tanpa kredensial — data anak.
+        # anonim. Tanpa sesi, /murid/ me-redirect 303 ke /masuk — 401 polos
+        # tidak dipakai lagi (lihat test_role_guards.py). Palang datanya:
+        # halaman murid tidak pernah dilayani, selalu dilempar ke halaman
+        # masuk. Redirect ke tujuan lain berarti ada yang salah.
         run: |
           set -e
           for i in $(seq 1 10); do
-            KODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
-                   "https://${{ secrets.SITUS }}/murid/" || echo 000)
-            if [ "$KODE" = "401" ]; then
-              echo "Situs hidup dan palang data anak aktif (401 di /murid/)"
+            HASIL=$(curl -s -o /dev/null -w '%{http_code}|%{redirect_url}' --max-time 10 \
+                   "https://${{ secrets.SITUS }}/murid/" || echo "000|")
+            KODE="${HASIL%%|*}"
+            TUJUAN="${HASIL#*|}"
+            if [ "$KODE" = "303" ] && [[ "$TUJUAN" == *"/masuk"* ]]; then
+              echo "Situs hidup dan palang data anak aktif (303 ke /masuk)"
               exit 0
             fi
-            echo "percobaan $i: $KODE"
+            echo "percobaan $i: $HASIL"
             sleep 6
           done
-          echo "::error::Situs tidak menjawab 401 di /murid/ — periksa VPS"
+          echo "::error::Situs tidak me-redirect /murid/ ke /masuk — periksa VPS"
           exit 1
