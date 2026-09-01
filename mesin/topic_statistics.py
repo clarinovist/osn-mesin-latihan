@@ -449,7 +449,7 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
                 data = [rng.randint(1, 100) for _ in range(n)]
             return {"varian": varian, "data": data}
         # cari_data_ke_n: pilih rata bulat, lalu data pertama; data terakhir = rata×n−jumlah
-        rata = rng.randint(15, 50)
+        rata = rng.randint(12, 80)
         data = [rng.randint(1, 100) for _ in range(n - 1)]
         data.append(rata * n - sum(data))
         # jaga data terakhir tetap positif & masuk akal (1..200)
@@ -458,11 +458,11 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             data.append(rata * n - sum(data))
         return {"varian": varian, "data": data, "rata": rata}
     if template_id == "rata_rata_gabungan":
-        n1, n2 = rng.randint(2, 10), rng.randint(2, 10)
-        x1, x2 = rng.randint(5, 90), rng.randint(5, 90)
+        n1, n2 = rng.randint(2, 12), rng.randint(2, 12)
+        x1, x2 = rng.randint(5, 100), rng.randint(5, 100)
         # total gabungan habis dibagi (n1+n2)
         while (n1 * x1 + n2 * x2) % (n1 + n2) != 0:
-            x2 = rng.randint(5, 90)
+            x2 = rng.randint(5, 100)
         return {"n1": n1, "n2": n2, "x1": x1, "x2": x2}
     if template_id == "median_modus":
         # P3: median di atas kelas 3 — selalu varian modus; band SASMO
@@ -481,9 +481,9 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             data = [rng.randint(1, 12) for _ in range(n)]
             modus = rng.randint(1, 12)
         else:
-            n = rng.randint(3, 7)
-            data = [rng.randint(1, 20) for _ in range(n)]
-            modus = rng.randint(1, 20)
+            n = rng.randint(3, 8)
+            data = [rng.randint(1, 40) for _ in range(n)]
+            modus = rng.randint(1, 40)
         data[0] = modus
         if n > 1:
             data[1] = modus
@@ -509,7 +509,7 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             # P3: empat batang, nilai 1-20 — ketiga varian tetap boleh.
             n, atas = 4, 20
         else:
-            n, atas = rng.randint(4, 6), 50
+            n, atas = rng.randint(4, 6), 70
         data = [rng.randint(1, atas) for _ in range(n)]
         i = rng.randint(0, n - 1)
         if varian == "baca":
