@@ -180,6 +180,28 @@ KARTU: dict[str, Kartu] = {
              "(kg-hg-dag-g-dg-cg-mg).",
         contoh="380 kg → g turun 3 tangga → 380 × 1.000 = 380.000 g.",
     ),
+    "satuan_kuantitas": Kartu(
+        judul="Lusin, kodi, gros, rim",
+        inti="1 lusin = 12, 1 kodi = 20, 1 gros = 144 (= 12 lusin), "
+             "1 rim = 500 lembar. Satuan ini TIDAK memakai tangga ×10.",
+        contoh="5 lusin = 5 × 12 = 60 buah. 240 buah = 240 : 12 = 20 lusin.",
+    ),
+    "satuan_luas_volume": Kartu(
+        judul="Satuan luas dan volume",
+        inti="Satuan LUAS turun satu tangga dikali 100 (km²-hm²-dam²-m²-dm²-cm²). "
+             "Satuan VOLUME dikali 1.000 (m³-dm³-cm³). Bukan ×10 seperti "
+             "satuan panjang. 1 hektar = 1 hm², 1 are = 1 dam².",
+        contoh="3 dam² → m² turun 1 tangga → 3 × 100 = 300 m². "
+               "2 m³ → dm³ → 2 × 1.000 = 2.000 dm³.",
+    ),
+    "jam_selesai": Kartu(
+        judul="Waktu mulai, lama, dan selesai",
+        inti="Selesai = mulai + lama. Mulai = selesai − lama. "
+             "Setiap 60 menit menjadi 1 jam — menit tidak boleh ditulis "
+             "lebih dari 59.",
+        contoh="Mulai 09.45, lama 2 jam 40 menit → 09.45 + 2 jam = 11.45, "
+               "+ 40 menit = 12.25.",
+    ),
     "lingkaran": Kartu(
         judul="Lingkaran",
         inti="Keliling = 2 × π × jari-jari. Luas = π × jari-jari × jari-jari. "
@@ -364,6 +386,10 @@ KONSEP_TEMPLATE: dict[str, str] = {
     "perbandingan_berbalik": "perbandingan",
     "jam_menit_detik": "waktu",
     "satuan_waktu_lama": "waktu",
+    "jam_selesai": "jam_selesai",
+    "satuan_kuantitas": "satuan_kuantitas",
+    "tangga_satuan_campuran": "satuan_konversi",
+    "satuan_luas_volume": "satuan_luas_volume",
     # persen & uang
     "persen_diskon": "persen",
     "persen_untung_rugi": "persen",

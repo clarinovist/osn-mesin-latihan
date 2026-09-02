@@ -1,7 +1,9 @@
 """Fase 8: kontrak paket topik kesepuluh — pengukuran (P4/P5/P6).
 
-Tiga template menutup cakupan pengukuran OSN SD yang belum tercakup Fase 4/6:
-skala peta, satuan waktu lama, jam/menit/detik. P3 tidak didukung.
+Tiga template Fase 8 menutup skala peta, satuan waktu lama, dan
+jam/menit/detik. Gelombang 2 (2 Sep 2026) menambah empat JENIS soal —
+kontrak khususnya ada di test_pengukuran_jenis_baru.py; di sini yang
+diuji identitas paket, komposisi, dan sweep malrule. P3 tidak didukung.
 """
 
 from __future__ import annotations
@@ -43,33 +45,36 @@ def test_pengukuran_memulai_dengan_template_awal():
 
 
 def test_komposisi_p4_sepuluh_soal():
+    """P4: lima jenis soal, tanpa skala_peta dan satuan_luas_volume.
+
+    Komposisi berubah di gelombang 2 (2 Sep 2026) karena empat JENIS soal
+    baru masuk — bukan karena test lama menutupi regresi. Yang dikunci di
+    sini adalah keputusannya: P4 tidak memuat `skala_peta` (perbandingan
+    belum diajarkan) dan tidak memuat `satuan_luas_volume` (satuan luas
+    dan volume baru masuk kurikulum kelas 5).
+    """
     komposisi = _paket().komposisi_untuk("P4")
-    assert komposisi == (
-        "satuan_waktu_lama", "jam_menit_detik",
-        "satuan_waktu_lama", "jam_menit_detik",
-        "satuan_waktu_lama", "jam_menit_detik",
-        "satuan_waktu_lama", "jam_menit_detik",
-        "satuan_waktu_lama", "jam_menit_detik",
-    )
+    assert len(komposisi) == 10
+    assert set(komposisi) == {
+        "satuan_waktu_lama", "jam_menit_detik", "satuan_kuantitas",
+        "jam_selesai", "tangga_satuan_campuran",
+    }
+    assert "skala_peta" not in komposisi
+    assert "satuan_luas_volume" not in komposisi
 
 
-def test_komposisi_p5_sepuluh_soal():
-    komposisi = _paket().komposisi_untuk("P5")
-    assert komposisi == (
-        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
-        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
-        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
-        "skala_peta",
-    )
+@pytest.mark.parametrize("level", ("P5", "P6"))
+def test_komposisi_p5_p6_sepuluh_soal(level):
+    """P5/P6 memuat KETUJUH template — tidak ada yang tidur.
 
-
-def test_komposisi_p6_sepuluh_soal():
-    komposisi = _paket().komposisi_untuk("P6")
-    assert komposisi == (
-        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
-        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
-        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
-        "skala_peta",
+    Daftar diuji sebagai himpunan, bukan tuple persis: penambahan jenis
+    soal berikutnya tidak perlu memaksa test ini berubah lagi selama
+    seluruh template tetap terpakai dan jumlah soalnya tetap 10.
+    """
+    komposisi = _paket().komposisi_untuk(level)
+    assert len(komposisi) == 10
+    assert set(komposisi) == set(_paket().templates), (
+        f"{level}: ada template yang terdaftar tapi tidak dipakai"
     )
 
 
@@ -89,11 +94,21 @@ def test_pengukuran_level_teks_aneh_jatuh_ke_p4():
     assert aneh.tanda_tangan == p4.tanda_tangan
 
 
-def test_pengukuran_memuat_tiga_template():
-    """Task 8.2: seluruh 3 template sudah terimplementasi."""
+def test_pengukuran_memuat_tujuh_template():
+    """Tiga template Fase 8 + empat jenis soal gelombang 2.
+
+    Angkanya naik dari 3 ke 7 karena paket ini memang bertambah (P4 18
+    bentuk kalimat -> 67), bukan karena test dilonggarkan. Ketiga template
+    lama WAJIB tetap ada: menambah jenis soal tidak boleh diam-diam
+    menghapus cakupan yang sudah dijanjikan.
+    """
     paket = _paket()
-    assert len(paket.templates) == 3
-    for nama in ("skala_peta", "satuan_waktu_lama", "jam_menit_detik"):
+    assert len(paket.templates) == 7
+    for nama in (
+        "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
+        "satuan_kuantitas", "tangga_satuan_campuran", "satuan_luas_volume",
+        "jam_selesai",
+    ):
         assert nama in paket.templates, nama
 
 
@@ -105,7 +120,12 @@ def test_judul_bagian_pengukuran():
     assert paket.judul_bagian == {
         "A": "Bagian A — Skala peta",
         "B": "Bagian B — Waktu & konversi",
+        "C": "Bagian C — Satuan kuantitas & tangga satuan",
+        "D": "Bagian D — Satuan luas & volume",
     }
+    # Tiap bagian yang dipakai WAJIB punya catatan: catatan itu yang
+    # dibaca anak saat ia lupa faktor konversinya di tengah mengerjakan.
+    assert set(paket.catatan_bagian) == set(paket.judul_bagian)
 
 
 # ── Template #1 skala_peta ─────────────────────────────────────────────
@@ -181,14 +201,18 @@ def test_jam_menit_detik_kunci():
 
 # ── Sweep per template ─────────────────────────────────────────────────
 
-TEMPLATE_ALL = ("skala_peta", "satuan_waktu_lama", "jam_menit_detik")
+TEMPLATE_ALL = (
+    "skala_peta", "satuan_waktu_lama", "jam_menit_detik",
+    "satuan_kuantitas", "tangga_satuan_campuran", "satuan_luas_volume",
+    "jam_selesai",
+)
 
 
 @pytest.mark.parametrize("template_id", TEMPLATE_ALL)
 @pytest.mark.parametrize("level", ("P4", "P5", "P6"))
 def test_sweep(template_id, level):
-    if template_id == "skala_peta" and level == "P4":
-        return  # #1 hanya P5+
+    if level == "P4" and template_id in ("skala_peta", "satuan_luas_volume"):
+        return  # keduanya hanya P5+ (lihat KOMPOSISI)
     for seed in range(1, 120):
         s = buat_soal(template_id, seed, level=level, topik="pengukuran")
         assert s.malrule, f"{template_id}@{level}/{seed} kosong"
