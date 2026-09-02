@@ -333,7 +333,19 @@ template.
 
 ## 6. Data mentah & cara reproduksi
 
-Artefak riset (lokal, tidak di-commit karena besar):
+⚠️ **Arsip permanen: `~/Documents/osn-arsip-soal/`** (85 MB, di luar repo).
+Berisi 81 PDF asli + 69 hasil ekstraksi teks + `INDEKS-SOAL.csv`
+(**1.305 baris, satu per soal, lengkap dengan tahun/tahap/nomor/naskah
+asal/drive id**) + `data/indeks_naskah.json` (51 naskah). Baca
+`README.md` di sana sebelum menyitir — ada catatan hak cipta dan
+kualitas teks.
+
+**Cara mengutip satu soal:** cari `id_soal` (format `tahun-tahap-nomor`)
+di `INDEKS-SOAL.csv` → dapat naskah asal + `drive_id` untuk unduh ulang
+PDF-nya. Contoh: `2016-NAS-eksplorasi-1` = OSN 2016 tahap eksplorasi
+nasional nomor 1.
+
+Artefak kerja (salinan ada di `~/Documents/osn-arsip-soal/data/`):
 
 - `/tmp/osn_riset/pdf/`, `/tmp/osn_riset/pdf2/` — 65 PDF soal + hasil
   `pdftotext`.
