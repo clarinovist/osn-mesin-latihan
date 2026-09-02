@@ -126,3 +126,27 @@ def test_css_kartu_rumus_ada_di_gaya_murid():
 
     assert "rumus-blok-st" in style_stitch.gaya_stitch()
     assert "rumus-blok-st" not in style_stitch.CSS_SESI
+
+
+def test_semua_template_punya_kartu():
+    """Cakupan PENUH: setiap template di registri punya kartu rumus.
+
+    Sengaja test terpisah dari integritas pemetaan: yang ini akan gagal
+    saat template BARU ditambahkan tanpa kartunya. Itu memang yang
+    diinginkan — template baru wajib ikut memikirkan rumus apa yang
+    dibaca anak kalau ia salah.
+    """
+    from templates import REGISTRI
+
+    belum = sorted(t for t in REGISTRI if t not in rumus.KONSEP_TEMPLATE)
+    assert belum == [], (
+        f"{len(belum)} template tanpa kartu rumus: {belum[:8]}"
+    )
+
+
+def test_setiap_template_menghasilkan_kartu_nyata():
+    """kartu_untuk() harus mengembalikan Kartu untuk SEMUA template."""
+    from templates import REGISTRI
+
+    kosong = [t for t in REGISTRI if rumus.kartu_untuk(t) is None]
+    assert kosong == [], f"kartu_untuk None untuk: {kosong[:8]}"
