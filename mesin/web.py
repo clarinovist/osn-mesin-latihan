@@ -583,6 +583,15 @@ class Penangan(BaseHTTPRequestHandler):
                 except (ValueError, TypeError):
                     tersimpan = 0
             sesi_id_kerja = int(bagian[3])
+            # Kabar hasil kirim foto (?foto=ok / ?foto=<alasan gagal>).
+            # Sama seperti `tersimpan`: datang dari URL, jadi tidak
+            # dipercaya — hanya dipakai sebagai kalimat, dan dipangkas.
+            kabar_foto = ""
+            if jalur_penuh:
+                q_foto = urllib.parse.parse_qs(
+                    urllib.parse.urlparse(jalur_penuh).query
+                )
+                kabar_foto = (q_foto.get("foto", [""])[0] or "")[:200]
             # Waktu pengerjaan mulai dihitung dari saat lembar DIBUKA, bukan
             # dari simpan pertama: anak yang mengisi semuanya lalu sekali
             # simpan tidak boleh tercatat berdurasi 0 detik. Idempoten —
@@ -592,7 +601,10 @@ class Penangan(BaseHTTPRequestHandler):
             if students.sesi_murid(kon, siswa_id, sesi_id_kerja):
                 database.tandai_mulai(kon, sesi_id_kerja)
                 kon.commit()
-            isi = student_pages.halaman_kerja_baru(kon, siswa_id, sesi_id_kerja, tersimpan)
+            isi = student_pages.halaman_kerja_baru(
+                kon, siswa_id, sesi_id_kerja, tersimpan,
+                kabar_foto=kabar_foto,
+            )
             if isi is None:
                 return self._kirim(
                     _halaman("404", "<h1>Sesi tidak ada</h1>"), 404
@@ -806,6 +818,55 @@ class Penangan(BaseHTTPRequestHandler):
             self.send_response(303)
             self.send_header("Location", "/masuk")
             self.send_header("Set-Cookie", self._set_cookie(None))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        if jalur.startswith("/murid/foto/"):
+            # Anak mengirim FOTO lembar yang dikerjakan di kertas (poin 1 & 4
+            # feedback Filia). Palang sama ketat dengan POST jawaban: wajib
+            # akun berperan murid, dan sesi wajib milik anak itu sendiri.
+            # Yang tersimpan hanya lampiran berstatus 'baru' — guru tetap
+            # yang menerapkan, jadi tidak ada jalur anak menulis laporan.
+            import students
+
+            kredensial = self._sesi_atau_basic(peran_wajib="murid")
+            if not kredensial:
+                return self._kirim(
+                    _halaman("Perlu masuk", "<h1>Halaman murid</h1>"), 401
+                )
+            try:
+                sesi_id = int(jalur.split("/")[3])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+
+            content_type = self.headers.get("Content-Type", "")
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            if panjang > lampiran_mod.BATAS_UKURAN * 2:
+                return self._kirim(
+                    _halaman("Terlalu besar", "<h1>Fotonya terlalu besar</h1>"),
+                    400,
+                )
+            tubuh = self.rfile.read(panjang)
+            with database.buka() as kon:
+                siswa_id = students.siswa_dari_akun(kon, kredensial[0])
+                if siswa_id is None or not students.sesi_murid(
+                    kon, siswa_id, sesi_id
+                ):
+                    # Satu body 404 yang sama untuk "tidak ada" dan "bukan
+                    # milikmu" — beda body jadi oracle eksistensi.
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
+                _lid, pesan = lampiran_mod.proses_upload_murid(
+                    kon, sesi_id, content_type, tubuh
+                )
+            # PRG: refresh tidak mengunggah dua kali. Pesan (sukses ATAU
+            # alasan gagal) dibawa di query dan ditampilkan di blok foto —
+            # anak harus tahu fotonya masuk atau tidak.
+            qs = urllib.parse.urlencode({"foto": pesan})
+            self.send_response(303)
+            self.send_header("Location", f"/murid/kerjakan/{sesi_id}?{qs}")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return

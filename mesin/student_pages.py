@@ -756,7 +756,7 @@ def _badan_teks_st(teks: str) -> str:
 
 def halaman_kerja_baru(
     kon, siswa_id: int, sesi_id: int, tersimpan: int = 0,
-    topik_paket: Topik | None = None,
+    topik_paket: Topik | None = None, kabar_foto: str = "",
 ) -> bytes | None:
     """Versi Stitch dari halaman kerja murid (S4).
 
@@ -1008,6 +1008,43 @@ def halaman_kerja_baru(
 </script>
 """
 
+    # Kirim foto cara pengerjaan (poin 1 & 4 feedback Filia 2 Sep 2026).
+    # Untuk anak yang mengerjakan di KERTAS (lembar dicetak): tidak ada
+    # tempat mengetik, jadi foto adalah satu-satunya jalan masuk. Blok ini
+    # hanya mengunggah — tidak menampilkan hasil bacaan AI, tidak
+    # menampilkan benar/salah. Guru yang memeriksa dan menerapkan.
+    daftar_foto = ""
+    kabar_foto_html = ""
+    if kabar_foto:
+        kabar_foto_html = (
+            f'<p class="kerja-foto-kabar-st">{_escape(kabar_foto)}</p>'
+        )
+    n_foto = kon.execute(
+        "SELECT COUNT(*) AS n FROM lampiran WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()["n"]
+    if n_foto:
+        daftar_foto = (
+            f'<p class="kerja-foto-jumlah-st">Sudah terkirim: {n_foto} foto. '
+            "Boleh kirim lagi kalau ada lembar lain.</p>"
+        )
+    blok_foto = f"""
+<div class="kerja-foto-st hanya-layar">
+  <div class="kerja-foto-kepala-st">
+    <span class="material-symbols-outlined">photo_camera</span>
+    <b>Kerjakan di kertas? Kirim fotonya</b>
+  </div>
+  <p class="kerja-foto-sub-st">Foto lembar yang sudah kamu isi (boleh
+  tulisan tangan). Gurumu yang akan memeriksa — kamu tidak perlu
+  mengetik ulang.</p>
+  {kabar_foto_html}
+  {daftar_foto}
+  <form method="post" action="/murid/foto/{sesi_id}"
+        enctype="multipart/form-data" class="kerja-foto-form-st">
+    <input type="file" name="foto" accept="image/*" capture="environment">
+    <button type="submit" class="kerja-btn-sekunder-st">Kirim foto caraku</button>
+  </form>
+</div>"""
+
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1047,6 +1084,7 @@ def halaman_kerja_baru(
     <span class="material-symbols-outlined" style="font-size:1.1rem">print</span> Cetak / PDF</button>
   <a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a>
 </div>
+{blok_foto}
 <form method="post" action="/keluar" class="hanya-layar" style="margin-top:0.7rem"><button class="kerja-btn-sekunder-st" type="submit">Keluar</button></form>
 {jaga}{skrip}
 </div></body></html>"""

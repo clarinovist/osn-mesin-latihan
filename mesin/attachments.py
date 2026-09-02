@@ -186,7 +186,7 @@ def _ekstraksi_untuk(kon, sesi_id: int, isi: bytes) -> tuple[str, str]:
 
     total = len(database.isi_sesi(kon, sesi_id))
     b64 = base64.b64encode(isi).decode()
-    konteks = [b["teks"] for b in _soal_konteks(kon, sesi_id)]
+    konteks = _teks_konteks(kon, sesi_id)
     hasil = llm.ekstrak_lembar(konteks, b64)
     if hasil is None:
         return "", (
@@ -235,6 +235,66 @@ def baca_ulang(kon, lampiran_id: int) -> str:
         (hasil_json, lampiran_id),
     )
     return pesan
+
+
+def proses_upload_murid(
+    kon, sesi_id: int, content_type: str, tubuh: bytes
+) -> tuple[int | None, str]:
+    """Upload foto oleh ANAK dari halaman kerjanya (poin 1 & 4 Filia).
+
+    Sengaja BUKAN pintu yang sama dengan guru, walau menyimpan ke tabel yang
+    sama. Bedanya dua hal, dan keduanya disengaja:
+
+      1. Palang: tidak menyentuh kunci/malrule/diagnosis sama sekali —
+         ekstraksi memakai _teks_konteks (teks soal saja).
+      2. Pesan balik ke anak TIDAK menyebut berapa yang terbaca AI. Anak
+         tidak sedang dinilai saat mengunggah; angka "3 dari 50" adalah
+         informasi untuk guru yang mengoreksi, dan menampilkannya ke anak
+         mengundang tafsir "cuma 3 yang benar".
+
+    Jawaban TIDAK langsung masuk laporan: statusnya 'baru' dan guru tetap
+    yang menekan Terapkan di halaman konfirmasi. Jadi anak boleh salah
+    unggah tanpa merusak data.
+    """
+    m = re.search(r'boundary="?([^";]+)"?', content_type)
+    if not m:
+        return None, "Format upload tidak dikenal."
+    terurai = _parsing_multipart(tubuh, m.group(1))
+    if not terurai:
+        return None, "Tidak ada foto yang terkirim."
+    nama_asli, _mime_klaim, isi = terurai
+    if not isi:
+        return None, "Berkasnya kosong."
+    if len(isi) > BATAS_UKURAN:
+        return None, "Fotonya terlalu besar (maksimal 8 MB)."
+    mime = _mime_dari_isi(isi)
+    if mime is None:
+        return None, "Yang dikirim bukan foto (JPEG/PNG/WebP)."
+    if not database.isi_sesi(kon, sesi_id):
+        return None, "Sesi tidak ditemukan."
+
+    hasil_json, _pesan_guru = _ekstraksi_untuk(kon, sesi_id, isi)
+    nama = simpan_berkas(sesi_id, nama_asli, isi)
+    lid = database.simpan_lampiran(
+        kon, sesi_id, nama, mime=mime, hasil_json=hasil_json
+    )
+    return lid, (
+        "Foto caramu sudah terkirim ke gurumu. Kamu tidak perlu "
+        "mengetik ulang — gurumu yang akan memeriksanya."
+    )
+
+
+def _teks_konteks(kon, sesi_id: int) -> list[str]:
+    """Teks soal saja (urut nomor) — TANPA kunci, TANPA diagnosis.
+
+    Dipisah dari _soal_konteks karena jalur MURID juga memanggil ekstraksi:
+    halaman/aksi murid tidak boleh menyentuh kolom kunci sama sekali
+    (palang di test_murid.py meledak kalau tersentuh). AI memang hanya
+    butuh kalimat soalnya untuk memetakan jawaban ke nomor yang benar.
+    """
+    from teacher_pages import _soal_dari_baris  # late import: hindari siklus
+
+    return [_soal_dari_baris(b).teks for b in database.isi_sesi(kon, sesi_id)]
 
 
 def _soal_konteks(kon, sesi_id: int) -> list[dict]:

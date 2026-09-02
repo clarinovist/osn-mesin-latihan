@@ -494,6 +494,53 @@ tr.sorot-baru, div.sorot-baru {{
 }}
 .kerja-btn-sekunder-st:hover {{ background: {T.LATAR_ELEVASI}; }}
 
+/* Kirim foto cara pengerjaan (anak yang mengerjakan di kertas).
+   Sengaja terlihat sebagai jalur ALTERNATIF, bukan tombol utama: anak
+   yang mengerjakan online tidak boleh merasa wajib memfoto. */
+.kerja-foto-st {{
+  background: {T.LATAR_KARTU_MURID};
+  border: 1px dashed {T.AKSEN_MURID_UTAMA};
+  border-radius: {T.RADIUS_KARTU};
+  padding: {T.SP_4}; margin-top: {T.SP_4};
+}}
+.kerja-foto-kepala-st {{
+  display: flex; align-items: center; gap: {T.SP_2};
+  font-family: {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL};
+}}
+.kerja-foto-kepala-st .material-symbols-outlined {{
+  color: {T.AKSEN_MURID_UTAMA};
+}}
+.kerja-foto-sub-st {{
+  color: {T.TEKS_SUBTLE}; font-size: .9rem; margin: {T.SP_2} 0 {T.SP_3};
+}}
+.kerja-foto-kabar-st {{
+  background: {T.LATAR_TERSIMPAN}; border: 1px solid {T.BORDER_TERSIMPAN};
+  color: {T.TEKS_TERSIMPAN}; border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_2} {T.SP_3}; margin: 0 0 {T.SP_3}; font-size: .92rem;
+}}
+.kerja-foto-jumlah-st {{
+  color: {T.TEKS_SUBTLE}; font-size: .88rem; margin: 0 0 {T.SP_3};
+}}
+.kerja-foto-form-st {{
+  display: flex; flex-wrap: wrap; gap: {T.SP_3}; align-items: center;
+}}
+/* Input file bawaan browser punya lebar intrinsik besar (nama berkas +
+   tombol Choose File) dan TIDAK mengecil hanya dengan flex:1 — di HP 420px
+   ia mendorong tombol kirim keluar layar (terbukti lewat screenshot
+   headless). Paksa tiap anak jadi satu baris penuh: input dan tombol
+   bertumpuk, tidak ada yang terpotong. */
+.kerja-foto-form-st > * {{ flex: 1 0 100%; min-width: 0; max-width: 100%; }}
+.kerja-foto-form-st input[type=file] {{
+  font-size: .92rem; width: 100%;
+}}
+.kerja-foto-form-st button {{ width: 100%; justify-content: center; }}
+@media (min-width: 34rem) {{
+  /* Layar lebar: cukup ruang untuk sebaris. */
+  .kerja-foto-form-st > * {{ flex: 0 1 auto; }}
+  .kerja-foto-form-st input[type=file] {{ flex: 1 1 auto; }}
+  .kerja-foto-form-st button {{ width: auto; }}
+}}
+
 /* Drill: kartu "ringan" — tetap punya kartu utuh, hilangkan pill Caraku.
    Pakai kelas modifier .kerja-soal-st.drill untuk menandakan. */
 .kerja-soal-st.drill {{ padding-top: {T.SP_5}; }}
