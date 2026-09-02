@@ -492,6 +492,39 @@ def halaman_anak(
             "</form>"
         )
 
+    # Latihan gabungan (poin 4 tahap 2): guru memilih BEBERAPA topik saja,
+    # mis. "geometri datar + pengukuran" untuk anak yang lemah di dua itu.
+    # Berbeda dari topik "campuran" yang selalu memakai SEMUA topik.
+    centang_topik = "".join(
+        f'<label class="mode-opsi"><input type="checkbox" name="topik" '
+        f'value="{html.escape(t)}"> {html.escape(ambil(t).nama)}</label>'
+        for t in _topik_untuk_level(siswa["tingkat"])
+        if t != "campuran"      # campuran sudah = semua, tak perlu dicentang
+    )
+    strip_gabungan = (
+        ""
+        if admin
+        else (
+            '<form method="post" '
+            f'action="/sesi-gabungan/{siswa["id"]}" class="strip-sesi">'
+            '<div class="strip-kolom">'
+            "<label>Latihan gabungan — pilih beberapa topik</label>"
+            '<p class="sub">Centang dua topik atau lebih. Soalnya dicampur '
+            "bergantian antar-topik yang kamu pilih.</p>"
+            f'<div class="mode-pilih">{centang_topik}</div></div>'
+            '<div class="strip-kolom"><label>Jumlah Soal</label>'
+            '<select name="jumlah_soal" class="st-input">'
+            '<option value="10" selected>10 soal (± 30 mnt)</option>'
+            '<option value="15">15 soal (± 45 mnt)</option>'
+            '<option value="20">20 soal (± 60 mnt)</option>'
+            "</select></div>"
+            '<button type="submit" class="st-tombol-coral">'
+            '<span class="material-symbols-outlined" style="font-size:1.1rem">'
+            "library_add</span>Buat latihan gabungan</button>"
+            "</form>"
+        )
+    )
+
     kabar = (
         '<div class="st-banner-sukses"><span class="ikon">✓</span>'
         f"<span>{html.escape(pesan)}</span></div>"
@@ -511,6 +544,7 @@ def halaman_anak(
         f"{kabar}"
         f'<div class="daftar-anak">{item}</div>'
         f"{strip_remedial}"
+        f"{strip_gabungan}"
         f"{strip_sesi}"
         "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');"
         "for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\","

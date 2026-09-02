@@ -176,6 +176,75 @@ def ambil(topik_id: str) -> Topik:
         ) from None
 
 
+def gabungan(topik_ids) -> Topik:
+    """Paket sintetis dari BEBERAPA topik pilihan (poin 4 tahap 2).
+
+    Berbeda dari "campuran" yang selalu memakai SEMUA topik: di sini guru
+    memilih sebagian, misalnya "geometri datar + pengukuran" untuk anak
+    yang lemah di dua itu saja.
+
+    Sengaja TIDAK mendaftarkan apa pun ke PAKET: paket ini ad-hoc per
+    permintaan. Kalau didaftarkan, dropdown topik akan penuh paket
+    sekali-pakai dan dua permintaan berbeda bisa saling menimpa.
+
+    Satu topik (setelah duplikat dibuang) mengembalikan paket aslinya —
+    tidak ada gunanya membungkus ulang. Topik tak dikenal dilempar lewat
+    `ambil()`, bukan dilewati diam-diam: pilihan yang salah harus terlihat.
+    """
+    _pastikan_dimuat()
+    urut: list[str] = []
+    for tid in topik_ids:
+        if tid not in urut:
+            urut.append(tid)
+    if not urut:
+        raise ValueError("pilih minimal satu topik")
+    paket_terpilih = [ambil(t) for t in urut]  # tak dikenal -> KeyError
+    if len(paket_terpilih) == 1:
+        return paket_terpilih[0]
+
+    templates: dict[str, Any] = {}
+    pemilik_param: dict[str, Any] = {}
+    for t in paket_terpilih:
+        templates.update(t.templates)
+        if t.parameter_untuk:
+            for tid in t.templates:
+                pemilik_param[tid] = t.parameter_untuk
+
+    def parameter_gabungan(template_id: str, rng, level: str):
+        if template_id in pemilik_param:
+            return pemilik_param[template_id](template_id, rng, level)
+        raise KeyError(f"template {template_id} tidak punya pemilik parameter")
+
+    # Interleave antar-topik (pola yang sama dengan campuran): ambil
+    # template ke-i dari tiap topik bergantian, supaya satu topik tidak
+    # memborong bagian awal lembar.
+    komposisi: dict[str, tuple[str, ...]] = {}
+    for lvl in LEVEL:
+        punya = [t for t in paket_terpilih if lvl in t.komposisi]
+        if not punya:
+            continue
+        panjang = max(len(t.komposisi[lvl]) for t in punya)
+        deret: list[str] = []
+        for i in range(panjang):
+            for t in punya:
+                comp = t.komposisi[lvl]
+                if i < len(comp):
+                    deret.append(comp[i])
+        komposisi[lvl] = tuple(deret)
+
+    nama_pendek = " + ".join(t.nama for t in paket_terpilih)
+    return Topik(
+        id="gabungan:" + ",".join(urut),
+        nama=nama_pendek,
+        judul_lembar="Latihan Gabungan — " + nama_pendek,
+        judul_penilaian="Penilaian — " + nama_pendek,
+        templates=templates,
+        komposisi=komposisi,
+        profil={lvl: {} for lvl in komposisi},
+        parameter_untuk=parameter_gabungan,
+    )
+
+
 def daftar_topik() -> list[str]:
     _pastikan_dimuat()
     return sorted(PAKET)
@@ -192,6 +261,15 @@ def dari_sesi(nilai: str | None) -> Topik:
     _pastikan_dimuat()
     if nilai in PAKET:
         return PAKET[nilai]
+    # Sesi gabungan menyimpan "gabungan:a,b" — bangun ulang paketnya supaya
+    # halaman lembar/cetak sesi lama tetap menampilkan judul yang benar.
+    # Kalau salah satu topiknya sudah tidak ada, jatuh ke bawaan (kontrak
+    # fungsi ini: JANGAN pernah membuat halaman sesi lama gagal).
+    if isinstance(nilai, str) and nilai.startswith("gabungan:"):
+        try:
+            return gabungan([t for t in nilai[len("gabungan:"):].split(",") if t])
+        except (KeyError, ValueError):
+            return PAKET[TOPIK_BAWAAN]
     return PAKET[TOPIK_BAWAAN]
 
 

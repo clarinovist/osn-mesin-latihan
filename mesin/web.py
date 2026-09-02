@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html
 import os
+import random
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
 
@@ -994,6 +995,81 @@ class Penangan(BaseHTTPRequestHandler):
                         pengguna=ident[0] if ident else "",
                     )
                 )
+
+        if jalur.startswith("/sesi-gabungan/"):
+            # Latihan lintas BEBERAPA topik pilihan guru (poin 4 tahap 2).
+            if self._peran_saya() == "admin":
+                return self._tolak_admin()
+            try:
+                siswa_id = int(jalur.split("/")[2])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            data = urllib.parse.parse_qs(
+                self.rfile.read(panjang).decode("utf-8"),
+                keep_blank_values=True,
+            )
+            # Checkbox bernama sama -> parse_qs mengembalikan LIST.
+            dipilih = [t.strip() for t in data.get("topik", []) if t.strip()]
+            sah = set(daftar_topik())
+            asing = [t for t in dipilih if t not in sah]
+            if asing:
+                # Pilihan asing = salah ketik/manipulasi: ditolak jelas,
+                # bukan dilewati diam-diam (kontrak sama dengan /sesi-baru).
+                return self._kirim(
+                    _halaman(
+                        "Topik tidak dikenal",
+                        "<h1>Topik tidak dikenal</h1><p>"
+                        + ", ".join(html.escape(t) for t in asing)
+                        + " tidak terdaftar.</p>",
+                    ),
+                    400,
+                )
+            try:
+                jumlah = int((data.get("jumlah_soal") or ["10"])[0] or 10)
+            except ValueError:
+                jumlah = 10
+            if not 1 <= jumlah <= 50:
+                jumlah = 10
+
+            if len(dipilih) < 2:
+                qs = urllib.parse.urlencode({
+                    "pesan": "Pilih minimal DUA topik untuk latihan gabungan. "
+                             "Kalau hanya satu, pakai form buat sesi biasa.",
+                })
+                self.send_response(303)
+                self.send_header("Location", f"/anak/{siswa_id}?{qs}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+
+            with database.buka() as kon:
+                if not self._bisa_lihat_siswa(kon, siswa_id):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
+                baris = kon.execute(
+                    "SELECT nama, tingkat FROM siswa WHERE id = ?", (siswa_id,)
+                ).fetchone()
+                nama_siswa = baris["nama"] if baris else ""
+                sesi_id = database.buat_sesi_gabungan(
+                    kon, siswa_id,
+                    seed=random.randint(1, 9_999_999),
+                    topik_ids=dipilih,
+                    level=(baris["tingkat"] if baris else LEVEL_BAWAAN),
+                    jumlah_soal=jumlah,
+                )
+            qs = urllib.parse.urlencode({
+                "pesan": f"Latihan gabungan untuk {nama_siswa} dibuat — "
+                         f"sesi #{sesi_id}, {jumlah} soal dari "
+                         f"{len(dipilih)} topik.",
+                "sorot": sesi_id,
+            })
+            self.send_response(303)
+            self.send_header("Location", f"/anak/{siswa_id}?{qs}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
 
         if jalur.startswith("/sesi-remedial/"):
             # Latihan ulang (poin a feedback Filia): sesi berisi HANYA

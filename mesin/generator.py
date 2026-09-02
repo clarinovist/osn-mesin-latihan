@@ -94,11 +94,16 @@ def buat_lembar(
     seed: int,
     urutan: tuple[str, ...] | None = None,
     level: str = LEVEL_BAWAAN,
-    topik: str = TOPIK_BAWAAN,
+    topik: str | Topik = TOPIK_BAWAAN,
     jumlah_soal: int | None = None,
 ) -> Lembar:
-    """Bangun satu lembar penuh dari seed. Deterministik."""
-    paket = ambil(topik)
+    """Bangun satu lembar penuh dari seed. Deterministik.
+
+    `topik` boleh berupa id (str) ATAU objek Topik yang sudah dibangun —
+    yang kedua dipakai paket gabungan ad-hoc (topics.gabungan) yang
+    sengaja tidak terdaftar di registri global.
+    """
+    paket = topik if isinstance(topik, Topik) else ambil(topik)
     level_efektif = _level_efektif(paket, level)
     rng = random.Random(seed)
     if urutan is None:

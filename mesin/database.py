@@ -365,6 +365,44 @@ def buat_sesi_dari_urutan(
     return sesi_id
 
 
+def buat_sesi_gabungan(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    seed: int,
+    topik_ids: list[str],
+    level: str = LEVEL_BAWAAN,
+    mode: str = "diagnostik",
+    jumlah_soal: int | None = None,
+) -> int:
+    """Sesi lintas BEBERAPA topik pilihan guru (poin 4 tahap 2).
+
+    Kolom `sesi.topik` menyimpan id gabungan ("gabungan:a,b") sehingga
+    sesi lama tetap bisa dibaca: `topics.dari_sesi` mengurainya kembali.
+    Soalnya sendiri sudah tersimpan baris-per-baris di tabel soal, jadi
+    replay tidak bergantung pada paket ad-hoc ini.
+    """
+    from topics import gabungan
+
+    paket = gabungan(topik_ids)
+    lembar = buat_lembar(
+        seed, level=level, topik=paket, jumlah_soal=jumlah_soal
+    )
+    cur = kon.execute(
+        """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                             timer_mode, durasi_menit, timer_auto)
+           VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0)""",
+        (siswa_id, seed, paket.id, lembar.level, mode),
+    )
+    sesi_id = int(cur.lastrowid)
+    for nomor, soal in enumerate(lembar.soal, start=1):
+        soal_id = simpan_soal(kon, soal)
+        kon.execute(
+            "INSERT INTO sesi_soal (sesi_id, soal_id, nomor) VALUES (?, ?, ?)",
+            (sesi_id, soal_id, nomor),
+        )
+    return sesi_id
+
+
 def sasaran_remedial(
     kon: sqlite3.Connection, siswa_id: int, batas: int = 6
 ) -> list[str]:
