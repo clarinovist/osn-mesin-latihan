@@ -177,9 +177,11 @@ def sudut_pelurus_berpenyiku(varian: str, x: int | None = None, kali: int | None
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            "Langkah: dua sudut berpelurus jumlahnya 180 derajat, "
+            "berpenyiku 90 derajat. "
+            + (f"180 - {x} = {kunci}." if varian in ("pelurus", "balik_pelurus")
+               else f"90 - {x} = {kunci}." if varian in ("penyiku", "balik_penyiku")
+               else f"180 dibagi ({kali} + 1) bagian = {kunci}.")
         ),
         bagian="A",
     )
@@ -258,9 +260,9 @@ def jumlah_sudut_segitiga(
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            "Langkah: jumlah sudut dalam segitiga = 180 derajat. "
+            + (f"180 - {a} - {b} = {kunci}." if varian == "dua_sudut"
+               else f"Perbandingan dibagi rata: 180 x {p} : {total} = {kunci}.")
         ),
         bagian="A",
     )
@@ -306,9 +308,8 @@ def sudut_luar_segitiga(a: int, b: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: sudut luar = jumlah dua sudut dalam yang jauh. "
+            f"{a} + {b} = {kunci}."
         ),
         bagian="A",
     )
@@ -350,6 +351,9 @@ def keliling_luas_datar(
             f"Berapa kelilingnya?"
         )
         param = {"varian": varian, "p": p, "l": l}
+        langkah = (
+            f"Keliling = 2 x (panjang + lebar) = 2 x ({p} + {l}) = {kunci}."
+        )
     else:
         kunci = p * (K // 2 - p)
         mal = [
@@ -377,6 +381,11 @@ def keliling_luas_datar(
             f"Berapa luas persegi panjang itu?"
         )
         param = {"varian": varian, "p": p, "K": K}
+        langkah = (
+            f"Keliling : 2 = panjang + lebar, jadi {K} : 2 = {K // 2}. "
+            f"Lebar = {K // 2} - {p} = {K // 2 - p}. "
+            f"Luas = {p} x {K // 2 - p} = {kunci}."
+        )
     return Soal(
         "keliling_luas_datar",
         param,
@@ -384,11 +393,7 @@ def keliling_luas_datar(
         str(kunci),
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
-        pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
-        ),
+        pembahasan="Langkah: " + langkah,
         bagian="B",
     )
 
@@ -461,9 +466,10 @@ def luas_segitiga_jajargenjang(varian: str, a: int, t: int, s: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: "
+            + (f"Luas segitiga = alas x tinggi : 2 = {a} x {t} : 2 = {kunci}."
+               if varian == "segitiga"
+               else f"Luas jajargenjang = alas x tinggi = {a} x {t} = {kunci}.")
         ),
         bagian="B",
     )
@@ -567,9 +573,15 @@ def luas_segiempat_lain(varian: str, **nilai: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            "Langkah: "
+            + (f"Luas trapesium = (jumlah sisi sejajar) x tinggi : 2 = "
+               f"({nilai['a']} + {nilai['b']}) x {nilai['t']} : 2 = {kunci}."
+               if varian == "trapesium"
+               else f"Luas belah ketupat/layang = diagonal x diagonal : 2 = "
+                    f"{nilai['d1']} x {nilai['d2']} : 2 = {kunci}."
+               if varian == "ketupat_layang"
+               else f"Dari luas, diagonal lain = 2 x luas : diagonal diketahui = "
+                    f"2 x {nilai['L']} : {nilai['d1']} = {kunci}.")
         ),
         bagian="B",
     )
@@ -592,6 +604,7 @@ def lingkaran_keliling_luas(varian: str, r: int) -> Soal:
         pi_val = 22 / 7
     else:
         pi_val = 3.14
+    pi_teks = "22/7" if r % 7 == 0 else "3,14"
 
     if varian == "keliling":
         kunci = fmt(2 * pi_val * r)
@@ -655,9 +668,10 @@ def lingkaran_keliling_luas(varian: str, r: int) -> Soal:
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            "Langkah: "
+            + (f"Keliling = 2 x pi x r = 2 x {pi_teks} x {r} = {kunci}."
+               if varian == "keliling"
+               else f"Luas = pi x r x r = {pi_teks} x {r} x {r} = {kunci}.")
         ),
         bagian="C",
     )
@@ -741,9 +755,10 @@ def juring(varian: str, s: int, r: int) -> Soal:
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: juring {s} derajat = {s}/360 bagian lingkaran. "
+            + (f"Luas = {s}/360 x pi x {r} x {r} = {kunci}."
+               if varian == "luas_juring"
+               else f"Keliling juring = busur + 2 x {r} = {kunci}.")
         ),
         bagian="C",
     )
@@ -831,9 +846,8 @@ def luas_arsiran(varian: str, **nilai: int) -> Soal:
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            "Langkah: luas yang diarsir = luas seluruhnya dikurangi luas "
+            "bagian yang tidak diarsir. Hasilnya " + str(kunci) + "."
         ),
         bagian="D",
     )
@@ -932,9 +946,12 @@ def perbandingan_ukuran(varian: str, k: int, ukuran: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: ukuran diperbesar {k} kali. "
+            + (f"Keliling ikut {k} kali: {ukuran} x {k} = {kunci}."
+               if varian == "keliling"
+               else f"Luas jadi {k} x {k} kali: {ukuran} x {k * k} = {kunci}."
+               if varian == "luas"
+               else f"Volume jadi {k} x {k} x {k} kali: {ukuran} x {k*k*k} = {kunci}.")
         ),
         bagian="D",
     )
@@ -998,9 +1015,7 @@ def luas_kotak_satuan(p: int, l: int, satuan: str = "cm", konteks: str = "kotak"
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: Luas = panjang x lebar = {p} x {l} = {kunci}."
         ),
         bagian="E",
     )
@@ -1150,9 +1165,8 @@ def simetri_bangun(
         str(kunci),
         saring_malrule(str(kunci), mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: sumbu simetri = garis yang membelah bangun jadi dua "
+            f"bagian yang persis sama. Bangun ini punya {kunci}."
         ),
         bagian="E",
     )

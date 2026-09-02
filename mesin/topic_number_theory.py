@@ -74,9 +74,8 @@ def keterbagian(d: int, a: int, b: int, c: int, jawab: int) -> Soal:
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: bilangan habis dibagi {d} kalau memenuhi ciri "
+            f"pembagi {d}. Yang memenuhi = {kunci}."
         ),
         bagian="A",
     )
@@ -137,9 +136,8 @@ def prima_faktorisasi(n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: pecah {n} jadi perkalian bilangan prima, lalu banyak "
+            f"faktor = hasil kali (pangkat + 1) tiap prima = {kunci}."
         ),
         bagian="B",
     )
@@ -177,9 +175,8 @@ def kpk_dua_bilangan(a: int, b: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: KPK = (a x b) : FPB. "
+            f"({a} x {b}) : {math.gcd(a, b)} = {kunci}."
         ),
         bagian="B",
     )
@@ -220,9 +217,8 @@ def fpb_kpk_hubungan(a: int, b: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: FPB x KPK = hasil kali kedua bilangan. "
+            f"{a} x {b} = {kunci}."
         ),
         bagian="B",
     )
@@ -266,9 +262,8 @@ def sisa_pembagian(N: int, d: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: {N} : {d} = {N // d} sisa {kunci}. "
+            f"Yang diminta SISAnya, yaitu {kunci}."
         ),
         bagian="C",
     )
@@ -317,9 +312,8 @@ def paritas(a: int, n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: {n} bilangan berurutan mulai {a}. "
+            f"Jumlah = {n} x ({a} + {a + n - 1}) : 2 = {kunci}."
         ),
         bagian="C",
     )
@@ -367,9 +361,8 @@ def angka_satuan_pangkat(a: int, b: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: digit satuan {a} pangkat berulang dalam siklus. "
+            f"Cari sisa {b} dibagi panjang siklusnya, hasilnya {kunci}."
         ),
         bagian="D",
     )
@@ -407,9 +400,8 @@ def gauss_deret(n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: 1 + 2 + ... + n = n x (n+1) : 2. "
+            f"{n} x {n + 1} : 2 = {kunci}."
         ),
         bagian="D",
     )

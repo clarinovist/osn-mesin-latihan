@@ -54,9 +54,8 @@ def aturan_tambah(m: int, n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: memilih SATU dari kelompok ini ATAU itu -> DITAMBAH. "
+            f"Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -98,9 +97,8 @@ def aturan_kali(m: int, n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: memilih satu ini DAN satu itu -> DIKALI. "
+            f"Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -215,9 +213,8 @@ def susun_bilangan(varian: str, angka: tuple[int, ...]) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: hitung pilihan tiap digit lalu kalikan. Kalau digit "
+            f"depan tidak boleh 0, pilihannya berkurang satu. Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -304,9 +301,8 @@ def susun_bilangan_syarat(varian: str, angka: tuple[int, ...], N: int | None = N
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: penuhi syaratnya dulu (digit terakhir/awal), "
+            f"baru hitung sisa digitnya lalu kalikan. Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -352,9 +348,8 @@ def permutasi_urutan(n: int, r: int, objek: list[str]) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: URUTAN penting, jadi pakai permutasi: "
+            f"kalikan pilihan yang tersisa tiap posisi. Hasilnya {kunci}."
         ),
         bagian="C",
     )
@@ -401,9 +396,8 @@ def permutasi_blok(n: int, k: int, objek: list[str]) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: yang harus berdampingan dianggap SATU blok dulu, "
+            f"lalu kalikan dengan susunan di dalam blok. Hasilnya {kunci}."
         ),
         bagian="C",
     )
@@ -446,9 +440,8 @@ def kombinasi_pilih(n: int, r: int, objek: list[str]) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: urutan TIDAK penting, jadi kombinasi: "
+            f"permutasi dibagi banyaknya susunan yang sama. Hasilnya {kunci}."
         ),
         bagian="C",
     )
@@ -493,9 +486,8 @@ def jabat_tangan(n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: tiap dua orang berjabat sekali = n x (n-1) : 2. "
+            f"Hasilnya {kunci}."
         ),
         bagian="D",
     )
@@ -537,9 +529,8 @@ def jalur_petak(b: int, k: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: tulis angka di tiap titik = jumlah angka dari kiri "
+            f"dan dari atas; angka di pojok tujuan = {kunci}."
         ),
         bagian="D",
     )
@@ -583,9 +574,8 @@ def sarang_merpati(n: int, m: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: bagi rata dulu, sisanya dibagikan satu-satu. "
+            f"Yang terbanyak pasti = {kunci}."
         ),
         bagian="D",
     )
@@ -627,9 +617,8 @@ def inklusi_eksklusi_2(a: int, b: int, c: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: yang suka setidaknya satu = A + B - keduanya. "
+            f"Hasilnya {kunci}."
         ),
         bagian="D",
     )

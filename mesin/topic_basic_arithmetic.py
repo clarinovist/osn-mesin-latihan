@@ -117,9 +117,9 @@ def urutan_operasi_1(a: int, b: int, c: int, d: int, e: int) -> Soal:
         saring_malrule(str(jawab), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: kerjakan kali/bagi DULU, baru tambah/kurang. "
+            f"{b} : {c} = {b // c}, lalu x {d} = {b // c * d}. "
+            f"{a} + {b // c * d} - {e} = {jawab}."
         ),
         bagian="A",
     )
@@ -157,9 +157,8 @@ def fpb_dua_bilangan(a: int, b: int) -> Soal:
         saring_malrule(str(jawab), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: FPB = bilangan TERBESAR yang membagi habis {a} dan {b}, "
+            f"yaitu {jawab}. (KPK-nya {kpk} — jangan tertukar.)"
         ),
         bagian="B",
     )
@@ -204,9 +203,9 @@ def pecahan_operasi_campuran(
         saring_malrule(_teks_pecahan(hasil), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(hasil)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: samakan penyebut dulu (KPK dari {d1}, {d2}, {d3}), "
+            f"baru jumlah/kurangkan pembilangnya. Hasilnya "
+            + _teks_pecahan(hasil) + "."
         ),
         bagian="C",
         tantangan=True,

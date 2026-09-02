@@ -74,9 +74,9 @@ def benar_salah_pengandaian(
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: dari \"setiap A adalah B\", yang PASTI benar hanya "
+            f"tidak ada A yang bukan B. Kebalikannya belum tentu benar. "
+            f"Jawabannya {kunci}."
         ),
         bagian="A",
     )
@@ -168,9 +168,8 @@ def tabel_penalaran(urutan: list[str], tanya: str) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: tulis urutannya jadi satu baris dari yang paling "
+            f"besar ke paling kecil, baru jawab pertanyaannya: {kunci}."
         ),
         bagian="A",
     )
@@ -216,9 +215,8 @@ def jumlah_selisih(jumlah: int, selisih: int, tanya: str) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: bilangan besar = (jumlah + selisih) : 2, "
+            f"bilangan kecil = (jumlah - selisih) : 2. Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -263,9 +261,8 @@ def soal_umur(a: int, b: int, k: int, n: int, tanya: str) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: selisih umur SELALU tetap. Pakai selisih itu untuk "
+            f"mencari kapan syaratnya terpenuhi. Jawabannya {kunci}."
         ),
         bagian="B",
     )
@@ -310,9 +307,8 @@ def soal_uang(total: int, k: int, tanya: str) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: nyatakan yang satu sebagai kelipatan yang lain, "
+            f"jumlahkan bagiannya, lalu bagi. Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -357,9 +353,8 @@ def dua_besaran_selisih(selisih: int, k: int, tanya: str) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: pakai jumlah dan selisihnya untuk memisahkan dua "
+            f"besaran itu, lalu jawab yang diminta: {kunci}."
         ),
         bagian="B",
     )

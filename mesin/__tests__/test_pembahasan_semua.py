@@ -89,3 +89,36 @@ def test_pembahasan_bukan_kunci_mentah(topik_id):
         assert pb.strip() != soal.kunci.strip(), (
             f"{topik_id}/{template_id}: pembahasan = kunci mentah"
         )
+
+
+def test_pembahasan_tidak_generik():
+    """Pembahasan harus MENJELASKAN caranya, bukan mengulang jawabannya.
+
+    Bentuk lama "Langkah: jawaban benar = X. Cocokkan dengan caramu
+    sendiri, ya." tidak mengajari apa pun — anak yang salah tetap tidak
+    tahu langkahnya. Sejak halaman hasil anak dibuka (poin b feedback
+    Filia), pembahasan wajib memuat langkah/rumusnya.
+    """
+    import random
+
+    from templates import REGISTRI
+
+    pelanggar = []
+    for topik_id in SEMUA_TOPIK:
+        paket = topics.ambil(topik_id)
+        for level in LEVEL:
+            for template_id in sorted(set(paket.komposisi.get(level, ()))):
+                rng = random.Random(abs(hash((topik_id, template_id))) % 99991)
+                param = (
+                    paket.parameter_untuk(template_id, rng, level)
+                    if paket.parameter_untuk else {}
+                )
+                if not param:
+                    continue
+                pb = getattr(REGISTRI[template_id](**param), "pembahasan", "")
+                if "Cocokkan dengan caramu" in pb:
+                    pelanggar.append((topik_id, template_id))
+    assert not pelanggar, (
+        f"{len(set(pelanggar))} template masih memakai pembahasan generik: "
+        f"{sorted(set(pelanggar))[:6]}"
+    )

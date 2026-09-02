@@ -65,9 +65,8 @@ def satuan_konversi(varian: str, nilai: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: turun satu tangga satuan DIKALI 10, naik DIBAGI 10. "
+            f"Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -108,9 +107,8 @@ def kecepatan_jarak_waktu(varian: str, s: int, t: int, v: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: jarak = kecepatan x waktu; kecepatan = jarak : waktu; "
+            f"waktu = jarak : kecepatan. Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -137,9 +135,8 @@ def berpapasan(jarak: int, v1: int, v2: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: berlawanan arah, kecepatan DIJUMLAH. "
+            f"Waktu = jarak : jumlah kecepatan = {kunci}."
         ),
         bagian="A",
     )
@@ -174,9 +171,8 @@ def menyusul(jarak: int, v1: int, v2: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: searah, kecepatan DIKURANG. "
+            f"Waktu = selisih jarak : selisih kecepatan = {kunci}."
         ),
         bagian="A",
     )
@@ -211,9 +207,8 @@ def debit(varian: str, volume: int, waktu: int, d: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: debit = volume : waktu, jadi volume = debit x waktu "
+            f"dan waktu = volume : debit. Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -243,9 +238,8 @@ def perbandingan_senilai(p: int, q: int, n: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: perbandingan SENILAI - kalau satu naik, yang lain "
+            f"ikut naik. Kalikan silang lalu bagi. Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -275,9 +269,8 @@ def perbandingan_berbalik(a1: int, b1: int, a2: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: perbandingan BERBALIK nilai - kalau satu naik, yang "
+            f"lain turun. Kalikan lurus lalu bagi. Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -303,9 +296,8 @@ def kerja_bersama(a: int, b: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: ubah ke bagian per jam (1/a + 1/b), lalu waktu "
+            f"bersama = 1 dibagi hasilnya = {kunci}."
         ),
         bagian="C",
     )
@@ -332,9 +324,8 @@ def persen_diskon(harga: int, d: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: setelah diskon x%, harga tinggal (100 - x)% dari "
+            f"harga awal. Hasilnya {kunci}."
         ),
         bagian="D",
     )
@@ -362,9 +353,8 @@ def persen_untung_rugi(jenis: str, modal: int, persen: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: untung/rugi dihitung dari harga BELI. "
+            f"Harga jual = harga beli +/- (persen x harga beli) = {kunci}."
         ),
         bagian="D",
     )
@@ -390,9 +380,8 @@ def persen_bertingkat(harga: int, d1: int, d2: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: diskon bertingkat dihitung BERURUTAN, bukan dijumlah. "
+            f"Diskon kedua dikenakan pada harga setelah diskon pertama = {kunci}."
         ),
         bagian="D",
     )

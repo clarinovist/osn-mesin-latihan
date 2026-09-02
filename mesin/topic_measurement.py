@@ -62,9 +62,9 @@ def skala_peta(varian: str, sebenarnya: int, peta: int, skala: int) -> Soal:
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: skala 1 : n berarti 1 cm di peta = n cm sebenarnya. "
+            f"Jarak peta {peta} cm, skala 1:{skala}, jarak sebenarnya "
+            f"{sebenarnya} cm. Yang diminta: {kunci}."
         ),
         bagian="A",
     )
@@ -116,9 +116,8 @@ def satuan_waktu_lama(varian: str, nilai: int, hasil: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: ingat 1 windu = 8 tahun, 1 dasawarsa = 10 tahun, "
+            f"1 abad = 100 tahun. Hasil konversinya {kunci}."
         ),
         bagian="B",
     )
@@ -184,9 +183,8 @@ def jam_menit_detik(varian: str, jam: int, menit: int, detik: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: 1 jam = 60 menit, 1 menit = 60 detik, "
+            f"1 jam = 3600 detik. Hasilnya {kunci}."
         ),
         bagian="B",
     )

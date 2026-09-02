@@ -123,9 +123,9 @@ def unsur_bangun(bangun: str, tanya: str, n: int = 1) -> Soal:
             kunci,
             saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: kubus/balok punya 6 sisi, 12 rusuk, 8 titik sudut; "
+            f"limas segiempat 5 sisi, 8 rusuk, 5 titik sudut. "
+            f"Jawabannya {kunci}."
         ),
             bagian="A",
         )
@@ -167,9 +167,8 @@ def unsur_bangun(bangun: str, tanya: str, n: int = 1) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: hitung nilai dasarnya dulu, lalu kalikan sebanyak "
+            f"yang diminta soal. Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -219,9 +218,8 @@ def volume_kubus_balok(varian: str, s: int = 0, p: int = 0,
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: volume kubus = rusuk x rusuk x rusuk; "
+            f"volume balok = panjang x lebar x tinggi. Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -294,9 +292,8 @@ def volume_prisma_tabung(varian: str, a: int = 0, t_segitiga: int = 0,
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: volume prisma = luas alas x tinggi; "
+            f"volume tabung = pi x r x r x tinggi. Hasilnya {kunci}."
         ),
         bagian="A",
     )
@@ -382,9 +379,9 @@ def luas_permukaan(varian: str, s: int = 0,
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: LP kubus = 6 x rusuk x rusuk; "
+            f"LP balok = 2 x (pl + pt + lt); "
+            f"LP tabung = 2 x pi x r x (r + tinggi). Hasilnya {kunci}."
         ),
         bagian="B",
     )
@@ -447,9 +444,8 @@ def jaring_jaring(pilihan_benar: int, urutan: tuple[int, ...]) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: jaring-jaring kubus yang sah punya 6 persegi dan "
+            f"tidak ada sisi yang bertumpuk saat dilipat. Jawabannya {kunci}."
         ),
         bagian="B",
     )
@@ -503,9 +499,8 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
             kunci,
             saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: kubus besar dipotong; yang di POJOK kena cat 3 sisi, "
+            f"di RUSUK 2 sisi, di TENGAH sisi 1, di dalam 0. Jawabannya {kunci}."
         ),
             bagian="C",
         )
@@ -556,9 +551,8 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: hitung nilai dasarnya dulu, lalu kalikan sebanyak "
+            f"yang diminta soal. Hasilnya {kunci}."
         ),
         bagian="C",
     )
@@ -612,9 +606,8 @@ def perbandingan_volume(varian: str, k: int, s: int = 0,
         saring_malrule(kunci, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: kalau rusuk diperbesar k kali, volumenya jadi "
+            f"k x k x k kali. Hasilnya {kunci}."
         ),
         bagian="C",
     )

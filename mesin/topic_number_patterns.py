@@ -74,9 +74,9 @@ def deret_aritmetika(awal: int, beda: int, n_tampil: int, n_minta: int) -> Soal:
         kunci,
         saring_malrule(kunci, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(kunci)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: beda tiap suku = {beda}. "
+            f"Dari suku terakhir {terakhir}, tambah {beda} berulang: "
+            + str(kunci) + "."
         ),
         bagian="A",
     )
@@ -115,9 +115,8 @@ def deret_aritmetika_turun(awal: int, beda: int, n_tampil: int) -> Soal:
         str(jawab),
         saring_malrule(str(jawab), list(mal)),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: tiap suku BERKURANG {beda}. "
+            f"Dari suku terakhir {urut[-1]}: {urut[-1]} - {beda} = {jawab}."
         ),
         bagian="A",
     )
@@ -151,9 +150,8 @@ def deret_geometri(awal: int, rasio: int, n_tampil: int) -> Soal:
         str(jawab),
         saring_malrule(str(jawab), list(mal)),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: tiap suku DIKALI {rasio}. "
+            f"Dari suku terakhir {urut[-1]}: {urut[-1]} x {rasio} = {jawab}."
         ),
         bagian="A",
     )
@@ -205,9 +203,9 @@ def deret_bertingkat(awal: int, beda_awal: int, kenaikan: int, n_tampil: int) ->
         str(jawab),
         saring_malrule(str(jawab), list(mal)),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: selisihnya tidak tetap, tiap kali bertambah {kenaikan}. "
+            f"Selisih terakhir {selisih_terakhir} + {kenaikan} = {selisih_terakhir + kenaikan}, "
+            f"lalu {terakhir} + {selisih_terakhir + kenaikan} = {jawab}."
         ),
         bagian="A",
     )
@@ -322,9 +320,9 @@ def siklus_huruf(pola: list[str] | tuple[str, ...], posisi: int) -> Soal:
         saring_malrule(jawab, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: satu putaran ada {len(pola)} huruf. "
+            f"{posisi} : {len(pola)} = {posisi // len(pola)} sisa {sisa}. "
+            f"Sisa itu menunjuk huruf ke-{sisa if sisa else len(pola)}, yaitu {jawab}."
         ),
         bagian="B",
     )
@@ -400,9 +398,9 @@ def siklus_warna(pola: tuple[str, ...], posisi: int) -> Soal:
         jawab,
         saring_malrule(jawab, mal),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: satu putaran ada {len(pola)} manik. "
+            f"{posisi} : {len(pola)} = {posisi // len(pola)} sisa {sisa}. "
+            f"Sisa itu menunjuk manik ke-{sisa if sisa else len(pola)}, yaitu {jawab}."
         ),
         bagian="B",
     )
@@ -451,9 +449,9 @@ def korek_api(awal: int, tambah: int, gambar_ke: int) -> Soal:
         saring_malrule(str(jawab), list(mal)),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: gambar 1 butuh {awal} batang, tiap gambar berikutnya "
+            f"tambah {tambah}. Gambar ke-{gambar_ke}: {awal} + {tambah} x "
+            f"{gambar_ke - 1} = {jawab}."
         ),
         bagian="C",
     )
@@ -501,9 +499,8 @@ def titik_segitiga(gambar_ke: int) -> Soal:
         saring_malrule(str(jawab), list(mal)),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: banyak titik gambar ke-n = n x (n+1) : 2. "
+            f"Gambar ke-{gambar_ke}: {gambar_ke} x {gambar_ke + 1} : 2 = {jawab}."
         ),
         bagian="C",
     )
@@ -552,8 +549,7 @@ def deret_terbalik_aritmetika(awal: int, beda: int, posisi_target: int) -> Soal:
         minta_restatement=True,
         pembahasan=(
             f"Langkah: jawaban benar = {posisi_target}. "
-            "Cara: posisi = (target − awal) ÷ beda + 1. "
-            "Cocokkan dengan caramu sendiri, ya."
+            "Cara: posisi = (target - awal) : beda + 1."
         ),
         bagian="D",
     )
@@ -622,8 +618,8 @@ def deret_terbalik_geometri(awal: int, rasio: int, posisi_target: int) -> Soal:
         minta_restatement=True,
         pembahasan=(
             f"Langkah: jawaban benar = {posisi_target}. "
-            "Cara: posisi = 1 + banyaknya penggandaan rasio dari awal "
-            "sampai target. Cocokkan dengan caramu sendiri, ya."
+            "Cara: hitung berapa kali awal dikali rasio sampai mencapai "
+            "target, lalu tambah 1."
         ),
         bagian="D",
     )
@@ -667,9 +663,8 @@ def siklus_hari(hari_awal: str, tambah: int) -> Soal:
         saring_malrule(jawab, list(mal)),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: satu minggu 7 hari. {tambah} : 7 = {tambah // 7} "
+            f"sisa {tambah % 7}. Maju {tambah % 7} hari dari {hari_awal} = {jawab}."
         ),
         bagian="E",
     )
@@ -716,9 +711,9 @@ def jumlah_siklus(pola: tuple[int, ...], n_angka: int) -> Soal:
         saring_malrule(str(jawab), list(mal)),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: satu putaran {n} angka berjumlah {sum(pola)}. "
+            f"{n_angka} : {n} = {penuh} putaran penuh sisa {sisa} angka. "
+            f"{penuh} x {sum(pola)} + {sum(pola[:sisa])} = {jawab}."
         ),
         bagian="E",
         tantangan=True,
@@ -784,9 +779,8 @@ def suku_ke_n(awal: int, beda: int, posisi: int) -> Soal:
         saring_malrule(str(jawab), list(mal)),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: suku ke-n = awal + beda x (n - 1). "
+            f"{awal} + {beda} x ({posisi} - 1) = {jawab}."
         ),
         bagian="F",
     )
@@ -889,9 +883,8 @@ def sisa_bagi_siklus(pola: tuple[str, ...], posisi: int) -> Soal:
         saring_malrule(jawab, mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: satu putaran {n} huruf. {posisi} : {n} sisa {sisa}. "
+            f"Sisa itu menunjuk huruf ke-{sisa if sisa else n}, yaitu {jawab}."
         ),
         bagian="F",
     )
@@ -962,9 +955,9 @@ def pola_pecahan(pembilang: int, penyebut: int, beda_pembilang: int, n_tampil: i
         jawab,
         saring_malrule(jawab, list(mal)),
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: penyebutnya TETAP {penyebut}, yang berpola hanya "
+            f"pembilangnya (tambah {beda_pembilang}). Pembilang berikutnya "
+            f"{jawab_pemb}, jadi jawabannya {jawab}."
         ),
         bagian="F",
     )
@@ -1022,9 +1015,8 @@ def jumlah_deret(awal: int, beda: int, n: int) -> Soal:
         saring_malrule(str(jawab), list(mal)),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: jawaban benar = "
-            + str(jawab)
-            + ". Cocokkan dengan caramu sendiri, ya."
+            f"Langkah: jumlah n suku = (suku pertama + suku terakhir) x n : 2. "
+            f"({awal} + {terakhir}) x {n} : 2 = {jawab}."
         ),
         bagian="F",
         tantangan=True,
