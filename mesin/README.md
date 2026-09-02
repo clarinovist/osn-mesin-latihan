@@ -343,6 +343,7 @@ per paket**:
 | geometri-datar | objek nyata seukuran cm | P4 11→39, P5 21→60, P6 21→63 |
 | aritmetika-dasar | **tambah jenis soal**, bukan latar | 3→7 jenis, 3→11 bentuk |
 | teori-bilangan | latar untuk KPK **saja** | P5/P6 7→11 |
+| pengukuran | **tambah jenis soal**, bukan latar | 3→7 jenis; P4 18→67, P5 21→146, P6 21→147 |
 
 `_putar()` naik jadi `templates.putar` karena dipakai bersama; kontrak
 lengkapnya (deterministik atas parameter, bukan `hash()`, tanpa parameter
@@ -362,19 +363,43 @@ angkanya, jadi ambang 25 berarti 25 template untuk satu paket P5/P6.
 Untuk aritmetika-dasar yang dikunci adalah **berapa jenis soal yang
 dilatih** (≥7) — metrik yang benar untuk paket seperti itu.
 
-Sisa di bawah ambang 25: 8 dari 29 kombinasi topik×level (dari 13).
+Sisa di bawah ambang 25: 5 dari 29 kombinasi topik×level (dari 13).
+
+**Pengukuran (2 Sep 2026).** Paket terakhir yang tercatat sebagai batas
+yang diketahui. Obatnya menambah jenis soal, karena akar masalahnya bukan
+kalimat mati — ketiga template lama sudah punya 3, 10, dan 8 varian —
+melainkan paketnya cuma punya TIGA template dan dua di antaranya
+sama-sama konversi waktu. Empat jenis baru dipilih karena masing-masing
+membawa **jalur diagnosis yang belum ada**, bukan sekadar kalimat baru:
+
+| jenis | miskonsepsi yang jadi bisa dibaca |
+|---|---|
+| `satuan_kuantitas` | lusin/kodi/gros/rim tertukar isinya (kodi dihitung 12) |
+| `tangga_satuan_campuran` | satu faktor dipakai untuk semua suku |
+| `satuan_luas_volume` | faktor 10 dipakai di satuan luas (harusnya 100/1.000) |
+| `jam_selesai` | menit dijumlahkan melewati 60 tanpa menaikkan jam |
+
+Tiga cacat ketahuan hanya dengan MEMBACA keluaran nyatanya, bukan dari
+test yang lolos: `satuan_luas_volume` jarak 1 tangga kehilangan jalur H
+(malrule "satu tangga kurang" = kunci); `satuan_kuantitas` angka kecil
+kehilangan H juga (24 buah → 2 lusin: K dan H sama-sama 1); dan malrule
+"arah terbalik" pada kuantitas menghasilkan angka seperti 1.250.000 yang
+tidak akan ditulis anak mana pun — diganti "menyalin angka soal apa
+adanya". Ketiganya diperbaiki di sumber parameternya dan dikunci test.
 
 
 ## Batas yang diketahui
 
-- **Empat paket masih di bawah ambang variasi, dan itu disengaja**
+- **Tiga paket masih di bawah ambang variasi, dan itu disengaja**
   (gelombang 2, 2 Sep 2026). `teori-bilangan` P4 tetap 4 bentuk kalimat
   karena ketiga templatenya (keterbagian, sisa pembagian, paritas)
   hitung murni — memberi cerita akan mengaburkan konsep yang sedang
   diuji. `aritmetika-dasar` berhenti di 11 karena metriknya menabrak
-  langit-langit struktural (lihat "Melawan monoton"). `pengukuran` (P4
-  18, P5/P6 21) belum dikerjakan. Perbaikan yang benar untuk semuanya
-  **menambah jenis soal**, bukan menambah latar — pekerjaan tersendiri.
+  langit-langit struktural (lihat "Melawan monoton"). `pengukuran` SUDAH
+  dikerjakan (2 Sep 2026): empat jenis soal baru membawanya dari 18/21/21
+  ke 67/146/147, jadi paket ini tidak lagi jadi batas. Perbaikan yang
+  benar untuk dua sisanya **menambah jenis soal**, bukan menambah latar —
+  pekerjaan tersendiri.
   Angka-angka itu dikunci test supaya tidak diam-diam turun, dan
   `test_latar_teori_bilangan.py` juga akan MENOLAK kalau seseorang
   membungkus template hitung murni dengan cerita demi menaikkan metrik.
