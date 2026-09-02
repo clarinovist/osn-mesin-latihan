@@ -388,3 +388,77 @@ def test_kelompok_penerapan_sweep_tanpa_malrule_kosong(template_id, level):
         assert {"K", "H"} <= {m.kode for m in s.malrule}, (
             f"{template_id}@{level}/{seed}"
         )
+
+
+# ── Latar cerita berputar (2 Sep 2026) ─────────────────────────────────
+
+
+def test_latar_berputar_menambah_bentuk_kalimat_p5():
+    """Empat template P5 dulu punya SATU cerita yang ditulis mati.
+
+    Terukur 2 Sep 2026: 3000 soal kombinatorik P5 hanya melahirkan 14
+    bentuk kalimat, dan aturan_tambah/aturan_kali/jabat_tangan/
+    inklusi_eksklusi_2 menyumbang tepat 1 bentuk masing-masing — anak
+    hafal bunyi soalnya sebelum hafal caranya.
+    """
+    import re
+
+    from generator import buat_lembar
+
+    bentuk = set()
+    for seed in range(300):
+        for s in buat_lembar(seed, level="P5", topik="kombinatorik").soal:
+            bentuk.add(re.sub(r"-?\d+", "N", s.teks))
+    assert len(bentuk) >= 25, (
+        f"kombinatorik P5 cuma {len(bentuk)} bentuk kalimat (baseline 14)"
+    )
+
+
+@pytest.mark.parametrize(
+    "template_id",
+    ("aturan_tambah", "aturan_kali", "jabat_tangan", "inklusi_eksklusi_2"),
+)
+def test_template_berlatar_punya_lebih_dari_satu_cerita(template_id):
+    import re
+
+    bentuk = {
+        re.sub(r"-?\d+", "N", buat_soal(
+            template_id, seed, level="P5", topik="kombinatorik"
+        ).teks)
+        for seed in range(1, 200)
+    }
+    assert len(bentuk) >= 3, f"{template_id}: cuma {len(bentuk)} cerita"
+
+
+@pytest.mark.parametrize(
+    "template_id",
+    ("aturan_tambah", "aturan_kali", "jabat_tangan", "inklusi_eksklusi_2"),
+)
+def test_latar_deterministik_atas_parameter(template_id):
+    """Latar HARUS turunan parameter, bukan rng atau hash() bawaan.
+
+    Kalau tidak, mencetak ulang lembar lama dari bank soal (parameter
+    sama, proses berbeda) melahirkan kalimat yang berbeda — guru menilai
+    soal yang tidak dikerjakan anak.
+    """
+    from templates import REGISTRI
+
+    fn = REGISTRI[template_id]
+    for seed in range(1, 40):
+        asli = buat_soal(template_id, seed, level="P5", topik="kombinatorik")
+        ulang = fn(**asli.parameter)
+        assert ulang.teks == asli.teks, asli.parameter
+        assert ulang.kunci == asli.kunci
+
+
+def test_latar_tidak_menambah_parameter():
+    """Parameter ikut tanda_tangan: menambah kunci 'latar' akan
+    membatalkan seluruh bank soal dan snapshot golden."""
+    for template_id, diharap in (
+        ("aturan_tambah", {"m", "n"}),
+        ("aturan_kali", {"m", "n"}),
+        ("jabat_tangan", {"n"}),
+        ("inklusi_eksklusi_2", {"a", "b", "c"}),
+    ):
+        s = buat_soal(template_id, 5, level="P5", topik="kombinatorik")
+        assert set(s.parameter) == diharap, s.parameter

@@ -253,8 +253,22 @@ KARTU: dict[str, Kartu] = {
         judul="Membaca diagram",
         inti="Diagram batang: baca tinggi tiap batang. "
              "Diagram lingkaran: bagian = besar sudut ÷ 360 × total, "
-             "atau persen ÷ 100 × total.",
+             "atau persen ÷ 100 × total. "
+             "Tabel turus: baca angka pada baris yang DITANYA.",
         contoh="752 dari 1.504 = setengah → sudutnya 180°.",
+    ),
+    "piktogram": Kartu(
+        judul="Piktogram (diagram gambar)",
+        inti="Satu gambar mewakili beberapa benda. Banyak benda = "
+             "banyak gambar × nilai satu gambar. Jangan berhenti di "
+             "banyaknya gambar — itu belum jawabannya.",
+        contoh="1 gambar = 5 buah. Senin 4 gambar → 4 × 5 = 20 buah.",
+    ),
+    "jangkauan": Kartu(
+        judul="Terbesar, terkecil, jangkauan",
+        inti="Terbesar = nilai paling tinggi, terkecil = paling rendah. "
+             "Jangkauan = terbesar − terkecil (dikurangi, bukan ditambah).",
+        contoh="Data 7, 3, 9, 5 → terbesar 9, terkecil 3, jangkauan 9 − 3 = 6.",
     ),
     "sarang_merpati": Kartu(
         judul="Prinsip sarang merpati",
@@ -374,6 +388,9 @@ KONSEP_TEMPLATE: dict[str, str] = {
     # statistika: diagram
     "diagram_batang_garis": "diagram",
     "diagram_lingkaran": "diagram",
+    "tabel_turus": "diagram",
+    "piktogram": "piktogram",
+    "jangkauan_data": "jangkauan",
     "sarang_merpati": "sarang_merpati",
     "jalur_petak": "jalur_petak",
     "korek_api": "pola_bilangan",

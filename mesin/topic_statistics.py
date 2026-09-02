@@ -1,11 +1,20 @@
 """Paket topik statistika — Fase 6 plan 30 Aug 2026.
 
-Lima template menutup cakupan statistika & pengukuran OSN SD: rata-rata
-(bagian A), median & modus, diagram lingkaran dan batang/garis (B).
+Delapan template menutup cakupan statistika & pengukuran OSN SD:
+rata-rata (bagian A), median & modus, diagram lingkaran dan batang/garis,
+tabel turus, piktogram, dan terbesar/terkecil/jangkauan (B).
 Level P3-P6; P3 selaras band SASMO Primary 1-4 (statistics) — cukup modus
-dan pembacaan diagram batang, median & rata-rata menunggu P4+. Soal
-berbentuk teks; diagram dirender sebagai deskripsi data (SVG adalah
-penyempurnaan render_badan belakangan).
+dan pembacaan data, median & rata-rata menunggu P4+. Soal berbentuk teks;
+diagram dirender sebagai deskripsi data (SVG adalah penyempurnaan
+render_badan belakangan).
+
+Tiga template terakhir (tabel_turus, piktogram, jangkauan_data) ditambahkan
+2 Sep 2026 untuk mengobati monoton di P3. Sebelumnya P3 hanya punya DUA
+template (modus + diagram batang), dan terukur: 3000 soal P3 hanya
+menghasilkan 6 bentuk kalimat berbeda — anak yang berlatih tiap hari
+membaca bunyi soal yang sama terus, cuma angkanya ganti. Menambah
+template menaikkan variasi jauh lebih besar daripada membungkus kalimat
+lewat LLM, dan tidak menambah biaya per soal sama sekali.
 """
 
 from __future__ import annotations
@@ -281,6 +290,220 @@ def diagram_batang_garis(varian: str, data: list[int], i: int = 0) -> Soal:
     )
 
 
+def tabel_turus(varian: str, nama: list[str], data: list[int], i: int = 0) -> Soal:
+    """Tabel turus (tally): baca frekuensi, cari terbanyak, atau total.
+
+    Bentuk soal yang berbeda dari diagram batang meski datanya sejenis:
+    anak membaca coretan turus, bukan tinggi batang. Ditambahkan untuk
+    P3 yang sebelumnya hanya punya dua template.
+    """
+    n = len(data)
+    baris = ", ".join(f"{nama[k]} = {data[k]} turus" for k in range(n))
+    if varian == "baca":
+        kunci = data[i]
+        k1 = data[(i + 1) % n]
+        k2 = data[(i + 2) % n]
+        teks = f"Tabel turus: {baris}. Berapa banyak {nama[i]}?"
+        pembahasan = f"Langkah: Baca baris {nama[i]} pada tabel = {kunci}."
+        param = {"varian": varian, "nama": nama, "data": data, "i": i}
+        alasan1 = f"membaca baris yang berdekatan, bukan {nama[i]}"
+        alasan2 = "membaca baris yang salah"
+    elif varian == "terbanyak":
+        besar = max(data)
+        kunci = data.index(besar)
+        # kunci berupa NAMA, bukan angka — dikembalikan sebagai teks.
+        nama_kunci = nama[kunci]
+        urut = sorted(range(n), key=lambda k: -data[k])
+        mal = [
+            Malrule("turus.terkecil", nama[min(range(n), key=lambda k: data[k])],
+                    "K", "menjawab yang paling sedikit, bukan yang terbanyak"),
+            Malrule("turus.kedua", nama[urut[1]], "K",
+                    "menjawab yang terbanyak kedua"),
+            Malrule("turus.jumlahnya", str(besar), "E",
+                    "menuliskan banyaknya, padahal yang diminta namanya"),
+        ]
+        teks = f"Tabel turus: {baris}. Yang paling banyak adalah?"
+        pembahasan = (
+            f"Langkah: Bandingkan semua baris ({', '.join(str(x) for x in data)}). "
+            f"Paling banyak = {besar}, yaitu {nama_kunci}."
+        )
+        return Soal(
+            "tabel_turus",
+            {"varian": varian, "nama": nama, "data": data},
+            teks,
+            nama_kunci,
+            saring_malrule(nama_kunci, mal),
+            bagian="B",
+            pembahasan=pembahasan,
+        )
+    else:
+        kunci = sum(data)
+        k1 = max(data)
+        k2 = sum(data) - data[0]
+        teks = f"Tabel turus: {baris}. Berapa jumlah seluruhnya?"
+        pembahasan = (
+            f"Langkah: Jumlahkan semua baris = "
+            f"{' + '.join(str(x) for x in data)} = {kunci}."
+        )
+        param = {"varian": varian, "nama": nama, "data": data}
+        alasan1 = "menjawab baris terbesar, bukan jumlah"
+        alasan2 = "menjumlahkan dengan melupakan satu baris"
+    h = kunci - 1
+    if k1 == kunci or k1 == h:
+        k1 = kunci + 1
+    if k2 == kunci or k2 == h or k2 == k1:
+        k2 = kunci + 2
+    mal = [
+        Malrule("turus.salah_baris", str(k1), "K", alasan1),
+        Malrule("turus.salah_baris2", str(k2), "K", alasan2),
+        Malrule("turus.kurang_satu", str(h), "H",
+                "perhitungan benar, hasilnya meleset satu"),
+    ]
+    return Soal(
+        "tabel_turus",
+        param,
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        bagian="B",
+        pembahasan=pembahasan,
+    )
+
+
+def piktogram(varian: str, satuan: int, gambar: list[int], nama: list[str], i: int = 0) -> Soal:
+    """Piktogram: 1 gambar mewakili `satuan` benda.
+
+    Yang diuji bukan aritmetikanya saja tapi SKALA — kesalahan khas anak
+    adalah menjawab banyaknya gambar, bukan hasil kali dengan satuan.
+    Miskonsepsi itu tidak tersedia di template diagram batang, jadi
+    template ini menambah jalur diagnosis baru, bukan sekadar kalimat baru.
+    """
+    n = len(gambar)
+    baris = ", ".join(f"{nama[k]}: {gambar[k]} gambar" for k in range(n))
+    awalan = f"Piktogram (1 gambar = {satuan} buah). {baris}."
+    if varian == "baca":
+        kunci = gambar[i] * satuan
+        teks = f"{awalan} Berapa buah {nama[i]}?"
+        pembahasan = (
+            f"Langkah: {nama[i]} punya {gambar[i]} gambar. "
+            f"Tiap gambar = {satuan} buah, jadi {gambar[i]} × {satuan} = {kunci}."
+        )
+        k1 = gambar[i]  # lupa dikali satuan
+        k2 = gambar[i] + satuan  # menambah, bukan mengali
+        alasan1 = "menjawab banyaknya gambar, lupa dikali nilai satu gambar"
+        alasan2 = "menambahkan nilai satu gambar, bukan mengalikan"
+        param = {"varian": varian, "satuan": satuan, "gambar": gambar, "nama": nama, "i": i}
+    elif varian == "total":
+        kunci = sum(gambar) * satuan
+        teks = f"{awalan} Berapa buah seluruhnya?"
+        pembahasan = (
+            f"Langkah: Jumlah gambar = {' + '.join(str(x) for x in gambar)} "
+            f"= {sum(gambar)}. Seluruhnya = {sum(gambar)} × {satuan} = {kunci}."
+        )
+        k1 = sum(gambar)  # lupa dikali satuan
+        k2 = max(gambar) * satuan  # baris terbesar saja
+        alasan1 = "menjumlahkan gambar tanpa mengalikan nilai satu gambar"
+        alasan2 = "menghitung satu baris saja, bukan seluruhnya"
+        param = {"varian": varian, "satuan": satuan, "gambar": gambar, "nama": nama}
+    else:
+        # selisih dua baris
+        a, b = gambar[i], gambar[(i + 1) % n]
+        kunci = abs(a - b) * satuan
+        teks = f"{awalan} Berapa selisih {nama[i]} dan {nama[(i+1)%n]}?"
+        pembahasan = (
+            f"Langkah: Selisih gambar = |{a} - {b}| = {abs(a - b)}. "
+            f"Selisih buah = {abs(a - b)} × {satuan} = {kunci}."
+        )
+        k1 = abs(a - b)  # lupa dikali satuan
+        k2 = (a + b) * satuan  # menjumlahkan, bukan selisih
+        alasan1 = "menjawab selisih gambar, lupa dikali nilai satu gambar"
+        alasan2 = "menjumlahkan dua baris padahal yang diminta selisih"
+        param = {"varian": varian, "satuan": satuan, "gambar": gambar, "nama": nama, "i": i}
+    h = kunci - 1
+    if k1 == kunci or k1 == h:
+        k1 = kunci + 1
+    if k2 == kunci or k2 == h or k2 == k1:
+        k2 = kunci + 2
+    mal = [
+        Malrule("pikto.lupa_skala", str(k1), "K", alasan1),
+        Malrule("pikto.salah_operasi", str(k2), "K", alasan2),
+        Malrule("pikto.kurang_satu", str(h), "H",
+                "perhitungan benar, hasilnya meleset satu"),
+    ]
+    return Soal(
+        "piktogram",
+        param,
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        bagian="B",
+        pembahasan=pembahasan,
+    )
+
+
+def jangkauan_data(varian: str, data: list[int]) -> Soal:
+    """Nilai terbesar, terkecil, atau jangkauan (terbesar − terkecil).
+
+    Konsep paling dasar di statistika dan satu-satunya yang bisa dikerjakan
+    anak P3 tanpa membagi — pintu masuk sebelum modus.
+    """
+    besar, kecil = max(data), min(data)
+    teks_data = ", ".join(str(x) for x in data)
+    if varian == "terbesar":
+        kunci = besar
+        k1 = kecil
+        k2 = sorted(data)[-2] if len(set(data)) > 1 else besar + 2
+        alasan1 = "menjawab nilai terkecil, bukan terbesar"
+        alasan2 = "menjawab nilai terbesar kedua"
+        tanya = "Berapa nilai terbesarnya?"
+        pembahasan = (
+            f"Langkah: Bandingkan semua data ({teks_data}). Terbesar = {kunci}."
+        )
+    elif varian == "terkecil":
+        kunci = kecil
+        k1 = besar
+        k2 = sorted(data)[1] if len(set(data)) > 1 else kecil + 2
+        alasan1 = "menjawab nilai terbesar, bukan terkecil"
+        alasan2 = "menjawab nilai terkecil kedua"
+        tanya = "Berapa nilai terkecilnya?"
+        pembahasan = (
+            f"Langkah: Bandingkan semua data ({teks_data}). Terkecil = {kunci}."
+        )
+    else:
+        kunci = besar - kecil
+        k1 = besar + kecil  # menjumlahkan, bukan mengurangi
+        k2 = besar  # menjawab terbesar saja
+        alasan1 = "menjumlahkan nilai terbesar dan terkecil, bukan menguranginya"
+        alasan2 = "menjawab nilai terbesar, bukan selisihnya"
+        tanya = "Berapa jangkauannya (nilai terbesar dikurangi terkecil)?"
+        pembahasan = (
+            f"Langkah: Terbesar = {besar}, terkecil = {kecil}. "
+            f"Jangkauan = {besar} - {kecil} = {kunci}."
+        )
+    h = kunci - 1
+    if k1 == kunci or k1 == h:
+        k1 = kunci + 1
+    if k2 == kunci or k2 == h or k2 == k1:
+        k2 = kunci + 2
+    if h == k1 or h == k2:
+        h = kunci + 3
+    mal = [
+        Malrule("jangkau.arah_salah", str(k1), "K", alasan1),
+        Malrule("jangkau.hampir", str(k2), "K", alasan2),
+        Malrule("jangkau.kurang_satu", str(h), "H",
+                "perhitungan benar, hasilnya meleset satu"),
+    ]
+    teks = f"Data: {teks_data}. {tanya}"
+    return Soal(
+        "jangkauan_data",
+        {"varian": varian, "data": data},
+        teks,
+        str(kunci),
+        saring_malrule(str(kunci), mal),
+        bagian="B",
+        pembahasan=pembahasan,
+    )
+
 # ── Registry ─────────────────────────────────────────────────────────────
 
 REGISTRI_TOPIK = {
@@ -289,34 +512,42 @@ REGISTRI_TOPIK = {
     "median_modus": median_modus,
     "diagram_lingkaran": diagram_lingkaran,
     "diagram_batang_garis": diagram_batang_garis,
+    "tabel_turus": tabel_turus,
+    "piktogram": piktogram,
+    "jangkauan_data": jangkauan_data,
 }
 
 KOMPOSISI = {
-    # P3 (10 soal): 3, 5, 3, 5, 3, 5, 3, 5, 3, 5 — modus dulu (mudah),
-    # diagram batang menyusul; median & rata-rata menunggu P4.
+    # P3 (10 soal): lima template berputar. Sebelum 2 Sep 2026 hanya dua
+    # (modus + diagram batang) dan itu membuat P3 jadi level paling
+    # monoton di seluruh aplikasi — terukur 3000 soal hanya melahirkan
+    # 6 bentuk kalimat. Jangkauan/turus/piktogram semuanya sesuai band
+    # SASMO Primary 1-4 (membaca & membandingkan data, tanpa membagi);
+    # median & rata-rata tetap menunggu P4.
     "P3": (
+        "jangkauan_data",
         "median_modus",
+        "tabel_turus",
         "diagram_batang_garis",
+        "piktogram",
         "median_modus",
+        "jangkauan_data",
+        "tabel_turus",
         "diagram_batang_garis",
-        "median_modus",
-        "diagram_batang_garis",
-        "median_modus",
-        "diagram_batang_garis",
-        "median_modus",
-        "diagram_batang_garis",
+        "piktogram",
     ),
-    # P4 (10 soal): 1, 3, 5, 1, 3, 5, 1, 3, 5, 1
+    # P4 (10 soal): rata-rata masuk, piktogram & turus tetap dipakai
+    # supaya posisi yang sama tidak selalu bermodel sama antar-seed.
     "P4": (
         "rata_rata",
         "median_modus",
         "diagram_batang_garis",
+        "piktogram",
         "rata_rata",
+        "tabel_turus",
         "median_modus",
         "diagram_batang_garis",
-        "rata_rata",
-        "median_modus",
-        "diagram_batang_garis",
+        "jangkauan_data",
         "rata_rata",
     ),
     # P5 (10 soal): 1, 2, 3, 4, 5, 1, 2, 3, 4, 5
@@ -442,6 +673,62 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             data[(i + 1) % n] = rng.randint(1, atas)
             b = data[(i + 1) % n]
         return {"varian": varian, "data": data, "i": i}
+    if template_id == "tabel_turus":
+        varian = rng.choice(("baca", "terbanyak", "jumlah"))
+        pilihan = (
+            ("Apel", "Jeruk", "Mangga", "Pisang"),
+            ("Merah", "Biru", "Hijau", "Kuning"),
+            ("Sepeda", "Motor", "Mobil", "Becak"),
+            ("Bakso", "Soto", "Mie", "Nasi"),
+        )
+        nama = list(rng.choice(pilihan))
+        atas = 9 if level == "P3" else 25
+        data = [rng.randint(1, atas) for _ in range(4)]
+        if varian == "terbanyak":
+            # Terbanyak harus TUNGGAL, kalau seri soalnya tidak punya
+            # satu jawaban benar dan malrule "terbanyak kedua" jadi kunci.
+            while data.count(max(data)) > 1:
+                data = [rng.randint(1, atas) for _ in range(4)]
+            return {"varian": varian, "nama": nama, "data": data}
+        if varian == "jumlah":
+            return {"varian": varian, "nama": nama, "data": data}
+        return {"varian": varian, "nama": nama, "data": data, "i": rng.randint(0, 3)}
+    if template_id == "piktogram":
+        varian = rng.choice(("baca", "total", "selisih"))
+        pilihan = (
+            ("Senin", "Selasa", "Rabu"),
+            ("Kelas A", "Kelas B", "Kelas C"),
+            ("Toko 1", "Toko 2", "Toko 3"),
+        )
+        nama = list(rng.choice(pilihan))
+        # Satuan kecil di P3 (2/5/10 — masih bisa dihitung dengan
+        # penjumlahan berulang), lebih besar mulai P4.
+        satuan = rng.choice((2, 5, 10)) if level == "P3" else rng.choice((2, 4, 5, 10, 20))
+        atas = 6 if level == "P3" else 12
+        gambar = [rng.randint(1, atas) for _ in range(3)]
+        if varian == "total":
+            return {"varian": varian, "satuan": satuan, "gambar": gambar, "nama": nama}
+        i = rng.randint(0, 2)
+        if varian == "selisih":
+            # Dua baris yang dibandingkan wajib berbeda, kalau tidak
+            # kuncinya 0 dan malrule selisih jadi tak bermakna.
+            while gambar[i] == gambar[(i + 1) % 3]:
+                gambar[(i + 1) % 3] = rng.randint(1, atas)
+        return {"varian": varian, "satuan": satuan, "gambar": gambar, "nama": nama, "i": i}
+    if template_id == "jangkauan_data":
+        varian = rng.choice(("terbesar", "terkecil", "jangkauan"))
+        n = rng.randint(4, 5) if level == "P3" else rng.randint(4, 7)
+        atas = 20 if level == "P3" else 99
+        data = [rng.randint(1, atas) for _ in range(n)]
+        # Terbesar & terkecil wajib TUNGGAL dan berbeda: kalau seri,
+        # "terbesar kedua" bertabrakan dengan kunci dan malrule terbuang.
+        while (
+            data.count(max(data)) > 1
+            or data.count(min(data)) > 1
+            or max(data) == min(data)
+        ):
+            data = [rng.randint(1, atas) for _ in range(n)]
+        return {"varian": varian, "data": data}
     raise KeyError(f"template tidak dikenal: {template_id}")
 
 

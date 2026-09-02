@@ -290,7 +290,35 @@ Fitur "variasi cerita" (`llm.py`) membaca kunci API dari env
    yang butuh `max_tokens` besar (sudah diatur `llm.MAX_TOKENS`).
 
 Respons API LLM di-cache per soal (`llm_cache`) — satu soal tidak dibayar
-dua kali. Saldo dipantau oleh cron harian yang sama dengan sumber kuncinya.
+dua kali. Kunci cache = hash(`template_id` + parameter + latar + versi
+prompt + model). `template_id` WAJIB ada di situ: tanpa itu dua template
+berbeda yang kebetulan berparameter sama berbagi entri (terukur 354
+tabrakan di bank soal), dan karena cache hit pulang tanpa verifikasi,
+soal yang satu tampil memakai cerita milik soal yang lain. Saldo dipantau
+oleh cron harian yang sama dengan sumber kuncinya.
+
+### Melawan monoton (2 Sep 2026)
+
+Monoton diukur sebagai "pola-kalimat unik": teks soal dengan seluruh
+angka dinormalkan jadi `N`. Tiga jalur dipakai, urut dari yang paling
+ampuh:
+
+1. **Tambah template.** Statistika P3 dulu cuma 2 template — 3000 soal
+   hanya melahirkan 6 bentuk kalimat. Ditambah `tabel_turus`,
+   `piktogram`, `jangkauan_data` → 53 bentuk. Nol biaya per soal, dan
+   `piktogram` sekaligus menambah jalur diagnosis baru (lupa mengali
+   skala) yang tidak ada di template mana pun.
+2. **Latar turunan parameter.** Beberapa template kombinatorik dulu
+   punya satu cerita yang ditulis mati di f-string (roti & selai,
+   pertemuan). Latarnya kini dipilih dari parameter lewat `_putar()` —
+   deterministik, tanpa menambah parameter (parameter ikut
+   `tanda_tangan`, menambahnya membatalkan bank soal + snapshot golden).
+   Kombinatorik P5: 14 → 30 bentuk.
+3. **Variasi cerita LLM** (`llm.py`, tombol manual di halaman cetak).
+   Lapisan paling mahal dan paling rapuh — dipakai terakhir, bukan
+   pertama. Kini punya latar berputar: `PERCOBAAN_LATAR` latar dicoba
+   per soal, tiap (soal, latar) punya entri cache sendiri, jadi satu
+   soal bisa punya beberapa cerita tanpa satu pun dibayar dua kali.
 
 Patch ini hanya ada di VPS (`/usr/local/bin/osn-deploy` tidak ter-track);
 backup sebelum patch: `/root/osn-deploy.bak.<tanggal>`.

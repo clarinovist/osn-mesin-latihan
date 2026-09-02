@@ -67,7 +67,37 @@ MAX_TOKENS_VISION = 8000
 
 # Naikkan versi ini kalau prompt berubah — kunci cache ikut berubah,
 # jadi kalimat lama tidak dipakai ulang untuk soal berprompt baru.
-VERSI_PROMPT = "b2-cerita-v1"
+#
+# v2 (2 Sep 2026): kunci cache kini memuat template_id + latar. Versi lama
+# hanya memakai parameter, dan itu membuat dua template BERBEDA berbagi
+# entri cache saat parameternya kebetulan sama — terukur 354 tabrakan
+# (mis. {"a": 9, "b": 24} dipakai `angka_satuan_pangkat` DAN
+# `kerja_bersama`). Cache hit pulang tanpa lewat verifikasi(), jadi soal
+# KPK bisa tampil memakai cerita milik soal pangkat.
+VERSI_PROMPT = "b2-cerita-v2"
+
+# ── Latar cerita berputar ──────────────────────────────────────────────
+#
+# Satu soal punya SATU parameter, jadi versi lama hanya bisa punya SATU
+# cerita seumur hidup — bank soal tetap terasa monoton meski dibungkus
+# LLM. Latar menambah dimensi kedua ke kunci cache: soal yang sama boleh
+# punya beberapa penyamaran, dipilih deterministik dari sidik jari soal.
+#
+# Deterministik itu syarat, bukan kenyamanan: seed yang sama harus
+# melahirkan lembar yang sama (kontrak generator.py), dan cache hanya
+# berguna kalau soal yang sama selalu meminta latar yang sama. Dipakai
+# hash SHA-256, BUKAN hash() bawaan — hash() diacak per proses
+# (PYTHONHASHSEED) sehingga latar bisa berubah tiap kali server restart.
+LATAR = (
+    "pasar pagi",
+    "kantin sekolah",
+    "kebun belakang rumah",
+    "toko kue",
+    "lomba 17 Agustus",
+    "perpustakaan sekolah",
+    "bengkel sepeda",
+    "warung sayur",
+)
 
 
 def konfigurasi() -> dict[str, str]:
@@ -87,9 +117,10 @@ def aktif() -> bool:
 # ── Cache ───────────────────────────────────────────────────────────────
 #
 # Satu soal tidak pernah dibayar dua kali: kalimat hasil LLM disimpan
-# berkunci hash(parameter + versi_prompt + model). Tabelnya dibuat oleh
-# PEMANGGIL lewat ensure_table(kon), pola yang sama dengan skema di
-# schema.py/database.py — modul ini tidak menyentuh skema milik orang lain.
+# berkunci hash(template_id + parameter + latar + versi_prompt + model).
+# Tabelnya dibuat oleh PEMANGGIL lewat ensure_table(kon), pola yang sama
+# dengan skema di schema.py/database.py — modul ini tidak menyentuh skema
+# milik orang lain.
 
 
 def ensure_table(kon: sqlite3.Connection) -> None:
@@ -104,17 +135,56 @@ def ensure_table(kon: sqlite3.Connection) -> None:
     )
 
 
-def kunci_cache(parameter: dict[str, Any], model: str | None = None) -> str:
-    """Sidik jari cache: parameter + versi prompt + model.
+def pilih_latar(soal: Soal, putaran: int = 0) -> str:
+    """Latar cerita untuk satu soal — deterministik, berputar.
+
+    Dipilih dari sidik jari soal (template_id + parameter), bukan dari
+    random module: soal yang sama HARUS selalu meminta latar yang sama,
+    kalau tidak cache tidak pernah kena dan tiap generate membayar ulang.
+
+    `putaran` menaikkan indeks: guru yang menekan "variasi cerita" untuk
+    kedua kalinya pada soal yang sama mendapat latar berikutnya, bukan
+    kalimat yang identik. Nol berarti latar pertama.
+
+    SHA-256, bukan hash() bawaan — hash() diacak per proses lewat
+    PYTHONHASHSEED, jadi latar akan berubah tiap server restart dan
+    seluruh cache jadi sia-sia.
+    """
+    sidik = hashlib.sha256(
+        f"{soal.template_id}|{soal.tanda_tangan}".encode("utf-8")
+    ).hexdigest()
+    return LATAR[(int(sidik[:8], 16) + putaran) % len(LATAR)]
+
+
+def kunci_cache(
+    parameter: dict[str, Any],
+    model: str | None = None,
+    template_id: str = "",
+    latar: str = "",
+) -> str:
+    """Sidik jari cache: template + parameter + latar + versi prompt + model.
 
     Parameter diurutkan agar {"awal": 2, "beda": 3} dan {"beda": 3,
     "awal": 2} berbagi entri cache — soal yang sama, bayar sekali.
+
+    `template_id` WAJIB ada di sidik jari. Tanpa itu dua template berbeda
+    yang kebetulan berparameter sama berbagi entri (terukur 354 tabrakan
+    di bank soal, mis. {"a": 9, "b": 24} pada `angka_satuan_pangkat` dan
+    `kerja_bersama`), dan karena cache hit pulang TANPA verifikasi(), soal
+    yang satu tampil memakai cerita milik soal yang lain. Default ""
+    dipertahankan supaya pemanggil lama tidak pecah — tapi seluruh
+    pemanggil di modul ini mengisinya.
+
+    `latar` memisahkan beberapa penyamaran untuk soal yang sama, sehingga
+    satu soal bisa punya lebih dari satu cerita.
     """
     if model is None:
         model = konfigurasi()["model"]
     butir = json.dumps(
         {
+            "template_id": template_id,
             "parameter": parameter,
+            "latar": latar,
             "versi_prompt": VERSI_PROMPT,
             "model": model,
         },
@@ -210,8 +280,14 @@ def verifikasi(kalimat: str, soal: Soal) -> bool:
 # ── Prompt & respons ───────────────────────────────────────────────────
 
 
-def _buat_prompt(soal: Soal) -> list[dict[str, str]]:
-    """Pesan untuk /chat/completions. Kunci & malrule sengaja tidak dikirim."""
+def _buat_prompt(soal: Soal, latar: str = "") -> list[dict[str, str]]:
+    """Pesan untuk /chat/completions. Kunci & malrule sengaja tidak dikirim.
+
+    `latar` disebut eksplisit supaya dua soal sejenis tidak kembali ke
+    latar yang sama. Tanpa arahan latar, model punya kecenderungan kuat
+    memilih beberapa cerita favorit ("Ani menabung", "Budi membeli
+    permen") dan monotonnya cuma bergeser dari template ke LLM.
+    """
     sistem = (
         "Kamu penulis soal matematika untuk anak SD Indonesia. "
         "Tugasmu HANYA menulis ulang SATU kalimat soal yang diberikan "
@@ -222,17 +298,22 @@ def _buat_prompt(soal: Soal) -> list[dict[str, str]]:
         "satu kalimat soal, tanpa penjelasan."
     )
     parameter = ", ".join(f"{k}={soal.parameter[k]}" for k in sorted(soal.parameter))
-    pengguna = json.dumps(
-        {
-            "kalimat_soal_asli": soal.teks,
-            "parameter": parameter,
-            "tugas": (
-                "Tulis satu kalimat soal pengganti, "
-                "angkanya sama persis dengan kalimat asli."
-            ),
-        },
-        ensure_ascii=False,
+    tugas = (
+        "Tulis satu kalimat soal pengganti, "
+        "angkanya sama persis dengan kalimat asli."
     )
+    muatan: dict[str, str] = {
+        "kalimat_soal_asli": soal.teks,
+        "parameter": parameter,
+        "tugas": tugas,
+    }
+    if latar:
+        muatan["latar_yang_diminta"] = latar
+        muatan["tugas"] = (
+            f"{tugas} Gunakan latar cerita '{latar}'. "
+            "Jangan menambah angka baru untuk latar itu."
+        )
+    pengguna = json.dumps(muatan, ensure_ascii=False)
     return [
         {"role": "system", "content": sistem},
         {"role": "user", "content": pengguna},
@@ -601,7 +682,9 @@ def cek_saldo(minimal: float | None = None) -> bool:
 # ── Pintu masuk utama (B2) ─────────────────────────────────────────────
 
 
-def bungkus(kon: sqlite3.Connection, soal: Soal) -> str | None:
+def bungkus(
+    kon: sqlite3.Connection, soal: Soal, putaran: int = 0
+) -> str | None:
     """Kalimat soal versi cerita, atau None = pakai kalimat bawaan.
 
     Urutan keputusannya:
@@ -609,18 +692,30 @@ def bungkus(kon: sqlite3.Connection, soal: Soal) -> str | None:
       2. cache hit    -> kalimat tersimpan, nol network call;
       3. panggil API  -> verifikasi angka -> simpan cache -> kalimat;
       4. gagal di mana pun -> None.
+
+    `putaran` memutar latar cerita (lihat pilih_latar): 0 = latar pertama,
+    1 = latar berikutnya, dan seterusnya. Soal yang sama karena itu bisa
+    punya beberapa cerita berbeda tanpa satu pun dibayar dua kali — tiap
+    (soal, latar) punya entri cache sendiri.
+
+    Cache hit sengaja TIDAK diverifikasi ulang: yang masuk cache sudah
+    lolos verifikasi saat pertama disimpan. Itu aman HANYA karena kunci
+    cache memuat template_id — lihat catatan di kunci_cache().
     """
     if not aktif():
         return None
 
-    hash_kunci = kunci_cache(soal.parameter)
+    latar = pilih_latar(soal, putaran)
+    hash_kunci = kunci_cache(
+        soal.parameter, template_id=soal.template_id, latar=latar
+    )
     baris = kon.execute(
         "SELECT kalimat FROM llm_cache WHERE kunci_hash = ?", (hash_kunci,)
     ).fetchone()
     if baris is not None:
         return str(baris[0])
 
-    kalimat = _panggil(_buat_prompt(soal))
+    kalimat = _panggil(_buat_prompt(soal, latar))
     if kalimat is None or not verifikasi(kalimat, soal):
         return None
 
@@ -633,6 +728,15 @@ def bungkus(kon: sqlite3.Connection, soal: Soal) -> str | None:
     # karena transaksi pemanggil (mis. penyimpanan sesi) di-rollback.
     kon.commit()
     return kalimat
+
+
+# Berapa latar yang dicoba untuk satu soal sebelum menyerah ke kalimat
+# bawaan. Verifikasi angka sengaja galak (menolak angka karangan, menolak
+# angka soal yang hilang), dan sebagian latar memang sulit dipakai tanpa
+# menambah angka — "lomba 17 Agustus" menggoda model menulis "17".
+# Mencoba latar kedua jauh lebih murah daripada membiarkan soal kembali
+# ke kalimat bawaan, dan tetap berbatas supaya biaya tidak lepas kendali.
+PERCOBAAN_LATAR = 2
 
 
 def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
@@ -665,7 +769,12 @@ def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
         if (b["cerita"] or "").strip():
             continue
         dicoba += 1
-        kalimat = bungkus(kon, ambil_soal(b))
+        soal_ini = ambil_soal(b)
+        kalimat = None
+        for putaran in range(PERCOBAAN_LATAR):
+            kalimat = bungkus(kon, soal_ini, putaran)
+            if kalimat:
+                break
         if kalimat:
             kon.execute(
                 "UPDATE soal SET cerita = ? WHERE id = ?", (kalimat, b["id"])

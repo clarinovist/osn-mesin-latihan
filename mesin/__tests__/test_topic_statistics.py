@@ -45,20 +45,36 @@ def test_statistika_memulai_dengan_template_awal():
 
 
 def test_komposisi_p3_sepuluh_soal():
-    """P3: hanya modus & diagram batang — median & rata-rata menunggu P4."""
+    """P3: lima template — median & rata-rata tetap menunggu P4.
+
+    Sebelum 2 Sep 2026 hanya dua template, dan itu membuat P3 level
+    paling monoton di aplikasi (3000 soal → 6 bentuk kalimat saja).
+    Jangkauan/turus/piktogram semuanya sesuai band SASMO Primary 1-4:
+    membaca dan membandingkan data, tanpa perlu membagi.
+    """
     komposisi = _paket().komposisi_untuk("P3")
     assert komposisi == (
+        "jangkauan_data",
         "median_modus",
+        "tabel_turus",
         "diagram_batang_garis",
+        "piktogram",
         "median_modus",
+        "jangkauan_data",
+        "tabel_turus",
         "diagram_batang_garis",
-        "median_modus",
-        "diagram_batang_garis",
-        "median_modus",
-        "diagram_batang_garis",
-        "median_modus",
-        "diagram_batang_garis",
+        "piktogram",
     )
+    assert "rata_rata" not in komposisi, "rata-rata masih menunggu P4"
+
+
+def test_komposisi_p3_tanpa_median():
+    """Median di atas kelas 3 — penambahan template tidak boleh
+    menyelundupkannya lewat varian median_modus."""
+    for seed in range(1, 60):
+        lembar = buat_lembar(seed, level="P3", topik="statistika")
+        for s in lembar.soal:
+            assert s.parameter.get("varian") != "median", s.parameter
 
 
 def test_komposisi_p4_sepuluh_soal():
@@ -67,12 +83,12 @@ def test_komposisi_p4_sepuluh_soal():
         "rata_rata",
         "median_modus",
         "diagram_batang_garis",
+        "piktogram",
         "rata_rata",
+        "tabel_turus",
         "median_modus",
         "diagram_batang_garis",
-        "rata_rata",
-        "median_modus",
-        "diagram_batang_garis",
+        "jangkauan_data",
         "rata_rata",
     )
 
@@ -130,16 +146,19 @@ def test_statistika_level_teks_aneh_jatuh_ke_p3():
     assert aneh.tanda_tangan == p3.tanda_tangan
 
 
-def test_statistika_memuat_lima_template():
-    """Task 6.3: seluruh 5 template sudah terimplementasi."""
+def test_statistika_memuat_delapan_template():
+    """Task 6.3 (5 template) + penambahan anti-monoton 2 Sep 2026 (3)."""
     paket = _paket()
-    assert len(paket.templates) == 5
+    assert len(paket.templates) == 8
     for nama in (
         "rata_rata",
         "rata_rata_gabungan",
         "median_modus",
         "diagram_lingkaran",
         "diagram_batang_garis",
+        "tabel_turus",
+        "piktogram",
+        "jangkauan_data",
     ):
         assert nama in paket.templates, nama
 
@@ -311,3 +330,145 @@ def test_kelompok_b_sweep(template_id, level):
         s = buat_soal(template_id, seed, level=level, topik="statistika")
         assert s.malrule, f"{template_id}@{level}/{seed} kosong"
         assert {"K", "H"} <= {m.kode for m in s.malrule}, f"{template_id}@{level}/{seed}"
+
+# ── Template #6-8: penambahan anti-monoton (2 Sep 2026) ────────────────
+#
+# Ketiganya lahir dari pengukuran, bukan selera: P3 statistika hanya
+# punya 2 template, dan 3000 soal yang dibangkitkan cuma menghasilkan
+# 6 bentuk kalimat berbeda. Menambah template menaikkan variasi jauh
+# lebih besar daripada membungkus kalimat lewat LLM, dan tidak menambah
+# biaya per soal sama sekali.
+
+
+def test_tabel_turus_kunci():
+    """#6: baca baris / cari terbanyak (jawaban NAMA) / jumlah."""
+    for seed in range(1, 150):
+        s = buat_soal("tabel_turus", seed, level="P3", topik="statistika")
+        p = s.parameter
+        data, nama = p["data"], p["nama"]
+        if p["varian"] == "baca":
+            expected = str(data[p["i"]])
+        elif p["varian"] == "terbanyak":
+            expected = nama[data.index(max(data))]
+        else:
+            expected = str(sum(data))
+        assert s.kunci == expected, f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K"} <= {m.kode for m in s.malrule}, p
+
+
+def test_tabel_turus_terbanyak_selalu_tunggal():
+    """Kalau dua baris seri, soal tidak punya SATU jawaban benar dan
+    malrule 'terbanyak kedua' justru menebak kunci."""
+    for seed in range(1, 200):
+        s = buat_soal("tabel_turus", seed, level="P3", topik="statistika")
+        if s.parameter["varian"] != "terbanyak":
+            continue
+        data = s.parameter["data"]
+        assert data.count(max(data)) == 1, s.parameter
+
+
+def test_piktogram_kunci_memakai_skala():
+    """#7: nilai = banyak gambar × nilai satu gambar.
+
+    Miskonsepsi khasnya (menjawab banyaknya gambar, lupa dikali skala)
+    tidak tersedia di template diagram batang — jadi template ini
+    menambah jalur DIAGNOSIS baru, bukan sekadar kalimat baru.
+    """
+    for seed in range(1, 150):
+        s = buat_soal("piktogram", seed, level="P4", topik="statistika")
+        p = s.parameter
+        g, satuan = p["gambar"], p["satuan"]
+        if p["varian"] == "baca":
+            expected = g[p["i"]] * satuan
+        elif p["varian"] == "total":
+            expected = sum(g) * satuan
+        else:
+            a, b = g[p["i"]], g[(p["i"] + 1) % len(g)]
+            expected = abs(a - b) * satuan
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_piktogram_malrule_lupa_skala_selalu_ada():
+    """Justifikasi template ini adalah malrule 'lupa dikali skala'.
+    Kalau ia tersaring, template hanya menambah kalimat tanpa diagnosis."""
+    for seed in range(1, 120):
+        s = buat_soal("piktogram", seed, level="P3", topik="statistika")
+        assert any(m.id == "pikto.lupa_skala" for m in s.malrule), s.parameter
+
+
+def test_jangkauan_data_kunci():
+    """#8: terbesar / terkecil / jangkauan = terbesar − terkecil."""
+    for seed in range(1, 150):
+        s = buat_soal("jangkauan_data", seed, level="P3", topik="statistika")
+        p = s.parameter
+        data = p["data"]
+        if p["varian"] == "terbesar":
+            expected = max(data)
+        elif p["varian"] == "terkecil":
+            expected = min(data)
+        else:
+            expected = max(data) - min(data)
+        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert {"K", "H"} <= {m.kode for m in s.malrule}, p
+
+
+def test_jangkauan_data_ekstrem_tunggal():
+    """Terbesar & terkecil wajib tunggal dan berbeda — kalau seri,
+    malrule 'terbesar kedua' bertabrakan dengan kunci lalu terbuang."""
+    for seed in range(1, 200):
+        s = buat_soal("jangkauan_data", seed, level="P3", topik="statistika")
+        data = s.parameter["data"]
+        assert data.count(max(data)) == 1, s.parameter
+        assert data.count(min(data)) == 1, s.parameter
+        assert max(data) != min(data), s.parameter
+
+
+def test_p3_angka_tetap_ramah_kelas_tiga():
+    """Template baru tidak boleh menyelundupkan angka besar ke P3."""
+    for seed in range(1, 120):
+        for s in buat_lembar(seed, level="P3", topik="statistika").soal:
+            p = s.parameter
+            if s.template_id == "tabel_turus":
+                assert all(1 <= x <= 9 for x in p["data"]), p
+            elif s.template_id == "piktogram":
+                assert p["satuan"] in (2, 5, 10), p
+                assert all(1 <= x <= 6 for x in p["gambar"]), p
+            elif s.template_id == "jangkauan_data":
+                assert all(1 <= x <= 20 for x in p["data"]), p
+
+
+def test_p3_variasi_kalimat_naik_tajam():
+    """Pengunci alasan seluruh perubahan ini.
+
+    Baseline sebelum penambahan (diukur 2 Sep 2026): 3000 soal P3
+    statistika hanya melahirkan 6 bentuk kalimat berbeda — anak yang
+    berlatih tiap hari membaca bunyi soal yang sama terus, cuma
+    angkanya ganti. Yang diukur: kalimat soal dengan seluruh angka
+    dinormalkan jadi 'N'.
+    """
+    import re
+
+    bentuk = set()
+    for seed in range(300):
+        for s in buat_lembar(seed, level="P3", topik="statistika").soal:
+            bentuk.add(re.sub(r"-?\d+(?:[.,]\d+)?", "N", s.teks))
+    assert len(bentuk) >= 20, (
+        f"P3 statistika cuma {len(bentuk)} bentuk kalimat (baseline lama 6) "
+        "— penambahan template tidak memperbaiki monoton"
+    )
+
+
+@pytest.mark.parametrize(
+    "template_id", ("tabel_turus", "piktogram", "jangkauan_data")
+)
+@pytest.mark.parametrize("level", ("P3", "P4", "P5", "P6"))
+def test_template_baru_sweep(template_id, level):
+    for seed in range(1, 120):
+        s = buat_soal(template_id, seed, level=level, topik="statistika")
+        assert s.malrule, f"{template_id}@{level}/{seed} kosong"
+        assert s.kunci not in [m.jawaban for m in s.malrule]
+        assert s.pembahasan.strip(), f"{template_id}@{level}/{seed}"

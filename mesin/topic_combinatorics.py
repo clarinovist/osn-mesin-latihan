@@ -15,6 +15,30 @@ from templates import Malrule, Soal, saring_malrule
 from topics import Topik, daftarkan
 
 
+# ── Latar cerita berputar (2 Sep 2026) ─────────────────────────────────
+#
+# Empat template P5 (aturan_tambah, aturan_kali, jabat_tangan,
+# inklusi_eksklusi_2) dulu punya SATU cerita yang ditulis mati di dalam
+# f-string: roti & selai, buku cerita, pertemuan, matematika & IPA.
+# Terukur 2 Sep 2026: 3000 soal kombinatorik P5 hanya melahirkan 14
+# bentuk kalimat, dan empat template itu menyumbang 1 bentuk masing-masing.
+#
+# Latar dipilih dari PARAMETER soal, bukan dari rng: parameter sudah
+# deterministik per seed, jadi lembar yang sama tetap melahirkan kalimat
+# yang sama (kontrak generator.py) TANPA menambah parameter baru —
+# penting karena parameter ikut tanda_tangan, dan menambahnya akan
+# membatalkan seluruh bank soal serta snapshot golden.
+
+
+def _putar(pilihan: tuple, *angka: int):
+    """Ambil satu unsur `pilihan` secara deterministik dari angka soal.
+
+    Bukan rng: fungsi template harus murni atas parameternya supaya
+    memanggil ulang dengan parameter yang sama (mis. saat mencetak lembar
+    lama dari bank soal) menghasilkan kalimat yang sama persis.
+    """
+    return pilihan[sum(angka) % len(pilihan)]
+
 # ── Bagian A — Aturan mencacah ─────────────────────────────────────────
 
 
@@ -41,10 +65,21 @@ def aturan_tambah(m: int, n: int) -> Soal:
             "penjumlahan benar, hasilnya meleset satu",
         ),
     ]
+    tempat, jenis1, jenis2, benda, tokoh = _putar(
+        (
+            ("toko buku", "buku cerita", "buku pelajaran", "buku", "Budi"),
+            ("kantin sekolah", "roti isi", "kue basah", "jajanan", "Sinta"),
+            ("warung sayur", "ikat bayam", "ikat kangkung", "sayur", "Ibu"),
+            ("toko olahraga", "bola plastik", "bola karet", "bola", "Rian"),
+            ("perpustakaan", "majalah anak", "komik", "bacaan", "Dika"),
+        ),
+        m,
+        n,
+    )
     teks = (
-        f"Di toko buku, ada {m} buku cerita dan {n} buku pelajaran. "
-        f"Budi ingin membeli satu buku. Berapa banyak pilihan buku yang "
-        f"dimiliki Budi?"
+        f"Di {tempat}, ada {m} {jenis1} dan {n} {jenis2}. "
+        f"{tokoh} ingin membeli satu {benda}. Berapa banyak pilihan {benda} "
+        f"yang dimiliki {tokoh}?"
     )
     return Soal(
         "aturan_tambah",
@@ -84,10 +119,22 @@ def aturan_kali(m: int, n: int) -> Soal:
             "perkalian benar, hasilnya meleset satu",
         ),
     ]
+    tempat, jenis1, jenis2, tujuan, hasil, tokoh = _putar(
+        (
+            ("toko", "jenis roti", "jenis selai", "sarapan", "menu", "Budi"),
+            ("lemari", "kaus", "celana", "dipakai ke sekolah", "setelan", "Rani"),
+            ("kantin", "jenis nasi", "jenis lauk", "makan siang", "porsi", "Aldi"),
+            ("toko es", "rasa es krim", "jenis wadah", "dibeli", "pesanan", "Nina"),
+            ("rak", "warna sampul", "jenis stiker", "menghias buku", "hiasan", "Tio"),
+        ),
+        m,
+        n,
+    )
     teks = (
-        f"Di toko, ada {m} jenis roti dan {n} jenis selai. "
-        f"Budi ingin memilih satu roti dan satu selai untuk sarapan. "
-        f"Berapa banyak pilihan menu yang dimiliki Budi?"
+        f"Di {tempat}, ada {m} {jenis1} dan {n} {jenis2}. "
+        f"{tokoh} ingin memilih satu {jenis1} dan satu {jenis2} "
+        f"untuk {tujuan}. "
+        f"Berapa banyak pilihan {hasil} yang dimiliki {tokoh}?"
     )
     return Soal(
         "aturan_kali",
@@ -473,8 +520,18 @@ def jabat_tangan(n: int) -> Soal:
             "perhitungan benar, hasilnya meleset satu",
         ),
     ]
+    acara = _putar(
+        (
+            "sebuah pertemuan",
+            "acara arisan",
+            "rapat panitia lomba",
+            "reuni keluarga",
+            "pembukaan kelas baru",
+        ),
+        n,
+    )
     teks = (
-        f"Dalam sebuah pertemuan, ada {n} orang. Setiap orang berjabat "
+        f"Dalam {acara}, ada {n} orang. Setiap orang berjabat "
         f"tangan satu kali dengan setiap orang lainnya. "
         f"Berapa banyak jabat tangan yang terjadi?"
     )
@@ -604,10 +661,22 @@ def inklusi_eksklusi_2(a: int, b: int, c: int) -> Soal:
             "perhitungan jumlah−irisan benar, hasilnya meleset satu",
         ),
     ]
+    kelompok, hal1, hal2 = _putar(
+        (
+            ("siswa", "matematika", "IPA"),
+            ("anak", "sepak bola", "renang"),
+            ("warga", "membaca koran", "mendengar radio"),
+            ("murid", "paduan suara", "pramuka"),
+            ("peserta", "lomba gambar", "lomba puisi"),
+        ),
+        a,
+        b,
+        c,
+    )
     teks = (
-        f"Dari 100 siswa, {a} siswa suka matematika dan {b} siswa suka "
-        f"IPA, serta {c} siswa suka keduanya. Berapa banyak siswa yang "
-        f"suka matematika atau IPA (atau keduanya)?"
+        f"Ada {a} {kelompok} yang suka {hal1} dan {b} {kelompok} yang suka "
+        f"{hal2}, serta {c} {kelompok} suka keduanya. Berapa banyak "
+        f"{kelompok} yang suka {hal1} atau {hal2} (atau keduanya)?"
     )
     return Soal(
         "inklusi_eksklusi_2",

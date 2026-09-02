@@ -293,6 +293,66 @@ def test_verifikasi_gagal_tak_masuk_cache(monkeypatch, api_aktif, kon, soal):
     assert len(panggilan) == 2
 
 
+def test_template_beda_parameter_sama_tidak_berbagi_cache(monkeypatch, api_aktif, kon):
+    """Bug 2 Sep 2026: kunci cache dulu hanya parameter + prompt + model.
+
+    Di bank soal nyata ada 354 pasang parameter identik yang dipakai dua
+    template berbeda (mis. {"a": 9, "b": 24} pada `angka_satuan_pangkat`
+    dan `kerja_bersama`). Karena cache hit pulang TANPA verifikasi ulang,
+    soal yang satu tampil memakai cerita milik soal yang lain — anak
+    membaca soal yang tidak nyambung dengan pertanyaannya.
+    """
+    a = llm.kunci_cache({"a": 9, "b": 24}, template_id="angka_satuan_pangkat")
+    b = llm.kunci_cache({"a": 9, "b": 24}, template_id="kerja_bersama")
+    assert a != b, "dua template berbeda berbagi entri cache"
+
+
+def test_latar_berputar_memberi_entri_cache_berbeda(soal):
+    """Satu soal boleh punya lebih dari satu cerita: latar yang berbeda
+    harus jatuh ke entri cache yang berbeda, kalau tidak putaran kedua
+    hanya mengembalikan kalimat yang sama."""
+    l0 = llm.pilih_latar(soal, 0)
+    l1 = llm.pilih_latar(soal, 1)
+    assert l0 != l1
+    k0 = llm.kunci_cache(soal.parameter, template_id=soal.template_id, latar=l0)
+    k1 = llm.kunci_cache(soal.parameter, template_id=soal.template_id, latar=l1)
+    assert k0 != k1
+
+
+def test_latar_deterministik_antar_proses(soal):
+    """Latar dipilih dari SHA-256, bukan hash() bawaan yang diacak per
+    proses lewat PYTHONHASHSEED. Kalau latar berubah tiap restart, seluruh
+    cache jadi sia-sia dan tiap generate membayar ulang."""
+    import subprocess
+
+    kode = (
+        "import sys; sys.path.insert(0, %r);"
+        "import llm; from templates import deret_aritmetika;"
+        "s = deret_aritmetika(awal=2, beda=3, n_tampil=4, n_minta=2);"
+        "print(llm.pilih_latar(s, 0))"
+    ) % str(Path(__file__).resolve().parent.parent)
+    hasil = set()
+    for benih in ("0", "1", "12345"):
+        keluar = subprocess.run(
+            [sys.executable, "-c", kode],
+            capture_output=True,
+            text=True,
+            env={"PATH": "/usr/bin:/bin", "PYTHONHASHSEED": benih},
+        )
+        hasil.add(keluar.stdout.strip())
+    assert len(hasil) == 1, f"latar berubah antar PYTHONHASHSEED: {hasil}"
+    assert hasil == {llm.pilih_latar(soal, 0)}
+
+
+def test_latar_disebut_di_prompt(monkeypatch, api_aktif, kon, soal):
+    """Tanpa arahan latar, model punya beberapa cerita favorit dan
+    monotonnya cuma pindah dari template ke LLM."""
+    panggilan = pasang_api(monkeypatch, muatan=respons_chat("ok."))
+    llm.bungkus(kon, soal)
+    tubuh = panggilan[0].data.decode("utf-8")
+    assert llm.pilih_latar(soal, 0) in tubuh
+
+
 def test_ensure_table_idempoten(kon):
     llm.ensure_table(kon)
     llm.ensure_table(kon)  # tidak boleh raise

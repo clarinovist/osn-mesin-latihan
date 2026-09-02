@@ -25,8 +25,15 @@ def db(tmp_path, monkeypatch):
 
 
 def _palsu(monkeypatch, kalimat_fn):
-    """Ganti llm.bungkus supaya tidak ada panggilan API sungguhan."""
-    monkeypatch.setattr(llm, "bungkus", lambda kon, soal: kalimat_fn(soal))
+    """Ganti llm.bungkus supaya tidak ada panggilan API sungguhan.
+
+    Tanda tangannya harus ikut `putaran` (latar berputar): bungkus_sesi
+    memanggil ulang dengan latar berikutnya kalau latar pertama gagal
+    verifikasi.
+    """
+    monkeypatch.setattr(
+        llm, "bungkus", lambda kon, soal, putaran=0: kalimat_fn(soal)
+    )
 
 
 def test_cerita_mengganti_kalimat_tanpa_menyentuh_kunci(db, monkeypatch):
@@ -93,6 +100,29 @@ def test_tombol_muncul_di_cetak_kalau_fitur_hidup(db):
     assert "Variasi cerita" not in html_sesi
     assert "Variasi cerita" in html_cetak
     assert "0 dari 12" in html_cetak
+
+
+def test_latar_kedua_dicoba_kalau_latar_pertama_gagal(db, monkeypatch):
+    """Verifikasi angka sengaja galak, dan sebagian latar memang sulit
+    dipakai tanpa menambah angka ("lomba 17 Agustus" menggoda model
+    menulis 17). Menyerah setelah satu latar berarti soal kembali ke
+    kalimat bawaan padahal latar berikutnya mungkin lolos."""
+    putaran_terlihat: list[int] = []
+
+    def bungkus_palsu(kon, soal, putaran=0):
+        putaran_terlihat.append(putaran)
+        # Latar pertama selalu gagal verifikasi; yang kedua lolos.
+        if putaran == 0:
+            return None
+        return "Latar kedua: " + soal.teks.replace(chr(10), " ")
+
+    monkeypatch.setattr(llm, "bungkus", bungkus_palsu)
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Anak")
+        ses = database.buat_sesi(kon, sid, seed=42)
+        n, dicoba, _ = llm.bungkus_sesi(kon, ses, teacher_pages._soal_dari_baris)
+    assert set(putaran_terlihat) == {0, 1}
+    assert n == dicoba == 12, "latar kedua tidak menyelamatkan soal"
 
 
 def test_kalimat_cerita_tampil_di_lembar_anak(db, monkeypatch):
