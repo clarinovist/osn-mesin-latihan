@@ -323,8 +323,61 @@ ampuh:
 Patch ini hanya ada di VPS (`/usr/local/bin/osn-deploy` tidak ter-track);
 backup sebelum patch: `/root/osn-deploy.bak.<tanggal>`.
 
+### Gelombang 2 — akar masalahnya lebih luas (2 Sep 2026)
+
+Gelombang 1 menutup dengan dugaan "template sudah ada, tinggal dipakai".
+Dugaan itu **diverifikasi salah**: tidak ada satu pun template tidur di
+topik mana pun. Yang benar:
+
+```
+SELURUH APLIKASI: 43 dari 85 template hanya punya <= 2 bentuk kalimat.
+```
+
+Separuh bank template menulis satu kalimat mati di f-string. Empat
+perbaikan, dan yang menentukan bukan tekniknya melainkan **pilihan obat
+per paket**:
+
+| paket | obat | hasil |
+|---|---|---|
+| aritmatika-lanjut | latar berputar (8 template) | P5 18→34, P6 22→94 |
+| geometri-datar | objek nyata seukuran cm | P4 11→39, P5 21→60, P6 21→63 |
+| aritmetika-dasar | **tambah jenis soal**, bukan latar | 3→7 jenis, 3→11 bentuk |
+| teori-bilangan | latar untuk KPK **saja** | P5/P6 7→11 |
+
+`_putar()` naik jadi `templates.putar` karena dipakai bersama; kontrak
+lengkapnya (deterministik atas parameter, bukan `hash()`, tanpa parameter
+baru) ada di docstringnya.
+
+**Kapan latar BUKAN obatnya.** Soal hitung murni tidak selalu penyakit.
+`Hitung: 24 + 54 ÷ 3 × 2 − 7` memang bentuk yang benar untuk melatih
+urutan operasi; membungkusnya jadi cerita menambah beban baca yang bukan
+sedang diuji. Untuk paket seperti itu obatnya menambah **jenis soal**.
+Aturan yang dipakai: latar diberi kalau ia bagian dari konsepnya (KPK
+lewat "lampu berkedip bersamaan" — bentuk baku di naskah OSN), ditolak
+kalau ia cuma bungkus (keterbagian, sisa pembagian, paritas).
+
+**Metrik ada batasnya.** Untuk paket hitung murni, "pola-kalimat unik"
+menabrak langit-langit struktural: satu template = satu pola, berapa pun
+angkanya, jadi ambang 25 berarti 25 template untuk satu paket P5/P6.
+Untuk aritmetika-dasar yang dikunci adalah **berapa jenis soal yang
+dilatih** (≥7) — metrik yang benar untuk paket seperti itu.
+
+Sisa di bawah ambang 25: 8 dari 29 kombinasi topik×level (dari 13).
+
 
 ## Batas yang diketahui
+
+- **Empat paket masih di bawah ambang variasi, dan itu disengaja**
+  (gelombang 2, 2 Sep 2026). `teori-bilangan` P4 tetap 4 bentuk kalimat
+  karena ketiga templatenya (keterbagian, sisa pembagian, paritas)
+  hitung murni — memberi cerita akan mengaburkan konsep yang sedang
+  diuji. `aritmetika-dasar` berhenti di 11 karena metriknya menabrak
+  langit-langit struktural (lihat "Melawan monoton"). `pengukuran` (P4
+  18, P5/P6 21) belum dikerjakan. Perbaikan yang benar untuk semuanya
+  **menambah jenis soal**, bukan menambah latar — pekerjaan tersendiri.
+  Angka-angka itu dikunci test supaya tidak diam-diam turun, dan
+  `test_latar_teori_bilangan.py` juga akan MENOLAK kalau seseorang
+  membungkus template hitung murni dengan cerita demi menaikkan metrik.
 
 - **Lembar 12 soal = 5 halaman.** Sudah dicoba dipadatkan; memangkas kotak
   Caraku mengurangi ruang tulis tanpa mengurangi halaman. Kotak yang terlalu
