@@ -1014,6 +1014,22 @@ class Penangan(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
 
+            if len(bagian) >= 4 and bagian[3] == "baca-ulang":
+                # Ulangi ekstraksi AI atas foto yang sudah ada — tidak
+                # menyentuh jawaban sama sekali, hanya hasil_json usulan.
+                with database.buka() as kon:
+                    if not self._bisa_lihat_lampiran(kon, angka):
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    pesan = lampiran_mod.baca_ulang(kon, angka)
+                    isi = lampiran_mod.halaman_konfirmasi(kon, angka, pesan)
+                    if isi is None:
+                        return self._kirim(
+                            _halaman("404", "<h1>Lampiran hilang</h1>"), 404
+                        )
+                    return self._kirim(isi)
+
             if len(bagian) >= 4 and bagian[3] == "terapkan":
                 # Konfirmasi guru: tulis jawaban hasil koreksi ke jalur resmi.
                 panjang = int(self.headers.get("Content-Length", 0) or 0)

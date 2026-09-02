@@ -57,9 +57,13 @@ BATAS_WAKTU_DETIK = 20
 MAX_TOKENS = 2000
 
 # Vision (lampiran foto): deepseek-v4-flash-vision-exp juga reasoning model
-# — terukur 718 reasoning token untuk 6 soal. 3000 menyisakan ruang untuk
-# lembar 12 soal + JSON hasil.
-MAX_TOKENS_VISION = 3000
+# — terukur 718 reasoning token untuk 6 soal.
+# Vision membaca lembar utuh: jawaban + caraku untuk sampai puluhan soal.
+# 3000 terbukti kurang di lapangan (2 Sep 2026): sesi 50 soal membuat
+# balasan terpotong di soal ke-11 dan seluruh hasil terbuang. Prompt kini
+# meminta caraku singkat, tapi batasnya tetap dinaikkan supaya lembar
+# panjang muat utuh.
+MAX_TOKENS_VISION = 8000
 
 # Naikkan versi ini kalau prompt berubah — kunci cache ikut berubah,
 # jadi kalimat lama tidak dipakai ulang untuk soal berprompt baru.
@@ -315,11 +319,59 @@ def konfigurasi_vision() -> dict[str, str]:
     }
 
 
+# Alias kunci: model kadang menjawab dalam bahasa Inggris
+# ("number"/"answer"/"work") meski prompt berbahasa Indonesia. Menolak
+# balasan seperti itu berarti membuang bacaan yang sebenarnya benar —
+# bug lapangan 2 Sep 2026 (lembar Filia: 11 soal terbaca, semuanya
+# dibuang). Kunci Indonesia tetap yang utama; alias hanya cadangan.
+ALIAS_NOMOR = ("nomor", "number", "no", "soal_ke")
+ALIAS_JAWABAN = ("jawaban", "answer", "jawab", "hasil")
+ALIAS_CARAKU = ("caraku", "cara", "work", "working", "langkah")
+
+
+def _ambil_alias(butir: dict, alias: tuple[str, ...]):
+    """Nilai pertama yang ada di butir menurut urutan alias (None bila tak ada)."""
+    for kunci in alias:
+        if kunci in butir and butir[kunci] is not None:
+            return butir[kunci]
+    return None
+
+
+def _potong_json_terpotong(bersih: str) -> str | None:
+    """Selamatkan JSON yang terpotong di tengah karena batas token.
+
+    Model yang diminta membaca 50 soal bisa kehabisan token di soal ke-11:
+    string yang keluar valid sampai objek terakhir lalu berhenti mendadak
+    ("caraku": "Pola 'ABCDEB' ada 6 huruf. 139 : 6 = 23 sisa 1, jadi hu).
+    Membuang seluruhnya berarti kehilangan 10 soal yang sudah benar terbaca.
+    Strategi: potong di objek lengkap TERAKHIR (`}` terakhir yang punya
+    pasangan `{`) lalu tutup array + objek luar secara sintaksis.
+    Kembalikan None kalau tidak ada satu pun objek utuh.
+    """
+    # Cari akhir objek butir terakhir yang utuh: telusuri dari belakang.
+    for i in range(len(bersih) - 1, -1, -1):
+        if bersih[i] != "}":
+            continue
+        calon = bersih[: i + 1] + "]}"
+        try:
+            data = json.loads(calon)
+        except ValueError:
+            continue
+        if isinstance(data, dict) and isinstance(data.get("soal"), list):
+            return calon
+    return None
+
+
 def parse_ekstraksi(konten: str) -> list[dict] | None:
     """Ubah konten model (mungkin dibungkus ```json) jadi daftar hasil.
 
     Format yang diterima:
       {"soal": [{"nomor": 1, "jawaban": "10", "caraku": "tambah 2"}, ...]}
+
+    Kunci bahasa Inggris (number/answer/work) diterima sebagai alias —
+    lihat ALIAS_*. JSON yang terpotong karena batas token diselamatkan
+    sampai objek utuh terakhir (_potong_json_terpotong): bacaan sebagian
+    tetap berguna, guru yang mengoreksi.
 
     Apa pun yang menyimpang -> None, bukan exception. Dua garis kebenaran:
       - nomor wajib bilangan bulat >= 1;
@@ -334,13 +386,25 @@ def parse_ekstraksi(konten: str) -> list[dict] | None:
         if baris and baris[-1].strip().startswith("```"):
             baris = baris[:-1]
         bersih = "\n".join(baris).strip()
-    mulai, akhir = bersih.find("{"), bersih.rfind("}")
-    if mulai == -1 or akhir <= mulai:
+    mulai = bersih.find("{")
+    if mulai == -1:
         return None
-    try:
-        data = json.loads(bersih[mulai : akhir + 1])
-    except ValueError:
-        return None
+    akhir = bersih.rfind("}")
+    data = None
+    if akhir > mulai:
+        try:
+            data = json.loads(bersih[mulai : akhir + 1])
+        except ValueError:
+            data = None
+    if data is None:
+        # Kemungkinan terpotong batas token — selamatkan bagian yang utuh.
+        selamat = _potong_json_terpotong(bersih[mulai:])
+        if selamat is None:
+            return None
+        try:
+            data = json.loads(selamat)
+        except ValueError:
+            return None
     if not isinstance(data, dict):
         return None
     daftar = data.get("soal")
@@ -351,12 +415,12 @@ def parse_ekstraksi(konten: str) -> list[dict] | None:
         if not isinstance(butir, dict):
             return None
         try:
-            nilai_nomor = butir.get("nomor")
+            nilai_nomor = _ambil_alias(butir, ALIAS_NOMOR)
             if nilai_nomor is None:
                 return None
             nomor = int(nilai_nomor)
-            jawaban = str(butir.get("jawaban") or "").strip()
-            caraku = str(butir.get("caraku") or "").strip()
+            jawaban = str(_ambil_alias(butir, ALIAS_JAWABAN) or "").strip()
+            caraku = str(_ambil_alias(butir, ALIAS_CARAKU) or "").strip()
         except (TypeError, ValueError):
             return None
         if nomor < 1:
@@ -366,17 +430,42 @@ def parse_ekstraksi(konten: str) -> list[dict] | None:
 
 
 def verifikasi_ekstraksi(hasil: list[dict], jumlah_soal: int) -> bool:
-    """Hasil hanya sah kalau nomornya 1..N lengkap, tanpa nomor asing.
+    """Hasil sah kalau ada minimal satu nomor yang MASIH di rentang 1..N.
 
-    Nomor asing (99) atau hilang (hanya 1..5 dari 6) berarti model tidak
-    benar-benar membaca lembar — hasilnya tidak layak ditampilkan ke guru.
-    Isi jawaban TIDAK diverifikasi di sini: guru yang menilai di halaman
-    konfirmasi.
+    Dulu syaratnya 1..N LENGKAP. Itu membuang hasil yang benar dalam dua
+    kasus nyata (2 Sep 2026): (a) foto memuat sebagian soal saja — anak
+    memfoto satu lembar dari sesi 50 soal; (b) balasan model terpotong
+    batas token. Sekarang bacaan SEBAGIAN diterima — guru tetap wajib
+    konfirmasi di halaman lampiran, jadi tidak ada data yang masuk tanpa
+    mata manusia.
+
+    Yang masih ditolak: hasil kosong, dan hasil yang SELURUH nomornya di
+    luar rentang (mis. semua nomor 99) — itu tanda model tidak membaca
+    lembar ini. Nomor asing dibersihkan oleh saring_ekstraksi, bukan di
+    sini. Isi jawaban TIDAK diverifikasi: guru yang menilai.
     """
     if not hasil:
         return False
     nomor = {h["nomor"] for h in hasil}
-    return nomor == set(range(1, jumlah_soal + 1))
+    return bool(nomor & set(range(1, jumlah_soal + 1)))
+
+
+def saring_ekstraksi(hasil: list[dict], jumlah_soal: int) -> list[dict]:
+    """Buang nomor di luar 1..N dan duplikat (ambil kemunculan pertama).
+
+    Verifikasi memutuskan "layak/tidak"; penyaringan memutuskan "apa yang
+    dipakai". Nomor 99 pada sesi 12 soal tidak boleh sampai ke halaman
+    konfirmasi — ia tak punya sesi_soal_id dan hanya membingungkan guru.
+    """
+    sah = set(range(1, jumlah_soal + 1))
+    keluar: list[dict] = []
+    terlihat: set[int] = set()
+    for h in hasil:
+        n = h["nomor"]
+        if n in sah and n not in terlihat:
+            terlihat.add(n)
+            keluar.append(h)
+    return keluar
 
 
 def ekstrak_lembar(soal_konteks: list[str], gambar_b64: str) -> list[dict] | None:
@@ -398,11 +487,15 @@ def ekstrak_lembar(soal_konteks: list[str], gambar_b64: str) -> list[dict] | Non
     prompt = (
         "Berikut daftar soal di lembar ini:\n"
         f"{daftar_soal}\n\n"
-        "Baca FOTO lembar yang sudah diisi anak. Untuk SETIAP nomor 1.."
-        f"{len(soal_konteks)}:\n"
-        "- jawaban: angka yang anak tulis di kotak Jawabanku (kalau kosong, \"\").\n"
-        "- caraku: teks di kotak Caraku. Coretan tak terbaca tulis \"?\"; "
-        "kotak kosong tulis \"\".\n"
+        "Baca FOTO lembar yang sudah diisi anak. Untuk SETIAP nomor yang "
+        "TERLIHAT di foto:\n"
+        "- jawaban: angka/kata yang anak tulis di kotak Jawabanku "
+        "(kalau kosong, \"\").\n"
+        "- caraku: SALINAN SINGKAT tulisan anak di kotak Caraku, maksimal 15 "
+        "kata. Coretan tak terbaca tulis \"?\"; kotak kosong tulis \"\".\n"
+        "Nomor yang tidak ada di foto boleh dilewati — jangan mengarang.\n"
+        "JANGAN menilai benar/salah dan JANGAN menuliskan cara yang benar; "
+        "salin apa adanya yang anak tulis.\n"
         'Keluarkan HANYA JSON: {"soal": [{"nomor": 1, "jawaban": "...", '
         '"caraku": "..."}]} tanpa penjelasan.'
     )
@@ -457,7 +550,7 @@ def ekstrak_lembar(soal_konteks: list[str], gambar_b64: str) -> list[dict] | Non
     hasil = parse_ekstraksi(konten)
     if hasil is None or not verifikasi_ekstraksi(hasil, len(soal_konteks)):
         return None
-    return hasil
+    return saring_ekstraksi(hasil, len(soal_konteks))
 
 
 # ── Gerbang biaya (opsional) ───────────────────────────────────────────

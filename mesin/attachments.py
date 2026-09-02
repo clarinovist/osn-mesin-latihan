@@ -164,27 +164,77 @@ def proses_upload(
 
     # Ekstraksi AI — gagal-diam; tetap simpan lampiran tanpa hasil supaya
     # guru bisa coba lagi dari halaman yang sama.
-    import llm
-
-    b64 = base64.b64encode(isi).decode()
-    konteks = [b["teks"] for b in _soal_konteks(kon, sesi_id)]
-    hasil = llm.ekstrak_lembar(konteks, b64)
-    hasil_json = (
-        json.dumps({"soal": hasil}, ensure_ascii=False) if hasil else ""
-    )
-    if hasil is None:
-        pesan = (
-            "Foto tersimpan, tapi AI tidak bisa membaca lembar dengan yakin. "
-            "Coba lagi dengan foto yang lebih terang/tegak, atau isi manual."
-        )
-    else:
-        pesan = f"AI membaca {len(hasil)} soal — periksa dan koreksi di bawah."
+    hasil_json, pesan = _ekstraksi_untuk(kon, sesi_id, isi)
 
     nama = simpan_berkas(sesi_id, nama_asli, isi)
     lid = database.simpan_lampiran(
         kon, sesi_id, nama, mime=mime, hasil_json=hasil_json
     )
     return lid, pesan
+
+
+def _ekstraksi_untuk(kon, sesi_id: int, isi: bytes) -> tuple[str, str]:
+    """Jalankan ekstraksi AI atas satu foto -> (hasil_json, pesan untuk guru).
+
+    Dipakai dua kali: saat upload pertama dan saat guru menekan "Coba baca
+    ulang" di halaman konfirmasi (tanpa upload ulang). Pesan menyebutkan
+    JUMLAH soal yang terbaca dari total — bacaan sebagian adalah keadaan
+    normal (anak memfoto satu lembar dari sesi panjang), bukan kegagalan,
+    jadi guru harus tahu angkanya, bukan cuma "berhasil/gagal".
+    """
+    import llm
+
+    total = len(database.isi_sesi(kon, sesi_id))
+    b64 = base64.b64encode(isi).decode()
+    konteks = [b["teks"] for b in _soal_konteks(kon, sesi_id)]
+    hasil = llm.ekstrak_lembar(konteks, b64)
+    if hasil is None:
+        return "", (
+            "Foto tersimpan, tapi AI tidak bisa membaca lembar dengan yakin. "
+            "Coba tekan \"Coba baca ulang\", atau unggah foto yang lebih "
+            "terang/tegak, atau isi manual."
+        )
+    hasil_json = json.dumps({"soal": hasil}, ensure_ascii=False)
+    terisi = sum(1 for h in hasil if h.get("jawaban") or h.get("caraku"))
+    if terisi == 0:
+        return hasil_json, (
+            f"AI melihat lembar ini tapi tidak menemukan jawaban terisi "
+            f"(0 dari {total} soal). Pastikan yang difoto adalah lembar "
+            "jawaban anak, lalu coba baca ulang."
+        )
+    return hasil_json, (
+        f"AI membaca {terisi} dari {total} soal — periksa dan koreksi di "
+        "bawah, soal yang tidak terbaca biarkan kosong."
+    )
+
+
+def baca_ulang(kon, lampiran_id: int) -> str:
+    """Jalankan ulang ekstraksi AI atas foto yang SUDAH terunggah.
+
+    Guru tidak perlu memotret dan mengunggah lagi hanya karena bacaan
+    pertama gagal (jaringan, model sibuk, balasan terpotong). Berkasnya
+    sudah ada di cakram; yang diulang hanya panggilan AI dan hasil_json
+    ditimpa. Status lampiran TIDAK diubah — 'diterapkan' tetap
+    'diterapkan' supaya jejak penerapan tidak hilang.
+    """
+    lampiran = database.ambil_lampiran(kon, lampiran_id)
+    if not lampiran:
+        return "Lampiran tidak ditemukan."
+    berkas = (
+        direktori_lampiran()
+        / str(lampiran["sesi_id"])
+        / lampiran["nama_berkas"]
+    )
+    try:
+        isi = berkas.read_bytes()
+    except OSError:
+        return "Berkas foto tidak ditemukan lagi di server."
+    hasil_json, pesan = _ekstraksi_untuk(kon, int(lampiran["sesi_id"]), isi)
+    kon.execute(
+        "UPDATE lampiran SET hasil_json = ? WHERE id = ?",
+        (hasil_json, lampiran_id),
+    )
+    return pesan
 
 
 def _soal_konteks(kon, sesi_id: int) -> list[dict]:
@@ -324,6 +374,17 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
         else '<div class="pesan">Lampiran ini sudah diterapkan — '
         "menyimpan lagi akan menimpa jawaban yang ada.</div>"
     )
+    # Tombol baca ulang: form TERPISAH dari form terapkan (form bersarang
+    # tidak sah di HTML, dan menekan "baca ulang" tidak boleh ikut menulis
+    # jawaban). Selalu tersedia — bacaan pertama bisa gagal karena apa saja.
+    blok_baca_ulang = (
+        f'<form method="post" action="/lampiran/{lampiran_id}/baca-ulang" '
+        'class="baca-ulang-form">'
+        '<button type="submit" class="tombol-baca-ulang">'
+        "Coba baca ulang dengan AI</button>"
+        '<span class="sub">Foto tidak perlu diunggah ulang.</span>'
+        "</form>"
+    )
 
     isi = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -340,6 +401,7 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
 {kabar}{catatan_status}
 <div class="kartu"><img class="foto-lembar"
   src="/lampiran/berkas/{lampiran_id}" alt="Foto lembar anak"></div>
+{blok_baca_ulang}
 <form method="post" action="/lampiran/{lampiran_id}/terapkan">
 {''.join(kartu)}
 <div class="koreksi-simpan-st"><button type="submit">Terapkan &amp; diagnosis</button></div>
@@ -402,5 +464,17 @@ input[type=text]:focus {{
 button {{
   background: {T.AKSEN_TEAL_TUA}; color: #fff; border: 0;
   border-radius: 9px; padding: .85rem 1.3rem; font-size: 1rem; cursor: pointer; width: 100%;
+}}
+/* Baca ulang = aksi sekunder: jangan menyaingi tombol Terapkan yang
+   penuh-lebar teal, tapi tetap target sentuh 44px di HP. */
+.baca-ulang-form {{
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  margin: 0 0 1rem;
+}}
+.baca-ulang-form .sub {{ color: {T.TEKS_SUBTLE}; font-size: .84rem; }}
+button.tombol-baca-ulang {{
+  width: auto; min-height: 44px; padding: .6rem 1rem;
+  background: {T.LATAR_KARTU_MURID}; color: {T.AKSEN_TEAL_TUA};
+  border: 1px solid {T.AKSEN_TEAL_TUA}; font-size: .95rem;
 }}
 """

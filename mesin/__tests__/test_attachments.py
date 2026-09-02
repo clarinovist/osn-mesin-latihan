@@ -121,18 +121,26 @@ def test_ekstrak_hasil_dalam_code_fence(monkeypatch, api_aktif):
     assert hasil is not None and len(hasil) == 2
 
 
-def test_ekstrak_nomor_tidak_lengkap_ditolak(monkeypatch, api_aktif):
+def test_ekstrak_nomor_sebagian_diterima(monkeypatch, api_aktif):
+    """Kontrak BARU (2 Sep 2026): bacaan sebagian tetap dipakai.
+
+    Anak memfoto satu lembar dari sesi panjang -> hanya sebagian nomor
+    terlihat. Dulu seluruh hasil dibuang (all-or-nothing) sehingga guru
+    melihat form kosong dan mengira AI diam. Sekarang nomor yang terbaca
+    dipakai; guru tetap wajib konfirmasi sebelum data masuk.
+    """
     pasang_api(
         monkeypatch,
         muatan=respons_chat(
             json.dumps({"soal": [{"nomor": 1, "jawaban": "10", "caraku": ""}]})
         ),
     )
-    # 2 soal diharapkan tapi hanya nomor 1 -> verifikasi gagal
-    assert llm.ekstrak_lembar(["soal 1", "soal 2"], GAMBAR_UJI) is None
+    hasil = llm.ekstrak_lembar(["soal 1", "soal 2"], GAMBAR_UJI)
+    assert hasil == [{"nomor": 1, "jawaban": "10", "caraku": ""}]
 
 
-def test_ekstrak_nomor_aneh_ditolak(monkeypatch, api_aktif):
+def test_ekstrak_nomor_aneh_disaring_bukan_membuang_semua(monkeypatch, api_aktif):
+    """Nomor di luar rentang dibuang, nomor sah tetap dipakai."""
     pasang_api(
         monkeypatch,
         muatan=respons_chat(
@@ -140,6 +148,23 @@ def test_ekstrak_nomor_aneh_ditolak(monkeypatch, api_aktif):
                 {"soal": [
                     {"nomor": 99, "jawaban": "x", "caraku": ""},
                     {"nomor": 2, "jawaban": "9", "caraku": ""},
+                ]}
+            )
+        ),
+    )
+    hasil = llm.ekstrak_lembar(["soal 1", "soal 2"], GAMBAR_UJI)
+    assert hasil == [{"nomor": 2, "jawaban": "9", "caraku": ""}]
+
+
+def test_ekstrak_semua_nomor_di_luar_rentang_ditolak(monkeypatch, api_aktif):
+    """Kalau TIDAK ADA nomor yang masuk rentang, model tidak membaca lembar ini."""
+    pasang_api(
+        monkeypatch,
+        muatan=respons_chat(
+            json.dumps(
+                {"soal": [
+                    {"nomor": 99, "jawaban": "x", "caraku": ""},
+                    {"nomor": 40, "jawaban": "y", "caraku": ""},
                 ]}
             )
         ),
