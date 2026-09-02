@@ -10,8 +10,30 @@ from __future__ import annotations
 import math
 import random
 
-from templates import Malrule, Soal, saring_malrule
+from templates import Malrule, Soal, putar, saring_malrule
 from topics import Topik, daftarkan
+
+
+# ── Latar cerita: HANYA untuk yang memang bercerita ────────────────────
+#
+# Gelombang 2 mengukur seluruh 8 template paket ini punya <= 2 bentuk
+# kalimat. Godaannya membungkus semuanya dengan cerita, dan itu ditolak:
+# "Berapa KPK dari 190 dan 108?" adalah perintah hitung murni, tapi
+# "Manakah dari bilangan 84, 85, dan 90 yang habis dibagi 3?" juga —
+# membungkusnya jadi cerita mengaburkan konsep yang sedang diuji tanpa
+# menambah kemampuan apa pun yang dinilai.
+#
+# Yang lolos saringan itu cuma KPK: "lampu berkedip tiap N detik, kapan
+# berkedip bersamaan" adalah bentuk soal KPK yang SUDAH baku di buku dan
+# di naskah OSN — ceritanya bukan bungkus, ia bagian dari konsepnya
+# (kejadian berulang yang bertemu).
+#
+# Konsekuensi yang diterima sadar (keputusan pemilik produk 2 Sep 2026):
+# teori-bilangan P4 tetap 4 bentuk kalimat, karena ketiga templatenya
+# (keterbagian, sisa_pembagian, paritas) semuanya hitung murni. Lebih
+# baik jujur di bawah ambang daripada memberi anak soal yang kabur.
+# Perbaikan yang benar untuk P4 adalah menambah JENIS soal, bukan latar —
+# dicatat di README sebagai batas yang diketahui.
 
 
 # ── Bagian A — Keterbagian ─────────────────────────────────────────────
@@ -166,7 +188,30 @@ def kpk_dua_bilangan(a: int, b: int) -> Soal:
             "perhitungan KPK benar, hasilnya meleset satu",
         ),
     ]
-    teks = f"Berapa KPK dari {a} dan {b}?"
+    # Latar KPK: kejadian berulang yang bertemu. Bentuk pertama sengaja
+    # tetap perintah murni — sebagian anak justru terbantu melihat soal
+    # yang sama dalam dua rupa (nama konsepnya dan penerapannya), dan
+    # menghilangkan bentuk murni berarti anak tidak pernah lagi diminta
+    # menyebut KPK dengan namanya.
+    cerita = putar(
+        (
+            None,
+            ("Dua lampu hias berkedip setiap", "detik", "berkedip bersamaan"),
+            ("Dua bus berangkat dari terminal setiap", "menit", "berangkat bersamaan"),
+            ("Dua lonceng dibunyikan setiap", "detik", "berbunyi bersamaan"),
+            ("Dua kapal singgah di pelabuhan setiap", "hari", "singgah bersamaan"),
+        ),
+        a,
+        b,
+    )
+    if cerita is None:
+        teks = f"Berapa KPK dari {a} dan {b}?"
+    else:
+        pembuka, satuan, kejadian = cerita
+        teks = (
+            f"{pembuka} {a} {satuan} dan {b} {satuan}. Jika tadi keduanya "
+            f"{kejadian}, setelah berapa {satuan} keduanya {kejadian} lagi?"
+        )
     return Soal(
         "kpk_dua_bilangan",
         {"a": a, "b": b},
@@ -175,7 +220,8 @@ def kpk_dua_bilangan(a: int, b: int) -> Soal:
         saring_malrule(str(kunci), mal),
         minta_restatement=True,
         pembahasan=(
-            f"Langkah: KPK = (a x b) : FPB. "
+            f"Langkah: yang dicari KPK, yaitu kelipatan bersama TERKECIL. "
+            f"KPK = (a x b) : FPB. "
             f"({a} x {b}) : {math.gcd(a, b)} = {kunci}."
         ),
         bagian="B",

@@ -16,9 +16,62 @@ from __future__ import annotations
 
 import random
 
-from templates import Malrule, Soal, saring_malrule
+from templates import Malrule, Soal, putar, saring_malrule
 from topics import Topik, daftarkan
 from topic_plane_geometry_param import _parameter
+
+
+# ── Latar objek nyata (gelombang 2, 2 Sep 2026) ────────────────────────
+#
+# Lima template paket ini menulis bentuk geometri telanjang: "Persegi
+# panjang panjangnya N cm dan lebarnya N cm." Terukur: geometri-datar P4
+# hanya 11 bentuk kalimat, P5 dan P6 masing-masing 21 — ketiganya di
+# bawah ambang 25.
+#
+# Objek nyata dipakai karena begitulah soal OSN sendiri ditulis: "sebuah
+# kebun berbentuk persegi panjang", bukan "persegi panjang". Bedanya
+# dengan membungkus soal hitung murni jadi cerita (yang ditolak di
+# aritmetika-dasar): objek di sini TIDAK menambah langkah baca, ia hanya
+# memberi nama pada bangun yang sudah ada di soal.
+#
+# Objeknya WAJIB seukuran sentimeter. Parameter menghasilkan sisi 3–40
+# cm, jadi "sebuah lapangan panjangnya 12 cm" akan janggal — dan
+# mengubah satuannya jadi meter membuat kunci (dihitung dari angka apa
+# adanya) tidak lagi cocok dengan satuan di soal. Jadi yang dipilih:
+# kertas, ubin, foto, kain — bukan kebun atau sawah. Dikunci test.
+#
+# Latar diambil dari parameter lewat templates.putar; kontrak lengkapnya
+# ada di docstring fungsi itu.
+
+# Benda persegi panjang seukuran cm: (nama, kata sandang untuk kalimat).
+_BENDA_PERSEGI = (
+    ("selembar kertas gambar", "kertas"),
+    ("sebuah ubin lantai", "ubin"),
+    ("sebuah foto keluarga", "foto"),
+    ("sebuah papan tulis kecil", "papan"),
+    ("sepotong kain perca", "kain"),
+)
+
+# Benda segitiga seukuran cm. Dipisah dari jajargenjang: "penggaris
+# segitiga berbentuk jajargenjang" adalah kalimat yang bertentangan
+# dengan dirinya sendiri, dan itu lolos versi pertama karena satu daftar
+# dipakai dua bentuk. Ketahuan dari membaca keluaran nyatanya.
+_BENDA_SEGITIGA = (
+    "sebuah rambu lalu lintas mainan",
+    "selembar kertas origami",
+    "sepotong kue lapis",
+    "sebuah penggaris segitiga",
+    "sepotong keramik hias",
+)
+
+# Benda jajargenjang seukuran cm — tidak ada "penggaris segitiga" di sini.
+_BENDA_JAJARGENJANG = (
+    "selembar kertas origami",
+    "sepotong kue lapis",
+    "sepotong keramik hias",
+    "sebuah stiker",
+    "sepotong kain perca",
+)
 
 
 # ── Bagian A — Sudut ───────────────────────────────────────────────────
@@ -222,7 +275,26 @@ def jumlah_sudut_segitiga(
                 "hanya mengurangi satu sudut, sudut kedua tidak dihitung",
             ),
         ]
-        teks = f"Dalam sebuah segitiga, dua sudutnya {a}° dan {b}°. Berapa besar sudut yang ketiga?"
+        # Sudut tidak diberi benda fisik: "sebuah ubin dua sudutnya 40°"
+        # tidak menolong anak memahami apa pun, dan menambah kata yang
+        # harus dibaca tanpa menambah makna. Yang divariasikan KONTEKS
+        # bangunnya — rangka atap, layang-layang, potongan kain — semua
+        # benda yang memang berbentuk segitiga dan sudutnya bermakna.
+        rangka = putar(
+            (
+                "sebuah segitiga",
+                "rangka atap berbentuk segitiga",
+                "sebuah layang-layang bagian atas yang berbentuk segitiga",
+                "potongan kain berbentuk segitiga",
+                "sebuah papan penunjuk berbentuk segitiga",
+            ),
+            a or 0,
+            b or 0,
+        )
+        teks = (
+            f"Dalam {rangka}, dua sudutnya {a}° dan {b}°. "
+            f"Berapa besar sudut yang ketiga?"
+        )
         param = {"varian": varian, "a": a, "b": b}
     else:
         total = p + q + r
@@ -247,8 +319,20 @@ def jumlah_sudut_segitiga(
                 "menjawab angka perbandingannya, bukan besar sudut",
             ),
         ]
+        bangun = putar(
+            (
+                "sebuah segitiga",
+                "sebuah taman berbentuk segitiga",
+                "sebuah rambu berbentuk segitiga",
+                "sepotong kertas berbentuk segitiga",
+                "sebuah bendera berbentuk segitiga",
+            ),
+            p or 0,
+            q or 0,
+            r or 0,
+        )
         teks = (
-            f"Sudut-sudut sebuah segitiga berbanding {p} : {q} : {r}. "
+            f"Sudut-sudut {bangun} berbanding {p} : {q} : {r}. "
             f"Berapa besar sudut yang terkecil?"
         )
         param = {"varian": varian, "p": p, "q": q, "r": r}
@@ -296,11 +380,22 @@ def sudut_luar_segitiga(a: int, b: int) -> Soal:
             "jumlah dua sudut dalam sudah benar, hasilnya meleset satu",
         ),
     ]
+    bangun = putar(
+        (
+            "sebuah segitiga",
+            "sebuah rangka atap segitiga",
+            "sebuah taman berbentuk segitiga",
+            "sepotong kertas berbentuk segitiga",
+            "sebuah rambu berbentuk segitiga",
+        ),
+        a,
+        b,
+    )
     return Soal(
         "sudut_luar_segitiga",
         {"a": a, "b": b},
         (
-            f"Dua sudut dalam sebuah segitiga yang tidak bersisian dengan "
+            f"Dua sudut dalam {bangun} yang tidak bersisian dengan "
             f"sudut luar besarnya {a}° dan {b}°. "
             f"Berapa besar sudut luar tersebut?"
         ),
@@ -346,9 +441,10 @@ def keliling_luas_datar(
                 "kelilingnya benar, penjumlahannya meleset satu",
             ),
         ]
+        benda, sebut = putar(_BENDA_PERSEGI, p, l or 0)
         teks = (
-            f"Persegi panjang panjangnya {p} cm dan lebarnya {l} cm. "
-            f"Berapa kelilingnya?"
+            f"{benda.capitalize()} berbentuk persegi panjang, panjangnya "
+            f"{p} cm dan lebarnya {l} cm. Berapa keliling {sebut} itu?"
         )
         param = {"varian": varian, "p": p, "l": l}
         langkah = (
@@ -376,9 +472,10 @@ def keliling_luas_datar(
                 "langkahnya benar, perkalian luasnya meleset satu",
             ),
         ]
+        benda, sebut = putar(_BENDA_PERSEGI, p, K or 0)
         teks = (
-            f"Keliling persegi panjang {K} cm dan panjangnya {p} cm. "
-            f"Berapa luas persegi panjang itu?"
+            f"{benda.capitalize()} berbentuk persegi panjang. Kelilingnya "
+            f"{K} cm dan panjangnya {p} cm. Berapa luas {sebut} itu?"
         )
         param = {"varian": varian, "p": p, "K": K}
         langkah = (
@@ -426,9 +523,10 @@ def luas_segitiga_jajargenjang(varian: str, a: int, t: int, s: int) -> Soal:
                 "rumus ½·a·t benar, perkaliannya meleset satu",
             ),
         ]
+        benda = putar(_BENDA_SEGITIGA, a, t, s)
         teks = (
-            f"Segitiga alasnya {a} cm, tingginya {t} cm, dan sisi miringnya "
-            f"{s} cm. Berapa luas segitiga itu?"
+            f"{benda.capitalize()} berbentuk segitiga dengan alas {a} cm, "
+            f"tinggi {t} cm, dan sisi miring {s} cm. Berapa luasnya?"
         )
         param = {"varian": varian, "a": a, "t": t, "s": s}
     else:
@@ -453,9 +551,10 @@ def luas_segitiga_jajargenjang(varian: str, a: int, t: int, s: int) -> Soal:
                 "rumus a·t benar, perkaliannya meleset satu",
             ),
         ]
+        benda = putar(_BENDA_JAJARGENJANG, a, t, s)
         teks = (
-            f"Jajargenjang alasnya {a} cm, tingginya {t} cm, dan sisi "
-            f"miringnya {s} cm. Berapa luas jajargenjang itu?"
+            f"{benda.capitalize()} berbentuk jajargenjang dengan alas {a} cm, "
+            f"tinggi {t} cm, dan sisi miring {s} cm. Berapa luasnya?"
         )
         param = {"varian": varian, "a": a, "t": t, "s": s}
     return Soal(
