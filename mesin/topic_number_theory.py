@@ -76,7 +76,7 @@ def keterbagian(d: int, a: int, b: int, c: int, jawab: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -139,7 +139,7 @@ def prima_faktorisasi(n: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -179,7 +179,7 @@ def kpk_dua_bilangan(a: int, b: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -222,7 +222,7 @@ def fpb_kpk_hubungan(a: int, b: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -268,7 +268,7 @@ def sisa_pembagian(N: int, d: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -319,7 +319,7 @@ def paritas(a: int, n: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -369,7 +369,7 @@ def angka_satuan_pangkat(a: int, b: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="D",
     )
@@ -409,7 +409,7 @@ def gauss_deret(n: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="D",
     )

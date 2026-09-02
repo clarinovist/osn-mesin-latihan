@@ -179,7 +179,7 @@ def sudut_pelurus_berpenyiku(varian: str, x: int | None = None, kali: int | None
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -260,7 +260,7 @@ def jumlah_sudut_segitiga(
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -308,7 +308,7 @@ def sudut_luar_segitiga(a: int, b: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -387,7 +387,7 @@ def keliling_luas_datar(
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -463,7 +463,7 @@ def luas_segitiga_jajargenjang(varian: str, a: int, t: int, s: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -569,7 +569,7 @@ def luas_segiempat_lain(varian: str, **nilai: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -657,7 +657,7 @@ def lingkaran_keliling_luas(varian: str, r: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -743,7 +743,7 @@ def juring(varian: str, s: int, r: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -833,7 +833,7 @@ def luas_arsiran(varian: str, **nilai: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="D",
     )
@@ -934,7 +934,7 @@ def perbandingan_ukuran(varian: str, k: int, ukuran: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="D",
     )
@@ -1000,7 +1000,7 @@ def luas_kotak_satuan(p: int, l: int, satuan: str = "cm", konteks: str = "kotak"
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="E",
     )
@@ -1152,7 +1152,7 @@ def simetri_bangun(
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="E",
     )

@@ -64,7 +64,7 @@ def skala_peta(varian: str, sebenarnya: int, peta: int, skala: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -118,7 +118,7 @@ def satuan_waktu_lama(varian: str, nilai: int, hasil: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -186,7 +186,7 @@ def jam_menit_detik(varian: str, jam: int, menit: int, detik: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )

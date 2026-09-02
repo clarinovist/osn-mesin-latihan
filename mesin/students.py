@@ -84,6 +84,67 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
         )
     return keluar
 
+def hasil_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
+    """Hasil + PEMBAHASAN satu sesi untuk ANAK (poin b feedback Filia).
+
+    Ini SATU-SATUNYA fungsi sisi anak yang boleh menyentuh kebenaran
+    jawaban, dan syaratnya ketat:
+
+      - Sesi wajib milik anak ini (lewat sesi_murid) -> None kalau bukan.
+      - Sesi wajib SUDAH DIREVIEW guru (`sesi.direview` terisi) -> None
+        kalau belum. Tanpa pagar ini, anak bisa membuka pembahasan (yang
+        memuat jawaban akhir) sebelum pekerjaannya dinilai — itu sama
+        dengan membocorkan kunci.
+
+    Yang dikembalikan per soal: nomor, teks, jawaban anak sendiri,
+    benar/salah, dan pembahasan. Yang SENGAJA TIDAK dikembalikan: kode
+    diagnosis (K/H/E/N/B), malrule_id, dan alasan. Itu bahasa kerja guru;
+    anak butuh tahu letak salahnya, bukan label tipe kesalahannya.
+
+    Catatan palang: fungsi ini memang membaca kolom yang diblokir fixture
+    `db_terjaga` (kunci lewat _soal_dari_baris, benar dari diagnosis),
+    jadi ia TIDAK boleh dipanggil dari halaman kerja/daftar sesi. Halaman
+    hasil adalah permukaan terpisah dengan gerbang direview di atas.
+    """
+    from teacher_pages import _soal_dari_baris  # late import: hindari siklus
+
+    info = sesi_murid(kon, siswa_id, sesi_id)
+    if not info:
+        return None
+    ditinjau = kon.execute(
+        "SELECT direview FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()
+    if not ditinjau or not ditinjau["direview"]:
+        return None
+
+    butir: list[dict] = []
+    benar = 0
+    for b in isi_sesi(kon, sesi_id):
+        soal: Soal = _soal_dari_baris(b)
+        ini_benar = bool(b["benar"])
+        if ini_benar:
+            benar += 1
+        butir.append(
+            {
+                "nomor": b["nomor"],
+                "teks": soal.teks,
+                "jawabanku": (b["jawaban"] or ""),
+                "benar": ini_benar,
+                "dijawab": b["jawaban_id"] is not None,
+                "pembahasan": soal.pembahasan or "",
+            }
+        )
+    return {
+        "sesi_id": sesi_id,
+        "tanggal": info["tanggal"],
+        "level": info["level"],
+        "nama": info["nama"],
+        "jumlah": len(butir),
+        "benar": benar,
+        "soal": butir,
+    }
+
+
 def semua_terisi(kon, siswa_id: int, sesi_id: int) -> bool:
     """True bila SEMUA soal sesi ini sudah punya isian.
 

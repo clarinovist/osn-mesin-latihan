@@ -568,6 +568,29 @@ class Penangan(BaseHTTPRequestHandler):
                 )
             )
         bagian = jalur.split("/")
+        # /murid/hasil/<id> — hasil + pembahasan, hanya sesi yang SUDAH
+        # direview guru. Gerbangnya di students.hasil_murid (None = belum
+        # direview / bukan miliknya) dan dijawab 404: anak tidak boleh bisa
+        # membedakan "belum dinilai" dari "sesi orang lain" lewat kode HTTP.
+        if len(bagian) >= 4 and bagian[2] == "hasil":
+            try:
+                sesi_id_hasil = int(bagian[3])
+            except ValueError:
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            isi = student_pages.halaman_hasil_murid(
+                kon, siswa_id, sesi_id_hasil
+            )
+            if isi is None:
+                return self._kirim(
+                    _halaman(
+                        "Belum ada hasil",
+                        "<h1>Belum ada hasil</h1><p>Sesi ini belum selesai "
+                        "diperiksa gurumu. Coba lagi nanti, ya.</p>"
+                        '<p><a href="/murid">Kembali ke daftar sesi</a></p>',
+                    ),
+                    404,
+                )
+            return self._kirim(isi)
         # /murid/kerjakan/<id>
         if len(bagian) >= 3 and bagian[2] == "kerjakan":
             # Jumlah tersimpan datang dari pengalihan setelah POST. Nilainya

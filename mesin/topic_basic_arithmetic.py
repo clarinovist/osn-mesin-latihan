@@ -119,7 +119,7 @@ def urutan_operasi_1(a: int, b: int, c: int, d: int, e: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -159,7 +159,7 @@ def fpb_dua_bilangan(a: int, b: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -206,7 +206,7 @@ def pecahan_operasi_campuran(
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(hasil)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
         tantangan=True,

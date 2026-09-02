@@ -76,7 +76,7 @@ def benar_salah_pengandaian(
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -170,7 +170,7 @@ def tabel_penalaran(urutan: list[str], tanya: str) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -218,7 +218,7 @@ def jumlah_selisih(jumlah: int, selisih: int, tanya: str) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -265,7 +265,7 @@ def soal_umur(a: int, b: int, k: int, n: int, tanya: str) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -312,7 +312,7 @@ def soal_uang(total: int, k: int, tanya: str) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -359,7 +359,7 @@ def dua_besaran_selisih(selisih: int, k: int, tanya: str) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )

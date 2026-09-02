@@ -76,7 +76,7 @@ def deret_aritmetika(awal: int, beda: int, n_tampil: int, n_minta: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -117,7 +117,7 @@ def deret_aritmetika_turun(awal: int, beda: int, n_tampil: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -153,7 +153,7 @@ def deret_geometri(awal: int, rasio: int, n_tampil: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -207,7 +207,7 @@ def deret_bertingkat(awal: int, beda_awal: int, kenaikan: int, n_tampil: int) ->
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -324,7 +324,7 @@ def siklus_huruf(pola: list[str] | tuple[str, ...], posisi: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -402,7 +402,7 @@ def siklus_warna(pola: tuple[str, ...], posisi: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -453,7 +453,7 @@ def korek_api(awal: int, tambah: int, gambar_ke: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -503,7 +503,7 @@ def titik_segitiga(gambar_ke: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -553,7 +553,7 @@ def deret_terbalik_aritmetika(awal: int, beda: int, posisi_target: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = {posisi_target}. "
             "Cara: posisi = (target − awal) ÷ beda + 1. "
-            "Perhatikan malrule di halaman koreksi."
+            "Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="D",
     )
@@ -623,7 +623,7 @@ def deret_terbalik_geometri(awal: int, rasio: int, posisi_target: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = {posisi_target}. "
             "Cara: posisi = 1 + banyaknya penggandaan rasio dari awal "
-            "sampai target. Perhatikan malrule di halaman koreksi."
+            "sampai target. Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="D",
     )
@@ -669,7 +669,7 @@ def siklus_hari(hari_awal: str, tambah: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="E",
     )
@@ -718,7 +718,7 @@ def jumlah_siklus(pola: tuple[int, ...], n_angka: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="E",
         tantangan=True,
@@ -786,7 +786,7 @@ def suku_ke_n(awal: int, beda: int, posisi: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="F",
     )
@@ -891,7 +891,7 @@ def sisa_bagi_siklus(pola: tuple[str, ...], posisi: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="F",
     )
@@ -964,7 +964,7 @@ def pola_pecahan(pembilang: int, penyebut: int, beda_pembilang: int, n_tampil: i
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="F",
     )
@@ -1024,7 +1024,7 @@ def jumlah_deret(awal: int, beda: int, n: int) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(jawab)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="F",
         tantangan=True,

@@ -125,7 +125,7 @@ def unsur_bangun(bangun: str, tanya: str, n: int = 1) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
             bagian="A",
         )
@@ -169,7 +169,7 @@ def unsur_bangun(bangun: str, tanya: str, n: int = 1) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -221,7 +221,7 @@ def volume_kubus_balok(varian: str, s: int = 0, p: int = 0,
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -296,7 +296,7 @@ def volume_prisma_tabung(varian: str, a: int = 0, t_segitiga: int = 0,
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="A",
     )
@@ -384,7 +384,7 @@ def luas_permukaan(varian: str, s: int = 0,
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -449,7 +449,7 @@ def jaring_jaring(pilihan_benar: int, urutan: tuple[int, ...]) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="B",
     )
@@ -505,7 +505,7 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
             bagian="C",
         )
@@ -558,7 +558,7 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )
@@ -614,7 +614,7 @@ def perbandingan_volume(varian: str, k: int, s: int = 0,
         pembahasan=(
             f"Langkah: jawaban benar = "
             + str(kunci)
-            + ". Perhatikan malrule di halaman koreksi."
+            + ". Cocokkan dengan caramu sendiri, ya."
         ),
         bagian="C",
     )

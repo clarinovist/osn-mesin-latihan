@@ -779,6 +779,48 @@ a.tombol-coral {{
   display: inline-flex; align-items: center; gap: {T.SP_2};
 }}
 a.tombol-coral:hover {{ filter: brightness(1.06); }}
+/* Halaman hasil murid (/murid/hasil/<id>) — anak melihat letak salahnya.
+   Warna status memakai palet murid yang sudah ada; tidak ada token baru. */
+.hasil-ringkas-st {{
+  display: flex; align-items: center; gap: {T.SP_4};
+  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_4}; margin-bottom: {T.SP_4};
+}}
+.hasil-skor-st {{
+  font-family: {T.FONT_HEADLINE}; font-size: 2rem; font-weight: 800;
+  color: {T.AKSEN_TEAL_TUA}; line-height: 1; flex: none;
+}}
+.hasil-skor-st span {{ font-size: 1.1rem; color: {T.TEKS_VARIAN}; }}
+.hasil-pesan-st {{ font-size: .95rem; color: {T.TEKS_UTAMA}; }}
+.hasil-soal-st {{
+  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
+  border-left: 4px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_4}; margin-bottom: {T.SP_3};
+}}
+.hasil-soal-st.benar {{ border-left-color: {T.AKSEN_MURID_UTAMA}; }}
+.hasil-soal-st.salah {{ border-left-color: {T.AKSEN_MURID_KORAL}; }}
+.hasil-kepala-st {{
+  display: flex; align-items: center; gap: {T.SP_2}; margin-bottom: {T.SP_2};
+  flex-wrap: wrap;
+}}
+.hasil-nomor-st {{
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.9rem; height: 1.9rem; border-radius: 50%; flex: none;
+  background: {T.AKSEN_TEAL_TUA}; color: #fff; font-weight: 700;
+}}
+.hasil-teks-st {{ margin: 0 0 {T.SP_2}; font-size: .98rem; }}
+.hasil-jawabku-st {{
+  margin: 0 0 {T.SP_2}; font-size: .93rem; color: {T.TEKS_VARIAN};
+}}
+.hasil-langkah-st {{
+  display: flex; gap: {T.SP_2}; align-items: flex-start;
+  background: {T.LATAR_CATATAN}; border: 1px solid {T.BORDER_CATATAN};
+  border-radius: {T.RADIUS_SEDANG}; padding: {T.SP_3}; font-size: .93rem;
+}}
+.hasil-langkah-st .material-symbols-outlined {{
+  color: {T.AKSEN_MURID_AMBER}; flex: none; font-size: 1.15rem;
+}}
+
 """
 
 # Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa

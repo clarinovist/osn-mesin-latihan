@@ -17,6 +17,7 @@ from students import (
     PILIHAN_CARA,
     _ambil_topik,
     _escape,
+    hasil_murid,
     sesi_murid,
     soal_murid,
 )
@@ -653,6 +654,15 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
                 f'{b["benar"]}/{b["jumlah"]} benar</span>'
             )
 
+        # Tujuan kartu: sesi yang SUDAH direview membuka halaman hasil +
+        # pembahasan (poin b feedback Filia) — itulah yang dicari anak
+        # setelah dinilai. Sesi lain tetap membuka lembar kerjanya.
+        tujuan = (
+            f"/murid/hasil/{b['id']}"
+            if b["direview"] is not None
+            else f"/murid/kerjakan/{b['id']}"
+        )
+
         # Badge mode (terpisah, di baris meta)
         if b["mode"] == "drill":
             mode_label = '<span class="st-badge latihan">Latihan Cepat</span>'
@@ -660,7 +670,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
             mode_label = '<span class="st-badge diagnostik">Diagnostik</span>'
 
         kartu.append(
-            f'<a class="st-kartu-baris" href="/murid/kerjakan/{b["id"]}"'
+            f'<a class="st-kartu-baris" href="{tujuan}"'
             ' style="text-decoration:none;color:inherit">'
             f'<span style="flex:none;width:2.5rem;height:2.5rem;border-radius:50%;'
             f"background:{bg};display:inline-flex;align-items:center;justify-content:center;\">"
@@ -1188,6 +1198,106 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
 <form method="post" action="/keluar" class="keluar-form"><button class="btn secondary" type="submit">Keluar</button></form>
 <div class="daftar-sesi-grup">
 {kartu_html}
+</div>
+</div></body></html>"""
+    return isi.encode()
+
+
+def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
+    """Halaman /murid/hasil/<id> — anak melihat letak salahnya.
+
+    Poin b feedback Filia ("apa yang aplikasi bisa bantu agar anak mampu
+    meningkatkan nilainya"): benar/salah saja tidak mengajari apa pun.
+    Halaman ini menampilkan, per soal: jawaban anak sendiri, benar/salah,
+    dan LANGKAH pengerjaan yang benar (Soal.pembahasan).
+
+    Hanya terbuka setelah guru mereview — gerbangnya di students.hasil_murid
+    (None = belum direview / bukan miliknya), dan pemanggil menjawab 404.
+
+    Yang sengaja TIDAK ditampilkan: kode diagnosis K/H/E/N/B, malrule, dan
+    alasan. Anak butuh tahu letak salahnya, bukan label tipe kesalahannya.
+    """
+    from style_stitch import gaya_stitch
+
+    hasil = hasil_murid(kon, siswa_id, sesi_id)
+    if hasil is None:
+        return None
+
+    kartu = []
+    for b in hasil["soal"]:
+        if not b["dijawab"]:
+            status = '<span class="st-badge selesai">Belum dijawab</span>'
+            kelas = "hasil-soal-st kosong"
+        elif b["benar"]:
+            status = '<span class="st-badge diagnostik">Benar</span>'
+            kelas = "hasil-soal-st benar"
+        else:
+            status = '<span class="st-badge baru">Belum tepat</span>'
+            kelas = "hasil-soal-st salah"
+
+        jawabku = ""
+        if b["dijawab"]:
+            jawabku = (
+                f'<p class="hasil-jawabku-st">Jawabanmu: '
+                f'<b>{_escape(b["jawabanku"])}</b></p>'
+            )
+
+        # Pembahasan = langkah menuju jawaban. Ditampilkan untuk SEMUA soal
+        # (termasuk yang benar): anak yang benar karena menebak tetap perlu
+        # melihat caranya. Kalau template belum punya pembahasan, blok ini
+        # tidak muncul sama sekali — lebih baik kosong daripada basa-basi.
+        langkah = ""
+        if b["pembahasan"]:
+            langkah = (
+                '<div class="hasil-langkah-st">'
+                '<span class="material-symbols-outlined">lightbulb</span>'
+                f'<div><b>Caranya:</b> {_escape(b["pembahasan"])}</div></div>'
+            )
+
+        kartu.append(
+            f'<div class="{kelas}">'
+            f'<div class="hasil-kepala-st">'
+            f'<span class="hasil-nomor-st">{b["nomor"]}</span>{status}</div>'
+            f'<p class="hasil-teks-st">{_badan_teks_st(b["teks"])}</p>'
+            f"{jawabku}{langkah}</div>"
+        )
+
+    n_benar, n_soal = hasil["benar"], hasil["jumlah"]
+    # Nada ringkasan sengaja tidak menghakimi: yang ditonjolkan adalah
+    # "sudah dikoreksi, ini caranya", bukan skor telanjang.
+    if n_benar == n_soal:
+        pesan = "Semua benar! Baca juga caranya supaya makin mantap."
+    elif n_benar == 0:
+        pesan = "Belum ada yang tepat — tidak apa-apa. Baca caranya, lalu coba lagi."
+    else:
+        pesan = "Yang belum tepat ada caranya di bawah. Baca pelan-pelan, ya."
+
+    isi = f"""<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hasil &amp; cara — {T.NAMA_PRODUK}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
+<style>{gaya_stitch()}</style></head><body class="st">
+<div class="kerja-topbar-st">
+  <div class="brand">
+    <span class="ik-owl material-symbols-outlined fill">pets</span>
+    <span class="nama-osn">{T.NAMA_PRODUK}</span>
+  </div>
+  <a class="cta-keluar hanya-layar" href="/murid"><span class="material-symbols-outlined" style="font-size:1.1rem">arrow_back</span> Sesi lain</a>
+</div>
+<div class="kerja-badan-st">
+<p class="kerja-meta-st"><b>Halo, {_escape(hasil['nama'])}</b> &middot;
+ {_escape(hasil['tanggal'])} &middot; level {_escape(hasil['level'])}</p>
+<div class="hasil-ringkas-st">
+  <div class="hasil-skor-st">{n_benar}<span>/{n_soal}</span></div>
+  <div class="hasil-pesan-st">{pesan}</div>
+</div>
+{"".join(kartu)}
+<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">
+  <a class="kerja-btn-sekunder-st" href="/murid/kerjakan/{sesi_id}">Lihat lembarku</a>
+  <a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a>
 </div>
 </div></body></html>"""
     return isi.encode()
