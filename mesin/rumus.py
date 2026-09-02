@@ -112,6 +112,28 @@ KARTU: dict[str, Kartu] = {
              "Untuk mengali, kalikan atas dengan atas dan bawah dengan bawah.",
         contoh="1/2 + 1/3 = 3/6 + 2/6 = 5/6.",
     ),
+    "pecahan_kali_bagi": Kartu(
+        judul="Kali dan bagi pecahan",
+        inti="MENGALI: atas × atas, bawah × bawah — penyebut TIDAK perlu "
+             "disamakan. MEMBAGI: balik pecahan kedua, lalu kalikan.",
+        contoh="2/3 × 3/4 = 6/12 = 1/2. "
+               "2/3 : 3/4 = 2/3 × 4/3 = 8/9.",
+    ),
+    "bentuk_bilangan": Kartu(
+        judul="Pecahan, desimal, dan persen",
+        inti="Ketiganya bisa ditulis dalam bentuk yang sama. "
+             "Pecahan → desimal: atas dibagi bawah. "
+             "Desimal → persen: dikali 100. Persen → desimal: dibagi 100.",
+        contoh="3/5 = 0,6 = 60%. Jadi 3/5 lebih besar dari 55%.",
+    ),
+    "pembulatan": Kartu(
+        judul="Pembulatan dan taksiran",
+        inti="Lihat angka di sebelah kanan tempat yang dibulatkan. "
+             "Kurang dari 5 → dibulatkan ke bawah; 5 atau lebih → ke atas. "
+             "Untuk menaksir: bulatkan DULU, baru dihitung.",
+        contoh="248 ke ratusan = 200 (karena 48 kurang dari 50). "
+               "248 + 173 ditaksir 200 + 200 = 400.",
+    ),
     "perbandingan": Kartu(
         judul="Perbandingan dan skala",
         inti="Skala 1 : n berarti 1 cm di peta = n cm asli. "
@@ -331,7 +353,11 @@ KONSEP_TEMPLATE: dict[str, str] = {
     "sisa_bagi_siklus": "sisa_pembagian",
     # aritmetika
     "urutan_operasi_1": "urutan_operasi",
+    "operasi_berkurung": "urutan_operasi",
     "pecahan_operasi_campuran": "pecahan",
+    "pecahan_kali_bagi": "pecahan_kali_bagi",
+    "urut_pecahan_desimal_persen": "bentuk_bilangan",
+    "pembulatan_taksiran": "pembulatan",
     # perbandingan & pengukuran
     "skala_peta": "perbandingan",
     "perbandingan_senilai": "perbandingan",

@@ -21,6 +21,7 @@ import students  # noqa: E402
 import student_pages  # noqa: E402
 import web  # noqa: E402
 import teacher_pages  # noqa: E402
+import topics  # noqa: E402
 import reports  # noqa: E402
 from http_test_kit import SANDI_GURU, SANDI_MURID, ServerUji  # noqa: E402
 
@@ -228,7 +229,11 @@ def test_alur_aritmetika_memakai_judul_dan_laporan_topik_sendiri(server):
             "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC LIMIT 1",
             (siswa_id,),
         ).fetchone()["id"]
-        assert len(database.isi_sesi(kon, sesi_id)) == 6
+        # 10 soal sejak komposisi aritmetika-dasar diperluas (gelombang 2,
+        # 2 Sep 2026). Yang diuji di sini alurnya utuh, bukan angkanya —
+        # dibaca dari komposisi paket supaya tidak perlu diubah lagi.
+        harap = len(topics.ambil("aritmetika-dasar").komposisi["P5"])
+        assert len(database.isi_sesi(kon, sesi_id)) == harap
         lembar = teacher_pages.halaman_lembar(kon, sesi_id)
         assert lembar is not None
         assert "Latihan Aritmetika Dasar" in lembar.decode()

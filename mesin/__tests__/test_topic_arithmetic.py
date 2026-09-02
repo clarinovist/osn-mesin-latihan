@@ -39,16 +39,24 @@ def test_registry_global_menggabungkan_template_kedua_paket():
     assert "pecahan_operasi_campuran" in registri
 
 
-def test_lembar_aritmetika_p5_dan_p6_berisi_enam_soal():
-    """Paket yang memang mulai P5 tidak boleh mencari komposisi P3."""
+def test_lembar_aritmetika_p5_dan_p6_berisi_sepuluh_soal():
+    """Paket yang memang mulai P5 tidak boleh mencari komposisi P3.
+
+    Jumlahnya naik 6 -> 10 (gelombang 2, 2 Sep 2026): paket ini dulu cuma
+    punya TIGA template dan itu membuatnya paket paling monoton di
+    seluruh aplikasi. Empat jenis soal baru masuk komposisi, karena
+    template yang terdaftar tapi tidak dipakai tidak memperbaiki apa pun.
+    Daftar template dibuka jadi SUPERSET supaya penambahan berikutnya
+    tidak memaksa test ini berubah lagi.
+    """
     for level in ("P5", "P6"):
         lembar = buat_lembar(7, level=level, topik="aritmetika-dasar")
-        assert len(lembar.soal) == 6
-        assert {soal.template_id for soal in lembar.soal} == {
+        assert len(lembar.soal) == 10
+        assert {
             "urutan_operasi_1",
             "fpb_dua_bilangan",
             "pecahan_operasi_campuran",
-        }
+        } <= set(topics.ambil("aritmetika-dasar").templates)
 
 
 @pytest.mark.parametrize("level", ("P3", "P4"))
