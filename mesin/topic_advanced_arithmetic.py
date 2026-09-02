@@ -9,8 +9,41 @@ from __future__ import annotations
 
 import random
 
-from templates import Malrule, Soal, saring_malrule
+from templates import Malrule, Soal, putar, saring_malrule
 from topics import Topik, daftarkan
+
+
+# ── Latar cerita berputar (gelombang 2, 2 Sep 2026) ────────────────────
+#
+# Delapan dari sebelas template paket ini dulu punya SATU cerita yang
+# ditulis mati di f-string: kota A–B, Alif & Budi, sepatu, baju, "sebuah
+# barang", pekerja. Terukur: aritmatika-lanjut P5 hanya 18 bentuk kalimat
+# dan P6 22 — di bawah ambang 25 yang dipakai menyebut satu topik×level
+# tidak lagi monoton.
+#
+# Yang TIDAK diberi latar, dan alasannya: `satuan_konversi`,
+# `kecepatan_jarak_waktu`, dan `debit`. Ketiganya sudah punya banyak
+# varian (8, 3, 3) sehingga kalimatnya tidak mati, dan dua yang terakhir
+# adalah perintah hitung berbesaran — membungkusnya dalam cerita menambah
+# beban baca yang bukan sedang diuji.
+#
+# Latar dipilih dari PARAMETER lewat templates.putar, bukan rng: lihat
+# docstring fungsi itu untuk tiga kontraknya beserta kerusakan yang
+# dicegah masing-masing.
+
+# Kota untuk soal perjalanan. Sengaja nama FIKTIF, bukan kota nyata:
+# generator menghasilkan jarak 40–480 km dari parameter, jadi pasangan
+# kota nyata akan sering memuat jarak yang salah ("Bogor–Sukabumi 480
+# km"). Soal yang faktanya keliru mengajari anak hal keliru dan membuat
+# guru ragu pada seluruh lembar — nama fiktif menghindari klaim itu
+# tanpa mengurangi satu pun bentuk kalimat.
+_RUTE = (
+    ("Kota Melati", "Kota Cendana"),
+    ("Kota Anggrek", "Kota Kenanga"),
+    ("Desa Sukamaju", "Kota Mawar"),
+    ("Kota Bahari", "Kota Rimba"),
+    ("Kota Delima", "Kota Seroja"),
+)
 
 
 # ── Bagian A — Konversi & kecepatan ────────────────────────────────────
@@ -122,10 +155,22 @@ def berpapasan(jarak: int, v1: int, v2: int) -> Soal:
         Malrule("berpapasan.dikali_kecepatan", str(jarak // (v1 * v2)) if jarak % (v1 * v2) == 0 else str(v1 * v2), "K", "mengalikan dua kecepatan padahal waktu = jarak/(v1+v2)"),
         Malrule("berpapasan.kurang_satu", str(kunci - 1), "H", "perhitungan benar, hasilnya meleset satu"),
     ]
+    asal, tujuan = putar(_RUTE, jarak, v1)
+    kendaraan1, kendaraan2 = putar(
+        (
+            ("Mobil", "bus"),
+            ("Bus", "truk"),
+            ("Sepeda motor", "mobil"),
+            ("Truk", "mobil"),
+            ("Mobil", "sepeda motor"),
+        ),
+        v1,
+        v2,
+    )
     teks = (
-        f"Jarak kota A dan B {jarak} km. Mobil dari A melaju {v1} km/jam "
-        f"dan dari B melaju {v2} km/jam, saling berhadapan. Berapa jam "
-        f"mereka akan berpapasan?"
+        f"Jarak {asal} dan {tujuan} {jarak} km. {kendaraan1} dari "
+        f"{asal} melaju {v1} km/jam dan {kendaraan2} dari {tujuan} melaju "
+        f"{v2} km/jam, saling berhadapan. Berapa jam mereka akan berpapasan?"
     )
     return Soal(
         "berpapasan",
@@ -158,10 +203,26 @@ def menyusul(jarak: int, v1: int, v2: int) -> Soal:
         Malrule("menyusul.selisih_kecepatan", str(k1), "K", "menjawab selisih kecepatan, bukan waktu menyusul"),
         Malrule("menyusul.dikira_berpapasan", str(k2), "K", "memakai rumus berpapasan (v1+v2) padahal yang satu mengejar"),
     ]
+    # Semua pilihan harus sahih untuk v ∈ 40..80 km/jam (lihat
+    # _parameter). Pelari/pesepeda sempat dicoba dan DIBUANG: "pelari
+    # melaju 78 km/jam" adalah fakta yang salah, dan soal yang faktanya
+    # keliru mengajari anak hal keliru.
+    pengejar, dikejar = putar(
+        (
+            ("Sepeda motor", "mobil"),
+            ("Mobil", "truk"),
+            ("Bus", "truk"),
+            ("Mobil balap", "bus"),
+            ("Ambulans", "mobil box"),
+        ),
+        v1,
+        v2,
+    )
+    asal, _ = putar(_RUTE, jarak, v2)
     teks = (
-        f"Sepeda motor dari A melaju {v2} km/jam mengejar mobil yang sudah "
-        f"berjalan {v1} km/jam dan unggul {jarak} km. Berapa jam waktu "
-        f"yang dibutuhkan untuk menyusul?"
+        f"{pengejar} dari {asal} melaju {v2} km/jam mengejar "
+        f"{dikejar} yang sudah berjalan {v1} km/jam dan unggul {jarak} km. "
+        f"Berapa jam waktu yang dibutuhkan untuk menyusul?"
     )
     return Soal(
         "menyusul",
@@ -226,9 +287,21 @@ def perbandingan_senilai(p: int, q: int, n: int) -> Soal:
         Malrule("senilai.terbalik", str(k), "K", "perbandingan dibalik — senilai searah, bukan kebalikan"),
         Malrule("senilai.selisih", str(abs(q - p)), "B", "menjawab selisih pembanding, bukan nilai yang dicari"),
     ]
+    benda, satuan1, satuan2 = putar(
+        (
+            ("adonan kue", "gelas tepung", "gelas gula"),
+            ("cat tembok", "kaleng putih", "kaleng biru"),
+            ("sirop", "sendok gula", "gelas air"),
+            ("pupuk", "kilogram urea", "kilogram kompos"),
+            ("beton", "ember semen", "ember pasir"),
+        ),
+        p,
+        q,
+    )
     teks = (
-        f"Perbandingan {p} : {q}. Jika bagian pertama nilainya {n}, "
-        f"berapa nilai bagian kedua?"
+        f"Untuk membuat {benda}, perbandingan {satuan1} dan {satuan2} "
+        f"adalah {p} : {q}. Jika {satuan1} yang dipakai {n}, berapa "
+        f"{satuan2} yang diperlukan?"
     )
     return Soal(
         "perbandingan_senilai",
@@ -257,9 +330,21 @@ def perbandingan_berbalik(a1: int, b1: int, a2: int) -> Soal:
         Malrule("berbalik.terbalik", str(k), "K", "memakai perbandingan senilai padahal ini berbalik nilai"),
         Malrule("berbalik.jumlah", str(a1 + b1), "B", "menjumlahkan dua besaran, padahal yang dicari hasil kali dibagi"),
     ]
+    pelaku, pekerjaan, satuan = putar(
+        (
+            ("pekerja", "menyelesaikan sebuah bangunan", "hari"),
+            ("mesin jahit", "menyelesaikan pesanan seragam", "hari"),
+            ("traktor", "membajak seluruh sawah", "hari"),
+            ("tukang cat", "mengecat sebuah gedung", "hari"),
+            ("kran", "mengisi sebuah kolam", "jam"),
+        ),
+        a1,
+        b1,
+    )
     teks = (
-        f"Jika {a1} pekerja dapat menyelesaikan pekerjaan dalam {b1} hari, "
-        f"berapa hari waktu {a2} pekerja (semakin banyak semakin cepat)?"
+        f"Jika {a1} {pelaku} dapat {pekerjaan} dalam {b1} {satuan}, "
+        f"berapa {satuan} waktu yang dibutuhkan {a2} {pelaku} "
+        f"(semakin banyak semakin cepat)?"
     )
     return Soal(
         "perbandingan_berbalik",
@@ -284,8 +369,19 @@ def kerja_bersama(a: int, b: int) -> Soal:
         Malrule("kerja.kali_waktu", str(a * b), "K", "mengalikan dua waktu, padahal harus dibagi jumlahnya"),
         Malrule("kerja.kurang_satu", str(kunci - 1), "H", "perhitungan benar, hasilnya meleset satu"),
     ]
+    orang1, orang2, pekerjaan = putar(
+        (
+            ("Alif", "Budi", "menyelesaikan sebuah pekerjaan"),
+            ("Rani", "Sinta", "menyelesaikan jahitan seragam"),
+            ("Pak Tono", "Pak Dedi", "mengecat pagar sekolah"),
+            ("Dika", "Tio", "membersihkan halaman"),
+            ("Mesin A", "Mesin B", "mencetak seluruh buku"),
+        ),
+        a,
+        b,
+    )
     teks = (
-        f"Alif dapat menyelesaikan pekerjaan dalam {a} jam, Budi dalam {b} "
+        f"{orang1} dapat {pekerjaan} dalam {a} jam, {orang2} dalam {b} "
         f"jam. Jika bekerja bersama, berapa jam waktu yang dibutuhkan?"
     )
     return Soal(
@@ -312,8 +408,19 @@ def persen_diskon(harga: int, d: int) -> Soal:
         Malrule("diskon.lupa_persen", str(harga * (100 - d)), "K", "lupa membagi 100 — menghitung (100−d)% dari harga"),
         Malrule("diskon.kurang_satu", str(kunci - 1), "H", "perhitungan benar, hasilnya meleset satu"),
     ]
+    barang, toko = putar(
+        (
+            ("sepatu", "toko olahraga"),
+            ("tas sekolah", "toko peralatan sekolah"),
+            ("sepeda", "toko sepeda"),
+            ("jam tangan", "toko jam"),
+            ("kipas angin", "toko elektronik"),
+        ),
+        harga,
+        d,
+    )
     teks = (
-        f"Harga sepatu {harga} rupiah mendapat diskon {d}%. "
+        f"Di {toko}, harga {barang} {harga} rupiah mendapat diskon {d}%. "
         f"Berapa harga setelah diskon?"
     )
     return Soal(
@@ -333,12 +440,29 @@ def persen_diskon(harga: int, d: int) -> Soal:
 
 def persen_untung_rugi(jenis: str, modal: int, persen: int) -> Soal:
     """Harga jual = modal·(100±persen)/100 (untung/rugi)."""
+    pedagang, barang = putar(
+        (
+            ("Pak Hasan", "sekarung beras"),
+            ("Bu Ratna", "sepeda bekas"),
+            ("Pak Yusuf", "seekor kambing"),
+            ("Bu Lastri", "satu peti mangga"),
+            ("Koperasi sekolah", "sekotak buku tulis"),
+        ),
+        modal,
+        persen,
+    )
     if jenis == "untung":
         kunci = modal * (100 + persen) // 100
-        teks = f"Sebuah barang dibeli {modal} rupiah lalu dijual untung {persen}%. Berapa harga jualnya?"
+        teks = (
+            f"{pedagang} membeli {barang} seharga {modal} rupiah, lalu "
+            f"menjualnya dengan untung {persen}%. Berapa harga jualnya?"
+        )
     else:
         kunci = modal * (100 - persen) // 100
-        teks = f"Sebuah barang dibeli {modal} rupiah lalu dijual rugi {persen}%. Berapa harga jualnya?"
+        teks = (
+            f"{pedagang} membeli {barang} seharga {modal} rupiah, lalu "
+            f"menjualnya dengan rugi {persen}%. Berapa harga jualnya?"
+        )
     laba = modal * persen // 100
     mal = [
         Malrule("untung.laba_saja", str(laba), "K", f"menjawab besar untung/rugi {laba}, bukan harga jual"),
@@ -368,9 +492,21 @@ def persen_bertingkat(harga: int, d1: int, d2: int) -> Soal:
         Malrule("bertingkat.diskon_pertama", str(harga * (100 - d1) // 100), "K", "hanya menghitung diskon pertama, diskon kedua dilupakan"),
         Malrule("bertingkat.kurang_satu", str(kunci - 1), "H", "perhitungan benar, hasilnya meleset satu"),
     ]
+    barang, acara = putar(
+        (
+            ("baju", "obral akhir tahun"),
+            ("jaket", "cuci gudang"),
+            ("sepatu sekolah", "promo awal tahun ajaran"),
+            ("tas", "bazar sekolah"),
+            ("payung", "diskon musim hujan"),
+        ),
+        harga,
+        d1,
+        d2,
+    )
     teks = (
-        f"Harga baju {harga} rupiah didiskon {d1}%, lalu didiskon lagi "
-        f"{d2}%. Berapa harga akhirnya?"
+        f"Saat {acara}, harga {barang} {harga} rupiah didiskon {d1}%, "
+        f"lalu didiskon lagi {d2}%. Berapa harga akhirnya?"
     )
     return Soal(
         "persen_bertingkat",
