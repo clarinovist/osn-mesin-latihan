@@ -3,6 +3,11 @@
 > Dokumen acuan materi untuk mesin latihan OSN/SASMO. Sumber semua angka di
 > bawah adalah dokumen resmi (bukan artikel agregator). Dipertahankan agar
 > selalu up-to-date — perbarui di sini setiap ada silabus/panduan baru.
+>
+> **Dokumen pendamping (2 Sep 2026):** `riset-soal-osn-10-tahun.md` — riset
+> berbasis **1.237 soal OSN asli 2016–2026** (65 naskah), berisi audit
+> cakupan materi app (74,7% konsep tertutup; hanya 24,4% di tahap eksplorasi
+> nasional) plus daftar gap prioritas. Baca itu sebelum menambah template.
 
 ## Sumber otoritatif
 
@@ -34,6 +39,18 @@ elektronik; kamus yang diizinkan hanya Inggris–Indonesia / Indonesia–Inggris
 
 Seleksi: Semifinal menerima 115 peserta/bidang → 50 terbaik melaju ke Final.
 
+**Pembobotan nilai (dari Panduan OSN 2026, ditambahkan 2 Sep 2026):**
+skor bukan benar/salah polos — soal sulit bernilai lebih.
+
+- Semifinal isian singkat (15 soal): 2 mudah (bobot 1) · 6 sedang (1,25) ·
+  7 sulit (1,5). Salah atau kosong = 0 (**tidak ada nilai minus**).
+- Semifinal uraian (5 soal, maks 3 poin/soal): 1 mudah · 2 sedang · 3 sulit,
+  bobot sama 1 / 1,25 / 1,5.
+- Final: isian 25×1 = 25 · uraian 13×3 = 39 · eksplorasi 6×6 = 36 → maks 100.
+
+Karena tidak ada penalti salah (beda dari SASMO Section A yang −1), mengisi
+semua soal selalu menguntungkan di OSN.
+
 **Implikasi bentuk materi:** OSN SD bukan murni pilihan ganda. Makin naik
 tahap, soal bergeser ke **isian singkat → uraian → eksplorasi**. Kemampuan
 menuliskan **cara/langkah** (bukan hanya angka akhir) adalah kunci di level
@@ -60,9 +77,12 @@ acuan olimpiade internasional **IMSO 2019** (tidak hanya KD kurikulum).
 > Catatan: produk saat ini memakai 4 jalur (bilangan, geometri,
 > kombinatorik-logika, aritmatika-statistika-pengukuran). Ini ≈ 5 topik OSN
 > dengan Aritmatika+Statistika digabung. Lihat `docs/plan/2026-08-30-seed-topik-osn-sasmo.md`.
-> Berdasarkan rumus internasional, bobot Geometri cenderung paling besar lalu
-> Bilangan/Aritmatika, Kombinatorik, Statistika — tapi jangan bergantung pada
-> angka ini; verifikasi per silabus terbaru.
+> ⚠️ **DIKOREKSI 2 Sep 2026** oleh riset 1.237 soal asli 2016–2026
+> (`riset-soal-osn-10-tahun.md`): dugaan lama "bobot Geometri paling besar"
+> TIDAK terbukti. Distribusi nyata: Aritmatika 24,2% · Geometri 23,2% ·
+> Bilangan 21,5% · Statistika-Pengukuran 16,2% · Kombinatorik 14,9%.
+> Diagram lingkaran 25/25/12/38% di silabus resmi **bukan bobot topik** —
+> itu klip-art dekoratif di banner bab Statistika (diverifikasi visual).
 
 ---
 
@@ -84,9 +104,9 @@ acuan olimpiade internasional **IMSO 2019** (tidak hanya KD kurikulum).
 Top 40% peserta dapat sertifikat + medali:
 - **Perfect Score** → Gold + Perfect Score Award (kualifikasi IJHS)
 - **Gold** → top 8%
-- Silver → 8–20%
-- Bronze → 20–40%
-- Honorable Mention → 40–50%
+- Silver → 12% berikutnya (kumulatif 8–20%)
+- Bronze → 20% berikutnya (kumulatif 20–40%)
+- Honorable Mention → 10% berikutnya (40–50%)
 - Certificate of Participation → sisa 50%
 
 Gold/Silver lolos ke IJMO; Gold/Silver/Bronze ke SIMOC & SMGF.
