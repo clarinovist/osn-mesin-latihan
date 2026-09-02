@@ -81,6 +81,41 @@ def _deret(awal: int, beda: int, n: int) -> list[int]:
     return [awal + beda * i for i in range(n)]
 
 
+def putar(pilihan: tuple, *angka: int):
+    """Ambil satu unsur `pilihan` secara deterministik dari angka soal.
+
+    Ini alat utama melawan monoton di lapisan template. Terukur 2 Sep 2026:
+    43 dari 85 template hanya melahirkan <= 2 bentuk kalimat karena
+    ceritanya ditulis mati di dalam f-string. Latar yang berputar menurut
+    angka soal memberi banyak kalimat tanpa menambah satu pun parameter.
+
+    Tinggal di sini, bukan di modul topik, karena dipakai bersama: dua
+    salinan berarti dua definisi 'latar' dan perbaikan di satu tempat
+    diam-diam tidak berlaku di tempat lain. Arah impor aman — modul
+    `topic_*.py` sudah mengimpor `templates`, dan `templates` tidak
+    mengimpor mereka (kecuali lewat jalur kompatibilitas yang malas).
+
+    Tiga hal yang WAJIB dijaga, semuanya karena kerusakan nyata:
+
+    - **Deterministik atas parameter, bukan `rng`.** Fungsi template harus
+      murni atas parameternya. Kalau tidak, mencetak ulang lembar lama dari
+      bank soal (parameter sama, proses berbeda) melahirkan kalimat berbeda
+      dan guru menilai soal yang tidak dikerjakan anak.
+    - **Bukan `hash()` bawaan.** hash() diacak per proses lewat
+      PYTHONHASHSEED, jadi kalimat akan berganti tiap server restart. Ini
+      pitfall yang sudah pernah menggigit repo ini (lihat
+      `generator._acak_urutan` dan `llm.pilih_latar`).
+    - **Tanpa parameter baru.** Parameter ikut `Soal.tanda_tangan`;
+      menambahnya membatalkan seluruh bank soal yang sudah tersimpan
+      beserta snapshot `__tests__/test_golden_identity.py`.
+
+    Penjumlahan (bukan mis. angka pertama saja) dipakai supaya template
+    berparameter banyak tetap menyebar latarnya: parameter yang satu
+    berubah sudah cukup memindahkan latar.
+    """
+    return pilihan[sum(angka) % len(pilihan)]
+
+
 def saring_malrule(kunci: str, kandidat: list[Malrule]) -> tuple[Malrule, ...]:
     """Buang malrule yang tidak bisa membedakan benar dari salah.
 

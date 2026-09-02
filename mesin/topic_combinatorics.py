@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import random
 
-from templates import Malrule, Soal, saring_malrule
+from templates import Malrule, Soal, putar, saring_malrule
 from topics import Topik, daftarkan
 
 
@@ -28,16 +28,10 @@ from topics import Topik, daftarkan
 # yang sama (kontrak generator.py) TANPA menambah parameter baru —
 # penting karena parameter ikut tanda_tangan, dan menambahnya akan
 # membatalkan seluruh bank soal serta snapshot golden.
-
-
-def _putar(pilihan: tuple, *angka: int):
-    """Ambil satu unsur `pilihan` secara deterministik dari angka soal.
-
-    Bukan rng: fungsi template harus murni atas parameternya supaya
-    memanggil ulang dengan parameter yang sama (mis. saat mencetak lembar
-    lama dari bank soal) menghasilkan kalimat yang sama persis.
-    """
-    return pilihan[sum(angka) % len(pilihan)]
+#
+# Helpernya sendiri pindah ke templates.putar (gelombang 2, 2 Sep 2026)
+# karena modul topik lain memakainya juga; kontrak lengkapnya ada di
+# docstring fungsi itu.
 
 # ── Bagian A — Aturan mencacah ─────────────────────────────────────────
 
@@ -65,7 +59,7 @@ def aturan_tambah(m: int, n: int) -> Soal:
             "penjumlahan benar, hasilnya meleset satu",
         ),
     ]
-    tempat, jenis1, jenis2, benda, tokoh = _putar(
+    tempat, jenis1, jenis2, benda, tokoh = putar(
         (
             ("toko buku", "buku cerita", "buku pelajaran", "buku", "Budi"),
             ("kantin sekolah", "roti isi", "kue basah", "jajanan", "Sinta"),
@@ -119,7 +113,7 @@ def aturan_kali(m: int, n: int) -> Soal:
             "perkalian benar, hasilnya meleset satu",
         ),
     ]
-    tempat, jenis1, jenis2, tujuan, hasil, tokoh = _putar(
+    tempat, jenis1, jenis2, tujuan, hasil, tokoh = putar(
         (
             ("toko", "jenis roti", "jenis selai", "sarapan", "menu", "Budi"),
             ("lemari", "kaus", "celana", "dipakai ke sekolah", "setelan", "Rani"),
@@ -520,7 +514,7 @@ def jabat_tangan(n: int) -> Soal:
             "perhitungan benar, hasilnya meleset satu",
         ),
     ]
-    acara = _putar(
+    acara = putar(
         (
             "sebuah pertemuan",
             "acara arisan",
@@ -661,7 +655,7 @@ def inklusi_eksklusi_2(a: int, b: int, c: int) -> Soal:
             "perhitungan jumlah−irisan benar, hasilnya meleset satu",
         ),
     ]
-    kelompok, hal1, hal2 = _putar(
+    kelompok, hal1, hal2 = putar(
         (
             ("siswa", "matematika", "IPA"),
             ("anak", "sepak bola", "renang"),
