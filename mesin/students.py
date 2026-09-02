@@ -132,6 +132,7 @@ def hasil_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
                 "benar": ini_benar,
                 "dijawab": b["jawaban_id"] is not None,
                 "pembahasan": soal.pembahasan or "",
+                "template_id": b["template_id"],
             }
         )
     return {

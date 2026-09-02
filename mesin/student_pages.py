@@ -1272,6 +1272,40 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
     else:
         pesan = "Yang belum tepat ada caranya di bawah. Baca pelan-pelan, ya."
 
+    # Kartu rumus (poin c feedback Filia): hanya untuk konsep yang anak
+    # BELUM tepat. Diletakkan di atas daftar soal, saat anak paling siap
+    # menerimanya — bukan sebagai modul teori terpisah yang harus dibaca
+    # sebelum boleh berlatih (anak SD tidak membaca teori yang tidak
+    # sedang ia butuhkan). Semua benar -> tidak ada kartu, jangan
+    # menyodorkan teori tanpa keperluan.
+    import rumus as modul_rumus
+
+    salah_ids = [
+        b["template_id"] for b in hasil["soal"]
+        if b["dijawab"] and not b["benar"]
+    ]
+    kartu_rumus = modul_rumus.kartu_untuk_banyak(salah_ids)
+    blok_rumus = ""
+    if kartu_rumus:
+        isi_kartu = "".join(
+            '<div class="rumus-kartu-st">'
+            f'<div class="rumus-judul-st">{_escape(k.judul)}</div>'
+            f'<div class="rumus-inti-st">{_escape(k.inti)}</div>'
+            + (
+                f'<div class="rumus-contoh-st">Contoh: {_escape(k.contoh)}</div>'
+                if k.contoh else ""
+            )
+            + "</div>"
+            for k in kartu_rumus
+        )
+        blok_rumus = (
+            '<div class="rumus-blok-st">'
+            '<div class="rumus-kepala-st">'
+            '<span class="material-symbols-outlined">menu_book</span>'
+            "<b>Ingat rumusnya dulu</b></div>"
+            f"{isi_kartu}</div>"
+        )
+
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1294,6 +1328,7 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
   <div class="hasil-skor-st">{n_benar}<span>/{n_soal}</span></div>
   <div class="hasil-pesan-st">{pesan}</div>
 </div>
+{blok_rumus}
 {"".join(kartu)}
 <div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">
   <a class="kerja-btn-sekunder-st" href="/murid/kerjakan/{sesi_id}">Lihat lembarku</a>

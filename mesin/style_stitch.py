@@ -832,6 +832,32 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
   color: {T.AKSEN_MURID_AMBER}; flex: none; font-size: 1.15rem;
 }}
 
+/* Kartu rumus (poin c) — muncul di halaman hasil untuk konsep yang salah. */
+.rumus-blok-st {{
+  background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.AKSEN_MURID_AMBER};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_4}; margin-bottom: {T.SP_4};
+}}
+.rumus-kepala-st {{
+  display: flex; align-items: center; gap: {T.SP_2}; margin-bottom: {T.SP_3};
+  font-family: {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL};
+}}
+.rumus-kepala-st .material-symbols-outlined {{
+  color: {T.AKSEN_MURID_AMBER}; flex: none;
+}}
+.rumus-kartu-st {{
+  border-left: 3px solid {T.AKSEN_MURID_AMBER};
+  padding: {T.SP_2} 0 {T.SP_2} {T.SP_3}; margin-bottom: {T.SP_3};
+}}
+.rumus-kartu-st:last-child {{ margin-bottom: 0; }}
+.rumus-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .95rem;
+  color: {T.TEKS_JUDUL}; margin-bottom: .15rem;
+}}
+.rumus-inti-st {{ font-size: .93rem; }}
+.rumus-contoh-st {{
+  font-size: .88rem; color: {T.TEKS_VARIAN}; margin-top: .2rem;
+}}
+
 """
 
 # Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa
