@@ -995,6 +995,63 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                 )
 
+        if jalur.startswith("/sesi-remedial/"):
+            # Latihan ulang (poin a feedback Filia): sesi berisi HANYA
+            # konsep yang pernah dijawab salah anak ini, dengan soal baru.
+            if self._peran_saya() == "admin":
+                return self._tolak_admin()
+            try:
+                siswa_id = int(jalur.split("/")[2])
+            except (ValueError, IndexError):
+                return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            data = urllib.parse.parse_qs(
+                self.rfile.read(panjang).decode("utf-8"),
+                keep_blank_values=True,
+            )
+            try:
+                jumlah = int((data.get("jumlah_soal") or ["10"])[0] or 10)
+            except ValueError:
+                jumlah = 10
+            if not 1 <= jumlah <= 50:
+                jumlah = 10
+
+            sesi_id = None
+            nama_siswa = None
+            with database.buka() as kon:
+                if not self._bisa_lihat_siswa(kon, siswa_id):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
+                baris = kon.execute(
+                    "SELECT nama, tingkat FROM siswa WHERE id = ?", (siswa_id,)
+                ).fetchone()
+                nama_siswa = baris["nama"] if baris else ""
+                sesi_id = database.buat_sesi_remedial(
+                    kon, siswa_id,
+                    level=(baris["tingkat"] if baris else LEVEL_BAWAAN),
+                    jumlah_soal=jumlah,
+                )
+            if sesi_id is None:
+                # Tidak ada kesalahan tercatat: katakan apa adanya, jangan
+                # membuat sesi acak lalu menyebutnya latihan ulang.
+                qs = urllib.parse.urlencode({
+                    "pesan": "Belum ada kesalahan tercatat untuk dilatih "
+                             "ulang — buat sesi biasa dulu, ya.",
+                })
+            else:
+                qs = urllib.parse.urlencode({
+                    "pesan": f"Latihan ulang untuk {nama_siswa} dibuat — "
+                             f"sesi #{sesi_id}, {jumlah} soal dari konsep "
+                             "yang pernah salah.",
+                    "sorot": sesi_id,
+                })
+            self.send_response(303)
+            self.send_header("Location", f"/anak/{siswa_id}?{qs}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         if jalur.startswith("/sesi-baru/"):
             if self._peran_saya() == "admin":
                 return self._tolak_admin()

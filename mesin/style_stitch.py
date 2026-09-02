@@ -570,7 +570,18 @@ tr.sorot-baru, div.sorot-baru {{
   border-radius: {T.RADIUS_KARTU};
   display: flex; flex-direction: column; gap: {T.SP_4};
 }}
-.strip-sesi .strip-kolom {{ display: flex; flex-direction: column; gap: {T.SP_2}; }}
+.strip-sesi .strip-kolom {{ display: flex; flex-direction: column; gap: {T.SP_2}; min-width: 0; }}
+/* Tombol aksi di dalam strip: di HP ia melebihi lebar kartu karena
+   padding tetap 1.5rem + label panjang ("Buat latihan ulang") dan
+   terpotong di kanan (terbukti lewat screenshot headless 390px).
+   Satu baris penuh di layar sempit, kembali auto di layar lebar. */
+.strip-sesi .st-tombol-coral {{
+  width: 100%; justify-content: center; padding: 0 {T.SP_4};
+  display: inline-flex; align-items: center; gap: {T.SP_2};
+}}
+@media (min-width: 34rem) {{
+  .strip-sesi .st-tombol-coral {{ width: auto; align-self: flex-start; }}
+}}
 .strip-sesi .strip-kolom > label {{
   font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .82rem;
   color: {T.TEKS_VARIAN};

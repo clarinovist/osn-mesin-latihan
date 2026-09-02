@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -329,6 +330,131 @@ def buat_sesi(
             (sesi_id, soal_id, nomor),
         )
     return sesi_id
+
+
+def buat_sesi_dari_urutan(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    seed: int,
+    urutan: tuple[str, ...],
+    topik: str = TOPIK_BAWAAN,
+    level: str = LEVEL_BAWAAN,
+    mode: str = "diagnostik",
+) -> int:
+    """Sesi dengan komposisi soal DITENTUKAN pemanggil, bukan dari paket.
+
+    Dipakai remedial: template diambil dari kesalahan anak, bukan dari
+    komposisi bawaan level. Sengaja fungsi terpisah, bukan parameter
+    tambahan di buat_sesi — pemanggil biasa tidak boleh bisa menyetel
+    komposisi tanpa sadar, dan alur normalnya tetap satu jalur.
+    """
+    lembar = buat_lembar(seed, urutan=urutan, level=level, topik=topik)
+    cur = kon.execute(
+        """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                             timer_mode, durasi_menit, timer_auto)
+           VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0)""",
+        (siswa_id, seed, topik, level, mode),
+    )
+    sesi_id = int(cur.lastrowid)
+    for nomor, soal in enumerate(lembar.soal, start=1):
+        soal_id = simpan_soal(kon, soal)
+        kon.execute(
+            "INSERT INTO sesi_soal (sesi_id, soal_id, nomor) VALUES (?, ?, ?)",
+            (sesi_id, soal_id, nomor),
+        )
+    return sesi_id
+
+
+def sasaran_remedial(
+    kon: sqlite3.Connection, siswa_id: int, batas: int = 6
+) -> list[str]:
+    """Template yang perlu DILATIH ULANG oleh anak ini (poin a Filia).
+
+    Sumbernya data nyata, bukan tebakan: template yang jawabannya pernah
+    salah (diagnosis.benar = 0) untuk anak ini. Diurut dari yang paling
+    sering salah, lalu yang paling baru — supaya sesi remedial menyerang
+    yang paling membebani lebih dulu.
+
+    Yang TIDAK dihitung:
+      - soal yang belum dijawab (tidak ada bukti anak tidak bisa);
+      - kode 'T' (belum pernah diajarkan) — itu peta urutan belajar, dan
+        melatih ulang materi yang belum diajarkan bukan remedial, itu
+        menjatuhkan anak dua kali;
+      - template yang SELALU benar.
+
+    `batas` menjaga sesi remedial tetap masuk akal (bawaan 6 konsep).
+    Kembalian [] berarti tidak ada dasar untuk remedial — pemanggil WAJIB
+    menghormati itu dan tidak mengarang latihan.
+    """
+    baris = kon.execute(
+        """SELECT s.template_id            AS template_id,
+                  COUNT(*)                 AS kali_salah,
+                  MAX(se.tanggal)          AS terakhir
+           FROM diagnosis d
+           JOIN jawaban j    ON j.id  = d.jawaban_id
+           JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
+           JOIN sesi se      ON se.id = ss.sesi_id
+           JOIN soal s       ON s.id  = ss.soal_id
+           WHERE se.siswa_id = ?
+             AND d.benar = 0
+             AND IFNULL(d.kode_final, IFNULL(d.kode_usulan, '')) <> 'T'
+           GROUP BY s.template_id
+           ORDER BY kali_salah DESC, terakhir DESC""",
+        (siswa_id,),
+    ).fetchall()
+    return [b["template_id"] for b in baris[:batas]]
+
+
+def buat_sesi_remedial(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    seed: int | None = None,
+    level: str = LEVEL_BAWAAN,
+    topik: str = TOPIK_BAWAAN,
+    jumlah_soal: int = 10,
+) -> int | None:
+    """Sesi latihan ulang berisi HANYA konsep yang pernah dijawab salah.
+
+    Kunci desainnya: template-nya sama, SOALNYA BARU. Seed berbeda berarti
+    angka/objeknya berganti — yang dilatih konsepnya, bukan hafalan jawaban
+    lembar lama. Ini juga yang membuat perbandingan "sudah membaik atau
+    belum" bermakna.
+
+    `seed=None` berarti pilih seed yang BELUM pernah dipakai anak ini
+    (pola sama dengan buat_sesi_seed_baru) — pemanggil web tidak perlu
+    mengurus keacakan sendiri. Seed eksplisit dipakai test determinisme.
+
+    None kalau tidak ada sasaran (anak belum punya kesalahan tercatat) —
+    lebih jujur daripada membuat sesi acak dan menyebutnya remedial.
+    """
+    sasaran = sasaran_remedial(kon, siswa_id)
+    if not sasaran:
+        return None
+    if seed is None:
+        dipakai = {
+            r["seed"]
+            for r in kon.execute(
+                "SELECT seed FROM sesi WHERE siswa_id = ?", (siswa_id,)
+            ).fetchall()
+        }
+        for _ in range(500):
+            calon = random.randint(1, 9_999_999)
+            if calon not in dipakai:
+                seed = calon
+                break
+        else:
+            raise RuntimeError("gagal menemukan seed baru")
+    # Ulangi sasaran round-robin sampai memenuhi jumlah_soal: tiap konsep
+    # dapat porsi seimbang, dan urutannya tetap diacak per lembar oleh
+    # generator (_acak_urutan) supaya posisi soal tidak menghafal.
+    urutan: list[str] = []
+    while len(urutan) < jumlah_soal:
+        urutan.extend(sasaran)
+    return buat_sesi_dari_urutan(
+        kon, siswa_id, seed,
+        urutan=tuple(urutan[:jumlah_soal]),
+        level=level, topik=topik,
+    )
 
 
 def isi_sesi(kon: sqlite3.Connection, sesi_id: int) -> list[sqlite3.Row]:

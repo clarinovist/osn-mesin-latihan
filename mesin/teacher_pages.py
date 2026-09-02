@@ -465,6 +465,33 @@ def halaman_anak(
         "</form>"
     )
 
+    # Latihan ulang (poin a feedback Filia): satu klik membuat sesi berisi
+    # HANYA konsep yang pernah dijawab salah anak ini, dengan soal baru.
+    # Tombol hanya muncul kalau memang ADA dasarnya — tanpa kesalahan
+    # tercatat, menawarkan "remedial" itu mengarang.
+    sasaran = database.sasaran_remedial(kon, siswa["id"])
+    strip_remedial = ""
+    if sasaran and not admin:
+        strip_remedial = (
+            '<form method="post" '
+            f'action="/sesi-remedial/{siswa["id"]}" class="strip-sesi">'
+            '<div class="strip-kolom">'
+            "<label>Latihan ulang — dari kesalahan yang tercatat</label>"
+            f'<p class="sub">{len(sasaran)} konsep akan dilatih ulang '
+            "dengan soal baru (angkanya berganti, konsepnya sama).</p>"
+            "</div>"
+            '<div class="strip-kolom"><label>Jumlah Soal</label>'
+            '<select name="jumlah_soal" class="st-input">'
+            '<option value="10" selected>10 soal (± 30 mnt)</option>'
+            '<option value="15">15 soal (± 45 mnt)</option>'
+            '<option value="20">20 soal (± 60 mnt)</option>'
+            "</select></div>"
+            '<button type="submit" class="st-tombol-coral">'
+            '<span class="material-symbols-outlined" style="font-size:1.1rem">'
+            "restart_alt</span>Buat latihan ulang</button>"
+            "</form>"
+        )
+
     kabar = (
         '<div class="st-banner-sukses"><span class="ikon">✓</span>'
         f"<span>{html.escape(pesan)}</span></div>"
@@ -483,6 +510,7 @@ def halaman_anak(
         f'<a href="/laporan/{siswa["id"]}">lihat laporan tren &rarr;</a></p>'
         f"{kabar}"
         f'<div class="daftar-anak">{item}</div>'
+        f"{strip_remedial}"
         f"{strip_sesi}"
         "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');"
         "for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\","
