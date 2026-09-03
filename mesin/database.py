@@ -389,6 +389,13 @@ def buat_sesi_gabungan(
     from topics import gabungan
 
     paket = gabungan(topik_ids)
+    # Level datang dari `siswa.tingkat` (teks bebas), bukan dari pilihan
+    # guru — dan tidak semua topik punya semua level (logika melompati P4,
+    # kombinatorik mulai P5). Anak P4 yang memilih dua topik tanpa P4 dulu
+    # membuat generator melempar ValueError dan handler mati. Level yang
+    # bukan pilihan pengguna dinormalkan, bukan ditolak.
+    if level not in paket.komposisi:
+        level = _level_terdekat(level, paket.komposisi)
     lembar = buat_lembar(
         seed, level=level, topik=paket, jumlah_soal=jumlah_soal
     )
