@@ -718,16 +718,22 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
         )
 
     kartu_html = "\n".join(kartu) or (
-        '<div style="border:1.5px dashed; border-color:{T.BORDER_VARIAN}; '
+        # Bug 3 Sep: baris pertama dulu BUKAN f-string, jadi
+        # '{T.BORDER_VARIAN}' terkirim mentah ke browser sebagai teks dan
+        # bordernya tidak berwarna semestinya. Semua baris kini f-string.
+        f'<div style="border:1.5px dashed {T.BORDER_VARIAN}; '
         f'border-radius:{T.RADIUS_KARTU}; padding:{T.SP_5}; text-align:center;'
         f'color:{T.TEKS_VARIAN}; font-size:0.95rem">'
-        'Belum ada sesi. Minta gurumu membuatkan.</div>'
+        f'{brand.maskot("netral", 96)}'
+        '<div style="margin-top:0.6rem">'
+        'Belum ada sesi. Minta gurumu membuatkan.</div></div>'
     )
 
     banner = ""
     if sesi_selesai is not None:
         banner = (
             '<div class="st-banner-sukses">'
+            f'{brand.maskot("merayakan", 96, kelas="maskot-banner")}'
             '<span class="ikon">✓</span>'
             "<span>Selesai! Semua jawabanmu sudah masuk.</span></div>"
         )
@@ -755,8 +761,8 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
 
   <div style="padding:{T.SP_4} 0">
     <div style="display:flex;align-items:center;gap:{T.SP_4};margin:0.4rem 0 1.2rem">
-      <span style="flex:none;width:3.5rem;height:3.5rem;border-radius:50%;background:#d8f2f2;color:{T.AKSEN_MURID_UTAMA};display:inline-flex;align-items:center;justify-content:center;font-size:1.9rem">
-        {brand.mark("badge")}
+      <span style="flex:none;width:4.5rem;height:4.5rem;border-radius:50%;background:#d8f2f2;display:flex;align-items:center;justify-content:center">
+        {brand.maskot("netral", 96, kelas="maskot-sapaan")}
       </span>
       <div>
         <h1 class="st" style="margin:0">Halo, {_escape(nama)}!</h1>

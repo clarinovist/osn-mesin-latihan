@@ -106,6 +106,28 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: bold;
 }}
+/* Maskot di banner perayaan. Screenshot 430px menemukan DUA cacat: pada 48px
+   ayamnya sesak, DAN kalimatnya terpotong ("...sudah masuk" tanpa titik)
+   karena maskot memakan lebar yang dibutuhkan teks.
+
+   flex-wrap saja TIDAK cukup — span teks tetap dipaksa muat satu baris.
+   Yang menyelesaikan: beri span teks flex-basis 100% supaya ia turun ke
+   baris sendiri begitu ruangnya kurang, dengan maskot + centang di atasnya. */
+.st-banner-sukses {{
+  flex-wrap: wrap;
+}}
+.st-banner-sukses .maskot-banner {{
+  flex: none; width: 36px; height: auto;
+}}
+.st-banner-sukses > span:last-child {{
+  flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere;
+}}
+/* Maskot di badge sapaan. Ditemukan lewat screenshot: maskot 96px di dalam
+   badge 4,5rem (72px) TERPOTONG lingkaran. Dibatasi 82% diameter badge
+   supaya ayamnya utuh dengan sedikit ruang napas — bukan di-crop. */
+.maskot-sapaan {{
+  width: 82%; height: auto; max-width: none;
+}}
 
 /* Badge status mode */
 .st-badge {{

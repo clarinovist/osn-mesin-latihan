@@ -512,3 +512,66 @@ def test_maskot_tidak_dicetak():
     for fn in (render.lembar_soal, render.lembar_penilaian):
         halaman = fn(list(lembar.soal), nama="Putri", tanggal="1 Jan")
         assert "maskot-" not in halaman, f"{fn.__name__} memuat maskot"
+
+
+@pytest.fixture()
+def server_kosong(tmp_path, monkeypatch):
+    """Anak yang PUNYA akun tapi BELUM punya sesi — keadaan kosong.
+
+    Terpisah dari fixture `server` karena di sana feby sengaja punya sesi;
+    keadaan kosong tidak bisa diuji dari fixture yang sama.
+    """
+    s = ServerUji(tmp_path, monkeypatch)
+    with s.buka() as kon:
+        database.tambah_siswa(kon, "feby", pemilik="guru")
+    yield s
+    s.berhenti()
+
+
+def test_sapaan_anak_pakai_maskot(server):
+    """Sapaan "Halo, <nama>!" memakai maskot, bukan lambang brand.
+
+    Lambang tetap di topbar sebagai penanda identitas; badge sapaan adalah
+    tempat yang tepat untuk maskot — di situ ia menghangatkan, bukan
+    menggeser identitas.
+    """
+    from http_test_kit import SANDI_MURID
+
+    kode, isi, _ = server.minta("/murid", auth=("feby", SANDI_MURID))
+    assert kode == 200
+    assert "Halo, feby!" in isi
+    assert "/aset/maskot-netral-" in isi, "sapaan anak tanpa maskot"
+    # topbar tetap memakai lambang: identitas tidak digeser hiasan
+    assert "/aset/mark-sederhana.svg" in isi
+
+
+def test_banner_selesai_pakai_maskot_merayakan(server):
+    """Banner setelah semua jawaban terkirim memakai pose merayakan."""
+    from http_test_kit import SANDI_MURID
+
+    kode, isi, _ = server.minta(
+        f"/murid?selesai={server.sesi_id}", auth=("feby", SANDI_MURID)
+    )
+    assert kode == 200
+    assert "Selesai!" in isi
+    assert "/aset/maskot-merayakan-" in isi, "banner perayaan tanpa maskot"
+
+
+def test_keadaan_kosong_pakai_maskot(server_kosong):
+    """Anak tanpa sesi melihat maskot, bukan kotak dashed kosong saja."""
+    from http_test_kit import SANDI_MURID
+
+    kode, isi, _ = server_kosong.minta("/murid", auth=("feby", SANDI_MURID))
+    assert kode == 200
+    assert "Belum ada sesi" in isi
+    assert "/aset/maskot-netral-" in isi, "keadaan kosong tanpa maskot"
+
+
+def test_keadaan_kosong_border_bukan_teks_literal(server_kosong):
+    """Bug ditemukan 3 Sep: blok keadaan kosong memakai '{T.BORDER_VARIAN}'
+    di string NON-f-string, jadi border-color terkirim sebagai teks literal
+    ke browser dan bordernya tidak berwarna semestinya."""
+    from http_test_kit import SANDI_MURID
+
+    _, isi, _ = server_kosong.minta("/murid", auth=("feby", SANDI_MURID))
+    assert "{T." not in isi, "ada placeholder f-string yang tidak ter-render"
