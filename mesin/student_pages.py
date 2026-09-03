@@ -669,6 +669,32 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
         else:
             mode_label = '<span class="st-badge diagnostik">Diagnostik</span>'
 
+        # Penanda jumlah soal (3 Sep, feedback layout). Dulu ditulis di dalam
+        # span kolom teks → kena stretch flex-column jadi 271px di HP /
+        # 617px di desktop untuk konten +-67px ("blok abu memanjang").
+        # Sekarang anak LANGSUNG kartu, dan bentuknya kontekstual:
+        # bar berisi hanya untuk sesi yang sedang dikerjakan (0 < terisi <
+        # jumlah) — saat pecahannya memang informatif. Sesi baru (0%) dan
+        # sesi selesai (100%) tetap pill statis; angkanya sudah tergambar
+        # badge statusnya sendiri.
+        sedang_jalan = 0 < b["terisi"] < b["jumlah"]
+        if sedang_jalan:
+            persen = round(b["terisi"] / b["jumlah"] * 100, 1)
+            penanda = (
+                '<span class="st-progres-soal">'
+                '<span class="st-progres-jalur">'
+                f'<span class="st-progres-isi" style="width:{persen}%"></span>'
+                "</span>"
+                f'<span class="st-progres-label">{b["terisi"]} dari '
+                f'{b["jumlah"]} soal</span>'
+                "</span>"
+            )
+        else:
+            penanda = (
+                '<span class="st-badge selesai st-jumlah-soal">'
+                f'{b["jumlah"]} soal</span>'
+            )
+
         kartu.append(
             f'<a class="st-kartu-baris" href="{tujuan}"'
             ' style="text-decoration:none;color:inherit">'
@@ -676,7 +702,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
             f"background:{bg};display:inline-flex;align-items:center;justify-content:center;\">"
             f'<span class="material-symbols-outlined" style="font-size:1.2rem;color:{fg}">{ikon}</span>'
             "</span>"
-            '<span style="flex:1;display:flex;flex-direction:column;min-width:0">'
+            '<span class="st-kartu-teks">'
             f'<span style="font-weight:700;font-size:1rem;color:{T.TEKS_JUDUL}">{_escape(b["tanggal"])}</span>'
             f'<span style="font-size:0.85rem;color:{T.TEKS_VARIAN};display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
             f"level {_escape(b['level'])} &middot; {_escape(_ambil_topik(b))}"
@@ -684,8 +710,8 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
             # 1 Sep:badge review = baris METANYA sendiri (flex-wrap) supaya
             # selalu dalam viewport di HP — terukur lewat piksel screenshot.
             f'<span style="flex-basis:100%;display:flex;align-items:center;">{badge}</span></span>'
-            f'<span class="st-badge selesai" style="font-size:0.8rem">{b["jumlah"]} soal</span>'
             "</span>"
+            f"{penanda}"
             "</a>"
         )
 

@@ -262,6 +262,61 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
    Versi di teacher_style.py dibiarkan: halaman non-stitch masih memakainya. */
 .daftar-anak {{ display: grid; gap: {T.SP_3}; }}
 
+/* ── Kartu sesi murid (3 Sep, feedback layout) ──
+   Tiga masalah terukur di headless Chrome, akarnya satu markup:
+
+   1. Badge "{{n}} soal" dulu ditulis DI DALAM kolom teks. Kolom itu
+      flex-direction:column, jadi badge kena stretch: 271px di HP dan 617px
+      di 1440px untuk konten yang lebar aslinya +-67px — terbaca orang tua
+      sebagai "blok abu memanjang sampai habis" seolah progress bar.
+   2. Kolom teks tak punya gap (computed `normal` = 0px) → tanggal, meta,
+      dan badge dempet: "kayak agak bertumpuk".
+   3. Karena (1), kartu hanya punya 2 anak flex sehingga aturan HP
+      `.st-kartu-baris > *:nth-child(n+3)` di atas tidak pernah kena. */
+.st-kartu-teks {{
+  flex: 1; display: flex; flex-direction: column;
+  gap: {T.SP_1};              /* akar keluhan "bertumpuk" */
+  min-width: 0;
+}}
+/* Pill statis: lebar mengikuti isi, TIDAK memanjang. flex:none menahan
+   shrink; align-self mencegah stretch kalau kartu jatuh ke mode wrap. */
+.st-jumlah-soal {{
+  flex: none; align-self: center; margin-left: auto;
+  white-space: nowrap; font-size: 0.8rem;
+}}
+/* Bar progres hanya dipakai sesi yang SEDANG dikerjakan — saat pecahannya
+   informatif. Sesi baru (0%) dan selesai (100%) tetap pill statis. */
+.st-progres-soal {{
+  flex: none; align-self: center; margin-left: auto;
+  display: flex; flex-direction: column; gap: 0.2rem;
+  width: 6.5rem;
+}}
+.st-progres-jalur {{
+  display: block;
+  height: 0.4rem; border-radius: {T.RADIUS_PIL};
+  background: {T.LATAR_ELEVASI}; overflow: hidden;
+}}
+/* display:block WAJIB: penanda ini <span>, dan span inline mengabaikan
+   width/height sepenuhnya — terukur 3 Sep, bar tampil kosong (0px) padahal
+   style="width:30%" terpasang. Test HTML tidak menangkapnya; hanya render
+   yang menangkap (CLAUDE.md §10). */
+.st-progres-isi {{
+  display: block;
+  height: 100%; border-radius: {T.RADIUS_PIL};
+  background: {T.AKSEN_MURID_UTAMA};
+}}
+.st-progres-label {{
+  font-size: 0.7rem; color: {T.TEKS_VARIAN}; white-space: nowrap;
+}}
+@media (max-width: 46rem) {{
+  /* Aturan HP `.st-kartu-baris > *:nth-child(n+3)` di atas memberi penanda
+     `flex: 0 1 auto` + `margin-left: 0`, sehingga bar jatuh ke baris kedua
+     dan menempel KIRI (terukur x=31, kartu memanjang 143→159px). Kembalikan
+     dorongan ke kanan supaya bar tetap sebaris dengan kolom teks. */
+  .st-jumlah-soal, .st-progres-soal {{ margin-left: auto !important; }}
+  .st-progres-soal {{ width: 5.5rem; }}
+}}
+
 /* Sorot-baru — sisip baris yang baru dibuat */
 tr.sorot-baru, div.sorot-baru {{
   background: {T.AKSEN_MURID_UTAMA}20;
