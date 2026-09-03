@@ -282,6 +282,26 @@ tr.sorot-baru, div.sorot-baru {{
    sehingga tiap anak yang tidak selebar penuh menempel ke tepi KANAN.
    Versi yang menang ada di bagian "Form buat sesi (S6)". */
 
+/* ── Halaman /anak/<id> (3 Sep): dua kolom di desktop ──
+   Mobile-first: bawaannya SATU kolom, jadi di HP tampilannya sama persis
+   seperti sebelum blok ini ada. Grid dan pelebar kanvas baru hidup di
+   >= 64rem, tempat halaman lama menyisakan ~350px kosong di kiri-kanan
+   sambil memanjang 1698px ke bawah. */
+.anak-grid {{ display: flex; flex-direction: column; gap: {T.SP_4}; }}
+.anak-kolom-kanan {{ display: flex; flex-direction: column; gap: {T.SP_4}; }}
+
+@media (min-width: 64rem) {{
+  .bungkus-st.lebar {{ max-width: 72rem; }}
+  .anak-grid {{
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: {T.SP_5};
+    align-items: start;
+  }}
+  /* Strip pertama di kolom kanan sudah punya jarak dari grid gap. */
+  .anak-kolom-kanan > .strip-sesi:first-child {{ margin-top: 0; }}
+}}
+
 /* ── Halaman kerja murid (/murid/kerjakan/<id>) — S4 adopsi Stitch ── */
 
 /* Badan kerja: sticky topbar + timer, lalu konten utama, lalu save strip.  */

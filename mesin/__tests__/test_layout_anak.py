@@ -191,3 +191,56 @@ def test_halaman_anak_tetap_utuh(anak):
     assert "Buat sesi baru" in html
     assert "Buat latihan gabungan" in html
     assert "Claudia" in html
+
+
+# ── Fase B — layout desktop dua kolom ─────────────────────────────────
+#
+# Di 1440px halaman ini tinggi 1698px dengan konten hanya 51% viewport:
+# history sesi dan tiga form bertumpuk vertikal, sisa ~350px kosong di
+# kiri-kanan. Di >= 64rem keduanya dipisah jadi dua kolom.
+#
+# Palang yang dijaga: HP tidak boleh ikut berubah. Grid dan pelebar hanya
+# boleh hidup di dalam media query.
+
+
+def test_halaman_anak_punya_bungkus_grid(anak):
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert 'class="anak-grid"' in markup
+    assert 'class="anak-kolom-kiri"' in markup
+    assert 'class="anak-kolom-kanan"' in markup
+
+
+def test_daftar_sesi_di_kiri_form_di_kanan(anak):
+    """Urutan sumber menentukan urutan di HP (satu kolom): history dulu,
+    baru form — sama seperti sebelum Fase B."""
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    kiri = markup.index('anak-kolom-kiri')
+    kanan = markup.index('anak-kolom-kanan')
+    assert kiri < kanan
+    assert markup.index('daftar-anak') < kanan, "history harus di kolom kiri"
+    assert kanan < markup.index('Buat sesi baru'), "form di kolom kanan"
+
+
+def test_grid_dua_kolom_hanya_di_desktop():
+    """Di bawah breakpoint halaman harus tetap satu kolom seperti semula."""
+    aturan = _tanpa_komentar(GAYA_STITCH)
+    assert "grid-template-columns" in aturan, "grid belum ada"
+    # blok .anak-grid di luar media query tidak boleh punya dua kolom
+    assert "grid-template-columns" not in _blok(aturan, ".anak-grid")
+
+
+def test_pelebar_konten_hanya_untuk_kelas_lebar():
+    """Halaman lain tidak boleh ikut melebar — pelebar diikat ke kelas."""
+    assert ".bungkus-st.lebar" in _tanpa_komentar(GAYA_STITCH)
+
+
+def test_halaman_lain_tidak_ikut_melebar(anak):
+    """Dashboard memakai bingkai yang sama; ia harus tetap 46rem."""
+    db, sid = anak
+    with database.buka(db) as kon:
+        html = teacher_pages.halaman_utama_stitch(
+            kon, pemilik="ortu", peran="guru"
+        ).decode()
+    assert "bungkus-st lebar" not in _tanpa_gaya(html)

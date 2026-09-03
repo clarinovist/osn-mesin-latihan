@@ -244,14 +244,20 @@ def _topbar_stitch(pengguna: str, peran: str) -> str:
 
 
 def _halaman_stitch(
-    judul: str, isi: str, ident: tuple[str, str] | None = None
+    judul: str, isi: str, ident: tuple[str, str] | None = None,
+    kelas_bungkus: str = "",
 ) -> bytes:
     """Bingkai halaman versi Stitch — pakai GAYA_STITCH dan body.st.
 
     Dipisah dari _halaman lama supaya halaman lama tetap utuh; fungsi ini
     satu-satunya penghubung ke CSS Stitch di tree.
+
+    `kelas_bungkus` menempel di .bungkus-st untuk halaman yang butuh kanvas
+    berbeda (mis. "lebar" di /anak/<id> yang memakai dua kolom di desktop).
+    Bawaannya kosong: semua pemanggil lama menghasilkan HTML yang sama persis.
     """
     batang = _topbar_stitch(*ident) if ident else ""
+    kelas = f"bungkus-st {kelas_bungkus}".strip()
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(judul)}</title>
@@ -259,7 +265,7 @@ def _halaman_stitch(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>{GAYA_STITCH}</style></head>
-<body class="st"><div class="bungkus-st">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+<body class="st"><div class="{kelas}">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
 
 def halaman_utama_stitch(
@@ -542,15 +548,20 @@ def halaman_anak(
         f'<p class="sub">History latihan — '
         f'<a href="/laporan/{siswa["id"]}">lihat laporan tren &rarr;</a></p>'
         f"{kabar}"
-        f'<div class="daftar-anak">{item}</div>'
+        # Dua kolom di desktop (>= 64rem): history di kiri, alat buat-latihan
+        # di kanan. Di HP grid mati dan urutan sumber yang berlaku — history
+        # dulu, form menyusul, persis seperti sebelum kolom ini ada.
+        '<div class="anak-grid">'
+        f'<div class="anak-kolom-kiri"><div class="daftar-anak">{item}</div></div>'
+        '<div class="anak-kolom-kanan">'
         f"{strip_remedial}"
         f"{strip_gabungan}"
         f"{strip_sesi}"
-        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');"
-        "for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\","
-        "function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");"
-        "if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
+        "</div>"
+        "</div>"
+        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
         ident=(pengguna if pengguna else "guru", peran),
+        kelas_bungkus="lebar",
     )
 
 def halaman_utama(
