@@ -29,6 +29,12 @@ WORKDIR /app
 # kontrak ini dan menolak kembalinya daftar manual.
 COPY --chown=osn:osn *.py /app/
 
+# Aset brand (favicon, lockup, og-image, ikon PWA) — non-.py, jadi wildcard
+# di atas TIDAK membawanya. Tanpa baris ini favicon 404 di produksi meski
+# semua test hijau di lokal: pola insiden 25 Agustus 2026 terulang, kali ini
+# untuk berkas biner. Guard: __tests__/test_brand.py.
+COPY --chown=osn:osn aset/ /app/aset/
+
 # Basis data & sandi tinggal di volume supaya selamat saat container diganti.
 ENV OSN_BERKAS_SANDI=/data/sandi.json \
     OSN_BERKAS_SESI=/data/sesi.json \

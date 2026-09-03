@@ -22,6 +22,7 @@ from http.server import BaseHTTPRequestHandler
 
 import attachments as lampiran_mod
 import auth
+import brand
 import database
 import sessions
 import design_tokens as T
@@ -273,6 +274,26 @@ class Penangan(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(isi)
 
+    def _kirim_aset(self, nama: str) -> None:
+        """Berkas brand statis dari allow-list brand.ASET.
+
+        Nama diperiksa lewat dict, bukan digabung ke path — traversal `../`
+        mustahil secara konstruksi. Nama tak dikenal dijawab 404 dengan body
+        yang sama seperti halaman lain, jadi rute ini bukan oracle untuk
+        menebak isi filesystem.
+        """
+        got = brand.berkas(nama)
+        if got is None:
+            return self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
+        isi, mime = got
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(isi)))
+        # Berkasnya tidak pernah berubah tanpa berganti nama.
+        self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+        self.end_headers()
+        self.wfile.write(isi)
+
     def do_GET(self) -> None:  # noqa: N802
         """Pembungkus jaring pengaman — rutenya di _rute_get."""
         try:
@@ -351,6 +372,14 @@ class Penangan(BaseHTTPRequestHandler):
             from landing import halaman_lupa_sandi
 
             return self._kirim(halaman_lupa_sandi())
+        if jalur == "/aset" or jalur.startswith("/aset/"):
+            # Publik & sengaja sempit: hanya berkas brand statis dari
+            # allow-list brand.ASET. Favicon dibutuhkan browser sebelum
+            # login, jadi rute ini WAJIB berada sebelum palang guru.
+            # Tidak menyentuh basis data.
+            # Jalur sudah di-rstrip("/"), jadi "/aset/" tiba sebagai "/aset"
+            # dengan nama kosong — tetap 404 lewat allow-list.
+            return self._kirim_aset(jalur[len("/aset/"):] if len(jalur) > 5 else "")
         if jalur == "/murid" or jalur.startswith("/murid/"):
             try:
                 with database.buka() as kon:
