@@ -424,3 +424,91 @@ def test_judul_lembar_cetak_menyebut_brand():
         halaman = fn(list(lembar.soal), nama="Putri", tanggal="1 Jan")
         judul = halaman.split("<title>")[1].split("</title>")[0]
         assert f"· {T.NAMA_PRODUK}" in judul, f"{fn.__name__}: '{judul}'"
+
+
+# ───────────────────────── maskot ayam jago ─────────────────────────
+
+def test_maskot_aset_ada_dan_transparan():
+    """Maskot wajib PNG beralpha. Aset asalnya latar putih solid
+    (hasAlpha: no) — kalau yang itu yang terpasang, anak melihat kotak
+    putih di halaman cream."""
+    from struct import unpack
+
+    for pose in brand.POSE_MASKOT:
+        for px in (240, 96):
+            nama = f"maskot-{pose}-{px}.png"
+            assert nama in brand.ASET, f"{nama} tidak di allow-list"
+            p = ROOT / "aset" / nama
+            assert p.is_file(), f"{nama} tidak ada di disk"
+            data = p.read_bytes()
+            assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{nama} bukan PNG"
+            # IHDR: lebar, tinggi, bit depth, color type
+            lebar, tinggi = unpack(">II", data[16:24])
+            jenis_warna = data[25]
+            assert max(lebar, tinggi) == px, f"{nama}: {lebar}x{tinggi} != {px}"
+            # 3 = palette (alpha lewat tRNS), 6 = RGBA
+            assert jenis_warna in (3, 6), f"{nama}: color type {jenis_warna}"
+            if jenis_warna == 3:
+                assert b"tRNS" in data, f"{nama}: palette tanpa tRNS = tak transparan"
+
+
+def test_maskot_ringan():
+    """Halaman anak sering dibuka di HP. Aset mentah 132 KB per pose;
+    setelah crop+kuantisasi harus jauh di bawah itu."""
+    total = 0
+    for pose in brand.POSE_MASKOT:
+        for px in (240, 96):
+            n = (ROOT / "aset" / f"maskot-{pose}-{px}.png").stat().st_size
+            batas = 15_000 if px == 240 else 5_000
+            assert n < batas, f"maskot-{pose}-{px}.png {n}B melebihi {batas}B"
+            total += n
+    assert total < 40_000, f"total maskot {total}B terlalu berat"
+
+
+def test_maskot_helper_menolak_pose_dan_ukuran_asing():
+    """Pose 'berpikir' sengaja tidak ada (crop-nya cacat). Helper harus
+    MENOLAK keras, bukan diam-diam menyajikan 404 ke anak."""
+    import pytest as _pytest
+
+    assert "berpikir" not in brand.POSE_MASKOT
+    with _pytest.raises(ValueError):
+        brand.maskot("berpikir")
+    with _pytest.raises(ValueError):
+        brand.maskot("netral", 512)
+    for pose in brand.POSE_MASKOT:
+        assert f"/aset/maskot-{pose}-240.png" in brand.maskot(pose)
+
+
+def test_maskot_alt_kosong_default():
+    """Maskot hiasan, bukan informasi: pembaca layar harus melewatinya,
+    supaya anak tidak mendengar 'gambar ayam' sebelum tiap sapaan."""
+    assert 'alt=""' in brand.maskot()
+    assert 'alt="Ayam jago merayakan"' in brand.maskot(
+        "merayakan", alt="Ayam jago merayakan"
+    )
+
+
+def test_maskot_lazy_load():
+    """Maskot tidak boleh memblokir render halaman anak."""
+    m = brand.maskot()
+    assert 'loading="lazy"' in m and 'decoding="async"' in m
+
+
+def test_maskot_terlayani_lewat_rute_aset(server):
+    for pose in brand.POSE_MASKOT:
+        for px in (240, 96):
+            kode, isi, hdr = server.minta(f"/aset/maskot-{pose}-{px}.png", biner=True)
+            assert kode == 200, f"maskot-{pose}-{px} -> {kode}"
+            assert hdr["Content-Type"] == "image/png"
+            assert isi[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_maskot_tidak_dicetak():
+    """Keputusan 3 Sep: kertas A4 tetap fokus ke soal, hemat tinta warna."""
+    import render
+    from generator import buat_lembar
+
+    lembar = buat_lembar(seed=9, jumlah_soal=2)
+    for fn in (render.lembar_soal, render.lembar_penilaian):
+        halaman = fn(list(lembar.soal), nama="Putri", tanggal="1 Jan")
+        assert "maskot-" not in halaman, f"{fn.__name__} memuat maskot"

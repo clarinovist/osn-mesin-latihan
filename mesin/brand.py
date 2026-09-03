@@ -54,7 +54,21 @@ ASET: dict[str, str] = {
     "pwa-192.png": "image/png",
     "pwa-512.png": "image/png",
     "og-image.png": "image/png",
+    # Maskot ayam jago. Dua ukuran per pose: 240px (sapaan/banner) dan 96px
+    # (inline kecil) — bukan satu berkas besar yang di-scale CSS, karena
+    # halaman anak sering dibuka di HP.
+    "maskot-netral-240.png": "image/png",
+    "maskot-netral-96.png": "image/png",
+    "maskot-merayakan-240.png": "image/png",
+    "maskot-merayakan-96.png": "image/png",
+    "maskot-menunjuk-240.png": "image/png",
+    "maskot-menunjuk-96.png": "image/png",
 }
+
+# Pose maskot yang tersedia. "berpikir" TIDAK ada: di character sheet
+# aslinya palet warna berada di dalam kotak badan, jadi memotong paletnya
+# ikut memotong ekor — lebih baik tidak ada daripada cacat.
+POSE_MASKOT = ("netral", "merayakan", "menunjuk")
 
 NAMA_MANIFEST = "manifest.json"
 
@@ -213,3 +227,27 @@ def judul(halaman: str = "") -> str:
     if not nama:
         return T.NAMA_PRODUK
     return f"{nama} · {T.NAMA_PRODUK}"
+
+
+def maskot(pose: str = "netral", px: int = 240, alt: str = "", kelas: str = "") -> str:
+    """<img> maskot ayam jago.
+
+    Maskot BUKAN logo: ia hiasan/pendamping, bukan penanda identitas. Karena
+    itu default `alt=""` — pembaca layar melewatinya, dan anak yang memakai
+    pembaca layar tidak mendengar "gambar ayam" sebelum tiap sapaan. Isi
+    `alt` hanya kalau maskotnya benar-benar membawa informasi.
+
+    px: 240 (sapaan/banner) atau 96 (inline kecil). Dua berkas terpisah,
+    bukan satu besar yang di-scale CSS — halaman anak sering dibuka di HP.
+    """
+    if pose not in POSE_MASKOT:
+        raise ValueError(f"pose maskot tidak dikenal: {pose!r}")
+    if px not in (240, 96):
+        raise ValueError(f"ukuran maskot tidak tersedia: {px}")
+    berkas_maskot = f"maskot-{pose}-{px}.png"
+    atribut_kelas = f' class="{kelas}"' if kelas else ""
+    return (
+        f'<img src="/aset/{berkas_maskot}" alt="{_esc(alt)}"{atribut_kelas} '
+        f'loading="lazy" decoding="async" '
+        f'style="max-width:{px}px;height:auto">'
+    )
