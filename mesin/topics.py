@@ -153,6 +153,9 @@ def _daftarkan_campuran() -> None:
         templates=gabungan_templates,
         komposisi=komposisi_campuran,
         profil={"P3": {}, "P4": {}, "P5": {}, "P6": {}},
+        render_badan=_render_gabungan(
+            [t for t in PAKET.values() if t.id != "campuran"]
+        ),
         parameter_untuk=parameter_campuran,
     )
     PAKET["campuran"] = topik_campuran
@@ -241,8 +244,39 @@ def gabungan(topik_ids) -> Topik:
         templates=templates,
         komposisi=komposisi,
         profil={lvl: {} for lvl in komposisi},
+        render_badan=_render_gabungan(paket_terpilih),
         parameter_untuk=parameter_gabungan,
     )
+
+
+def _render_gabungan(paket_terpilih):
+    """Dispatch render_badan ke topik PEMILIK tiap template.
+
+    Paket sintetis (campuran & gabungan) merangkai templates dari beberapa
+    topik tapi dulu lahir dengan `render_badan=None`, sehingga soal yang
+    punya bentuk visual khusus (SVG korek api, susunan titik, kotak isian
+    deret) turun jadi teks polos begitu masuk sesi campuran/gabungan —
+    termasuk sesi remedial. Anak jadi melihat soal berbeda untuk template
+    yang sama, tergantung sesi itu lahir dari jalur mana.
+
+    Renderer dipetakan per template_id, bukan dirantai berurutan: renderer
+    hanya boleh menyentuh templatenya sendiri, dan pemetaan membuat itu
+    berlaku otomatis tanpa bergantung pada urutan paket.
+    """
+    peta = {}
+    for t in paket_terpilih:
+        if t.render_badan is None:
+            continue
+        for tid in t.templates:
+            peta.setdefault(tid, t.render_badan)
+    if not peta:
+        return None
+
+    def render_badan_gabungan(soal):
+        fungsi = peta.get(soal.template_id)
+        return fungsi(soal) if fungsi else None
+
+    return render_badan_gabungan
 
 
 def pemilik_template(template_id: str) -> str | None:
