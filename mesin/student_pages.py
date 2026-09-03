@@ -571,7 +571,7 @@ def halaman_kerja(
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kerjakan — {topik_paket.judul_lembar}</title>
+<title>{brand.judul(f"Kerjakan — {topik_paket.judul_lembar}")}</title>
 {brand.tag_kepala()}
 <style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
@@ -735,7 +735,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sesiku &middot; {T.NAMA_PRODUK}</title>
+<title>{brand.judul("Sesiku")}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1087,7 +1087,7 @@ def halaman_kerja_baru(
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kerjakan — {_escape(topik_paket.judul_lembar)}</title>
+<title>{brand.judul(f"Kerjakan — {_escape(topik_paket.judul_lembar)}")}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1217,7 +1217,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sesiku</title>
+<title>{brand.judul("Sesiku")}</title>
 {brand.tag_kepala()}<style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
   <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
@@ -1340,7 +1340,7 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hasil &amp; cara — {T.NAMA_PRODUK}</title>
+<title>{brand.judul("Hasil &amp; cara")}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

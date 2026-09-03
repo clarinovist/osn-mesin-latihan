@@ -285,7 +285,9 @@ def test_halaman_kerja_murid_judul_dari_paket(db):
         sesi_id = database.buat_sesi(kon, sid, seed=80)
         isi = student_pages.halaman_kerja(kon, sid, sesi_id)
     assert isi is not None, "halaman kerja tidak terbangkit"
-    assert "<title>Kerjakan — Latihan Pola Bilangan</title>" in isi.decode()
+    # Judul kini berpola tunggal "<Halaman> · Jagomat" (brand.judul) —
+    # yang dijaga test ini tetap sama: judulnya ikut PAKET TOPIK sesi.
+    assert "<title>Kerjakan — Latihan Pola Bilangan · " in isi.decode()
 
 
 def test_halaman_lembar_web_judul_dari_topik_sesi(db):

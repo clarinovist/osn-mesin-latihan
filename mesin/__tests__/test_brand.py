@@ -372,3 +372,55 @@ def test_topbar_guru_legacy_punya_mark():
     bar = teacher_pages._topbar("guru", "guru")
     assert "/aset/mark-" in bar, "topbar legacy tanpa mark"
     assert T.NAMA_PRODUK in bar
+
+
+# ───────────────────────── judul halaman seragam ─────────────────────────
+
+def test_judul_helper_pola_tunggal():
+    """Satu pola: "<Halaman> · Jagomat". Landing cukup nama produk saja."""
+    assert brand.judul("Akun") == f"Akun · {T.NAMA_PRODUK}"
+    assert brand.judul("") == T.NAMA_PRODUK
+    assert brand.judul(T.NAMA_PRODUK) == T.NAMA_PRODUK
+    # pemisah lama (— dan ·) dinormalisasi, bukan ditumpuk
+    assert brand.judul(f"Daftar — {T.NAMA_PRODUK}") == f"Daftar · {T.NAMA_PRODUK}"
+    assert brand.judul(f"Sesiku · {T.NAMA_PRODUK}") == f"Sesiku · {T.NAMA_PRODUK}"
+    assert brand.judul("Sesi #1 — Cetak") == f"Sesi #1 — Cetak · {T.NAMA_PRODUK}"
+
+
+def test_semua_judul_halaman_menyebut_brand(server):
+    """Audit 3 Sep: 6 halaman tanpa nama brand sama sekali di tab browser
+    (Akun, Laporan Putri, Panel Pengelola, Sesi #1 — Cetak, Sesi #1 —
+    Lampiran, Hapus sesi #3?), dan pemisah campur — vs ·."""
+    import re
+
+    from http_test_kit import SANDI_MURID
+
+    permukaan = [(j, None) for j in JALUR_PUBLIK]
+    permukaan += [(j, ("guru", SANDI_GURU)) for j in JALUR_GURU]
+    permukaan += [
+        (j, ("guru", SANDI_GURU)) for j in _jalur_guru_berdata(server.sesi_id)
+    ]
+    permukaan += [("/murid", ("feby", SANDI_MURID))]
+
+    for jalur, kred in permukaan:
+        kode, isi, _ = server.minta(jalur, auth=kred)
+        assert kode == 200, f"{jalur} -> {kode}"
+        m = re.search(r"<title>(.*?)</title>", isi, re.S)
+        assert m, f"{jalur} tanpa <title>"
+        judul = m.group(1)
+        assert T.NAMA_PRODUK in judul, f"{jalur}: judul '{judul}' tanpa brand"
+        if judul.strip() != T.NAMA_PRODUK:
+            assert f"· {T.NAMA_PRODUK}" in judul, (
+                f"{jalur}: '{judul}' tidak memakai pemisah tunggal '·'"
+            )
+
+
+def test_judul_lembar_cetak_menyebut_brand():
+    import render
+    from generator import buat_lembar
+
+    lembar = buat_lembar(seed=5, jumlah_soal=2)
+    for fn in (render.lembar_soal, render.lembar_penilaian):
+        halaman = fn(list(lembar.soal), nama="Putri", tanggal="1 Jan")
+        judul = halaman.split("<title>")[1].split("</title>")[0]
+        assert f"· {T.NAMA_PRODUK}" in judul, f"{fn.__name__}: '{judul}'"

@@ -449,7 +449,7 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
 
     isi = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Konfirmasi lembar foto — {T.NAMA_PRODUK}</title>
+<title>{brand.judul("Konfirmasi lembar foto")}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

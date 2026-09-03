@@ -139,7 +139,7 @@ def lembar_soal(
     return f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(topik_paket.judul_lembar)}</title>
+<title>{html.escape(brand.judul(topik_paket.judul_lembar))}</title>
 {brand.tag_kepala(cetak=True)}<style>{css}</style></head><body>
 <div class="wrap">
 <div class="mesin-banner">
@@ -216,7 +216,7 @@ def lembar_penilaian(
     return f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(topik_paket.judul_penilaian)}</title>
+<title>{html.escape(brand.judul(topik_paket.judul_penilaian))}</title>
 {brand.tag_kepala(cetak=True)}<style>{css}</style></head><body>
 <div class="wrap">
 <div class="mesin-banner banner-kunci">

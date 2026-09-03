@@ -52,7 +52,7 @@ def _halaman(
         batang = _topbar_stitch(*ident) if ident else ""
         return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(judul)}</title>
+<title>{html.escape(brand.judul(judul))}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,7 +62,7 @@ def _halaman(
     batang = _topbar(*ident) if ident else ""
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(judul)}</title>
+<title>{html.escape(brand.judul(judul))}</title>
 {brand.tag_kepala()}<style>{GAYA}</style></head>
 <body><div class="bungkus">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
@@ -264,7 +264,7 @@ def _halaman_stitch(
     kelas = f"bungkus-st {kelas_bungkus}".strip()
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(judul)}</title>
+<title>{html.escape(brand.judul(judul))}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1307,7 +1307,7 @@ def halaman_sesi_stitch(
     return (
         f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sesi #{sesi_id} &middot; {html.escape(T.NAMA_PRODUK)}</title>
+<title>{html.escape(brand.judul(f"Sesi #{sesi_id}"))}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -743,7 +743,7 @@ class Penangan(BaseHTTPRequestHandler):
         )
         body = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Masuk &middot; {html.escape(T.NAMA_PRODUK)}</title>
+<title>{html.escape(brand.judul("Masuk"))}</title>
 {brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

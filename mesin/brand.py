@@ -188,3 +188,28 @@ def mark(ukuran: str = "topbar", kelas: str = "") -> str:
         f'width="{px.rstrip("px")}" height="{px.rstrip("px")}" '
         f'style="width:{px};height:{px};flex:none">'
     )
+
+
+def judul(halaman: str = "") -> str:
+    """Judul <title> dengan pola tunggal: "<Halaman> · Jagomat".
+
+    Audit 3 Sep: pemisah campur (— di sebagian halaman, · di sebagian
+    lain) dan ENAM halaman tanpa nama brand sama sekali di tab browser —
+    "Akun", "Laporan Putri", "Panel Pengelola", "Sesi #1 — Cetak", "Sesi #1
+    — Lampiran", "Hapus sesi #3?". Tab yang tidak menyebut produk membuat
+    orang tua dengan banyak tab tidak tahu mana yang ini.
+
+    Nama halaman yang SUDAH mengandung brand (dengan pemisah apa pun)
+    dinormalisasi, bukan ditumpuk jadi "Daftar — Jagomat · Jagomat".
+    """
+    nama = (halaman or "").strip()
+    if not nama or nama == T.NAMA_PRODUK:
+        return T.NAMA_PRODUK
+    for pemisah in (" · ", " — ", " &middot; ", " - "):
+        akhiran = f"{pemisah}{T.NAMA_PRODUK}"
+        if nama.endswith(akhiran):
+            nama = nama[: -len(akhiran)].strip()
+            break
+    if not nama:
+        return T.NAMA_PRODUK
+    return f"{nama} · {T.NAMA_PRODUK}"

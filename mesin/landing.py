@@ -46,7 +46,7 @@ def _halaman_publik_stitch(
 
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(judul)}</title>
+<title>{html.escape(brand.judul(judul))}</title>
 {brand.tag_kepala(og)}
 {_font_link()}
 <style>{gaya_stitch()}</style></head>
