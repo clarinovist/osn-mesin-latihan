@@ -61,6 +61,56 @@ class Penangan(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(isi)
 
+    def end_headers(self) -> None:
+        """Satu titik penanda "respons sudah keluar".
+
+        Ditaruh di sini, bukan di tiap rute: ada 17 tempat yang menutup
+        header sendiri (redirect 303, berkas lampiran, halaman cetak), dan
+        menandai satu per satu pasti terlewat saat rute baru ditambahkan.
+        Dipakai `_galat_500` untuk tahu kapan ia harus diam.
+        """
+        self._sudah_menjawab = True
+        super().end_headers()
+
+    def _galat_500(self) -> None:
+        """Respons 500 yang UTUH untuk exception tak terduga.
+
+        Tanpa ini, exception di handler membuat BaseHTTPRequestHandler
+        memutus koneksi tanpa menulis apa pun — dan Caddy di depannya
+        menerjemahkannya jadi **502 Bad Gateway**: halaman kosong, tanpa
+        penjelasan, dan menyesatkan saat diinvestigasi (502 berarti
+        "aplikasi mati", padahal aplikasinya hidup dan cuma satu rute yang
+        salah). Insiden 3 Sep 2026: KeyError di sesi remedial.
+
+        Traceback TIDAK ikut ke layar — jalur galat sering memegang nama
+        anak dan detail internal. Yang teknis dicetak ke log server, satu-
+        satunya tempat yang aman untuk itu.
+        """
+        import traceback
+
+        traceback.print_exc()
+        if getattr(self, "_sudah_menjawab", False):
+            # Respons sudah keluar: menulis yang kedua merusak yang valid.
+            return
+        isi = _halaman(
+            "Ada yang bermasalah",
+            "<h1>Ada yang bermasalah</h1>"
+            "<p>Permintaan ini gagal diproses. Kesalahannya ada di sisi "
+            "aplikasi, bukan pada yang kamu isi.</p>"
+            "<p>Silakan coba lagi. Kalau masih gagal, catat halaman apa "
+            "yang kamu buka waktu ini terjadi.</p>"
+            '<p><a href="/">Kembali ke halaman depan</a></p>',
+        )
+        try:
+            self._kirim(isi, 500)
+        except Exception:  # socket sudah putus — tidak ada lagi yang bisa
+            traceback.print_exc()  # dilakukan selain mencatatnya
+
+    def handle_one_request(self) -> None:
+        """Reset penanda respons tiap permintaan (koneksi bisa keep-alive)."""
+        self._sudah_menjawab = False
+        super().handle_one_request()
+
     def _ambil_token(self) -> str | None:
         import http.cookies
 
@@ -224,6 +274,20 @@ class Penangan(BaseHTTPRequestHandler):
         self.wfile.write(isi)
 
     def do_GET(self) -> None:  # noqa: N802
+        """Pembungkus jaring pengaman — rutenya di _rute_get."""
+        try:
+            self._rute_get()
+        except Exception:
+            self._galat_500()
+
+    def do_POST(self) -> None:  # noqa: N802
+        """Pembungkus jaring pengaman — rutenya di _rute_post."""
+        try:
+            self._rute_post()
+        except Exception:
+            self._galat_500()
+
+    def _rute_get(self) -> None:
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
         if jalur == "/masuk":
             galat = ""
@@ -747,7 +811,7 @@ class Penangan(BaseHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    def do_POST(self) -> None:  # noqa: N802
+    def _rute_post(self) -> None:
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
 
         if jalur.startswith("/murid/kerjakan/"):
