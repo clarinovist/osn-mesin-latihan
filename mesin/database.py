@@ -304,6 +304,13 @@ def buat_sesi(
         raise ValueError(f"durasi_menit tidak wajar: {durasi_menit!r}")
 
     lembar = buat_lembar(seed, level=level, topik=topik, jumlah_soal=jumlah_soal)
+    # Level yang DICATAT adalah level yang benar-benar dipakai generator,
+    # bukan yang diminta. `siswa.tingkat` teks bebas, dan `_level_efektif`
+    # menormalkan nilai tak dikenal ke level paket — menyimpan yang mentah
+    # membuat kolom ini berbohong: halaman murid menampilkan "level kelas 4"
+    # untuk lembar yang isinya P3, dan laporan guru ikut salah label.
+    # Level yang sah tidak tersentuh: untuk itu lembar.level == level.
+    level = lembar.level
 
     if tanggal:
         cur = kon.execute(
