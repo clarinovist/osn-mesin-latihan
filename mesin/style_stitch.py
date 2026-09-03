@@ -302,6 +302,68 @@ tr.sorot-baru, div.sorot-baru {{
   .anak-kolom-kanan > .strip-sesi:first-child {{ margin-top: 0; }}
 }}
 
+
+/* ── Kartu "Buat latihan" (3 Sep, Fase C): tab CSS-only ──
+   Tiga form sebelumnya berdiri sebagai tiga kartu abu-abu berurutan; di
+   kolom kanan itu berarti menggulir jauh untuk sampai ke form ketiga.
+   Kini satu kartu dengan tab. TANPA JS: radio + :has(), sama seperti
+   .mode-opsi:has(input:checked) yang sudah dipakai. */
+.buat-latihan-st {{
+  background: {T.LATAR_KARTU};
+  border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU};
+  padding: {T.SP_4};
+}}
+.buat-latihan-st > h2.st {{ margin: 0 0 {T.SP_3}; }}
+/* Radio penggerak tab: disembunyikan dari mata, TETAP dapat difokus papan
+   ketik (bukan display:none yang mencabutnya dari urutan tab). */
+.tab-radio-st {{
+  position: absolute; opacity: 0; width: 1px; height: 1px;
+  margin: 0; pointer-events: none;
+}}
+.tab-bar-st {{
+  display: flex; flex-wrap: wrap; gap: {T.SP_2};
+  border-bottom: 1px solid {T.BORDER_VARIAN};
+  margin-bottom: {T.SP_4};
+}}
+.tab-label-st {{
+  display: inline-flex; align-items: center; gap: {T.SP_2};
+  padding: {T.SP_2} {T.SP_3}; min-height: {T.TARGET_SENTUH};
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .88rem;
+  color: {T.TEKS_VARIAN}; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}}
+.tab-label-st .material-symbols-outlined {{ font-size: 1.1rem; }}
+.tab-label-st:hover {{ color: {T.TEKS_JUDUL}; }}
+/* Strip di dalam panel sudah dibingkai kartu induk — buang bingkai gandanya. */
+.panel-latihan-st > .strip-sesi {{
+  margin-top: 0; padding: 0; background: none; border: 0;
+}}
+
+/* Penyembunyian panel HANYA kalau :has() didukung. Tanpa penjagaan ini,
+   browser lama menyembunyikan panel dan tidak punya cara menampilkannya
+   lagi — guru kehilangan tombol buat sesi sama sekali. Di sana semua panel
+   tampil berurutan seperti sebelum Fase C: lebih panjang, tetap berfungsi. */
+@supports selector(:has(*)) {{
+  .panel-latihan-st {{ display: none; }}
+  .buat-latihan-st:has(#tab-baru:checked) [data-panel="baru"],
+  .buat-latihan-st:has(#tab-ulang:checked) [data-panel="ulang"],
+  .buat-latihan-st:has(#tab-gabungan:checked) [data-panel="gabungan"] {{
+    display: block;
+  }}
+  .buat-latihan-st:has(#tab-baru:checked) .tab-label-st[for="tab-baru"],
+  .buat-latihan-st:has(#tab-ulang:checked) .tab-label-st[for="tab-ulang"],
+  .buat-latihan-st:has(#tab-gabungan:checked) .tab-label-st[for="tab-gabungan"] {{
+    color: {T.AKSEN_MURID_UTAMA}; border-bottom-color: {T.AKSEN_MURID_UTAMA};
+  }}
+}}
+/* Fokus papan ketik harus terlihat: radio-nya kasat mata nol, jadi cincin
+   fokus dipinjamkan ke labelnya. */
+.tab-radio-st:focus-visible + .tab-bar-st .tab-label-st,
+.buat-latihan-st:has(.tab-radio-st:focus-visible) .tab-bar-st {{
+  outline: 2px solid {T.AKSEN_MURID_UTAMA}; outline-offset: 2px;
+}}
+
 /* ── Halaman kerja murid (/murid/kerjakan/<id>) — S4 adopsi Stitch ── */
 
 /* Badan kerja: sticky topbar + timer, lalu konten utama, lalu save strip.  */

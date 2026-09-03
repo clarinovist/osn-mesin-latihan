@@ -531,6 +531,53 @@ def halaman_anak(
         )
     )
 
+    # Fase C: tiga form di atas dibungkus SATU kartu "Buat latihan" dengan tab
+    # radio. Tanpa JS (CLAUDE.md: zero-JS by default) — pemilihan tab memakai
+    # :has(), teknik yang sudah dipakai .mode-opsi:has(input:checked).
+    #
+    # Panel disusun dinamis: strip_remedial kosong kalau anak belum punya
+    # kesalahan tercatat, strip_gabungan kosong untuk admin. Menyusunnya dari
+    # daftar mencegah tab hantu yang menunjuk panel kosong.
+    panel = [("baru", "add_circle", "Sesi baru", strip_sesi)]
+    if strip_remedial:
+        panel.append(("ulang", "restart_alt", "Latihan ulang", strip_remedial))
+    if strip_gabungan:
+        panel.append(("gabungan", "library_add", "Gabungan topik", strip_gabungan))
+
+    if len(panel) > 1:
+        tab = "".join(
+            f'<input type="radio" name="jenis-latihan" id="tab-{kode}" '
+            f'class="tab-radio-st"{" checked" if i == 0 else ""}>'
+            for i, (kode, _, _, _) in enumerate(panel)
+        )
+        label = "".join(
+            f'<label class="tab-label-st" for="tab-{kode}">'
+            f'<span class="material-symbols-outlined">{ikon}</span>'
+            f"{html.escape(judul)}</label>"
+            for kode, ikon, judul, _ in panel
+        )
+        isi_panel = "".join(
+            f'<div class="panel-latihan-st" data-panel="{kode}">{badan}</div>'
+            for kode, _, _, badan in panel
+        )
+        blok_buat_latihan = (
+            '<section class="buat-latihan-st">'
+            '<h2 class="st">Buat latihan</h2>'
+            f"{tab}"
+            f'<div class="tab-bar-st">{label}</div>'
+            f"{isi_panel}"
+            "</section>"
+        )
+    else:
+        # Hanya satu bentuk latihan yang tersedia — tab justru menambah klik
+        # tanpa memberi pilihan. Tampilkan formnya langsung.
+        blok_buat_latihan = (
+            '<section class="buat-latihan-st">'
+            '<h2 class="st">Buat latihan</h2>'
+            f"{strip_sesi}"
+            "</section>"
+        )
+
     kabar = (
         '<div class="st-banner-sukses"><span class="ikon">✓</span>'
         f"<span>{html.escape(pesan)}</span></div>"
@@ -554,9 +601,7 @@ def halaman_anak(
         '<div class="anak-grid">'
         f'<div class="anak-kolom-kiri"><div class="daftar-anak">{item}</div></div>'
         '<div class="anak-kolom-kanan">'
-        f"{strip_remedial}"
-        f"{strip_gabungan}"
-        f"{strip_sesi}"
+        f"{blok_buat_latihan}"
         "</div>"
         "</div>"
         "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",

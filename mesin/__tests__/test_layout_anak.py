@@ -41,8 +41,15 @@ from style_stitch import GAYA_STITCH  # noqa: E402
 
 
 def _blok(css: str, selektor: str) -> str:
-    """Isi blok CSS pertama untuk `selektor`, tanpa kurung kurawal luar."""
-    cocok = re.search(re.escape(selektor) + r"\s*\{(.*?)\}", css, re.S)
+    """Isi blok CSS untuk `selektor` sebagai deklarasi berdiri sendiri.
+
+    Diikat ke awal baris: tanpa itu `.strip-sesi` juga cocok dengan
+    `.panel-latihan-st > .strip-sesi` yang kebetulan muncul lebih dulu di
+    file, dan test memeriksa blok yang salah.
+    """
+    cocok = re.search(
+        r"^" + re.escape(selektor) + r"\s*\{(.*?)\}", css, re.S | re.M
+    )
     assert cocok, f"selektor {selektor} tidak ada di GAYA_STITCH"
     return _tanpa_komentar(cocok.group(1))
 
@@ -244,3 +251,86 @@ def test_halaman_lain_tidak_ikut_melebar(anak):
             kon, pemilik="ortu", peran="guru"
         ).decode()
     assert "bungkus-st lebar" not in _tanpa_gaya(html)
+
+
+# ── Fase C — satu kartu "Buat latihan", tab CSS-only ──────────────────
+#
+# Tiga form (sesi baru / latihan ulang / gabungan topik) sebelumnya berdiri
+# sebagai tiga kartu abu-abu berurutan. Kini dibungkus satu kartu dengan tab
+# radio; hanya panel terpilih yang tampil.
+#
+# Palang yang dijaga:
+# - TANPA JS baru (CLAUDE.md: zero-JS by default). Tab memakai radio +
+#   selector :has(), teknik yang sudah dipakai .mode-opsi:has(input:checked).
+# - Backend tidak tersentuh: tetap TIGA <form> dengan action masing-masing.
+# - Browser tanpa dukungan :has() harus tetap melihat SEMUA form (degradasi
+#   anggun), bukan halaman kosong tanpa cara membuat sesi.
+
+
+def test_tiga_form_tetap_utuh_dengan_action_masing_masing(anak):
+    """Pembungkusan visual tidak boleh mengubah kontrak POST."""
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert f'action="/sesi-baru/{sid}"' in markup
+    assert f'action="/sesi-gabungan/{sid}"' in markup
+    assert markup.count('<form method="post"') >= 2
+
+
+def test_kartu_buat_latihan_membungkus_form(anak):
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert 'class="buat-latihan-st"' in markup
+    assert markup.index('buat-latihan-st') < markup.index('/sesi-baru/')
+
+
+def test_tab_memakai_radio_bukan_javascript(anak):
+    """Tab harus radio murni; tidak boleh ada handler JS baru."""
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert 'name="jenis-latihan"' in markup
+    assert "addEventListener(\"click\"" not in markup
+    assert "onclick=" not in markup
+
+
+def test_radio_tab_di_luar_form(anak):
+    """Radio tab tidak boleh ikut terkirim sebagai field form.
+
+    Diperiksa dengan menghitung <form> yang masih terbuka di titik radio
+    berada — bukan sekadar membandingkan posisi dengan form pertama di
+    halaman, karena topbar sudah memuat form logout jauh di atas.
+    """
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    sebelum = markup[: markup.index('name="jenis-latihan"')]
+    assert sebelum.count("<form") == sebelum.count("</form>"), (
+        "radio tab berada di dalam <form> — nilainya akan ikut terkirim"
+    )
+
+
+def test_panel_disembunyikan_hanya_bila_has_didukung():
+    """Tanpa @supports, browser lama menyembunyikan panel tanpa bisa
+    menampilkannya lagi — guru kehilangan tombol buat sesi.
+
+    Yang diperiksa: aturan `display: none` untuk panel harus berada DI DALAM
+    blok @supports, bukan sekadar muncul sesudahnya di file.
+    """
+    aturan = _tanpa_komentar(GAYA_STITCH)
+    mulai = aturan.index("@supports selector(:has(*))")
+    # ambil isi blok @supports dengan menghitung kurung kurawal
+    i = aturan.index("{", mulai)
+    dalam, j = 0, i
+    while j < len(aturan):
+        if aturan[j] == "{":
+            dalam += 1
+        elif aturan[j] == "}":
+            dalam -= 1
+            if dalam == 0:
+                break
+        j += 1
+    blok_supports = aturan[i : j + 1]
+
+    assert ".panel-latihan-st" in blok_supports
+    assert "display: none" in blok_supports
+    # dan di luar @supports panel TIDAK boleh disembunyikan
+    luar = aturan[:mulai] + aturan[j + 1 :]
+    assert "\n.panel-latihan-st { display: none" not in luar
