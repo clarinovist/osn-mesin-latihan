@@ -187,16 +187,17 @@ def _topbar(pengguna: str, peran: str) -> str:
     Isinya menyesuaikan peran (guru: pintu keluarga; admin: dashboard
     admin + ganti sandi), dan keluar tinggal satu pintu yang sama."""
     if peran == "admin":
-        brand, item = "/admin", (
+        brand_href, item = "/admin", (
             '<a href="/admin">Dashboard admin</a>'
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
+        brand_href, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         f'<div class="topbar">'
-        f'<a class="brand" href="{brand}">{T.NAMA_PRODUK}</a>'
+        f'<a class="brand" href="{brand_href}">'
+        f'{brand.mark("topbar")}<span>{T.NAMA_PRODUK}</span></a>'
         f'<nav class="topbar-navigasi">'
         f'<details class="menu-pengguna">'
         f'<summary>{siapa} {_badge_peran(peran)}</summary>'
@@ -221,17 +222,17 @@ def _topbar_stitch(pengguna: str, peran: str) -> str:
     menyesuaikan peran. Logo ikon owl = Material Symbols 'school'.
     """
     if peran == "admin":
-        brand, item = "/admin", (
+        brand_href, item = "/admin", (
             '<a href="/admin">Dashboard admin</a>'
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
+        brand_href, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         '<div class="st-topbar">'
-        f'<a class="brand" href="{brand}">'
-        '<span class="owl material-symbols-outlined">school</span>'
+        f'<a class="brand" href="{brand_href}">'
+        f'{brand.mark("topbar")}'
         f'<span class="nama">{html.escape(T.NAMA_PRODUK)}</span>'
         "</a>"
         '<nav class="topbar-navigasi">'

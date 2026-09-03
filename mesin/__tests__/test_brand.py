@@ -32,6 +32,11 @@ def server(tmp_path, monkeypatch):
         # bukan milik guru dengan 404, dan itu bukan yang sedang diuji.
         sid = database.tambah_siswa(kon, "Putri", pemilik="guru")
         s.sesi_id = database.buat_sesi(kon, sid, seed=7)
+        # Akun murid "feby" harus punya siswa dengan nama yang sama, kalau
+        # tidak /murid menjatuhkan ke halaman "Belum terhubung" dan test
+        # brand mengukur halaman yang salah.
+        sid_feby = database.tambah_siswa(kon, "feby", pemilik="guru")
+        database.buat_sesi(kon, sid_feby, seed=11)
     yield s
     s.berhenti()
 
@@ -274,3 +279,96 @@ def test_setiap_head_memanggil_tag_kepala():
         if n_head != n_tag:
             kurang.append(f"{nama}: {n_head} <head> tapi {n_tag} tag_kepala()")
     assert not kurang, "head tanpa favicon:\n" + "\n".join(kurang)
+
+
+# ───────────────────── satu lambang, bukan empat ─────────────────────
+
+# Audit 3 Sep: EMPAT lambang berbeda dipakai sebagai logo — 'school' (topi
+# wisuda), 'pets' (jejak kaki), SVG owl icons.py, dan teks polos tanpa ikon.
+# Anak melihat jejak kaki, orang tua melihat topi wisuda.
+GLYPH_LOGO_LAMA = (">school<", ">pets<")
+
+
+def test_tidak_ada_glyph_logo_lama():
+    """Glyph Material Symbols tidak boleh lagi dipakai SEBAGAI LOGO.
+
+    icons.OWL sendiri tidak dihapus — masih dipakai halaman murid legacy
+    dan modulnya menyediakan ikon lain (bohlam, chevron, bintang).
+    """
+    tersangka: list[str] = []
+    for nama in MODUL_HALAMAN:
+        sumber = (ROOT / nama).read_text(encoding="utf-8")
+        for ln_no, ln in enumerate(sumber.splitlines(), 1):
+            if any(g in ln for g in GLYPH_LOGO_LAMA):
+                tersangka.append(f"{nama}:{ln_no}: {ln.strip()}")
+    assert not tersangka, (
+        "glyph logo lama masih dipakai — pakai brand.mark():\n"
+        + "\n".join(tersangka)
+    )
+
+
+def test_token_ukuran_logo_ada():
+    """Ukuran logo lewat token, bukan angka acak per CSS (audit menemukan
+    20,8px vs 21,6px untuk ikon brand yang sama)."""
+    for nama in ("LOGO_TOPBAR", "LOGO_BADGE", "LOGO_HERO", "WARNA_WORDMARK"):
+        assert getattr(T, nama, None), f"token {nama} belum ada"
+
+
+def test_warna_wordmark_satu_nilai():
+    """Audit: wordmark dirender #0FA3A3 di satu tempat dan #0a7d7d di
+    tempat lain — nama produk berganti rona antar halaman.
+
+    Dua jebakan yang sudah kena saat menulis guard ini:
+    1. Assert "token ada di CSS" TIDAK cukup — nilainya sama dengan
+       AKSEN_MURID_UTAMA yang muncul di puluhan aturan lain, jadi test
+       tetap hijau meski wordmark di-hardcode kembali.
+    2. Memeriksa CSS yang sudah dirender juga sia-sia: di sana token SUDAH
+       jadi hex. Yang harus diperiksa adalah SUMBER stylesheet.
+    """
+    import re
+
+    from style_stitch import gaya_stitch
+
+    assert T.WARNA_WORDMARK in gaya_stitch()
+
+    tersangka: list[str] = []
+    for nama in ("style_stitch.py", "teacher_style.py"):
+        sumber = (ROOT / nama).read_text(encoding="utf-8")
+        for blok in re.finditer(r"([^{}\n]*)\{\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}\}", sumber):
+            selektor, isi = blok.group(1), blok.group(2)
+            if "brand" not in selektor and "wordmark" not in selektor:
+                continue
+            for hexa in re.findall(r"#[0-9a-fA-F]{3,8}\b", isi):
+                tersangka.append(f"{nama}: {selektor.strip()} -> {hexa}")
+    assert not tersangka, (
+        "hex hardcoded di aturan brand — pakai T.WARNA_WORDMARK:\n"
+        + "\n".join(tersangka)
+    )
+
+
+def test_mark_dipakai_di_semua_permukaan_brand(server):
+    """Landing, masuk, dashboard guru, dan halaman anak memakai mark yang
+    SAMA — satu lambang, bukan empat."""
+    from http_test_kit import SANDI_MURID
+
+    permukaan = (
+        ("/", None),
+        ("/masuk", None),
+        ("/daftar", None),
+        ("/", ("guru", SANDI_GURU)),
+        ("/murid", ("feby", SANDI_MURID)),
+    )
+    for jalur, kred in permukaan:
+        kode, isi, _ = server.minta(jalur, auth=kred)
+        assert kode == 200, f"{jalur} -> {kode}"
+        assert "/aset/mark-" in isi, f"{jalur} tanpa mark brand"
+
+
+def test_topbar_guru_legacy_punya_mark():
+    """Topbar guru non-Stitch dulu teks polos tanpa ikon sama sekali —
+    lambang keempat dari audit."""
+    import teacher_pages
+
+    bar = teacher_pages._topbar("guru", "guru")
+    assert "/aset/mark-" in bar, "topbar legacy tanpa mark"
+    assert T.NAMA_PRODUK in bar

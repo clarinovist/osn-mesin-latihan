@@ -93,10 +93,12 @@ input:disabled, textarea:disabled, select:disabled {{
   border-bottom: 1px solid {T.BORDER_HALUS};
 }}
 .brand {{
-  font-weight: 800; font-size: 1.15rem; color: {T.AKSEN_TEAL_TUA};
+  font-weight: 800; font-size: 1.15rem; color: {T.WARNA_WORDMARK};
   display: flex; align-items: center; gap: .55rem;
 }}
-.brand img {{ width: 34px; height: 34px; }}
+/* Lambang brand memakai token, bukan angka lepas: sebelum ini ikon yang
+   sama dirender 34px di sini dan ~21px di style_stitch. */
+.brand img {{ width: {T.LOGO_TOPBAR}; height: {T.LOGO_TOPBAR}; flex: none; }}
 .topbar-navigasi {{ display: flex; align-items: center; gap: .7rem; }}
 .topbar-navigasi a {{ color: {T.TEKS_SUBTLE}; text-decoration: none; font-size: .9rem; }}
 .topbar-navigasi a:hover {{ color: {T.AKSEN_TEAL_TUA}; }}

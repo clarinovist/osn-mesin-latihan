@@ -745,7 +745,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
 <div class="bungkus-st">
   <div class="st-topbar">
     <div class="brand">
-      <span class="owl material-symbols-outlined fill">school</span>
+      {brand.mark("topbar")}
       <span class="nama">{T.NAMA_PRODUK}</span>
     </div>
     <form method="post" action="/keluar" style="margin:0">
@@ -756,7 +756,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
   <div style="padding:{T.SP_4} 0">
     <div style="display:flex;align-items:center;gap:{T.SP_4};margin:0.4rem 0 1.2rem">
       <span style="flex:none;width:3.5rem;height:3.5rem;border-radius:50%;background:#d8f2f2;color:{T.AKSEN_MURID_UTAMA};display:inline-flex;align-items:center;justify-content:center;font-size:1.9rem">
-        <span class="material-symbols-outlined fill">pets</span>
+        {brand.mark("badge")}
       </span>
       <div>
         <h1 class="st" style="margin:0">Halo, {_escape(nama)}!</h1>
@@ -1095,7 +1095,7 @@ def halaman_kerja_baru(
 <style>{gaya_stitch()}</style></head><body class="st">
 <div class="kerja-topbar-st">
   <div class="brand">
-    <span class="ik-owl material-symbols-outlined fill">pets</span>
+    {brand.mark("topbar", kelas="ik-owl")}
     <span class="nama-osn">{T.NAMA_PRODUK}</span>
   </div>
   <a class="cta-keluar hanya-layar" href="/murid"><span class="material-symbols-outlined" style="font-size:1.1rem">close</span> Tutup</a>
@@ -1348,7 +1348,7 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
 <style>{gaya_stitch()}</style></head><body class="st">
 <div class="kerja-topbar-st">
   <div class="brand">
-    <span class="ik-owl material-symbols-outlined fill">pets</span>
+    {brand.mark("topbar", kelas="ik-owl")}
     <span class="nama-osn">{T.NAMA_PRODUK}</span>
   </div>
   <a class="cta-keluar hanya-layar" href="/murid"><span class="material-symbols-outlined" style="font-size:1.1rem">arrow_back</span> Sesi lain</a>

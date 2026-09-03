@@ -62,10 +62,12 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 }}
 .st-topbar .brand {{ display: flex; align-items: center; gap: {T.SP_2}; font-weight: 800; }}
 .st-topbar .brand .owl {{
-  color: {T.AKSEN_MURID_UTAMA}; font-size: 1.35rem;
+  color: {T.WARNA_WORDMARK}; font-size: {T.LOGO_TOPBAR};
   display: inline-flex; align-items: center;
 }}
-.st-topbar .brand .nama {{ color: {T.AKSEN_MURID_UTAMA}; font-size: 1.1rem; }}
+/* Lambang brand: satu ukuran dari token, bukan angka lepas per stylesheet. */
+.st-topbar .brand img {{ width: {T.LOGO_TOPBAR}; height: {T.LOGO_TOPBAR}; flex: none; }}
+.st-topbar .brand .nama {{ color: {T.WARNA_WORDMARK}; font-size: 1.1rem; }}
 .st-topbar .cta {{
   font: inherit; color: {T.AKSEN_MURID_KORAL};
   background: none; border: 0;
@@ -435,10 +437,10 @@ tr.sorot-baru, div.sorot-baru {{
 }}
 .kerja-topbar-st .brand {{ display: flex; align-items: center; gap: {T.SP_2}; }}
 .kerja-topbar-st .brand .ik-owl {{
-  color: {T.AKSEN_MURID_UTAMA}; font-size: 1.35rem;
+  width: {T.LOGO_TOPBAR}; height: {T.LOGO_TOPBAR}; flex: none;
   display: inline-flex; align-items: center;
 }}
-.kerja-topbar-st .brand .nama-osn {{ color: {T.AKSEN_MURID_UTAMA}; font-size: 1.1rem; font-weight: 800; }}
+.kerja-topbar-st .brand .nama-osn {{ color: {T.WARNA_WORDMARK}; font-size: 1.1rem; font-weight: 800; }}
 .kerja-topbar-st .cta-keluar {{
   font: inherit; color: {T.AKSEN_KORAL_TUA};
   background: none; border: 0; padding: {T.SP_2} {T.SP_4};
@@ -817,14 +819,12 @@ tr.sorot-baru, div.sorot-baru {{
   margin-bottom: {T.SP_2};
 }}
 .masuk-brand-st .ik-owl {{
-  width: 2.5rem; height: 2.5rem; border-radius: {T.RADIUS_BULAT};
-  background: #d8f2f2; color: {T.AKSEN_MURID_UTAMA};
+  width: {T.LOGO_BADGE}; height: {T.LOGO_BADGE}; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 1.5rem;
 }}
 .masuk-brand-st .nama-brand {{
   font-family: {T.FONT_HEADLINE}; font-weight: 800; font-size: 1.5rem;
-  color: {T.AKSEN_MURID_UTAMA}; letter-spacing: -0.02em;
+  color: {T.WARNA_WORDMARK}; letter-spacing: -0.02em;
 }}
 .masuk-judul-st {{
   font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: 1.2rem;
@@ -893,10 +893,10 @@ tr.sorot-baru, div.sorot-baru {{
 }}
 .publik-topbar-st .brand {{
   display: flex; align-items: center; gap: {T.SP_2}; text-decoration: none;
-  font-weight: 800; font-size: 1.1rem; color: {T.AKSEN_MURID_UTAMA};
+  font-weight: 800; font-size: 1.1rem; color: {T.WARNA_WORDMARK};
 }}
-.publik-topbar-st .brand .material-symbols-outlined {{
-  color: {T.AKSEN_MURID_UTAMA}; font-size: 1.3rem;
+.publik-topbar-st .brand img {{
+  width: {T.LOGO_TOPBAR}; height: {T.LOGO_TOPBAR}; flex: none;
 }}
 .publik-topbar-st .tombol-putih {{
   font: inherit; color: {T.AKSEN_TEAL_TUA}; background: none;

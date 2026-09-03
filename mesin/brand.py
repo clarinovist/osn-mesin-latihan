@@ -159,3 +159,32 @@ def tag_kepala(og: dict[str, str] | None = None, cetak: bool = False) -> str:
             f'<meta name="twitter:image" content="{_esc(URL_SITUS)}/aset/og-image.png">',
         ]
     return "\n".join(baris)
+
+
+def mark(ukuran: str = "topbar", kelas: str = "") -> str:
+    """<img> lambang Jagomat — satu lambang untuk semua permukaan.
+
+    Sebelum ini ada EMPAT lambang berbeda yang dipakai sebagai logo: glyph
+    'school' (topi wisuda) di topbar guru, 'pets' (jejak kaki) di halaman
+    anak, SVG owl di halaman murid legacy, dan teks polos tanpa ikon di
+    topbar guru non-Stitch. Anak melihat jejak kaki, orang tua melihat topi
+    wisuda — dua produk berbeda di mata pengguna yang sama.
+
+    ukuran: "topbar" (<=32px, mark sederhana), "badge", atau "hero"
+    (>=48px, mark penuh dengan detail). Nilainya dari design_tokens supaya
+    tidak lahir lagi beda 20,8 vs 21,6 px.
+    """
+    px = {
+        "topbar": T.LOGO_TOPBAR,
+        "badge": T.LOGO_BADGE,
+        "hero": T.LOGO_HERO,
+    }[ukuran]
+    # Mark sederhana dirancang untuk ukuran kecil (detail dibuang supaya
+    # tetap terbaca); mark penuh untuk ukuran besar.
+    berkas_mark = "mark-penuh.svg" if ukuran == "hero" else "mark-sederhana.svg"
+    atribut_kelas = f' class="{kelas}"' if kelas else ""
+    return (
+        f'<img src="/aset/{berkas_mark}" alt=""{atribut_kelas} '
+        f'width="{px.rstrip("px")}" height="{px.rstrip("px")}" '
+        f'style="width:{px};height:{px};flex:none">'
+    )

@@ -60,7 +60,7 @@ def _topbar_publik_st() -> str:
     return (
         '<div class="publik-topbar-st">'
         f'<a class="brand" href="/">'
-        '<span class="material-symbols-outlined">school</span>'
+        f'{brand.mark("topbar")}'
         f'<span>{n}</span></a>'
         '<nav class="topbar-navigasi">'
         f'<a class="tombol-putih" href="/masuk">Masuk</a></nav></div>'
@@ -228,12 +228,12 @@ def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
     isi = f"""
-<div class="publik-topbar-st"><a class="brand" href="/"><span class="material-symbols-outlined">school</span><span>{n}</span></a>
+<div class="publik-topbar-st"><a class="brand" href="/">{brand.mark("topbar")}<span>{n}</span></a>
 <nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
 
 <div class="publik-bungkus-st">
 <section class="publik-kartu-st" style="text-align:center;align-items:center">
-  <span class="material-symbols-outlined fill" style="font-size:5rem;color:{T.AKSEN_MURID_UTAMA}">pets</span>
+  {brand.mark("hero")}
   <h1 class="publik-judul-st" style="font-size:2rem">{n}</h1>
   <p class="publik-sub-st" style="font-size:1.05rem">{tag}</p>
   <p class="publik-isi-st">Anak berlatih matematika, menuliskan <b>caranya</b>, dan sistem

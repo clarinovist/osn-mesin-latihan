@@ -753,7 +753,7 @@ class Penangan(BaseHTTPRequestHandler):
 <div class="masuk-badan-st">
   <div class="masuk-kartu-st">
     <div class="masuk-brand-st">
-      <span class="ik-owl material-symbols-outlined fill">school</span>
+      {brand.mark("badge", kelas="ik-owl")}
       <span class="nama-brand">{T.NAMA_PRODUK}</span>
     </div>
     <h1 class="masuk-judul-st">Masuk ke Akun Kamu</h1>

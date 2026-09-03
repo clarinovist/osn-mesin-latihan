@@ -121,6 +121,18 @@ LATAR_KARTU_MURID = "#fff"
 NAMA_PRODUK = "Jagomat"
 TAGLINE = "Jago karena tahu caranya."
 
+# Ukuran lambang (mark) per konteks. Audit 3 Sep menemukan ikon brand yang
+# sama dirender 20,8px di satu CSS dan 21,6px di CSS lain — akibat ukuran
+# ditulis sebagai angka lepas per stylesheet, bukan token.
+LOGO_TOPBAR = "26px"   # topbar & ikon kecil (<=32px): pakai mark-sederhana
+LOGO_BADGE = "40px"    # badge bulat di kartu masuk / sapaan anak
+LOGO_HERO = "80px"     # hero landing (>=48px): pakai mark-penuh
+
+# Warna wordmark — satu nilai. Sebelumnya #0FA3A3 di satu tempat dan
+# #0a7d7d (teal tua) di tempat lain, jadi nama produk berganti rona antar
+# halaman.
+WARNA_WORDMARK = AKSEN_MURID_UTAMA
+
 # ─────────────────────────────────────────────────────────────────────
 # Tipografi
 # ─────────────────────────────────────────────────────────────────────
