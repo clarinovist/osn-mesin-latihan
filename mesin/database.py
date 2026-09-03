@@ -12,7 +12,7 @@ import random
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 from generator import LEVEL_BAWAAN, buat_lembar
 from schema import MIGRASI, SKEMA, VIEW_USANG
@@ -337,7 +337,7 @@ def buat_sesi_dari_urutan(
     siswa_id: int,
     seed: int,
     urutan: tuple[str, ...],
-    topik: str = TOPIK_BAWAAN,
+    topik: str | Any = TOPIK_BAWAAN,
     level: str = LEVEL_BAWAAN,
     mode: str = "diagnostik",
 ) -> int:
@@ -347,13 +347,18 @@ def buat_sesi_dari_urutan(
     komposisi bawaan level. Sengaja fungsi terpisah, bukan parameter
     tambahan di buat_sesi — pemanggil biasa tidak boleh bisa menyetel
     komposisi tanpa sadar, dan alur normalnya tetap satu jalur.
+
+    `topik` boleh objek Topik (paket ad-hoc lintas topik): yang tersimpan
+    ke kolom `sesi.topik` adalah id-nya, supaya `topics.dari_sesi` bisa
+    merekonstruksi paket yang sama saat lembar dicetak ulang.
     """
     lembar = buat_lembar(seed, urutan=urutan, level=level, topik=topik)
+    topik_id = getattr(topik, "id", topik)
     cur = kon.execute(
         """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
                              timer_mode, durasi_menit, timer_auto)
            VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0)""",
-        (siswa_id, seed, topik, level, mode),
+        (siswa_id, seed, topik_id, lembar.level, mode),
     )
     sesi_id = int(cur.lastrowid)
     for nomor, soal in enumerate(lembar.soal, start=1):
@@ -443,12 +448,33 @@ def sasaran_remedial(
     return [b["template_id"] for b in baris[:batas]]
 
 
+def _level_terdekat(level: str, tersedia) -> str:
+    """Level didukung yang PALING DEKAT dengan level anak.
+
+    Dipakai remedial: paket sasaran bisa saja tidak punya level anak
+    (logika melompati P4). Memilih yang terdekat — bukan yang pertama —
+    menjaga soal tetap sepadan: anak P4 dapat P3, bukan P6.
+    Seri (mis. P4 antara P3 dan P5) diputus ke bawah: lebih baik sedikit
+    terlalu mudah daripada terlalu sulit untuk latihan ulang.
+    """
+    from templates import LEVEL
+
+    urut = [lv for lv in LEVEL if lv in tersedia]
+    if not urut:
+        return level
+    if level not in LEVEL:
+        return urut[0]
+    posisi = LEVEL.index(level)
+    return min(urut, key=lambda lv: (abs(LEVEL.index(lv) - posisi),
+                                     LEVEL.index(lv)))
+
+
 def buat_sesi_remedial(
     kon: sqlite3.Connection,
     siswa_id: int,
     seed: int | None = None,
     level: str = LEVEL_BAWAAN,
-    topik: str = TOPIK_BAWAAN,
+    topik: str | None = None,
     jumlah_soal: int = 10,
 ) -> int | None:
     """Sesi latihan ulang berisi HANYA konsep yang pernah dijawab salah.
@@ -462,12 +488,34 @@ def buat_sesi_remedial(
     (pola sama dengan buat_sesi_seed_baru) — pemanggil web tidak perlu
     mengurus keacakan sendiri. Seed eksplisit dipakai test determinisme.
 
+    `topik=None` (bawaan) berarti paket DITURUNKAN dari sasaran lewat
+    `topics.paket_untuk_template`. Ini bukan kenyamanan, ini koreksi bug:
+    sasaran remedial datang dari seluruh riwayat anak, jadi template-nya
+    bisa milik topik mana pun. Versi lama memaksa paket bawaan
+    (pola-bilangan) dan melempar KeyError untuk anak yang salah di topik
+    lain — 502 di produksi, 3 Sep 2026.
+
     None kalau tidak ada sasaran (anak belum punya kesalahan tercatat) —
     lebih jujur daripada membuat sesi acak dan menyebutnya remedial.
     """
     sasaran = sasaran_remedial(kon, siswa_id)
     if not sasaran:
         return None
+    if topik is None:
+        from topics import paket_untuk_template
+
+        paket = paket_untuk_template(sasaran)
+    else:
+        paket = topik
+    # `siswa.tingkat` adalah teks bebas dan paket sasaran belum tentu
+    # mendukung level itu (mis. anak P4 yang salah di topik logika = P3/P5/P6).
+    # Guru memilih topik lewat dropdown yang sudah difilter per level, jadi
+    # ValueError generator masih benar DI SANA; di sini levelnya bukan
+    # pilihan siapa pun, jadi dinormalkan ke level terdekat yang didukung
+    # daripada mematikan fitur untuk anak yang levelnya "salah".
+    komposisi = getattr(paket, "komposisi", None)
+    if komposisi and level not in komposisi:
+        level = _level_terdekat(level, komposisi)
     if seed is None:
         dipakai = {
             r["seed"]
@@ -491,7 +539,7 @@ def buat_sesi_remedial(
     return buat_sesi_dari_urutan(
         kon, siswa_id, seed,
         urutan=tuple(urutan[:jumlah_soal]),
-        level=level, topik=topik,
+        level=level, topik=paket,
     )
 
 

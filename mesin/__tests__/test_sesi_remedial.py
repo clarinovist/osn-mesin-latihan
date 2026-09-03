@@ -232,3 +232,119 @@ def test_http_latihan_ulang_anak_keluarga_lain_404(server):
             "SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (sid,)
         ).fetchone()["n"]
     assert sesudah == sebelum, "sesi terbuat padahal bukan anak keluarganya"
+
+
+# ── 4. Lintas topik — akar 502 produksi (3 Sep 2026) ──────────────────
+#
+# Sasaran remedial diambil dari SEMUA sesi anak, jadi template-nya bisa
+# milik topik mana pun. Sebelum perbaikan ini `buat_sesi_remedial` selalu
+# memakai paket bawaan (pola-bilangan), sehingga template topik lain
+# (`soal_umur`, `tabel_penalaran`, ...) tidak ada di `paket.templates` dan
+# generator melempar KeyError -> handler POST mati -> Caddy menjawab 502.
+# Test lama tidak menangkapnya karena fixture-nya selalu memakai topik
+# bawaan; di sini sesi sumbernya sengaja topik lain.
+
+
+def _sesi_salah_topik(kon, nama, topik, level, jumlah=4):
+    """Sesi topik NON-bawaan yang seluruh jawabannya salah."""
+    import reports
+
+    sid = database.tambah_siswa(kon, nama, pemilik="guru", tingkat=level)
+    sesi_id = database.buat_sesi(
+        kon, sid, seed=7, topik=topik, level=level, jumlah_soal=jumlah
+    )
+    for b in database.isi_sesi(kon, sesi_id):
+        database.simpan_jawaban(kon, b["sesi_soal_id"],
+                                jawaban="999999", cara="hitung")
+    reports.diagnosa_murid(kon, sesi_id)
+    return sid, sesi_id
+
+
+def test_remedial_topik_selain_bawaan_tidak_meledak(db):
+    """Regresi 502: anak yang salah di topik logika harus tetap dapat sesi."""
+    with database.buka(db) as kon:
+        sid, _ = _sesi_salah_topik(kon, "AnakLogika", "logika", "P5")
+        sasaran = set(database.sasaran_remedial(kon, sid))
+        assert sasaran, "prasyarat: harus ada kesalahan tercatat"
+        rem = database.buat_sesi_remedial(
+            kon, sid, seed=4242, level="P5", jumlah_soal=6
+        )
+        isi = database.isi_sesi(kon, rem)
+    assert rem is not None
+    assert len(isi) == 6
+    assert {b["template_id"] for b in isi} <= sasaran
+
+
+def test_remedial_lintas_dua_topik_sekaligus(db):
+    """Kesalahan di dua topik berbeda tetap satu sesi remedial."""
+    import reports
+
+    with database.buka(db) as kon:
+        sid, _ = _sesi_salah_topik(kon, "AnakDuaTopik", "logika", "P5")
+        sesi2 = database.buat_sesi(
+            kon, sid, seed=11, topik="statistika", level="P5", jumlah_soal=3
+        )
+        for b in database.isi_sesi(kon, sesi2):
+            database.simpan_jawaban(kon, b["sesi_soal_id"],
+                                    jawaban="999999", cara="hitung")
+        reports.diagnosa_murid(kon, sesi2)
+
+        sasaran = set(database.sasaran_remedial(kon, sid))
+        rem = database.buat_sesi_remedial(
+            kon, sid, seed=555, level="P5", jumlah_soal=8
+        )
+        isi = database.isi_sesi(kon, rem)
+    assert len(isi) == 8
+    assert {b["template_id"] for b in isi} <= sasaran
+
+
+def test_remedial_level_anak_tidak_didukung_topik_sasaran(db):
+    """`siswa.tingkat` teks bebas: level yang tak didukung paket sasaran
+    tidak boleh meledak — kontrak yang sama dengan komposisi_untuk()."""
+    with database.buka(db) as kon:
+        sid, _ = _sesi_salah_topik(kon, "AnakP4", "logika", "P5")
+        # logika hanya punya P3/P5/P6; anak dipindah ke P4
+        kon.execute("UPDATE siswa SET tingkat = 'P4' WHERE id = ?", (sid,))
+        rem = database.buat_sesi_remedial(
+            kon, sid, seed=606, level="P4", jumlah_soal=5
+        )
+        isi = database.isi_sesi(kon, rem)
+    assert rem is not None
+    assert len(isi) == 5
+
+
+def test_remedial_topik_tersimpan_bisa_dibaca_ulang(db):
+    """Kolom sesi.topik sesi remedial harus bisa direkonstruksi paketnya,
+    supaya halaman lembar/cetak tidak jatuh ke paket bawaan yang salah."""
+    import topics
+
+    with database.buka(db) as kon:
+        sid, _ = _sesi_salah_topik(kon, "AnakTopikSimpan", "logika", "P5")
+        rem = database.buat_sesi_remedial(
+            kon, sid, seed=808, level="P5", jumlah_soal=4
+        )
+        nilai = kon.execute(
+            "SELECT topik FROM sesi WHERE id = ?", (rem,)
+        ).fetchone()["topik"]
+        template = {b["template_id"] for b in database.isi_sesi(kon, rem)}
+    paket = topics.dari_sesi(nilai)
+    assert template <= set(paket.templates), (
+        f"paket {nilai!r} tidak memuat template sesinya sendiri"
+    )
+
+
+def test_http_remedial_lintas_topik_tidak_500(server):
+    """Jalur HTTP penuh — inilah yang di produksi menjadi 502."""
+    with server.buka() as kon:
+        sid, _ = _sesi_salah_topik(kon, "AnakHttpLintas", "logika", "P5")
+    kode, isi, _ = server.minta(
+        f"/sesi-remedial/{sid}", auth=("guru", SANDI_GURU),
+        data={"jumlah_soal": "10"},
+    )
+    assert kode == 200, f"rute remedial gagal (kode {kode})"
+    assert "Latihan ulang untuk" in isi
+    with server.buka() as kon:
+        terakhir = kon.execute(
+            "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC", (sid,)
+        ).fetchone()["id"]
+        assert len(database.isi_sesi(kon, int(terakhir))) == 10

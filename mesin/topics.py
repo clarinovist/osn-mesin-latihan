@@ -245,6 +245,46 @@ def gabungan(topik_ids) -> Topik:
     )
 
 
+def pemilik_template(template_id: str) -> str | None:
+    """Id topik yang MEMILIKI template ini, atau None kalau tak dikenal.
+
+    Paket sintetis ("campuran", "gabungan:...") sengaja dilewati: yang
+    dicari pemilik aslinya, supaya pemanggil bisa membangun paket yang
+    memuat template itu beserta `parameter_untuk` dan `render_badan`-nya.
+    """
+    _pastikan_dimuat()
+    for t in PAKET.values():
+        if t.id == "campuran":
+            continue
+        if template_id in t.templates:
+            return t.id
+    return None
+
+
+def paket_untuk_template(template_ids) -> Topik:
+    """Paket terkecil yang memuat SEMUA template ini (remedial lintas topik).
+
+    Sasaran remedial datang dari riwayat anak, jadi bisa mencakup beberapa
+    topik sekaligus — paket bawaan tidak memuatnya dan generator melempar
+    KeyError (akar 502 produksi 3 Sep 2026). Di sini topik pemiliknya
+    dikumpulkan lalu dirangkai lewat `gabungan()`, sehingga paket hasilnya
+    membawa `parameter_untuk` DAN `render_badan` pemilik aslinya.
+
+    Template tak dikenal (mis. sisa template yang sudah dihapus dari kode)
+    DILEWATI, bukan dilempar: riwayat anak tidak boleh membuat fitur mati.
+    Kalau tak satu pun dikenal, jatuh ke paket bawaan.
+    """
+    _pastikan_dimuat()
+    urut: list[str] = []
+    for tid in template_ids:
+        pemilik = pemilik_template(tid)
+        if pemilik is not None and pemilik not in urut:
+            urut.append(pemilik)
+    if not urut:
+        return PAKET[TOPIK_BAWAAN]
+    return gabungan(urut)
+
+
 def daftar_topik() -> list[str]:
     _pastikan_dimuat()
     return sorted(PAKET)
