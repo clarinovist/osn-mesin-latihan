@@ -392,7 +392,7 @@ def halaman_anak(
 
     if sesi:
         item = "".join(
-            f'<div class="st-kartu-baris {kelas}">'
+            f'<div class="st-kartu-baris kartu-sesi-guru {kelas}">'
             f'<div class="kolom-sesi" style="flex:1">'
             f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
             f'<div class="st-meta" style="font-size:.85rem;opacity:.75">{html.escape(r["tanggal"])}'

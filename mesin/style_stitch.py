@@ -234,17 +234,33 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
    mengoverflow di HP 360-420px → halaman menyamping. min-width:0 pada
    anak fleksibel + wrap pada baris menjaga badge tetap di dalam layar.
    !important diperlukan: markup kartu memakai inline style="flex:none"
-   yang tanpa ini menang atas media query. */
-.st-kartu-baris > span {{ min-width: 0; }}
+   yang tanpa ini menang atas media query.
+
+   3 Sep: selector diubah dari `> span` ke `> *`. Kartu sesi GURU anaknya
+   <div>, jadi aturan lama tidak pernah kena di /anak/<id> — kolom pertama
+   menyusut jadi 76px dan judul sesi terlipat 3 baris. Semua anak kartu
+   murid adalah <span>, jadi bagi mereka perubahan ini no-op. */
+.st-kartu-baris > * {{ min-width: 0; }}
 @media (max-width: 46rem) {{
   .st-kartu-baris {{ flex-wrap: wrap; }}
-  .st-kartu-baris > span:first-child {{ flex: none; }}
-  .st-kartu-baris > span:nth-child(2) {{ flex: 1 1 10rem; }}
+  .st-kartu-baris > *:nth-child(2) {{ flex: 1 1 10rem; }}
   /* pemegang badge jumlah + status boleh menyusut & pindah baris */
-  .st-kartu-baris > span:nth-child(n+3) {{
+  .st-kartu-baris > *:nth-child(n+3) {{
     flex: 0 1 auto !important; margin-left: 0;
   }}
+  /* HANYA kartu sesi guru: anak pertama ("Sesi #N · tanggal · topik") ambil
+     baris penuh supaya tidak terjepit jadi 76px; angka & badge turun ke baris
+     kedua. !important karena markup memakai inline style="flex:1".
+     JANGAN digeneralkan ke .st-kartu-baris — anak pertama kartu MURID adalah
+     ikon bulat 2.5rem yang justru harus tetap flex:none. */
+  .kartu-sesi-guru > *:first-child {{ flex: 1 1 100% !important; }}
+  .st-kartu-baris:not(.kartu-sesi-guru) > *:first-child {{ flex: none; }}
 }}
+
+/* 3 Sep: .daftar-anak sebelumnya HANYA ada di GAYA_GURU, yang tidak dimuat
+   _halaman_stitch → grid+gap hilang dan kartu sesi dempet (terukur 1px).
+   Versi di teacher_style.py dibiarkan: halaman non-stitch masih memakainya. */
+.daftar-anak {{ display: grid; gap: {T.SP_3}; }}
 
 /* Sorot-baru — sisip baris yang baru dibuat */
 tr.sorot-baru, div.sorot-baru {{
@@ -259,11 +275,12 @@ tr.sorot-baru, div.sorot-baru {{
    pada .bungkus milik teacher_style lama */
 .bungkus-st {{ max-width: {T.LEBAR_KONTEN}; margin: 0 auto; padding: {T.SP_4} 0.9rem 3rem; }}
 
-/* Form "buat sesi" dalam satu baris */
-.strip-sesi {{ display: flex; gap: {T.SP_3}; flex-wrap: wrap; align-items: flex-end; }}
-.strip-sesi label {{ font-size: .9rem; color: {T.TEKS_SUBTLE}; display:block; margin-bottom: .25rem; }}
-.mode-pilih {{ display: flex; gap: {T.SP_4}; }}
-.mode-opsi {{ display: flex; align-items: center; gap: {T.SP_2}; cursor: pointer; font-size: .95rem; }}
+/* 3 Sep: blok lama ".strip-sesi / .mode-pilih / .mode-opsi" (versi strip satu
+   baris) DIHAPUS dari sini — sisa refactor S6 yang tidak ikut dibersihkan.
+   Bahayanya bukan sekadar duplikasi: ia membawa `align-items: flex-end`, dan
+   blok S6 di bawah yang mengubah arah jadi kolom tidak me-reset properti itu,
+   sehingga tiap anak yang tidak selebar penuh menempel ke tepi KANAN.
+   Versi yang menang ada di bagian "Form buat sesi (S6)". */
 
 /* ── Halaman kerja murid (/murid/kerjakan/<id>) — S4 adopsi Stitch ── */
 
@@ -569,8 +586,17 @@ tr.sorot-baru, div.sorot-baru {{
   border: 1px solid {T.BORDER_VARIAN};
   border-radius: {T.RADIUS_KARTU};
   display: flex; flex-direction: column; gap: {T.SP_4};
+  /* 3 Sep: ditulis EKSPLISIT meski stretch itu nilai default. Sebelumnya ada
+     blok .strip-sesi lain di atas dengan align-items:flex-end, dan blok kolom
+     ini mewarisinya → label & select menempel ke tepi kanan (terukur x=866
+     dan x=744, seharusnya 383). Baris ini yang menahannya kalau terulang. */
+  align-items: stretch;
+  flex-wrap: nowrap;
 }}
 .strip-sesi .strip-kolom {{ display: flex; flex-direction: column; gap: {T.SP_2}; min-width: 0; }}
+/* Di desktop select melar selebar kartu (673px) dan lelah dipindai mata;
+   22rem masih jauh di atas target sentuh saat di HP. */
+.strip-sesi select.st-input {{ max-width: 22rem; }}
 /* Tombol aksi di dalam strip: di HP ia melebihi lebar kartu karena
    padding tetap 1.5rem + label panjang ("Buat latihan ulang") dan
    terpotong di kanan (terbukti lewat screenshot headless 390px).
