@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 
+import brand
 import design_tokens as T
 from topics import Topik, dari_sesi
 from students import (
@@ -571,6 +572,7 @@ def halaman_kerja(
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kerjakan — {topik_paket.judul_lembar}</title>
+{brand.tag_kepala()}
 <style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
   <img src="{icons.OWL}" alt="" class="owl-mascot" width="36" height="36">
@@ -734,6 +736,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sesiku &middot; {T.NAMA_PRODUK}</title>
+{brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
@@ -1085,6 +1088,7 @@ def halaman_kerja_baru(
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kerjakan — {_escape(topik_paket.judul_lembar)}</title>
+{brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
@@ -1213,7 +1217,8 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sesiku</title><style>{CSS_MURID}</style></head><body><div class="wrap">
+<title>Sesiku</title>
+{brand.tag_kepala()}<style>{CSS_MURID}</style></head><body><div class="wrap">
 <div class="murid-header">
   <img src="{icons.OWL}" alt="" class="owl-mascot" width="40" height="40">
   <h1>Halo, {_escape(nama)}!</h1>
@@ -1336,6 +1341,7 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hasil &amp; cara — {T.NAMA_PRODUK}</title>
+{brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">

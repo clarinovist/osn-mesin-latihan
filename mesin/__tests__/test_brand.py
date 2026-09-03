@@ -28,7 +28,10 @@ ROOT = Path(__file__).resolve().parent.parent
 def server(tmp_path, monkeypatch):
     s = ServerUji(tmp_path, monkeypatch)
     with s.buka() as kon:
-        database.tambah_siswa(kon, "Putri")
+        # pemilik distempel eksplisit — palang kepemilikan menolak id yang
+        # bukan milik guru dengan 404, dan itu bukan yang sedang diuji.
+        sid = database.tambah_siswa(kon, "Putri", pemilik="guru")
+        s.sesi_id = database.buat_sesi(kon, sid, seed=7)
     yield s
     s.berhenti()
 
@@ -155,3 +158,119 @@ def test_dockerfile_menyalin_folder_aset():
     (pola insiden 25 Agustus 2026, kali ini untuk berkas biner)."""
     isi = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert "aset/" in isi, "Dockerfile tidak menyalin folder aset/"
+
+
+# ───────────────────────── favicon di SEMUA halaman ─────────────────────────
+
+# Halaman yang dilayani lewat HTTP. Guard ini menutup celah "template baru
+# lahir tanpa favicon": sebelumnya tidak SATU pun halaman punya favicon.
+JALUR_PUBLIK = ("/", "/masuk", "/daftar", "/kebijakan-privasi", "/lupa-sandi")
+JALUR_GURU = ("/akun",)
+
+
+def _jalur_guru_berdata(sesi_id: int) -> tuple[str, ...]:
+    """Halaman guru yang butuh id — sengaja ikut diuji: justru di sinilah
+    template baru biasanya lahir (halaman sesi, cetak, laporan)."""
+    return (
+        f"/sesi/{sesi_id}",
+        f"/sesi/{sesi_id}/cetak",
+        f"/sesi/{sesi_id}/lampiran",
+        f"/laporan/{sesi_id}",
+    )
+
+
+def test_semua_halaman_publik_punya_favicon(server):
+    for jalur in JALUR_PUBLIK:
+        kode, isi, _ = server.minta(jalur)
+        assert kode == 200, f"{jalur} -> {kode}"
+        assert 'rel="icon"' in isi, f"{jalur} tanpa favicon"
+        assert 'rel="manifest"' in isi, f"{jalur} tanpa manifest"
+        assert 'name="theme-color"' in isi, f"{jalur} tanpa theme-color"
+
+
+def test_semua_halaman_guru_punya_favicon(server):
+    for jalur in JALUR_GURU + _jalur_guru_berdata(server.sesi_id):
+        kode, isi, _ = server.minta(jalur, auth=("guru", SANDI_GURU))
+        assert kode == 200, f"{jalur} -> {kode}"
+        assert 'rel="icon"' in isi, f"{jalur} tanpa favicon"
+
+
+def test_halaman_murid_punya_favicon(server):
+    from http_test_kit import SANDI_MURID
+
+    kode, isi, _ = server.minta("/murid", auth=("feby", SANDI_MURID))
+    assert kode == 200
+    assert 'rel="icon"' in isi, "halaman murid tanpa favicon"
+
+
+def test_lembar_cetak_punya_favicon_tanpa_og():
+    """Kertas A4 tidak di-share ke WhatsApp — og:* di sana hanya sampah."""
+    import render
+    from generator import buat_lembar
+
+    lembar = buat_lembar(seed=3, jumlah_soal=2)
+    for fn in (render.lembar_soal, render.lembar_penilaian):
+        halaman = fn(list(lembar.soal), nama="Putri", tanggal="1 Jan")
+        assert 'rel="icon"' in halaman, f"{fn.__name__} tanpa favicon"
+        assert "og:image" not in halaman, f"{fn.__name__} tidak perlu og:*"
+
+
+def test_landing_punya_meta_share_absolut(server):
+    """Crawler WhatsApp/Facebook menolak path relatif — og:image & og:url
+    wajib absolut. Satu konstanta brand.URL_SITUS supaya pindah domain
+    nanti = ubah satu baris."""
+    kode, isi, _ = server.minta("/")
+    assert kode == 200
+    assert f'content="{brand.URL_SITUS}/aset/og-image.png"' in isi
+    assert f'property="og:url" content="{brand.URL_SITUS}' in isi
+    assert 'name="twitter:card" content="summary_large_image"' in isi
+    assert f'property="og:title" content="' in isi
+    assert brand.URL_SITUS.startswith("https://")
+
+
+def test_tag_kepala_dipakai_bukan_disalin():
+    """Blok favicon harus datang dari brand.tag_kepala(), bukan disalin
+    per template — kalau disalin, template ke-15 lahir tanpa favicon dan
+    tidak ada yang sadar."""
+    for nama in (
+        "landing.py",
+        "web.py",
+        "teacher_pages.py",
+        "student_pages.py",
+        "attachments.py",
+        "render.py",
+    ):
+        sumber = (ROOT / nama).read_text(encoding="utf-8")
+        assert "tag_kepala" in sumber, f"{nama} tidak memakai brand.tag_kepala()"
+        assert 'rel="icon"' not in sumber, (
+            f"{nama} menyalin blok favicon — pakai brand.tag_kepala()"
+        )
+
+
+MODUL_HALAMAN = (
+    "landing.py",
+    "web.py",
+    "teacher_pages.py",
+    "student_pages.py",
+    "attachments.py",
+    "render.py",
+)
+
+
+def test_setiap_head_memanggil_tag_kepala():
+    """Guard STRUKTURAL, bukan lewat HTTP.
+
+    Test lewat HTTP hanya menyentuh halaman yang punya rute aktif — halaman
+    legacy dan cabang jarang lolos begitu saja. Terbukti: menghapus satu
+    sisipan di student_pages.py (halaman kerja legacy) tidak membuat satu
+    pun test HTTP merah. Guard ini menghitung <head> di sumber, jadi
+    template mana pun yang lahir tanpa favicon langsung ketahuan.
+    """
+    kurang: list[str] = []
+    for nama in MODUL_HALAMAN:
+        sumber = (ROOT / nama).read_text(encoding="utf-8")
+        n_head = sumber.count("<head>")
+        n_tag = sumber.count("brand.tag_kepala(")
+        if n_head != n_tag:
+            kurang.append(f"{nama}: {n_head} <head> tapi {n_tag} tag_kepala()")
+    assert not kurang, "head tanpa favicon:\n" + "\n".join(kurang)

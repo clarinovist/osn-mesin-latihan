@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import html
 
+import brand
 import design_tokens as T
 from teacher_style import SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 
@@ -29,18 +30,24 @@ def _font_link() -> str:
     )
 
 
-def _halaman_publik_stitch(judul: str, isi: str) -> bytes:
+def _halaman_publik_stitch(
+    judul: str, isi: str, og: dict[str, str] | None = None
+) -> bytes:
     """Kerangka halaman publik versi Stitch — GAYA_STITCH, body.st.
 
     Dipakai oleh halaman_daftar, halaman_kebijakan, halaman_lupa_sandi
     (S8-S10). Kontrak markup yang diuji test (a.brand href=/, tombol-putih
     href=/masuk, href=/masuk tepat 1) dipertahankan di markup isi.
+
+    og = metadata share (WhatsApp/Facebook) untuk halaman yang memang
+    dibagikan; None berarti favicon + manifest saja.
     """
     from style_stitch import gaya_stitch
 
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(judul)}</title>
+{brand.tag_kepala(og)}
 {_font_link()}
 <style>{gaya_stitch()}</style></head>
 <body class="st"><div class="publik-badan-st">{isi}</div>
@@ -286,4 +293,15 @@ def halaman_landing() -> bytes:
 </footer>
 </div>
 """
-    return _halaman_publik_stitch(T.NAMA_PRODUK, isi)
+    return _halaman_publik_stitch(
+        T.NAMA_PRODUK,
+        isi,
+        og={
+            "judul": f"{T.NAMA_PRODUK} — {T.TAGLINE}",
+            "deskripsi": (
+                "Latihan matematika bergaya OSN/SASMO untuk anak SD. Anak "
+                "menulis caranya, orang tua melihat di mana letak salahnya."
+            ),
+            "jalur": "/",
+        },
+    )

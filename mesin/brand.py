@@ -21,6 +21,7 @@ kebenaran yang bisa berbeda diam-diam.
 from __future__ import annotations
 
 import functools
+import html
 import json
 from pathlib import Path
 
@@ -30,6 +31,10 @@ import design_tokens as T
 # WhatsApp/Facebook menolak path relatif. Saat domain jagomat.id dibeli,
 # ubah satu baris ini saja.
 URL_SITUS = "https://osn.lesprivate.id"
+
+def _esc(teks: str) -> str:
+    return html.escape(teks, quote=True)
+
 
 FOLDER_ASET = Path(__file__).resolve().parent / "aset"
 
@@ -108,3 +113,49 @@ def berkas(nama: str) -> tuple[bytes, str] | None:
         return _isi(nama), mime
     except OSError:
         return None
+
+
+def tag_kepala(og: dict[str, str] | None = None, cetak: bool = False) -> str:
+    """Blok <link>+<meta> brand untuk <head> — ditulis sekali, dipakai semua.
+
+    Sebelum ini tidak satu pun halaman punya favicon: tab browser
+    menampilkan ikon kosong di landing, halaman masuk, dan halaman anak.
+    Menyalin blok ini per template berarti template ke-15 lahir tanpa
+    favicon tanpa ada yang sadar — guard di test_brand.py menolak itu.
+
+    og  = {"judul": ..., "deskripsi": ..., "jalur": "/"} untuk halaman
+          publik yang di-share (WhatsApp/Facebook). URL-nya dibuat absolut
+          dari URL_SITUS: crawler menolak path relatif.
+    cetak = True untuk lembar A4 — favicon saja, tanpa og/manifest yang
+            tidak ada artinya di kertas.
+    """
+    baris = [
+        '<link rel="icon" href="/aset/favicon.svg" type="image/svg+xml">',
+        '<link rel="alternate icon" href="/aset/favicon.ico" sizes="any">',
+        '<link rel="apple-touch-icon" href="/aset/apple-touch-180.png">',
+    ]
+    if cetak:
+        return "\n".join(baris)
+    baris += [
+        '<link rel="manifest" href="/aset/manifest.json">',
+        f'<meta name="theme-color" content="{T.AKSEN_MURID_UTAMA}">',
+        f'<meta name="application-name" content="{_esc(T.NAMA_PRODUK)}">',
+    ]
+    if og:
+        judul = og.get("judul") or T.NAMA_PRODUK
+        deskripsi = og.get("deskripsi") or T.TAGLINE
+        url = URL_SITUS + (og.get("jalur") or "/")
+        baris += [
+            f'<meta name="description" content="{_esc(deskripsi)}">',
+            f'<meta property="og:title" content="{_esc(judul)}">',
+            f'<meta property="og:description" content="{_esc(deskripsi)}">',
+            f'<meta property="og:type" content="website">',
+            f'<meta property="og:url" content="{_esc(url)}">',
+            f'<meta property="og:image" content="{_esc(URL_SITUS)}/aset/og-image.png">',
+            f'<meta property="og:site_name" content="{_esc(T.NAMA_PRODUK)}">',
+            '<meta name="twitter:card" content="summary_large_image">',
+            f'<meta name="twitter:title" content="{_esc(judul)}">',
+            f'<meta name="twitter:description" content="{_esc(deskripsi)}">',
+            f'<meta name="twitter:image" content="{_esc(URL_SITUS)}/aset/og-image.png">',
+        ]
+    return "\n".join(baris)
