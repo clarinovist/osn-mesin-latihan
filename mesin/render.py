@@ -29,6 +29,7 @@ from __future__ import annotations
 import html
 import json
 
+import design_tokens as T
 from print_style import GAYA_CETAK
 from screen_style import GAYA_LAYAR
 from templates import Soal
@@ -140,7 +141,7 @@ def lembar_soal(
 <title>{html.escape(topik_paket.judul_lembar)}</title><style>{css}</style></head><body>
 <div class="wrap">
 <div class="mesin-banner">
-  <span class="nama-app">Mesin Latihan</span>
+  <span class="nama-app">{html.escape(T.NAMA_PRODUK)}</span>
   <span class="meta-sesi">{html.escape(nama)} &middot; {len(soal)} soal</span>
 </div>
 <h1>{html.escape(topik_paket.judul_lembar)}</h1>
@@ -216,7 +217,7 @@ def lembar_penilaian(
 <title>{html.escape(topik_paket.judul_penilaian)}</title><style>{css}</style></head><body>
 <div class="wrap">
 <div class="mesin-banner banner-kunci">
-  <span class="nama-app">Mesin Latihan</span>
+  <span class="nama-app">{html.escape(T.NAMA_PRODUK)}</span>
   <span class="meta-sesi">{html.escape(nama)} &middot; {len(soal)} soal</span>
 </div>
 <div class="kunci-headline">Kunci — Rahasia Guru</div>

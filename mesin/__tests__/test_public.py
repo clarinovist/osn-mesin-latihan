@@ -26,8 +26,43 @@ from http_test_kit import SANDI_GURU, ServerUji  # noqa: E402
 # ───────────────────────── Fase 0: identitas ─────────────────────────
 
 def test_tokens_punya_identitas_produk():
-    assert getattr(T, "NAMA_PRODUK", "") == "Caraku"
+    assert getattr(T, "NAMA_PRODUK", "") == "Jagomat"
     assert getattr(T, "TAGLINE", "").strip()
+
+
+# Brand lama yang tidak boleh kembali muncul sebagai literal di modul mana
+# pun. "Caraku" TIDAK masuk daftar: kata itu punya makna kedua yang vital —
+# label kotak tempat anak menulis caranya, dipakai diagnosis.py/render.py.
+BRAND_LAMA = ("Mesin Latihan",)
+
+ROOT_MESIN = Path(__file__).resolve().parent.parent
+
+
+def test_tidak_ada_literal_brand_lama_di_seluruh_modul():
+    """Guard lama hanya menyapu web.py — karena itu "Mesin Latihan" bertahan
+    di kop lembar cetak (render.py) selama berbulan-bulan, justru di kertas
+    yang dipegang anak dan orang tua. Guard ini menyapu SEMUA modul root."""
+    tersangka: list[str] = []
+    for berkas in sorted(ROOT_MESIN.glob("*.py")):
+        sumber = berkas.read_text(encoding="utf-8")
+        for ln_no, ln in enumerate(sumber.splitlines(), 1):
+            if any(b in ln for b in BRAND_LAMA):
+                tersangka.append(f"{berkas.name}:{ln_no}: {ln.strip()}")
+    assert not tersangka, (
+        "brand lama masih ada — pakai T.NAMA_PRODUK:\n" + "\n".join(tersangka)
+    )
+
+
+def test_lembar_cetak_pakai_brand_dari_tokens():
+    """Kop lembar soal DAN lembar penilaian menyebut nama produk yang
+    berlaku, bukan nama lama yang di-hardcode."""
+    import render
+    from generator import buat_lembar
+
+    lembar = buat_lembar(seed=7, jumlah_soal=2)
+    for fn in (render.lembar_soal, render.lembar_penilaian):
+        halaman = fn(list(lembar.soal), nama="Putri", tanggal="1 Jan")
+        assert T.NAMA_PRODUK in halaman, f"{fn.__name__} tanpa nama produk"
 
 
 def test_web_tidak_ada_literal_brand_lama():

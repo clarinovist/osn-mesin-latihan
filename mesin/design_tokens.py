@@ -118,8 +118,8 @@ LATAR_KARTU_MURID = "#fff"
 # Ganti nama di sini, efek ke semua permukaan (landing, login, dashboard).
 # ─────────────────────────────────────────────────────────────────────
 
-NAMA_PRODUK = "Caraku"
-TAGLINE = "Latih. Tulis caramu. Ketahui letak salahmu."
+NAMA_PRODUK = "Jagomat"
+TAGLINE = "Jago karena tahu caranya."
 
 # ─────────────────────────────────────────────────────────────────────
 # Tipografi
