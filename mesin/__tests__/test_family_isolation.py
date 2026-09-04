@@ -197,9 +197,9 @@ def test_dashboard_guru_menampilkan_badge_orang_tua(dua_keluarga):
 
 
 def test_admin_diarahkan_ke_panel_semua_keluarga(dua_keluarga):
-    # Kebijakan baru: admin tidak lagi "pegang" murid lewat dashboard guru.
-    # GET / untuk admin dialihkan ke /admin — daftar semua keluarga tampil
-    # di sana (baca-semua-tulis-tidak).
+    # Admin full-write (4 Sep 2026): GET / tetap dialihkan ke /admin —
+    # daftar semua keluarga tampil di sana, dan admin menulis lewat
+    # rute guru yang sama (bukan lewat dashboard terpisah).
     s, ids = dua_keluarga
     kode, isi, _ = s.minta("/", auth=("pengelola", SANDI_ADMIN))
     assert kode == 200

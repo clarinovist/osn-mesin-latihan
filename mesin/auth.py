@@ -359,6 +359,33 @@ def hapus_akun(pengguna: str, path: Path | None = None) -> bool:
     return True
 
 
+def hapus_akun_guru(pengguna: str, path: Path | None = None) -> bool:
+    """Hapus satu akun orang tua (peran guru). Hanya dipanggil panel admin.
+
+    Akun ADMIN tidak bisa dihapus dari sini: sandi pengelola milik deploy,
+    dan menghapusnya dari panel berarti satu sesi bocor bisa mengunci
+    pengelola lain. Data anak ber-pemilik nama ini TIDAK ikut terhapus —
+    baris siswa & sesi tetap, supaya akun pengganti bisa mengambil alih.
+
+    Mengembalikan True kalau ada yang terhapus.
+    """
+    akun = muat_akun(path)
+    sisa = [
+        a
+        for a in akun
+        if not (
+            a["pengguna"].strip().lower() == pengguna.strip().lower()
+            and a.get("peran", "guru") == "guru"
+        )
+    ]
+    if len(sisa) == len(akun):
+        return False
+    p = path or BERKAS_SANDI
+    p.write_text(json.dumps({"akun": sisa}, indent=2), encoding="utf-8")
+    p.chmod(0o600)
+    return True
+
+
 def setel_sandi_murid(
     pengguna: str, sandi_baru: str, path: Path | None = None
 ) -> bool:

@@ -287,7 +287,6 @@ def halaman_utama_stitch(
     yang baru. Baris sesi baru tetap diberi kelas sorot-baru.
     """
     baris = []
-    admin = peran == "admin"
     for s in database.daftar_siswa(kon, pemilik):
         # Dashboard ringkas (feedback Filia 1 Sep 2026 no. 6): satu kartu
         # NAMA per anak — klik masuk ke /anak/<id> tempat history lengkap
@@ -306,7 +305,7 @@ def halaman_utama_stitch(
             else '<span class="st-badge diagnostik">semua direview</span>'
         )
         label_keluarga = ""
-        if admin:
+        if peran == "admin":
             siapa = s["pemilik"] or "warisan"
             label_keluarga = (
                 '<span class="st-badge selesai">keluarga: '
@@ -376,7 +375,6 @@ def halaman_anak(
     badge review & mode), strip buat sesi baru, dan pintasan laporan.
     `siswa` baris sqlite dari tabel siswa.
     """
-    admin = peran == "admin"
     opsi_topik = "".join(
         f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
         for t in _topik_untuk_level(siswa["tingkat"])
@@ -433,7 +431,7 @@ def halaman_anak(
         item = '<p class="sub">Belum ada sesi — buat yang pertama di bawah.</p>'
 
     label_keluarga = ""
-    if admin:
+    if peran == "admin":
         siapa = siswa["pemilik"] or "warisan"
         label_keluarga = (
             '<span class="st-badge selesai">keluarga: '
@@ -487,7 +485,7 @@ def halaman_anak(
     # tercatat, menawarkan "remedial" itu mengarang.
     sasaran = database.sasaran_remedial(kon, siswa["id"])
     strip_remedial = ""
-    if sasaran and not admin:
+    if sasaran:
         strip_remedial = (
             '<form method="post" '
             f'action="/sesi-remedial/{siswa["id"]}" class="strip-sesi">'
@@ -518,27 +516,23 @@ def halaman_anak(
         if t != "campuran"      # campuran sudah = semua, tak perlu dicentang
     )
     strip_gabungan = (
-        ""
-        if admin
-        else (
-            '<form method="post" '
-            f'action="/sesi-gabungan/{siswa["id"]}" class="strip-sesi">'
-            '<div class="strip-kolom">'
-            "<label>Latihan gabungan — pilih beberapa topik</label>"
-            '<p class="sub">Centang dua topik atau lebih. Soalnya dicampur '
-            "bergantian antar-topik yang kamu pilih.</p>"
-            f'<div class="mode-pilih">{centang_topik}</div></div>'
-            '<div class="strip-kolom"><label>Jumlah Soal</label>'
-            '<select name="jumlah_soal" class="st-input">'
-            '<option value="10" selected>10 soal (± 30 mnt)</option>'
-            '<option value="15">15 soal (± 45 mnt)</option>'
-            '<option value="20">20 soal (± 60 mnt)</option>'
-            "</select></div>"
-            '<button type="submit" class="st-tombol-coral">'
-            '<span class="material-symbols-outlined" style="font-size:1.1rem">'
-            "library_add</span>Buat latihan gabungan</button>"
-            "</form>"
-        )
+        '<form method="post" '
+        f'action="/sesi-gabungan/{siswa["id"]}" class="strip-sesi">'
+        '<div class="strip-kolom">'
+        "<label>Latihan gabungan — pilih beberapa topik</label>"
+        '<p class="sub">Centang dua topik atau lebih. Soalnya dicampur '
+        "bergantian antar-topik yang kamu pilih.</p>"
+        f'<div class="mode-pilih">{centang_topik}</div></div>'
+        '<div class="strip-kolom"><label>Jumlah Soal</label>'
+        '<select name="jumlah_soal" class="st-input">'
+        '<option value="10" selected>10 soal (± 30 mnt)</option>'
+        '<option value="15">15 soal (± 45 mnt)</option>'
+        '<option value="20">20 soal (± 60 mnt)</option>'
+        "</select></div>"
+        '<button type="submit" class="st-tombol-coral">'
+        '<span class="material-symbols-outlined" style="font-size:1.1rem">'
+        "library_add</span>Buat latihan gabungan</button>"
+        "</form>"
     )
 
     # Fase C: tiga form di atas dibungkus SATU kartu "Buat latihan" dengan tab
@@ -546,8 +540,8 @@ def halaman_anak(
     # :has(), teknik yang sudah dipakai .mode-opsi:has(input:checked).
     #
     # Panel disusun dinamis: strip_remedial kosong kalau anak belum punya
-    # kesalahan tercatat, strip_gabungan kosong untuk admin. Menyusunnya dari
-    # daftar mencegah tab hantu yang menunjuk panel kosong.
+    # kesalahan tercatat. Menyusunnya dari daftar mencegah tab hantu yang
+    # menunjuk panel kosong.
     panel = [("baru", "add_circle", "Sesi baru", strip_sesi)]
     if strip_remedial:
         panel.append(("ulang", "restart_alt", "Latihan ulang", strip_remedial))
@@ -628,7 +622,6 @@ def halaman_utama(
 ) -> bytes:
     """Dashboard pengelola."""
     baris = []
-    admin = peran == "admin"
     for s in database.daftar_siswa(kon, pemilik):
         opsi_topik = "".join(
             f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
@@ -672,7 +665,7 @@ def halaman_utama(
         ) or '<tr><td colspan="8" class="kosong">belum ada sesi</td></tr>'
 
         label_keluarga = ""
-        if admin:
+        if peran == "admin":
             siapa = s["pemilik"] or "warisan"
             label_keluarga = (
                 f'<span class="badge-keluarga">keluarga: {html.escape(siapa)}</span>'
@@ -892,9 +885,8 @@ def halaman_sesi_cetak(
     if not info:
         return None
     badge_mode = _badge_mode(info)
-    admin = peran == "admin"
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
-    blok_cerita = "" if admin else _tombol_cerita(kon, sesi_id)
+    blok_cerita = _tombol_cerita(kon, sesi_id)
     pil = _pil_sesi(kon, sesi_id, "cetak")
     return _halaman(
         f"Sesi #{sesi_id} — Cetak",
@@ -930,7 +922,6 @@ def halaman_sesi_lampiran(
     if not info:
         return None
     badge_mode = _badge_mode(info)
-    admin = peran == "admin"
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
     baris_lampiran = []
     for lamp in database.daftar_lampiran(kon, sesi_id):
@@ -947,16 +938,12 @@ def halaman_sesi_lampiran(
         else '<p class="sub">Belum ada foto lembar.</p>'
     )
     unggah = (
-        ""
-        if admin
-        else (
-            f'<form method="post" action="/lampiran/{sesi_id}" '
-            'enctype="multipart/form-data">'
-            "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
-            '<input type="file" name="foto" accept="image/jpeg,image/png">'
-            '<button type="submit">Upload foto</button>'
-            "</form>"
-        )
+        f'<form method="post" action="/lampiran/{sesi_id}" '
+        'enctype="multipart/form-data">'
+        "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
+        '<input type="file" name="foto" accept="image/jpeg,image/png">'
+        '<button type="submit">Upload foto</button>'
+        "</form>"
     )
     blok_lampiran = (
         '<div class="kartu blok-lampiran">'
@@ -986,12 +973,7 @@ def halaman_sesi(
     kon, sesi_id: int, pesan: str = "", peran: str = "guru",
     pengguna: str = "",
 ) -> bytes:
-    """Detail satu sesi — HANYA koreksi (opsi 3: alat pindah ke /cetak & /lampiran).
-
-    Kebijakan admin baca-semua-tulis-tidak dijaga di router (POST ditolak
-    404); di sini tombol/form tulis disembunyikan supaya admin tidak
-    menabrak 404 dari UI-nya sendiri."""
-    admin = peran == "admin"
+    """Detail satu sesi — HANYA koreksi (opsi 3: alat pindah ke /cetak & /lampiran)."""
     info = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.direview,
                    w.nama, w.id AS siswa_id
@@ -1092,24 +1074,17 @@ def halaman_sesi(
     pil = _pil_sesi(kon, sesi_id, "koreksi")
 
     tombol_hapus = (
-        ""
-        if admin
-        else (
-            f'<form method="get" action="/sesi/{sesi_id}/hapus" '
-            f'style="margin:.4rem 0">'
-            f'<button type="submit" class="tombol-kecil tombol-hapus">'
-            f"Hapus sesi</button></form>"
-        )
+        f'<form method="get" action="/sesi/{sesi_id}/hapus" '
+        f'style="margin:.4rem 0">'
+        f'<button type="submit" class="tombol-kecil tombol-hapus">'
+        f"Hapus sesi</button></form>"
     )
-    if admin:
-        blok_isi = f'<fieldset disabled>{"".join(kartu)}</fieldset>'
-    else:
-        blok_isi = (
-            f'<form method="post" action="/sesi/{sesi_id}">'
-            f'{"".join(kartu)}'
-            f'<div class="simpan-strip"><button type="submit">'
-            f"Simpan &amp; diagnosis</button></div></form>"
-        )
+    blok_isi = (
+        f'<form method="post" action="/sesi/{sesi_id}">'
+        f'{"".join(kartu)}'
+        f'<div class="simpan-strip"><button type="submit">'
+        f"Simpan &amp; diagnosis</button></div></form>"
+    )
 
     return _halaman(
         f"Sesi #{sesi_id}",
@@ -1153,7 +1128,6 @@ def halaman_sesi_stitch(
     """Detail sesi versi Stitch — HANYA koreksi (opsi 3)."""
     from style_stitch import gaya_stitch, CSS_SESI
 
-    admin = peran == "admin"
     info = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.direview,
                    w.nama, w.id AS siswa_id
@@ -1274,24 +1248,17 @@ def halaman_sesi_stitch(
     pil = _pil_sesi_stitch(kon, sesi_id, "koreksi")
 
     tombol_hapus = (
-        ""
-        if admin
-        else (
-            f'<form method="get" action="/sesi/{sesi_id}/hapus" '
-            f'style="margin:.4rem 0">'
-            f'<button type="submit" class="tombol-kecil-st">'
-            f"Hapus sesi</button></form>"
-        )
+        f'<form method="get" action="/sesi/{sesi_id}/hapus" '
+        f'style="margin:.4rem 0">'
+        f'<button type="submit" class="tombol-kecil-st">'
+        f"Hapus sesi</button></form>"
     )
-    if admin:
-        blok_isi = f'<fieldset disabled>{"".join(kartu)}</fieldset>'
-    else:
-        blok_isi = (
-            f'<form method="post" action="/sesi/{sesi_id}">'
-            f'{"".join(kartu)}'
-            f'<div class="koreksi-simpan-st"><button type="submit">'
-            "Simpan &amp; diagnosis</button></div></form>"
-        )
+    blok_isi = (
+        f'<form method="post" action="/sesi/{sesi_id}">'
+        f'{"".join(kartu)}'
+        f'<div class="koreksi-simpan-st"><button type="submit">'
+        "Simpan &amp; diagnosis</button></div></form>"
+    )
 
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
     isi = (

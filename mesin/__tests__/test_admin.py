@@ -101,7 +101,12 @@ def test_css_badge_peran_tersedia():
     assert ".badge-keluarga" in teacher_style.GAYA_GURU
 
 
-# --- Kebijakan admin: dashboard khusus + baca-semua-tulis-tidak -----------
+# --- Kebijakan admin: full-write (keputusan 4 Sep 2026) --------------------
+#
+# Dulu admin baca-semua-tulis-tidak (semua POST tulis -> 404). Kini admin
+# boleh menulis seperti guru — panel /admin tanpa tombol hapus/edit
+# menyulitkan kerja dukungan. Satu-satunya yang tetap tertutup: menyentuh
+# sandi sesama admin/pengelola (milik deploy) via aksi guru_sandi/guru_hapus.
 
 
 def _ids_siswa_dan_sesi(server):
@@ -154,7 +159,8 @@ def test_admin_buka_root_diarahkan_ke_panel(server):
     assert "Buat sesi baru" not in isi, "admin masih pegang murid lewat /"
 
 
-def test_admin_dilarang_membuat_sesi(server):
+def test_admin_boleh_membuat_sesi(server):
+    """Admin full-write: POST sesi-baru jalan dan sesinya benar-benar ada."""
     siswa_a, _ = _ids_siswa_dan_sesi(server)
     with server.buka() as kon:
         n0 = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
@@ -163,73 +169,74 @@ def test_admin_dilarang_membuat_sesi(server):
         auth=("pengelola", SANDI_ADMIN),
         data={"topik": "pola-bilangan", "mode": "diagnostik"},
     )
-    assert kode == 404
+    assert kode in (200, 303)
     with server.buka() as kon:
-        assert kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"] == n0
+        n1 = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
+    assert n1 == n0 + 1, "sesi admin tidak tersimpan"
 
 
-def test_admin_dilarang_hapus_sesi(server):
+def test_admin_boleh_hapus_sesi(server):
+    """Admin full-write: hapus sesi jalan dan barisnya benar-benar hilang."""
     _, sesi_a = _ids_siswa_dan_sesi(server)
     kode, _, _ = server.minta(
         f"/sesi/{sesi_a}/hapus",
         auth=("pengelola", SANDI_ADMIN),
         data={"konfirmasi": "1"},
     )
-    assert kode == 404
+    assert kode in (200, 303)
     with server.buka() as kon:
         n = kon.execute(
             "SELECT COUNT(*) AS n FROM sesi WHERE id = ?", (sesi_a,)
         ).fetchone()["n"]
-    assert n == 1, "sesi ternyata terhapus oleh admin"
+    assert n == 0, "sesi tidak terhapus oleh admin"
 
 
-def test_admin_dilarang_simpan_jawaban(server):
+def test_admin_boleh_simpan_jawaban(server):
+    """Admin full-write: simpan jawaban jalan dan halaman bilang tersimpan."""
+    import database
+
     _, sesi_a = _ids_siswa_dan_sesi(server)
-    kode, _, _ = server.minta(
+    with server.buka() as kon:
+        sid = database.isi_sesi(kon, sesi_a)[0]["sesi_soal_id"]
+    kode, isi, _ = server.minta(
         f"/sesi/{sesi_a}",
         auth=("pengelola", SANDI_ADMIN),
-        data={"jawaban_1": "diusap admin"},
+        data={f"jwb_{sid}": "diisi admin", f"cara_{sid}": "cara admin"},
     )
-    assert kode == 404
-    with server.buka() as kon:
-        n = kon.execute(
-            """SELECT COUNT(*) AS n FROM jawaban j
-               JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
-               WHERE ss.sesi_id = ?""",
-            (sesi_a,),
-        ).fetchone()["n"]
-    assert n == 0, "jawaban ternyata tersentuh admin"
+    assert kode == 200
+    # Tulisnya commit sesaat setelah respons (pola konteks buka()), jadi
+    # yang diassert responsnya — bukan baca-ulang yang balapan dengan commit.
+    assert "1 soal tersimpan" in isi, "simpan admin tidak jalan"
 
 
-def test_admin_dilarang_variasi_cerita(server):
+def test_admin_boleh_variasi_cerita_dan_lampiran(server):
+    """Admin full-write: rute cerita & lampiran tidak lagi 404 khusus admin.
+
+    Isi fiturnya sendiri bisa gagal-diam (tanpa kunci LLM / tanpa berkas),
+    yang dijaga di sini: admin tidak ditolak di pintu hanya karena perannya."""
     _, sesi_a = _ids_siswa_dan_sesi(server)
     kode, _, _ = server.minta(
         f"/cerita/{sesi_a}", auth=("pengelola", SANDI_ADMIN), data={}
     )
-    assert kode == 404
-
-
-def test_admin_dilarang_upload_lampiran(server):
-    _, sesi_a = _ids_siswa_dan_sesi(server)
+    assert kode != 404, "rute cerita masih menutup admin"
     kode, _, _ = server.minta(
         f"/lampiran/{sesi_a}", auth=("pengelola", SANDI_ADMIN), data={"x": "1"}
     )
-    assert kode == 404
+    assert kode != 404, "rute lampiran masih menutup admin"
 
 
-def test_admin_hanya_ganti_sandi_sendiri_di_akun(server):
+def test_admin_boleh_ubah_tingkat_dan_ganti_sandi_di_akun(server):
+    """Admin full-write: aksi tulis /akun jalan untuk data keluarga mana pun."""
     siswa_a, _ = _ids_siswa_dan_sesi(server)
-    kode, _, _ = server.minta(
+    kode, isi, _ = server.minta(
         "/akun",
         auth=("pengelola", SANDI_ADMIN),
         data={"aksi": "tingkat", "siswa_id": siswa_a, "tingkat": "P4"},
     )
-    assert kode == 404, "aksi tulis di /akun harus tertutup untuk admin"
-    with server.buka() as kon:
-        tingkat = kon.execute(
-            "SELECT tingkat FROM siswa WHERE id = ?", (siswa_a,)
-        ).fetchone()["tingkat"]
-    assert tingkat == "P3", "tingkat anak ternyata diubah admin"
+    assert kode == 200
+    # Tulisnya commit sesaat setelah respons (pola konteks buka()), jadi
+    # yang diassert pesannya — bukan baca-ulang yang balapan dengan commit.
+    assert "sekarang P4" in isi, "ubah tingkat admin tidak jalan"
 
     kode, isi, _ = server.minta(
         "/akun",
@@ -245,21 +252,52 @@ def test_admin_hanya_ganti_sandi_sendiri_di_akun(server):
     assert "Sandi diganti" in isi
 
 
-def test_halaman_sesi_admin_hanya_baca(server):
+def test_halaman_sesi_admin_bisa_tulis(server):
+    """Admin full-write: form tulis tampil untuk admin, bukan fieldset mati."""
     _, sesi_a = _ids_siswa_dan_sesi(server)
     kode, isi, _ = server.minta(
         f"/sesi/{sesi_a}", auth=("pengelola", SANDI_ADMIN)
     )
     assert kode == 200
-    assert "Simpan &amp; diagnosis" not in isi, "form tulis bocor ke admin"
-    assert "Hapus sesi" not in isi
-    assert "Upload foto" not in isi
+    assert "Simpan &amp; diagnosis" in isi, "form tulis hilang untuk admin"
+    assert "Hapus sesi" in isi
     # alat sesi pindah ke /cetak & /lampiran — /sesi hanya koreksi
     kode2, isi2, _ = server.minta(
         f"/sesi/{sesi_a}/cetak", auth=("pengelola", SANDI_ADMIN)
     )
     assert kode2 == 200
     assert "Lembar soal" in isi2, "jalur baca harus tetap ada"
+
+
+def test_admin_menghapus_akun_orang_tua_tanpa_menghapus_anaknya(server):
+    """Aksi guru_hapus: akun ortu hilang, anak & sesinya tetap ada."""
+    kode, isi, _ = server.minta(
+        "/admin",
+        auth=("pengelola", SANDI_ADMIN),
+        data={"aksi": "guru_hapus", "nama": "ortu-a"},
+    )
+    assert kode == 200
+    assert auth.cari_akun("ortu-a") is None, "akun ortu-a masih ada"
+    with server.buka() as kon:
+        n_siswa = kon.execute(
+            "SELECT COUNT(*) AS n FROM siswa WHERE pemilik = 'ortu-a'"
+        ).fetchone()["n"]
+        n_sesi = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
+    assert n_siswa == 1, "anak ikut terhapus!"
+    assert n_sesi == 1, "sesi ikut terhapus!"
+
+
+def test_admin_tidak_bisa_hapus_akun_pengelola(server):
+    """Sandi/akun sesama pengelola milik deploy — panel tidak boleh menyentuhnya."""
+    auth.tambah_akun("pengelola-2", "sandi-pengelola-dua-1", "admin")
+    kode, isi, _ = server.minta(
+        "/admin",
+        auth=("pengelola", SANDI_ADMIN),
+        data={"aksi": "guru_hapus", "nama": "pengelola-2"},
+    )
+    assert kode == 200
+    assert "tidak ditemukan" in isi
+    assert auth.cari_akun("pengelola-2") is not None, "akun pengelola ikut terhapus!"
 
 
 def test_admin_laporan_tetap_terbuka(server):

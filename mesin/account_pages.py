@@ -172,8 +172,8 @@ def halaman_akun(
 
     Satu halaman, tiga section via ?section=: "akun" (ganti sandi),
     "siswa" (daftar anak + hapus aman), "akun-murid" (akun latihan anak).
-    Nilai tak dikenal jatuh ke "akun". Admin hanya punya section "akun" —
-    data keluarga lain bukan ranahnya (baca-semua-tulis-tidak).
+    Nilai tak dikenal jatuh ke "akun". Admin full-write (4 Sep 2026)
+    melihat SEMUA keluarga di section siswa/akun-murid.
 
     `pengguna`/`peran` berasal dari sesi: guru melihat & mengelola
     keluarganya saja. Panggilan langsung tanpa `pengguna` (mode lokal,
@@ -184,9 +184,8 @@ def halaman_akun(
     dihapus dari sini — penjelasannya ada di kartu Catatan, section
     siswa; siswa tanpa riwayat boleh dihapus beserta akun latihannya.
     """
-    admin = peran == "admin"
-    if admin or section not in ("akun", "siswa", "akun-murid"):
-        # Admin cuma punya satu section; nilai asing dari URL jatuh ke bawaan.
+    if section not in ("akun", "siswa", "akun-murid"):
+        # Nilai asing dari URL jatuh ke bawaan.
         section = "akun"
 
     daftar = "".join(
@@ -321,8 +320,6 @@ def halaman_akun(
         ("siswa", "Siswa"),
         ("akun-murid", "Akun latihan"),
     ]
-    if admin:
-        item = item[:1]
     nav = "".join(
         f'<a href="/akun?section={sid}"'
         + (' class="aktif"' if sid == section else "")
@@ -610,11 +607,11 @@ def proses_akun(
 def proses_admin(data: dict) -> tuple[str, str]:
     """Jalankan aksi POST /admin yang hanya menyentuh berkas sandi.
 
-    Tanpa parameter kon — satu-satunya tulisan tambahan yang sah dari
-    panel admin adalah menyetel ulang sandi orang tua, dan itu murni
-    urusan auth.json, bukan basis data keluarga (kebijakan admin
-    baca-semua-tulis-tidak tetap berlaku untuk data murid). guru_baru
-    sengaja TIDAK ditangani di sini — tetap di web.py.
+    Tanpa parameter kon — tulisan yang sah dari panel admin adalah membuat
+    akun orang tua, menyetel ulang sandinya, dan menghapus akunnya; ketiganya
+    murni urusan auth.json, bukan basis data keluarga (anak & sesinya tetap
+    ada — hanya loginnya yang hilang). guru_baru sengaja TIDAK ditangani di
+    sini — tetap di web.py.
 
     Format kembalian (pesan, galat), persis pola proses_akun.
     """
@@ -640,19 +637,33 @@ def proses_admin(data: dict) -> tuple[str, str]:
             "",
         )
 
+    if aksi == "guru_hapus":
+        nama = (data.get("nama") or "").strip()
+        if not nama:
+            return "", "Pilih akunnya dulu."
+        a = auth.cari_akun(nama)
+        if not a or a.get("peran", "guru") != "guru":
+            return "", f"Akun {nama} tidak ditemukan."
+        auth.hapus_akun_guru(nama)
+        return (
+            f"Akun orang tua {nama} dihapus. Anak-anaknya tetap ada — "
+            f"mereka ikut akun lain atau akun baru bila dibuat lagi.",
+            "",
+        )
+
     return "", "Aksi tidak dikenal."
 
 def halaman_admin(
     kon, pesan: str = "", galat: str = "", pengguna: str = ""
 ) -> bytes:
-    """Dashboard admin: ringkasan, daftar keluarga, buat akun orang tua.
+    """Dashboard admin: ringkasan, daftar keluarga, kelola akun orang tua.
 
     Hanya peran admin yang sampai sini — penjaganya ada di router, dan
-    sejak login admin langsung diarahkan ke sini. Kebijakan admin
-    baca-semua-tulis-tidak: satu-satunya tulisan di halaman ini adalah
-    membuat akun orang tua (domain admin sendiri); data murid hanya bisa
-    DIBACA — nama anak jadi tautan ke laporannya, aksi tulis data murid
-    ditolak 404 di router.
+    sejak login admin langsung diarahkan ke sini. Admin full-write
+    (keputusan 4 Sep 2026): boleh menulis data murid seperti guru di
+    semua rute, plus tiga tulisan domain admin di panel ini (buat akun
+    orang tua, setel ulang sandinya, hapus akunnya — ketiganya murni
+    urusan auth.json). Nama anak jadi tautan ke laporannya.
     """
     akun = auth.muat_akun()
     n_keluarga = sum(1 for a in akun if a.get("peran", "guru") == "guru")
@@ -704,9 +715,9 @@ def halaman_admin(
     if galat:
         kabar += f'<div class="pesan galat">{html.escape(galat)}</div>'
 
-    # Kartu setel ulang sandi orang tua: satu-satunya aksi tulis kedua di
-    # panel ini (menyentuh auth.json saja). Daftar pilihannya hanya akun
-    # ber-peran guru — sandi admin milik deploy, bukan ranah panel.
+    # Kartu setel ulang sandi orang tua (menyentuh auth.json saja).
+    # Daftar pilihannya hanya akun ber-peran guru — sandi admin milik
+    # deploy, bukan ranah panel.
     daftar_guru = [a for a in akun if a.get("peran", "guru") == "guru"]
     if daftar_guru:
         opsi_guru = "".join(
@@ -749,6 +760,48 @@ def halaman_admin(
         f"</form></div>"
     )
 
+    # Kartu hapus akun orang tua (typo/duplikat). Sama seperti kartu sandi:
+    # hanya akun guru yang bisa dipilih; anak & sesinya tetap di basis data.
+    opsi_hapus = "".join(
+        f'<option value="{html.escape(a["pengguna"])}">'
+        f'{html.escape(a["pengguna"])}</option>'
+        for a in daftar_guru
+    )
+    if daftar_guru:
+        pilih_hapus = (
+            '<select name="nama" required>'
+            '<option value="">— pilih akun —</option>'
+            f"{opsi_hapus}</select>"
+        )
+        dis_hapus = ""
+    else:
+        pilih_hapus = (
+            '<select name="nama" disabled>'
+            "<option>belum ada akun orang tua</option></select>"
+        )
+        dis_hapus = " disabled"
+    kartu_hapus_guru = (
+        f'<div class="kartu">'
+        f'<div class="kartu-judul"><span class="ikon-kartu">🗑️</span>'
+        f"<h2>Hapus akun orang tua</h2></div>"
+        f'<p class="sub">Untuk akun salah ketik atau duplikat: yang hilang '
+        f"hanya loginnya — anak dan riwayat sesinya tetap tersimpan dan "
+        f"bisa dipakai akun pengganti. Akun pengelola tidak bisa dihapus "
+        f"dari sini.</p>"
+        f'<form method="post" action="/admin" '
+        f'onsubmit="return confirm(\'Hapus akun ini? Anak-anaknya tetap '
+        f'ada — hanya loginnya yang hilang.\')">'
+        f'<input type="hidden" name="aksi" value="guru_hapus">'
+        f'<div class="baris">'
+        f'<div><label>Akun orang tua</label>'
+        f"{pilih_hapus}</div>"
+        f"</div>"
+        f'<p style="margin-top:.8rem">'
+        f'<button type="submit" class="tombol-hapus"{dis_hapus}>'
+        f"Hapus akun</button></p>"
+        f"</form></div>"
+    )
+
     return _halaman(
         "Panel Pengelola",
         f"<h1>Panel Pengelola</h1>"
@@ -778,7 +831,8 @@ def halaman_admin(
         f'<a href="/daftar">/daftar</a> — setelah isolasi, pendaftar baru '
         f"tidak melihat data keluarga mana pun.</p>"
         f"</div>"
-        f"{kartu_sandi_guru}",
+        f"{kartu_sandi_guru}"
+        f"{kartu_hapus_guru}",
         ident=(pengguna, "admin") if pengguna else None,
         stitch=True,
     )

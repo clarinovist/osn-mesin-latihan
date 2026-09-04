@@ -536,19 +536,22 @@ def test_section_tak_dikenal_jatuh_ke_akun(siap):
     assert "Tambah siswa" not in h
 
 
-def test_admin_hanya_section_akun(siap):
+def test_admin_melihat_semua_section(siap):
+    """Admin full-write (4 Sep 2026): sidebar penuh + daftar lintas keluarga.
+
+    Dulu admin dikunci ke section "akun" (baca-semua-tulis-tidak); kini ia
+    menulis seperti guru, jadi section siswa & akun-murid dibuka — dengan
+    daftar SEMUA keluarga, bukan keluarganya sendiri."""
     with database.buka(siap) as kon:
+        database.tambah_siswa(kon, "AnakA", pemilik="ortu-a")
         h = account_pages.halaman_akun(kon, pengguna="pengelola", peran="admin").decode()
         h2 = account_pages.halaman_akun(
             kon, pengguna="pengelola", peran="admin", section="siswa"
         ).decode()
     assert "Ganti sandi" in h
-    # Sidebar admin satu item; link "Ganti sandi" topbar ikut muncul,
-    # jadi yang dicek adalah KETIDAKHADIRAN pintu keluarga.
-    assert 'href="/akun?section=siswa"' not in h
-    assert 'href="/akun?section=akun-murid"' not in h
-    assert "Tambah siswa" not in h2, "section siswa bocor ke admin"
-    assert "Ganti sandi" in h2
+    assert 'href="/akun?section=siswa"' in h
+    assert 'href="/akun?section=akun-murid"' in h
+    assert "AnakA" in h2
 
 
 def test_peta_aksi_ke_section_lengkap():
@@ -786,6 +789,44 @@ def test_proses_admin_aksi_tidak_dikenal(siap):
     pesan, galat = account_pages.proses_admin({"aksi": "hapus-semua"})
     assert not pesan
     assert "tidak dikenal" in galat.lower()
+
+
+def test_proses_admin_hapus_akun_guru(siap):
+    auth.tambah_akun("ortu-a", "sandi-lama-ortu-1", "guru")
+    pesan, galat = account_pages.proses_admin({
+        "aksi": "guru_hapus", "nama": "ortu-a",
+    })
+    assert not galat, galat
+    assert "dihapus" in pesan.lower()
+    assert auth.cari_akun("ortu-a") is None
+
+
+def test_proses_admin_hapus_menolak_admin_dan_murid(siap):
+    """Pesan sama dengan akun-tak-ada — bukan oracle peran (pola guru_sandi)."""
+    auth.tambah_akun("pengelola", "sandi-admin-123456", "admin")
+    auth.tambah_akun("murid-x", "sandi-murid-123456", "murid")
+    _, g1 = account_pages.proses_admin({"aksi": "guru_hapus", "nama": "pengelola"})
+    _, g2 = account_pages.proses_admin({"aksi": "guru_hapus", "nama": "murid-x"})
+    _, g3 = account_pages.proses_admin({"aksi": "guru_hapus", "nama": "   "})
+    assert g1 == "Akun pengelola tidak ditemukan."
+    assert g2 == "Akun murid-x tidak ditemukan."
+    assert g3 == "Pilih akunnya dulu."
+    assert auth.cari_akun("pengelola") is not None
+    assert auth.cari_akun("murid-x") is not None
+
+
+def test_hapus_akun_guru_langsung(siap):
+    """auth.hapus_akun_guru: guru terhapus, admin & murid tidak tersentuh."""
+    auth.tambah_akun("ortu-a", "sandi-lama-ortu-1", "guru")
+    auth.tambah_akun("pengelola", "sandi-admin-123456", "admin")
+    auth.tambah_akun("murid-x", "sandi-murid-123456", "murid")
+    assert auth.hapus_akun_guru("ortu-a") is True
+    assert auth.cari_akun("ortu-a") is None
+    assert auth.hapus_akun_guru("ortu-a") is False
+    assert auth.hapus_akun_guru("pengelola") is False
+    assert auth.hapus_akun_guru("murid-x") is False
+    assert auth.periksa("pengelola", "sandi-admin-123456")
+    assert auth.periksa("murid-x", "sandi-murid-123456")
 
 
 def test_proses_admin_sukses(siap):

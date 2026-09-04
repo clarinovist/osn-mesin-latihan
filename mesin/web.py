@@ -202,14 +202,6 @@ class Penangan(BaseHTTPRequestHandler):
         ident = self._identitas()
         return ident[1] if ident else None
 
-    def _tolak_admin(self) -> None:
-        """Tolak admin yang mencoba MENULIS data murid (404, bukan 403).
-
-        Kebijakan baca-semua-tulis-tidak: admin boleh membuka semua halaman
-        baca, tapi tidak satu pun aksi tulis. Body 404-nya identik dengan
-        tolakan kepemilikan supaya tidak jadi oracle yang berbeda."""
-        self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
-
     def _lolos_sandi(self) -> bool:
         """Palang pengelola (guru/admin). Dilewati kalau berkas sandi tidak ada."""
         if self._peran_saya() in ("guru", "admin"):
@@ -320,8 +312,8 @@ class Penangan(BaseHTTPRequestHandler):
         if jalur == "/":
             # Launch publik: / adalah landing untuk yang belum masuk.
             # Guru dengan sesi valid tetap dapat dashboard. Admin dialihkan
-            # ke dashboardnya sendiri di /admin — dashboard guru (dengan
-            # form "Buat sesi") bukan tempat admin: baca-semua-tulis-tidak.
+            # ke dashboardnya sendiri di /admin — panel dukungan tempat
+            # semua keluarga terlihat sekaligus.
             # Murid & anonim -> landing (bukan 401) — dashboard guru bukan
             # rahasia sekuat data anak, tapi tetap tak boleh dilihat murid.
             ident = self._identitas()
@@ -426,10 +418,6 @@ class Penangan(BaseHTTPRequestHandler):
                     if isi:
                         return self._kirim(isi)
                 if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
-                    # Halaman konfirmasi hapus = prasyarat tulis; admin
-                    # hanya-baca tidak sampai sini.
-                    if self._peran_saya() == "admin":
-                        return self._tolak_admin()
                     sesi_id = int(jalur.split("/")[2])
                     if not self._bisa_lihat_sesi(kon, sesi_id):
                         return self._kirim(
@@ -488,7 +476,7 @@ class Penangan(BaseHTTPRequestHandler):
                     # Guru membuka sesi yang terisi penuh = momen review:
                     # catat sekali supaya daftar sesi murid bisa menandai
                     # "Selesai". Buka lembar kosong untuk dicetak tidak
-                    # dihitung; admin tidak menulis (baca-semua-tulis-tidak).
+                    # dihitung.
                     #
                     # Commit sendiri sebelum respons: _kirim dijalankan di
                     # dalam with buka(), jadi commit konteks baru terjadi
@@ -1004,10 +992,6 @@ class Penangan(BaseHTTPRequestHandler):
             ident = self._identitas()
             pengguna = ident[0] if ident else "guru"
             peran = ident[1] if ident else "guru"
-            if peran == "admin" and data.get("aksi") != "sandi":
-                # Kebijakan baca-semua-tulis-tidak: satu-satunya aksi admin
-                # di /akun adalah mengganti sandinya sendiri.
-                return self._tolak_admin()
             with database.buka() as kon:
                 pesan, galat = proses_akun(kon, data, pengguna, peran)
                 section = data.get("section") or PETA_SECTION_AKUN.get(
@@ -1050,10 +1034,11 @@ class Penangan(BaseHTTPRequestHandler):
                         )
                     except ValueError as e:
                         galat = str(e)
-            elif data.get("aksi") == "guru_sandi":
-                # Satu tulisan lain yang sah di panel admin: menyetel ulang
-                # sandi akun orang tua yang lupa — sama domainnya dengan
-                # membuat akun (akun itu ciptaan admin). Detail di proses_admin.
+            elif data.get("aksi") in ("guru_sandi", "guru_hapus"):
+                # Tulisan domain admin di berkas sandi: setel ulang sandi
+                # atau hapus akun orang tua yang typo. Keduanya murni
+                # urusan auth.json — anak & sesinya tetap. Detail di
+                # proses_admin.
                 pesan, galat = proses_admin(data)
             else:
                 galat = "Aksi tidak dikenal."
@@ -1073,8 +1058,6 @@ class Penangan(BaseHTTPRequestHandler):
                 sesi_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
                 return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
-            if self._peran_saya() == "admin":
-                return self._tolak_admin()
             with database.buka() as kon:
                 if not self._bisa_lihat_sesi(kon, sesi_id):
                     return self._kirim(
@@ -1092,8 +1075,6 @@ class Penangan(BaseHTTPRequestHandler):
 
         if jalur.startswith("/sesi-gabungan/"):
             # Latihan lintas BEBERAPA topik pilihan guru (poin 4 tahap 2).
-            if self._peran_saya() == "admin":
-                return self._tolak_admin()
             try:
                 siswa_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
@@ -1168,8 +1149,6 @@ class Penangan(BaseHTTPRequestHandler):
         if jalur.startswith("/sesi-remedial/"):
             # Latihan ulang (poin a feedback Filia): sesi berisi HANYA
             # konsep yang pernah dijawab salah anak ini, dengan soal baru.
-            if self._peran_saya() == "admin":
-                return self._tolak_admin()
             try:
                 siswa_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
@@ -1223,8 +1202,6 @@ class Penangan(BaseHTTPRequestHandler):
             return
 
         if jalur.startswith("/sesi-baru/"):
-            if self._peran_saya() == "admin":
-                return self._tolak_admin()
             try:
                 siswa_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
@@ -1317,8 +1294,6 @@ class Penangan(BaseHTTPRequestHandler):
             return
 
         if jalur.startswith("/lampiran/"):
-            if self._peran_saya() == "admin":
-                return self._tolak_admin()
             bagian = jalur.split("/")
             try:
                 angka = int(bagian[2])
@@ -1398,8 +1373,6 @@ class Penangan(BaseHTTPRequestHandler):
             return
 
         if jalur.startswith("/sesi/") and jalur.endswith("/hapus"):
-            if self._peran_saya() == "admin":
-                return self._tolak_admin()
             try:
                 sesi_id = int(jalur.split("/")[2])
             except (ValueError, IndexError):
@@ -1456,9 +1429,6 @@ class Penangan(BaseHTTPRequestHandler):
 
         if not jalur.startswith("/sesi/"):
             return self._kirim(_halaman("404", "<h1>Tidak ada</h1>"), 404)
-        if self._peran_saya() == "admin":
-            # Simpan jawaban/diagnosis = tulis data murid.
-            return self._tolak_admin()
 
         panjang = int(self.headers.get("Content-Length", 0))
         mentah = self.rfile.read(panjang).decode("utf-8")
