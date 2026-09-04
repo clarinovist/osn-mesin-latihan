@@ -75,3 +75,8 @@ produk/PRD.pdf
 produk/Rencana Produk - Peta Jalan.pdf
 produk/Rencana Produk - Peta Jalan.html
 produk/Rencana Spike - Coretan ke Diagnosis.html
+
+# Instrumen wawancara: PDF hasil ekspor dari .md sumber, bisa dibangkitkan ulang.
+riset-pasar/wawancara-validasi-pasar/*.pdf
+# Instrumen pilot 10 keluarga: lokal saja, jangan di-commit.
+riset-pasar/wawancara-validasi-pasar/*-pilot.md
