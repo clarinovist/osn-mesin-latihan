@@ -881,6 +881,24 @@ tr.sorot-baru, div.sorot-baru {{
   box-shadow: 0 0 0 3px {T.AKSEN_MURID_UTAMA}55;
 }}
 
+/* ── Tombol mata sandi pada permukaan Stitch ───────────────────────────
+   SKRIP_MATA_SANDI (teacher_style.py) membungkus tiap input[type=password]
+   dengan .kolom-sandi lalu menyisipkan tombol .tombol-mata. CSS-nya wajib
+   ada di SINI, bukan cuma di GAYA_GURU: halaman publik (/masuk, /daftar)
+   hanya memuat gaya_stitch(), jadi tanpa blok ini tombolnya lahir tanpa
+   posisi absolut dan nongol di BAWAH kolom, bukan di dalamnya. */
+.kolom-sandi {{ position: relative; display: block; }}
+.kolom-sandi > input {{ padding-right: 3rem !important; }}
+.tombol-mata {{
+  position: absolute; top: 50%; right: {T.SP_1}; transform: translateY(-50%);
+  width: {T.TARGET_SENTUH}; height: {T.TARGET_SENTUH};
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; border: none; background: none; box-shadow: none;
+  color: {T.TEKS_VARIAN}; cursor: pointer; border-radius: {T.RADIUS_KECIL};
+}}
+.tombol-mata:hover {{ color: {T.TEKS_UTAMA}; }}
+.tombol-mata svg {{ display: block; }}
+
 .masuk-tombol-st {{
   width: 100%; font-size: 1.05rem; padding: .9rem;
   background: {T.AKSEN_MURID_KORAL}; color: {T.TEKS_PUTIH};

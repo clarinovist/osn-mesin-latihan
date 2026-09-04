@@ -725,6 +725,7 @@ class Penangan(BaseHTTPRequestHandler):
         masuk_mobile. Logika auth TIDAK berubah — ini hanya render.
         """
         from style_stitch import gaya_stitch
+        from teacher_style import SKRIP_MATA_SANDI
 
         kabar = (
             f'<div class="masuk-galat-st">{html.escape(galat)}</div>' if galat else ""
@@ -764,6 +765,7 @@ class Penangan(BaseHTTPRequestHandler):
     <p class="masuk-link-st"><a href="/lupa-sandi">Lupa sandi?</a></p>
   </div>
 </div>
+<script>{SKRIP_MATA_SANDI}</script>
 </body></html>"""
         return body.encode()
 
