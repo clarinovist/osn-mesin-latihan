@@ -225,30 +225,82 @@ membuatkan akunmu — untuk menyetel ulang sandimu.</li>
 
 
 def halaman_landing() -> bytes:
+    """Landing publik — mengikuti mockup Stitch landing_page_desktop.
+
+    Memakai kerangka .landing-*-st sendiri (container 75rem), BUKAN
+    .publik-*-st yang diklem 46rem untuk form: klem itu membuat
+    halaman tampil separo layar di laptop (keluhan 4 Sep 2026).
+
+    Yang sengaja TIDAK disalin dari mockup: nama "Caraku" (pakai
+    T.NAMA_PRODUK), logo dari URL asing (pakai brand.mark), Tailwind
+    CDN (CSS manual + token), klaim "Tulis Tangan" (aplikasi tidak
+    punya input tulis tangan — yang ada foto lembar + AI vision yang
+    dikonfirmasi guru), klaim "gratis" (keputusan bisnis), dan tombol
+    "Cek Jawaban" (kontrol mati di halaman publik).
+    """
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
+    mark_topbar = brand.mark("topbar")
+    mark_hero = brand.mark("badge")
     isi = f"""
-<div class="publik-topbar-st"><a class="brand" href="/">{brand.mark("topbar")}<span>{n}</span></a>
-<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav></div>
+<header class="landing-topbar-st"><div class="landing-topbar-isi-st">
+<a class="brand" href="/">{mark_topbar}<span>{n}</span></a>
+<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav>
+</div></header>
 
-<div class="publik-bungkus-st">
-<section class="publik-kartu-st" style="text-align:center;align-items:center">
-  {brand.mark("hero")}
-  <h1 class="publik-judul-st" style="font-size:2rem">{n}</h1>
-  <p class="publik-sub-st" style="font-size:1.05rem">{tag}</p>
-  <p class="publik-isi-st">Anak berlatih matematika, menuliskan <b>caranya</b>, dan sistem
-  menunjukkan letak kesalahannya — salah baca, salah konsep, salah hitung,
-  atau salah tulis. Orang tua dan guru melihat peta belajarnya, bukan
+<div class="landing-bungkus-st">
+<section class="landing-hero-st">
+<div class="landing-hero-teks-st">
+  <div class="landing-merek-st">{mark_hero}<span>{n}</span></div>
+  <h1 class="landing-judul-st">Latih. Tulis caramu. Ketahui letak salahmu.</h1>
+  <p class="landing-tagline-st">{tag}</p>
+  <p class="landing-sub-st">Anak berlatih matematika, menuliskan <b>caranya</b>, dan
+  sistem menunjukkan letak kesalahannya — salah baca, salah konsep, salah
+  hitung, atau salah tulis. Orang tua dan guru melihat peta belajarnya, bukan
   sekadar nilai.</p>
-  <p style="margin-top:1rem"><a class="tombol-coral" href="/daftar">
-  <span class="material-symbols-outlined" style="font-size:1.1rem">rocket_launch</span>
+  <p class="landing-cta-baris-st"><a class="tombol-coral" href="/daftar">
+  <span class="material-symbols-outlined" style="font-size:1.15rem">rocket_launch</span>
   Mulai — daftar sekarang</a></p>
+</div>
+
+<div class="landing-demo-st">
+  <div class="landing-demo-kepala-st"><span>Soal 4/10</span><span>Contoh</span></div>
+  <p class="landing-demo-soal-st">Berapa hasil dari 345 + 128?</p>
+  <div class="landing-demo-cara-st">  345
++ 128
+─────
+  463</div>
+  <div class="landing-demo-hasil-st">
+    <p class="landing-demo-label-st">Letak salahnya</p>
+    <div class="landing-kode-grup-st">
+      <span class="landing-kode-st aktif">H · Salah hitung</span>
+      <span class="landing-kode-st">K · Salah konsep</span>
+      <span class="landing-kode-st">B · Salah baca</span>
+    </div>
+    <p class="landing-demo-catatan-st"><b>Caranya sudah benar</b> — susun
+    bersusun, mulai dari satuan. Yang meleset di 5 + 8: hasilnya 13, tulis 3
+    simpan 1. Jadi jawabannya 473, bukan 463.</p>
+  </div>
+</div>
 </section>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:{T.SP_5};margin-top:{T.SP_5}">
-<section class="publik-kartu-st">
-  <h2 class="publik-judul-st" style="font-size:1.1rem">Untuk siapa</h2>
-  <div class="publik-isi-st">
+<section class="landing-pill-baris-st">
+  <span class="landing-pill-st">
+  <span class="material-symbols-outlined" style="font-size:1.15rem">edit_document</span>
+  Tulis caranya</span>
+  <span class="landing-pill-st">
+  <span class="material-symbols-outlined" style="font-size:1.15rem">query_stats</span>
+  Peta belajar</span>
+  <span class="landing-pill-st">
+  <span class="material-symbols-outlined" style="font-size:1.15rem">mood</span>
+  Tanpa tekanan</span>
+</section>
+
+<div class="landing-grid-st">
+<section class="landing-kartu-st">
+  <h2 class="landing-kartu-judul-st">
+  <span class="material-symbols-outlined">groups</span>Untuk siapa</h2>
+  <div class="landing-kartu-isi-st">
   <p><b>Orang tua</b> — temani anak belajar di rumah, lihat perkembangannya
   dari laporan mingguan.</p>
   <p><b>Guru &amp; les privat</b> — kelola banyak murid, beri latihan sesuai
@@ -256,9 +308,10 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 
-<section class="publik-kartu-st">
-  <h2 class="publik-judul-st" style="font-size:1.1rem">Cara kerja</h2>
-  <div class="publik-isi-st">
+<section class="landing-kartu-st">
+  <h2 class="landing-kartu-judul-st">
+  <span class="material-symbols-outlined">list_alt</span>Cara kerja</h2>
+  <div class="landing-kartu-isi-st">
   <ol>
     <li>Buat sesi latihan — pilih topik &amp; tingkat (P3–P6).</li>
     <li>Anak mengerjakan, lalu menuliskan caranya sendiri.</li>
@@ -268,17 +321,19 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 
-<section class="publik-kartu-st">
-  <h2 class="publik-judul-st" style="font-size:1.1rem">Topik latihan</h2>
-  <div class="publik-isi-st">
+<section class="landing-kartu-st">
+  <h2 class="landing-kartu-judul-st">
+  <span class="material-symbols-outlined">functions</span>Topik latihan</h2>
+  <div class="landing-kartu-isi-st">
   <p>Pola bilangan, aritmetika dasar, geometri datar, kombinatorik — dengan
   soal yang dibuat otomatis sehingga tiap sesi berbeda dari sebelumnya.</p>
   </div>
 </section>
 
-<section class="publik-kartu-st">
-  <h2 class="publik-judul-st" style="font-size:1.1rem">Ke arah kompetisi</h2>
-  <div class="publik-isi-st">
+<section class="landing-kartu-st">
+  <h2 class="landing-kartu-judul-st">
+  <span class="material-symbols-outlined">emoji_events</span>Ke arah kompetisi</h2>
+  <div class="landing-kartu-isi-st">
   <p>Materi disusun mengikuti silabus OSN Matematika SD (Bilangan,
   Aritmatika, Geometri, Statistika &amp; Pengukuran, Kombinatorik) dan cocok
   juga untuk persiapan SASMO. Berlatih teratur di sini adalah fondasi kuat
@@ -287,11 +342,12 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 </div>
-
-<footer class="publik-sub-st" style="text-align:center;margin-top:2rem">
-  <a href="/kebijakan-privasi">Kebijakan Privasi</a>
-</footer>
 </div>
+
+<footer class="landing-footer-st"><div class="landing-footer-isi-st">
+  <div><a href="/kebijakan-privasi">Kebijakan Privasi</a></div>
+  <div>{n} — {tag}</div>
+</div></footer>
 """
     return _halaman_publik_stitch(
         T.NAMA_PRODUK,

@@ -975,6 +975,177 @@ a.tombol-coral {{
   display: inline-flex; align-items: center; gap: {T.SP_2};
 }}
 a.tombol-coral:hover {{ filter: brightness(1.06); }}
+/* ══ Landing publik (mockup Stitch landing_page_desktop) ══
+   Landing TIDAK memakai .publik-bungkus-st: itu klem 46rem milik
+   halaman form (daftar/lupa-sandi/kebijakan) dan di laptop menyisakan
+   separo layar kosong. Container sendiri 75rem, sama dengan mockup. */
+.landing-topbar-st {{
+  background: {T.LATAR_KARTU}; border-bottom: 1px solid {T.BORDER_VARIAN};
+  position: sticky; top: 0; z-index: 50;
+}}
+.landing-topbar-isi-st {{
+  max-width: {T.LEBAR_LANDING}; margin: 0 auto;
+  min-height: 4.5rem; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 {T.SP_5};
+  font-family: {T.FONT_HEADLINE};
+}}
+.landing-topbar-st .brand {{
+  display: flex; align-items: center; gap: {T.SP_2}; text-decoration: none;
+  font-weight: 800; font-size: 1.15rem; color: {T.WARNA_WORDMARK};
+}}
+.landing-topbar-st .tombol-putih {{
+  font: inherit; color: {T.AKSEN_TEAL_TUA}; background: none;
+  border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_2} {T.SP_4}; font-weight: 600; font-size: .9rem;
+  text-decoration: none; min-height: {T.TARGET_SENTUH};
+  display: inline-flex; align-items: center;
+}}
+.landing-topbar-st .tombol-putih:hover {{
+  border-color: {T.AKSEN_MURID_UTAMA}; color: {T.AKSEN_MURID_UTAMA};
+}}
+.landing-bungkus-st {{
+  max-width: {T.LEBAR_LANDING}; margin: 0 auto;
+  padding: {T.SP_6} {T.SP_5} 3rem;
+}}
+
+/* Hero 2 kolom: proposisi kiri, bukti visual kanan. Di bawah 60rem
+   (HP/tablet potret) tetap satu kolom — kartu demo turun ke bawah. */
+.landing-hero-st {{
+  display: grid; grid-template-columns: 1fr; gap: {T.SP_6};
+  align-items: center; margin-bottom: 3.5rem;
+}}
+@media (min-width: 60rem) {{
+  .landing-hero-st {{ grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; }}
+}}
+.landing-hero-teks-st {{ display: flex; flex-direction: column; gap: {T.SP_5}; }}
+.landing-merek-st {{
+  display: flex; align-items: center; gap: {T.SP_3};
+  font-family: {T.FONT_HEADLINE}; font-weight: 800; font-size: 1.4rem;
+  color: {T.WARNA_WORDMARK};
+}}
+.landing-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 800;
+  font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.1;
+  letter-spacing: -0.02em; color: {T.TEKS_JUDUL}; margin: 0;
+}}
+.landing-sub-st {{
+  font-family: {T.FONT_BODY}; font-size: 1.1rem; line-height: 1.6;
+  color: {T.TEKS_VARIAN}; margin: 0; max-width: 34rem;
+}}
+.landing-tagline-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: 1rem;
+  color: {T.AKSEN_TEAL_TUA}; margin: 0;
+}}
+.landing-cta-baris-st {{ display: flex; align-items: center; gap: {T.SP_4}; flex-wrap: wrap; }}
+.landing-cta-baris-st a.tombol-coral {{ padding: .9rem 1.8rem; font-size: 1.05rem; }}
+
+/* Kartu demo — bukti visual fitur inti. Murni ilustrasi: TIDAK ada
+   kontrol sama sekali (mockup memakai tombol "Cek Jawaban" yang mati). */
+.landing-demo-st {{
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: 20px; padding: {T.SP_5};
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.18);
+  display: flex; flex-direction: column; gap: {T.SP_4};
+  max-width: 30rem; width: 100%; margin: 0 auto;
+}}
+.landing-demo-kepala-st {{
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid {T.LATAR_SEKUNDER_NETRAL}; padding-bottom: {T.SP_3};
+  font-family: {T.FONT_HEADLINE}; font-size: .82rem; color: {T.TEKS_VARIAN};
+  font-weight: 600;
+}}
+.landing-demo-soal-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: 1.15rem;
+  color: {T.TEKS_JUDUL}; margin: 0;
+}}
+.landing-demo-cara-st {{
+  border: 2px dashed {T.AKSEN_MURID_UTAMA}; border-radius: {T.RADIUS_KARTU};
+  background: {T.LATAR_MURID}; padding: {T.SP_4};
+  font-family: {T.FONT_CETAK}; font-size: 1.35rem; line-height: 1.5;
+  text-align: center; color: {T.TEKS_VARIAN}; white-space: pre-line;
+}}
+
+.landing-demo-hasil-st {{
+  background: {T.LATAR_SEKUNDER_LEMBUT}; border-radius: {T.RADIUS_KARTU};
+  padding: {T.SP_4}; display: flex; flex-direction: column; gap: {T.SP_3};
+}}
+.landing-demo-label-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .8rem;
+  color: {T.TEKS_VARIAN}; margin: 0;
+}}
+.landing-kode-grup-st {{ display: flex; flex-wrap: wrap; gap: {T.SP_2}; }}
+.landing-kode-st {{
+  display: inline-flex; align-items: center; gap: {T.SP_1};
+  border-radius: {T.RADIUS_PIL}; padding: .2rem .7rem;
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .76rem;
+  background: {T.LATAR_KARTU}; color: {T.TEKS_VARIAN};
+  border: 1px solid {T.BORDER_VARIAN};
+}}
+.landing-kode-st.aktif {{
+  background: {T.KODE_SALAH_HITUNG_BG}; color: {T.KODE_SALAH_HITUNG_TEKS};
+  border-color: {T.KODE_SALAH_HITUNG_TEKS};
+}}
+.landing-demo-catatan-st {{
+  font-family: {T.FONT_BODY}; font-size: .88rem; line-height: 1.55;
+  color: {T.TEKS_UTAMA}; margin: 0;
+}}
+
+/* Pill fitur — 3 pil teal horizontal (mockup). */
+.landing-pill-baris-st {{
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: {T.SP_4}; margin-bottom: 3.5rem;
+}}
+.landing-pill-st {{
+  display: inline-flex; align-items: center; gap: {T.SP_2};
+  background: {T.AKSEN_MURID_UTAMA}; color: #fff;
+  border-radius: {T.RADIUS_PIL}; padding: {T.SP_3} {T.SP_5};
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .92rem;
+  box-shadow: 0 2px 6px -2px rgba(0,0,0,.18);
+}}
+
+/* Grid kartu isi — 3 kolom di layar lebar (dulu 2x2 karena bungkus 46rem). */
+.landing-grid-st {{
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: {T.SP_5}; margin-bottom: 3rem;
+}}
+.landing-kartu-st {{
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_5};
+  display: flex; flex-direction: column; gap: {T.SP_3};
+}}
+.landing-kartu-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: 1.05rem;
+  color: {T.TEKS_JUDUL}; margin: 0;
+  display: flex; align-items: center; gap: {T.SP_2};
+}}
+.landing-kartu-isi-st {{
+  font-family: {T.FONT_BODY}; font-size: .95rem; line-height: 1.6;
+  color: {T.TEKS_UTAMA};
+}}
+.landing-kartu-isi-st p {{ margin: 0 0 {T.SP_3}; }}
+.landing-kartu-isi-st p:last-child {{ margin-bottom: 0; }}
+.landing-kartu-isi-st ol {{ margin: 0; padding-left: 1.15rem; }}
+.landing-kartu-isi-st li {{ margin-bottom: {T.SP_2}; }}
+
+/* Footer bar melintang (mockup: bg surface-container). */
+.landing-footer-st {{
+  background: {T.LATAR_SEKUNDER_NETRAL};
+  border-top: 1px solid {T.BORDER_VARIAN};
+  padding: {T.SP_6} {T.SP_5};
+}}
+.landing-footer-isi-st {{
+  max-width: {T.LEBAR_LANDING}; margin: 0 auto; text-align: center;
+  font-family: {T.FONT_BODY}; font-size: .9rem; color: {T.TEKS_VARIAN};
+  display: flex; flex-direction: column; gap: {T.SP_2};
+}}
+.landing-footer-isi-st a {{ color: {T.AKSEN_TEAL_TUA}; }}
+
+@media (max-width: 40rem) {{
+  .landing-bungkus-st {{ padding: {T.SP_5} {T.SP_4} 2.5rem; }}
+  .landing-topbar-isi-st {{ padding: 0 {T.SP_4}; }}
+  .landing-demo-cara-st {{ font-size: 1.15rem; }}
+  .landing-pill-baris-st {{ gap: {T.SP_3}; }}
+}}
 /* Halaman hasil murid (/murid/hasil/<id>) — anak melihat letak salahnya.
    Warna status memakai palet murid yang sudah ada; tidak ada token baru. */
 .hasil-ringkas-st {{

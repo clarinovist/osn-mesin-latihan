@@ -173,7 +173,14 @@ RADIUS_BULAT = "50%"       # nomor badge
 # ─────────────────────────────────────────────────────────────────────
 
 TARGET_SENTUH = "44px"     # pedoman aksesibilitas WCAG 2.5.5
-LEBAR_KONTEN = "46rem"     # maksimum lebar konten layar
+LEBAR_KONTEN = "46rem"     # maksimum lebar konten layar (kolom baca & form)
+
+# Landing publik = permukaan marketing, bukan kolom baca. 46rem di sana
+# menyisakan ~776px kosong di laptop 1512px (terukur 4 Sep: konten 736px,
+# 48,7% viewport — keluhan "tampilannya cuma separo"). 75rem = 1200px,
+# sama dengan container mockup Stitch landing_page_desktop.
+LEBAR_LANDING = "75rem"
+
 
 # ─────────────────────────────────────────────────────────────────────
 # Token Stitch (adopsi ui 2026-09-01 — lebih dekat Material 3 "surface")
