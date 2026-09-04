@@ -1,0 +1,181 @@
+"""Regresi layout halaman koreksi sesi guru.
+
+Audit visual 4 Sep 2026 menemukan kolom jawaban singkat mengambil ruang lebih
+besar daripada dropdown kode, label kode turun, dan tiap kartu terlalu tinggi.
+Test ini mengunci proporsi, kepadatan, serta ringkasan status agar masalah itu
+tidak kembali saat CSS dirapikan.
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import database  # noqa: E402
+import style_stitch  # noqa: E402
+import teacher_pages  # noqa: E402
+
+
+def _blok(css: str, selektor: str) -> str:
+    cocok = re.search(
+        r"^" + re.escape(selektor) + r"\s*\{(.*?)\}", css, re.S | re.M
+    )
+    assert cocok, f"selektor {selektor} tidak ditemukan"
+    return cocok.group(1)
+
+
+@pytest.fixture()
+def db(tmp_path, monkeypatch):
+    jalur = tmp_path / "uji.db"
+    database.siapkan(jalur)
+    monkeypatch.setattr(database, "BAWAAN", jalur)
+    return jalur
+
+
+def _buat_sesi(db, seed=7):
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(kon, "Claudia", tingkat="P3")
+        sesi_id = database.buat_sesi(
+            kon, siswa_id, seed=seed, level="P3", topik="statistika"
+        )
+    return sesi_id
+
+
+def test_kolom_jawaban_ringkas_dan_kode_mengambil_sisa_ruang():
+    css = style_stitch.CSS_SESI
+    assert "grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr)" in css
+    assert "align-items: end" in _blok(css, ".koreksi-baris-st")
+
+
+def test_form_tetap_satu_kolom_sebelum_breakpoint_desktop():
+    css = style_stitch.CSS_SESI
+    dasar = _blok(css, ".koreksi-baris-st")
+    assert "grid-template-columns: 1fr" in dasar
+    bagian_grid = css.split("/* Baris dua kolom:", 1)[1].split(
+        ".koreksi-input-st", 1
+    )[0]
+    assert "@media (min-width: 40rem)" in bagian_grid
+    assert "@media (min-width: 30rem)" not in bagian_grid
+
+
+def test_kartu_dan_caraku_lebih_padat_tanpa_mengecilkan_target_sentuh():
+    css = style_stitch.CSS_SESI
+    kartu = _blok(css, ".koreksi-kartu-st")
+    isi = _blok(css, ".koreksi-isi-st")
+    textarea = _blok(css, ".koreksi-textarea-st")
+    kontrol = _blok(css, ".koreksi-input-st")
+
+    assert "gap: 1rem" in kartu
+    assert "margin-bottom: 1rem" in kartu
+    assert "gap: 0.75rem" in isi
+    assert "min-height: 56px" in textarea
+    assert f"min-height: {style_stitch.T.TARGET_SENTUH}" in kontrol
+
+
+def test_label_kode_ringkas_dan_nama_template_ramah(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    badan = halaman.split("</style>", 1)[-1]
+    assert "Kode (kosong = usulan mesin)" in badan
+    assert "kosongkan = pakai usulan mesin" not in badan
+    assert "median_modus" not in badan
+    assert "Median &amp; modus" in badan
+
+
+def test_pembahasan_memakai_kelas_bukan_gaya_inline(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    assert '<div class="pembahasan-soal-st">' in halaman
+    pembahasan = _blok(style_stitch.CSS_SESI, ".pembahasan-soal-st")
+    assert style_stitch.T.LATAR_SEKUNDER_LEMBUT in pembahasan
+    assert style_stitch.T.AKSEN_MURID_UTAMA in pembahasan
+
+
+def test_alasan_mesin_benar_tidak_mengulang_status_benar(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{baris['sesi_soal_id']}": baris["kunci"],
+                f"cara_{baris['sesi_soal_id']}": "coretan",
+            },
+        )
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    badan = halaman.split("</style>", 1)[-1]
+    assert "Mesin: jawaban benar" not in badan
+    assert "BENAR" in badan
+
+
+def test_alasan_mesin_benar_tetap_tampil_saat_guru_mengoreksi_manual(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{baris['sesi_soal_id']}": baris["kunci"],
+                f"cara_{baris['sesi_soal_id']}": "coretan",
+                f"kode_{baris['sesi_soal_id']}": "H",
+            },
+        )
+        hasil = database.isi_sesi(kon, sesi_id)[0]
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    assert hasil["manual"]
+    assert hasil["alasan"] == "jawaban benar"
+    assert '<b>Mesin:</b> jawaban benar' in halaman
+
+
+def test_alasan_mesin_tetap_tampil_saat_guru_menandai_benar_manual(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{baris['sesi_soal_id']}": "jawaban lain",
+                f"cara_{baris['sesi_soal_id']}": "cara alternatif",
+                f"kode_{baris['sesi_soal_id']}": "benar",
+            },
+        )
+        hasil = database.isi_sesi(kon, sesi_id)[0]
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    assert hasil["benar"]
+    assert hasil["alasan"] != "jawaban benar"
+    assert f'<b>Mesin:</b> {hasil["alasan"]}' in halaman
+
+
+def test_alasan_mesin_yang_membantu_tetap_tampil(db):
+    sesi_id = _buat_sesi(db, seed=11)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        malrule = database.malrule_soal(kon, baris["soal_id"])[0]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{baris['sesi_soal_id']}": malrule["jawaban"],
+                f"cara_{baris['sesi_soal_id']}": "coretan",
+            },
+        )
+        hasil = database.isi_sesi(kon, sesi_id)[0]
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    assert hasil["alasan"]
+    assert f'<b>Mesin:</b> {hasil["alasan"]}' in halaman

@@ -1337,10 +1337,10 @@ CSS_SESI = f"""
    lebar; tumpuk vertikal di HP. */
 .koreksi-kartu-st {{
   background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
-  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_5} {T.SP_4} {T.SP_4};
-  margin-bottom: {T.SP_5}; position: relative;
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_4};
+  margin-bottom: {T.SP_4}; position: relative;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  display: flex; flex-direction: column; gap: {T.SP_5};
+  display: flex; flex-direction: column; gap: {T.SP_4};
 }}
 @media (min-width: 40rem) {{
   .koreksi-kartu-st {{ flex-direction: row; align-items: stretch; }}
@@ -1348,7 +1348,7 @@ CSS_SESI = f"""
   .koreksi-kartu-st .koreksi-status-st {{ width: 6rem; flex: none;
     border-left: 1px solid {T.BORDER_VARIAN}; padding-left: {T.SP_4}; }}
 }}
-.koreksi-isi-st {{ display: flex; flex-direction: column; gap: {T.SP_4}; }}
+.koreksi-isi-st {{ display: flex; flex-direction: column; gap: {T.SP_3}; }}
 .koreksi-isi-st.sudah {{ opacity: .85; }}
 
 /* Nomor + template_id badge. */
@@ -1369,6 +1369,15 @@ CSS_SESI = f"""
 
 .teks-soal-st {{ color: {T.TEKS_UTAMA}; line-height: 1.5; }}
 
+.pembahasan-soal-st {{
+  background: {T.LATAR_SEKUNDER_LEMBUT};
+  border-left: 3px solid {T.AKSEN_MURID_UTAMA};
+  border-radius: 0 {T.RADIUS_KECIL} {T.RADIUS_KECIL} 0;
+  color: {T.TEKS_VARIAN}; font-size: .88rem; line-height: 1.45;
+  padding: {T.SP_2} {T.SP_3};
+}}
+.pembahasan-soal-st b {{ color: {T.TEKS_JUDUL}; }}
+
 .kunci-baris-st {{
   background: {T.LATAR_SEKUNDER_LEMBUT}; border: 1px solid {T.BORDER_VARIAN};
   border-radius: {T.RADIUS_SEDANG}; padding: {T.SP_2} {T.SP_3};
@@ -1387,13 +1396,15 @@ CSS_SESI = f"""
   display: flex; align-items: center; gap: {T.SP_1};
 }}
 
-/* Baris dua kolom: Jawaban anak | Kode (select). */
+/* Baris dua kolom: jawaban singkat | kode yang butuh ruang label/pilihan. */
 .koreksi-baris-st {{
   display: grid; grid-template-columns: 1fr;
-  gap: {T.SP_3};
+  gap: {T.SP_3}; align-items: end;
 }}
-@media (min-width: 30rem) {{
-  .koreksi-baris-st {{ grid-template-columns: 1.4fr 1fr; }}
+@media (min-width: 40rem) {{
+  .koreksi-baris-st {{
+    grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr);
+  }}
 }}
 .koreksi-input-st {{
   font: inherit; font-size: 1rem; min-height: {T.TARGET_SENTUH};
@@ -1416,7 +1427,7 @@ CSS_SESI = f"""
 }}
 
 .koreksi-textarea-st {{
-  width: 100%; min-height: 70px;
+  width: 100%; min-height: 56px;
   border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
   padding: .6rem; font-size: 1rem; font-family: inherit;
   background: {T.LATAR_SEKUNDER_LEMBUT};

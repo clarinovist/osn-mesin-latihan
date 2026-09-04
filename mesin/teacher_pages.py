@@ -38,6 +38,18 @@ KODE_PILIHAN = [
     ("N", "N — menebak"),
 ]
 
+
+NAMA_TEMPLATE = {
+    "median_modus": "Median & modus",
+    "diagram_batang_garis": "Diagram batang & garis",
+}
+
+
+def _nama_template(template_id: str) -> str:
+    """Nama template yang mudah dipindai; ID internal tetap tidak berubah."""
+    return NAMA_TEMPLATE.get(template_id, template_id.replace("_", " ").capitalize())
+
+
 def _halaman(
     judul: str, isi: str, ident: tuple[str, str] | None = None,
     stitch: bool = False,
@@ -1175,7 +1187,8 @@ def halaman_sesi_stitch(
             )
 
         usulan = ""
-        if sudah and b["alasan"]:
+        alasan_redundan = b["alasan"] == "jawaban benar" and not b["manual"]
+        if sudah and b["alasan"] and not alasan_redundan:
             ragu = "" if (benar or kode) else " ragu"
             usulan = (
                 f'<div class="usulan-st{ragu}"><b>Mesin:</b> '
@@ -1199,16 +1212,17 @@ def halaman_sesi_stitch(
         )
 
         nomor = f'<span class="koreksi-nomor-st">{b["nomor"]}</span>'
-        tipe = f'<span class="koreksi-tipe-st">{b["template_id"]}</span>'
+        tipe = (
+            f'<span class="koreksi-tipe-st">'
+            f'{html.escape(_nama_template(b["template_id"]))}</span>'
+        )
 
         pembahasan_html = ""
         if getattr(soal, "pembahasan", ""):
             pembahasan_html = (
-                f'<div class="pembahasan-soal-st" style="margin-top:0.35rem;font-size:0.88rem;'
-                f'background:#f0f7ff;border-left:3px solid #3182ce;padding:0.4rem 0.6rem;border-radius:4px;'
-                f'color:#2b6cb0;">'
+                '<div class="pembahasan-soal-st">'
                 f'<b>Perhitungan/Langkah:</b> {html.escape(soal.pembahasan)}'
-                f'</div>'
+                '</div>'
             )
 
         kartu.append(f"""
@@ -1226,7 +1240,7 @@ def halaman_sesi_stitch(
                value="{html.escape(b["jawaban"] or "")}">
       </div>
       <div>
-        <label class="koreksi-label-st">Kode (kosongkan = pakai usulan mesin)</label>
+        <label class="koreksi-label-st">Kode (kosong = usulan mesin)</label>
         <select class="koreksi-select-st" name="kode_{b["sesi_soal_id"]}">{pilih}</select>
       </div>
     </div>
