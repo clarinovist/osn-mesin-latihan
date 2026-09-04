@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import random
 import sys
-from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import topic_logic as tl  # noqa: E402
 import topic_statistics as ts  # noqa: E402
+from diagnosis import setara  # noqa: E402
 
 LEVEL = ("P3", "P4", "P5", "P6")
 SEED = 300
@@ -120,3 +120,50 @@ def test_pengandaian_bekal_memakai_makanan_bukan_perlengkapan():
             soal = tl.benar_salah_pengandaian(**par)
             assert f"bekal {par['barang']}" in soal.teks
     assert jumlah_bekal > 0, "audit tidak pernah menyentuh varian bekal"
+
+
+# ── T1: median genap boleh desimal, tidak boleh dibulatkan // ──────────
+
+def _format_setengah(dua_kali_nilai: int) -> str:
+    """Format nilai /2 dengan koma desimal, secara eksak tanpa float."""
+    if dua_kali_nilai % 2 == 0:
+        return str(dua_kali_nilai // 2)
+    return f"{dua_kali_nilai // 2},5"
+
+
+def test_median_genap_desimal_kunci_dan_pembahasan_benar():
+    """Regresi nyata: [1,7,15,16,19,27] punya median 15,5, bukan 15.
+
+    Kunci dihitung ulang dari data mentah. Malrule juga harus memakai
+    format koma yang sama supaya diagnosis jawaban salah tidak runtuh.
+    """
+    kasus_desimal = 0
+    for lv in ("P4", "P5", "P6"):
+        for sd in range(1000):
+            par = ts._parameter("median_modus", random.Random(sd), lv)
+            if par["varian"] != "median" or len(par["data"]) % 2:
+                continue
+            data = par["data"]
+            urut = sorted(data)
+            dua_tengah = urut[len(urut) // 2 - 1] + urut[len(urut) // 2]
+            seharusnya = _format_setengah(dua_tengah)
+            soal = ts.median_modus(**par)
+            assert soal.kunci == seharusnya, (
+                f"median dibulatkan {lv}/{sd}: {data}; "
+                f"dapat {soal.kunci}, seharusnya {seharusnya}"
+            )
+            assert seharusnya in soal.pembahasan
+            if ",5" in seharusnya:
+                kasus_desimal += 1
+                for malrule in soal.malrule:
+                    # Semua jawaban numerik memakai format Indonesia;
+                    # titik desimal tidak boleh tercampur dengan koma kunci.
+                    assert ".5" not in malrule.jawaban
+    assert kasus_desimal > 0, "audit tidak pernah menyentuh median desimal"
+
+
+def test_median_contoh_regresi_15_koma_5():
+    soal = ts.median_modus("median", [16, 19, 1, 7, 15, 27])
+    assert soal.kunci == "15,5"
+    assert "15,5" in soal.pembahasan
+    assert setara(soal.kunci, "15.5"), "anak boleh mengetik titik desimal"

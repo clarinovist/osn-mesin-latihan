@@ -119,27 +119,46 @@ def median_modus(varian: str, data: list[int]) -> Soal:
     n = len(data)
     urut = sorted(data)
     if varian == "median":
+        def fmt_setengah(dua_kali_nilai: int) -> str:
+            """Format bilangan bulat/setengah dengan koma tanpa float."""
+            if dua_kali_nilai % 2 == 0:
+                return str(dua_kali_nilai // 2)
+            return f"{dua_kali_nilai // 2},5"
+
         if n % 2 == 1:
-            kunci = urut[n // 2]
-            k_tengah = data[n // 2]  # tengah tanpa urut
+            kunci_dua = 2 * urut[n // 2]
+            tengah_dua = 2 * data[n // 2]  # tengah tanpa urut
+            langkah_median = f"Nilai tengah (median) = {fmt_setengah(kunci_dua)}."
         else:
-            kunci = (urut[n // 2 - 1] + urut[n // 2]) // 2
-            k_tengah = (data[n // 2 - 1] + data[n // 2]) // 2  # tanpa urut
-        k_terkecil = urut[0]
-        h = kunci - 1
-        if k_tengah == kunci or k_tengah == h:
-            k_tengah = kunci + 1
-        if k_terkecil == kunci or k_terkecil == h or k_terkecil == k_tengah:
-            k_terkecil = kunci + 2
-        if h == k_tengah or h == k_terkecil:
-            h = kunci + 1
+            tengah_kiri, tengah_kanan = urut[n // 2 - 1], urut[n // 2]
+            # Simpan dalam satuan setengah agar 15,5 tetap eksak tanpa
+            # float. Sebelumnya `// 2` membulatkan 15,5 menjadi 15.
+            kunci_dua = tengah_kiri + tengah_kanan
+            tengah_dua = data[n // 2 - 1] + data[n // 2]  # tanpa urut
+            langkah_median = (
+                f"Dua nilai tengahnya {tengah_kiri} dan {tengah_kanan}. "
+                f"Median = ({tengah_kiri} + {tengah_kanan}) : 2 = "
+                f"{fmt_setengah(kunci_dua)}."
+            )
+        terkecil_dua = 2 * urut[0]
+        h_dua = kunci_dua - 2
+        while tengah_dua in (kunci_dua, h_dua):
+            tengah_dua += 2
+        while terkecil_dua in (kunci_dua, h_dua, tengah_dua):
+            terkecil_dua += 2
+        while h_dua in (kunci_dua, tengah_dua, terkecil_dua):
+            h_dua += 2
+        kunci = fmt_setengah(kunci_dua)
         mal = [
-            Malrule("median.tanpa_urut", str(k_tengah), "K", "mengambil nilai tengah tanpa mengurutkan data"),
-            Malrule("median.terkecil", str(k_terkecil), "K", "menjawab data terkecil, bukan median"),
-            Malrule("median.kurang_satu", str(h), "H", "perhitungan benar, hasilnya meleset satu"),
+            Malrule("median.tanpa_urut", fmt_setengah(tengah_dua), "K", "mengambil nilai tengah tanpa mengurutkan data"),
+            Malrule("median.terkecil", fmt_setengah(terkecil_dua), "K", "menjawab data terkecil, bukan median"),
+            Malrule("median.kurang_satu", fmt_setengah(h_dua), "H", "perhitungan benar, hasilnya meleset satu"),
         ]
         teks = f"Data: {', '.join(str(x) for x in data)}. Berapa mediannya?"
-        pembahasan = f"Langkah: Data diurutkan ({', '.join(str(x) for x in urut)}). Nilai tengah (median) = {kunci}."
+        pembahasan = (
+            f"Langkah: Data diurutkan ({', '.join(str(x) for x in urut)}). "
+            f"{langkah_median}"
+        )
         param = {"varian": varian, "data": data}
     else:
         # modus: nilai paling sering muncul

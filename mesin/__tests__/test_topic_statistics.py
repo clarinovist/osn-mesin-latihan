@@ -218,14 +218,18 @@ def test_median_modus_kunci():
             urut = sorted(data)
             n = len(data)
             if n % 2 == 1:
-                expected = urut[n // 2]
+                expected = str(urut[n // 2])
             else:
-                expected = (urut[n // 2 - 1] + urut[n // 2]) // 2
+                jumlah_tengah = urut[n // 2 - 1] + urut[n // 2]
+                if jumlah_tengah % 2 == 0:
+                    expected = str(jumlah_tengah // 2)
+                else:
+                    expected = f"{jumlah_tengah // 2},5"
         else:
             from collections import Counter
             hitung = Counter(data)
-            expected = max(hitung.items(), key=lambda kv: kv[1])[0]
-        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+            expected = str(max(hitung.items(), key=lambda kv: kv[1])[0])
+        assert s.kunci == expected, f"{p=}, kunci={s.kunci}"
         assert s.kunci not in [m.jawaban for m in s.malrule]
         assert {"K", "H"} <= {m.kode for m in s.malrule}, p
 
