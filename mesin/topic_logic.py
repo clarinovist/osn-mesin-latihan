@@ -88,6 +88,51 @@ def benar_salah_pengandaian(
     )
 
 
+def _pilih_indeks(n: int, benar: int, utama: int, kedua: int):
+    """Pilih indeks malrule yang dijamin saling berbeda: (K1, H, K2|None).
+
+    `saring_malrule` membuang malrule yang nilainya kembar dengan kunci
+    atau dengan malrule lain — yang PERTAMA didaftarkan menang (§7.1).
+    Sebelum perbaikan ini `h` dan `k2` sering menunjuk orang yang SAMA:
+    K menang, lalu k2 ditambal string "orang lain" sehingga jalur K mati
+    (anak tak mungkin menulis "orang lain"), dan anak yang salah konsep
+    justru divonis H "meleset satu posisi".
+
+    Dengan 3 nama hanya tersedia 2 pengecoh, sedangkan kode butuh 3 —
+    secara matematis mustahil. Prioritasnya K1 lalu H (dua kode berbeda
+    lebih berharga daripada dua K yang sama), K2 hanya kalau masih ada
+    ruang. Nilai yang dipakai selalu nama nyata dari cerita.
+    """
+    dipakai = {benar}
+
+    def ambil(pilihan: int):
+        if 0 <= pilihan < n and pilihan not in dipakai:
+            dipakai.add(pilihan)
+            return pilihan
+        for j in range(n):
+            if j not in dipakai:
+                dipakai.add(j)
+                return j
+        return None
+
+    i_k1 = ambil(utama)
+    # H = posisi bersebelahan dengan kunci ("meleset satu"), beda dari K1.
+    i_h = None
+    for kandidat in (benar + 1, benar - 1):
+        if 0 <= kandidat < n and kandidat not in dipakai:
+            dipakai.add(kandidat)
+            i_h = kandidat
+            break
+    if i_h is None:
+        i_h = ambil(benar + 1)
+    i_k2 = ambil(kedua)
+    # n >= 3 di semua pemanggil, jadi K1 dan H selalu dapat jatah; hanya
+    # K2 yang boleh kosong. assert menahan kontrak itu supaya perubahan
+    # komposisi di _parameter tidak diam-diam menghasilkan None.
+    assert i_k1 is not None and i_h is not None
+    return i_k1, i_h, i_k2
+
+
 def tabel_penalaran(urutan: list[str], tanya: str) -> Soal:
     """Urutan dari aturan perbandingan (lebih tinggi/lebih besar).
 
@@ -99,74 +144,44 @@ def tabel_penalaran(urutan: list[str], tanya: str) -> Soal:
         perbandingan.append(f"{urutan[i]} lebih tinggi dari {urutan[i+1]}")
     kalimat = ", ".join(perbandingan)
 
+    # i_* = INDEKS pengecoh, dipilih lewat _pilih_indeks supaya K dan H
+    # dijamin menunjuk orang yang BERBEDA. Sebelumnya h dan k2 sering
+    # sama: K menang (didaftarkan duluan), k2 ditambal "orang lain" ->
+    # jalur K mati dan anak yang salah konsep divonis H. K2 bisa None
+    # kalau namanya cuma 3 (2 pengecoh untuk 3 slot) — H diprioritaskan
+    # karena dua KODE berbeda lebih berharga daripada dua K sejenis.
     if tanya == "tertinggi":
         kunci = urutan[0]
         teks = f"{kalimat}. Siapa yang paling tinggi?"
-        k1 = urutan[-1]  # terendah
-        k2 = urutan[1]  # urutan kedua
-        h = urutan[1] if n >= 3 else urutan[-1]
-        if k1 == kunci or k1 == h:
-            k1 = "orang lain"
-        if k2 == kunci or k2 == h or k2 == k1:
-            k2 = "orang lain"
-        if h == kunci:
-            h = "orang lain"
-        mal = [
-            Malrule("tabel.terendah", k1, "K", "menjawab yang paling rendah, bukan paling tinggi"),
-            Malrule("tabel.kedua", k2, "K", "menjawab urutan kedua, bukan pertama"),
-            Malrule("tabel.kurang_satu", h, "H", "urutan benar, meleset satu posisi"),
-        ]
+        i_k1, i_h, i_k2 = _pilih_indeks(n, benar=0, utama=n - 1, kedua=1)
+        id_k1, alasan_k1 = "tabel.terendah", "menjawab yang paling rendah, bukan paling tinggi"
+        id_k2, alasan_k2 = "tabel.kedua", "menjawab urutan kedua, bukan pertama"
     elif tanya == "terendah":
         kunci = urutan[-1]
         teks = f"{kalimat}. Siapa yang paling rendah?"
-        k1 = urutan[0]  # tertinggi
-        k2 = urutan[-2]  # kedua dari bawah
-        h = urutan[-2] if n >= 3 else urutan[0]
-        if k1 == kunci or k1 == h:
-            k1 = "orang lain"
-        if k2 == kunci or k2 == h or k2 == k1:
-            k2 = "orang lain"
-        if h == kunci:
-            h = "orang lain"
-        mal = [
-            Malrule("tabel.tertinggi", k1, "K", "menjawab yang paling tinggi, bukan paling rendah"),
-            Malrule("tabel.kedua_bawah", k2, "K", "menjawab urutan kedua dari bawah, bukan terakhir"),
-            Malrule("tabel.kurang_satu", h, "H", "urutan benar, meleset satu posisi"),
-        ]
+        i_k1, i_h, i_k2 = _pilih_indeks(n, benar=n - 1, utama=0, kedua=n - 2)
+        id_k1, alasan_k1 = "tabel.tertinggi", "menjawab yang paling tinggi, bukan paling rendah"
+        id_k2, alasan_k2 = "tabel.kedua_bawah", "menjawab urutan kedua dari bawah, bukan terakhir"
     elif tanya == "posisi_dua":
         kunci = urutan[1]
         teks = f"{kalimat}. Siapa yang berada di urutan kedua dari atas?"
-        k1 = urutan[0]  # tertinggi
-        k2 = urutan[2]  # ketiga
-        h = urutan[0]
-        if k1 == kunci or k1 == h:
-            k1 = "orang lain"
-        if k2 == kunci or k2 == h or k2 == k1:
-            k2 = "orang lain"
-        if h == kunci:
-            h = "orang lain"
-        mal = [
-            Malrule("tabel.pertama", k1, "K", "menjawab yang paling tinggi, bukan urutan kedua"),
-            Malrule("tabel.ketiga", k2, "K", "menjawab urutan ketiga, bukan kedua"),
-            Malrule("tabel.kurang_satu", h, "H", "urutan benar, meleset satu posisi"),
-        ]
+        i_k1, i_h, i_k2 = _pilih_indeks(n, benar=1, utama=0, kedua=2)
+        id_k1, alasan_k1 = "tabel.pertama", "menjawab yang paling tinggi, bukan urutan kedua"
+        id_k2, alasan_k2 = "tabel.ketiga", "menjawab urutan ketiga, bukan kedua"
     else:  # posisi_tiga (hanya untuk n>=4)
         kunci = urutan[2]
         teks = f"{kalimat}. Siapa yang berada di urutan ketiga dari atas?"
-        k1 = urutan[1]  # kedua
-        k2 = urutan[3]  # keempat
-        h = urutan[1]
-        if k1 == kunci or k1 == h:
-            k1 = "orang lain"
-        if k2 == kunci or k2 == h or k2 == k1:
-            k2 = "orang lain"
-        if h == kunci:
-            h = "orang lain"
-        mal = [
-            Malrule("tabel.kedua", k1, "K", "menjawab urutan kedua, bukan ketiga"),
-            Malrule("tabel.keempat", k2, "K", "menjawab urutan keempat, bukan ketiga"),
-            Malrule("tabel.kurang_satu", h, "H", "urutan benar, meleset satu posisi"),
-        ]
+        i_k1, i_h, i_k2 = _pilih_indeks(n, benar=2, utama=1, kedua=3)
+        id_k1, alasan_k1 = "tabel.kedua", "menjawab urutan kedua, bukan ketiga"
+        id_k2, alasan_k2 = "tabel.keempat", "menjawab urutan keempat, bukan ketiga"
+
+    mal = [Malrule(id_k1, urutan[i_k1], "K", alasan_k1)]
+    if i_k2 is not None:
+        mal.append(Malrule(id_k2, urutan[i_k2], "K", alasan_k2))
+    mal.append(
+        Malrule("tabel.kurang_satu", urutan[i_h], "H",
+                "urutan benar, meleset satu posisi")
+    )
     return Soal(
         "tabel_penalaran",
         {"urutan": urutan, "tanya": tanya},
