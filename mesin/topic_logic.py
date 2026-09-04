@@ -31,7 +31,7 @@ def benar_salah_pengandaian(
     """
     opsi = ["A", "B", "C", "D", "E"]
     if varian == "warna":
-        fakta = f"Semua siswa kelas {kelas} memakai sepatu berwarna {warna}."
+        fakta = f"{nama} adalah siswa kelas {kelas}. Semua siswa kelas {kelas} memakai sepatu berwarna {warna}."
         pernyataan = [
             f"{nama} memakai sepatu berwarna {warna}.",
             f"{nama} memakai sepatu berwarna lain selain {warna}.",
@@ -39,6 +39,12 @@ def benar_salah_pengandaian(
             f"{nama} bukan siswa kelas {kelas}.",
             "Tidak ada siswa yang memakai sepatu.",
         ]
+        pembahasan = (
+            f"Langkah: {nama} adalah siswa kelas {kelas}, dan semua "
+            f"siswa kelas {kelas} memakai sepatu berwarna {warna}. Jadi "
+            f"{nama} pasti memakai sepatu berwarna {warna}. "
+            f"Jawabannya {opsi[pilihan_benar]}."
+        )
     else:
         fakta = f"Setiap hari {nama} membawa bekal {barang} ke sekolah."
         pernyataan = [
@@ -73,7 +79,7 @@ def benar_salah_pengandaian(
         teks,
         kunci,
         saring_malrule(kunci, mal),
-        pembahasan=(
+        pembahasan=pembahasan if varian == "warna" else (
             f"Langkah: dari \"setiap A adalah B\", yang PASTI benar hanya "
             f"tidak ada A yang bukan B. Kebalikannya belum tentu benar. "
             f"Jawabannya {kunci}."

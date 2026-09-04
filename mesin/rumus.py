@@ -252,9 +252,10 @@ KARTU: dict[str, Kartu] = {
     ),
     "logika_pasti": Kartu(
         judul="Pernyataan yang PASTI benar",
-        inti="Kalau \"setiap A adalah B\", yang pasti benar hanya: "
-             "tidak ada A yang bukan B. Kebalikannya belum tentu benar.",
-        contoh="Setiap hari bawa pensil → pasti: tak pernah ada hari tanpa pensil.",
+        inti="Gabungkan FAKTANYA: siapa orangnya + aturannya. "
+             "Yang pasti benar hanya yang mengikuti kedua fakta itu.",
+        contoh="Citra anak kelas 3, semua anak kelas 3 bersepatu merah → "
+               "pasti: Citra bersepatu merah.",
     ),
     "unsur_bangun": Kartu(
         judul="Sisi, rusuk, titik sudut",

@@ -626,18 +626,28 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
             n = rng.randint(3, 9)
             data = [rng.randint(1, 30) for _ in range(n)]
             return {"varian": varian, "data": data}
-        # modus: 3-7 data (P3: 3-5, nilai 1-12), minimal satu nilai muncul ≥2 kali
-        if level == "P3":
-            n = rng.randint(3, 5)
-            data = [rng.randint(1, 12) for _ in range(n)]
-            modus = rng.randint(1, 12)
-        else:
-            n = rng.randint(3, 8)
-            data = [rng.randint(1, 40) for _ in range(n)]
-            modus = rng.randint(1, 40)
-        data[0] = modus
-        if n > 1:
-            data[1] = modus
+        # modus: 3-7 data (P3: 3-5, nilai 1-12), minimal satu nilai muncul ≥2 kali.
+        # Modus wajib TUNGGAL: kalau dua nilai seri (mis. 1,1,3,3,10),
+        # soalnya tidak punya satu jawaban benar — pola yang sama dengan
+        # "terbanyak tunggal" di tabel_turus & jangkauan_data di bawah.
+        from collections import Counter
+
+        while True:
+            if level == "P3":
+                n = rng.randint(3, 5)
+                data = [rng.randint(1, 12) for _ in range(n)]
+                modus = rng.randint(1, 12)
+            else:
+                n = rng.randint(3, 8)
+                data = [rng.randint(1, 40) for _ in range(n)]
+                modus = rng.randint(1, 40)
+            data[0] = modus
+            if n > 1:
+                data[1] = modus
+            hitung = Counter(data)
+            tertinggi = max(hitung.values())
+            if sum(1 for v in hitung.values() if v == tertinggi) == 1:
+                break
         return {"varian": varian, "data": data}
     if template_id == "diagram_lingkaran":
         varian = rng.choice(("cari_nilai", "cari_sudut"))
