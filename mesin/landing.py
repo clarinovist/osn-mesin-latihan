@@ -179,8 +179,8 @@ pribadi lainnya.</li>
 <p>Semua data tersimpan dalam satu basis data di server pengelola —
 bukan layanan cloud pihak ketiga. Dari aplikasi, kamu bisa menghapus
 sesi latihan dan akun login anak kapan saja. Untuk penghapusan yang
-lebih besar (seluruh data keluarga), hubungi pengelola server yang
-membermu akun.</p>
+lebih besar (seluruh data keluarga), hubungi pengelola server lewat WA
+{html.escape(T.WA_SUPPORT)} — sebutkan nama akunmu.</p>
 </div>
 </section>
 </div>
@@ -213,8 +213,11 @@ otomatis. Yang menyetel ulang adalah manusia yang tepat:</p>
 <li><b>Kamu murid?</b> Mintalah gurumu atau orang tuamu menyetel sandi
 baru — dari halaman Akun, kartu "Akun latihan", tombol
 "Setel sandi baru".</li>
-<li><b>Kamu orang tua/guru?</b> Hubungi pengelola aplikasi — orang yang
-membuatkan akunmu — untuk menyetel ulang sandimu.</li>
+<li><b>Kamu orang tua yang daftar sendiri di /daftar?</b> Hubungi WA
+{html.escape(T.WA_SUPPORT)} — sebutkan nama akunmu — untuk disetel
+ulang oleh pengelola.</li>
+<li><b>Akunmu dibuatkan les/guru?</b> Minta ke mereka yang menyetel
+ulang — sandimu terikat ke keluarga mereka.</li>
 </ul>
 <p><a href="/masuk">Kembali ke halaman masuk</a></p>
 </div>
@@ -342,10 +345,88 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 </div>
+
+<section style="margin-bottom:3rem">
+<h2 class="landing-contoh-judul-st">Contoh yang dilihat orang tua</h2>
+<p class="landing-contoh-sub-st">Contoh tertulis — bukan data anak mana pun.</p>
+<div class="landing-grid-st" style="margin-bottom:0">
+<section class="landing-kartu-st">
+  <div class="landing-contoh-kode-st">
+  <span class="landing-contoh-dot-st" style="background:{T.STATUS_SALAH}"></span>
+  K · Salah konsep</div>
+  <div class="landing-kartu-isi-st">
+  <p>2/3 + 3/4 dijawab <b>5/7</b> — pembilang dan penyebut dijumlahkan
+  sendiri-sendiri, dan anak yakin caranya benar.</p>
+  <div class="landing-resep-st"><b>Resep:</b> 4–6 minggu pakai benda nyata
+  (kue/gelas air) sebelum kembali ke angka. Cek ulang tiap 3 hari dengan
+  angka berbeda.</div>
+  </div>
+</section>
+
+<section class="landing-kartu-st">
+  <div class="landing-contoh-kode-st">
+  <span class="landing-contoh-dot-st" style="background:{T.STATUS_LEMAH}"></span>
+  B · Salah baca soal</div>
+  <div class="landing-kartu-isi-st">
+  <p>Soal cerita kecepatan: angka yang ditanya tidak ditandai — anak
+  menghitung hal yang salah.</p>
+  <div class="landing-resep-st"><b>Resep:</b> bukan lubang matematika.
+  Latihan pegang pensil, tandai yang ditanya, ucapkan ulang soal.
+  Biasanya hilang 2–3 minggu.</div>
+  </div>
+</section>
+
+<section class="landing-kartu-st">
+  <div class="landing-contoh-kode-st">
+  <span class="landing-contoh-dot-st" style="background:{T.STATUS_KUAT}"></span>
+  H · Salah hitung</div>
+  <div class="landing-kartu-isi-st">
+  <p>Perkalian bersusun: caranya benar, angkanya meleset di langkah
+  penjumlahan.</p>
+  <div class="landing-resep-st"><b>Resep:</b> bukan materi baru. Wajib tulis
+  langkah + periksa ulang — gejala terburu-buru, bukan tidak paham.</div>
+  </div>
+</section>
+</div>
+</section>
+
+<section style="margin-bottom:3rem">
+<h2 class="landing-contoh-judul-st">Ikut pilot</h2>
+<p class="landing-contoh-sub-st">Dibuka untuk 10–20 keluarga pertama
+(kelas 4–6). Syaratnya: minimal 6 sesi latihan, izin memakai data
+anonim untuk bukti, dan testimoni di akhir. Tertarik? Daftar lewat
+tombol di atas — gratis selama masa pilot.</p>
+</section>
+
+<section class="landing-faq-st">
+<h2 class="landing-contoh-judul-st">Sering ditanya</h2>
+<details><summary>Untuk kelas berapa?</summary>
+<p>Kelas 3–6 SD (tingkat P3–P6). Kelas 4–5 paling cocok untuk pilot.</p></details>
+<details><summary>Anak mengerjakan di HP atau kertas?</summary>
+<p>Keduanya bisa: kerjakan langsung di HP lewat halaman murid, atau cetak
+lembarnya, kerjakan di kertas, lalu kirim foto lembarnya.</p></details>
+<details><summary>Apakah ini khusus olimpiade?</summary>
+<p>Tidak. Materinya mengikuti silabus OSN/SASMO sebagai fondasi, tapi
+tujuannya semua anak yang ingin kuat matematika — diagnosis salah
+konsep vs salah hitung berguna untuk nilai harian juga.</p></details>
+<details><summary>Setelah pilot gratis, lalu apa?</summary>
+<p>Harga belum diputuskan. Peserta pilot ikut menentukan — yang jelas
+tidak ada tagihan diam-diam selama masa pilot.</p></details>
+<details><summary>Data anak disimpan di mana?</summary>
+<p>Di server pengelola, bukan cloud pihak ketiga. Tanpa iklan, tanpa
+pelacak. Cukup tulis nama panggilan anak — dan aplikasi tidak
+menyimpan email atau nomor telepon siapa pun.</p></details>
+<details><summary>Lupa sandi bagaimana?</summary>
+<p>Tidak ada reset via email. Anak minta ke orang tua/gurunya; orang tua
+yang daftar sendiri hubungi WA {html.escape(T.WA_SUPPORT)}
+(sebutkan nama akunmu). Detailnya ada di halaman
+<a href="/lupa-sandi">Lupa sandi</a>.</p></details>
+</section>
 </div>
 
 <footer class="landing-footer-st"><div class="landing-footer-isi-st">
-  <div><a href="/kebijakan-privasi">Kebijakan Privasi</a></div>
+  <div><a href="/kebijakan-privasi">Kebijakan Privasi</a> ·
+  <span>Butuh bantuan? WA {html.escape(T.WA_SUPPORT)}</span></div>
   <div>{n} — {tag}</div>
 </div></footer>
 """

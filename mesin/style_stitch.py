@@ -1140,6 +1140,52 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
 }}
 .landing-footer-isi-st a {{ color: {T.AKSEN_TEAL_TUA}; }}
 
+/* Blok contoh diagnosis — 3 kartu B/K/H dari kartu pitch validasi pasar
+   (riset-pasar/Protokol Wawancara). Statis: contoh tertulis, BUKAN data
+   anak mana pun. Pakai ulang kelas .landing-kartu-st supaya satu rasa;
+   yang khas hanya dot warna + label contoh. */
+.landing-contoh-judul-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 800;
+  font-size: clamp(1.4rem, 2.6vw, 1.8rem); color: {T.TEKS_JUDUL};
+  text-align: center; margin: 0 0 {T.SP_2};
+}}
+.landing-contoh-sub-st {{
+  font-family: {T.FONT_BODY}; font-size: .95rem; color: {T.TEKS_VARIAN};
+  text-align: center; margin: 0 0 {T.SP_5};
+}}
+.landing-contoh-dot-st {{
+  flex: none; width: .8rem; height: .8rem; border-radius: {T.RADIUS_BULAT};
+}}
+.landing-contoh-kode-st {{
+  display: inline-flex; align-items: center; gap: {T.SP_2};
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .85rem;
+  margin-bottom: {T.SP_2};
+}}
+.landing-resep-st {{
+  background: {T.LATAR_MURID}; border-radius: {T.RADIUS_KECIL};
+  padding: {T.SP_3} {T.SP_4}; margin-top: {T.SP_3}; font-size: .9rem;
+}}
+
+/* FAQ pilot — <details> bawaan browser, tanpa JS (kontrak zero-JS).
+   summary-nya target sentuh penuh supaya nyaman di HP. */
+.landing-faq-st {{
+  max-width: 44rem; margin: 0 auto 3rem;
+  display: flex; flex-direction: column; gap: {T.SP_3};
+}}
+.landing-faq-st details {{
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_3} {T.SP_4};
+}}
+.landing-faq-st summary {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .95rem;
+  color: {T.TEKS_JUDUL}; cursor: pointer; min-height: {T.TARGET_SENTUH};
+  display: flex; align-items: center;
+}}
+.landing-faq-st details p {{
+  font-family: {T.FONT_BODY}; font-size: .92rem; line-height: 1.6;
+  color: {T.TEKS_UTAMA}; margin: {T.SP_2} 0 0;
+}}
+
 @media (max-width: 40rem) {{
   .landing-bungkus-st {{ padding: {T.SP_5} {T.SP_4} 2.5rem; }}
   .landing-topbar-isi-st {{ padding: 0 {T.SP_4}; }}

@@ -114,6 +114,14 @@ def test_kebijakan_sebut_laporan_pihak_ketiga():
     assert "layanan AI" in h
 
 
+def test_kebijakan_penghapusan_menunjuk_kontak():
+    """Hapus seluruh keluarga = hubungi manusia (tanpa email by design) —
+    halaman wajib menyebut jalurnya, bukan "hubungi yang memberimu akun"
+    yang buntu untuk pendaftar mandiri."""
+    h = _html(halaman_kebijakan)
+    assert T.WA_SUPPORT in h
+
+
 # ─────────────────── halaman_lupa_sandi ─────────────────
 
 def test_lupa_sandi_renders_sebagai_html():
@@ -133,7 +141,11 @@ def test_lupa_sandi_memuat_judul_dan_panduan_murid():
 
 def test_lupa_sandi_panduan_orang_tua():
     h = _html(halaman_lupa_sandi)
-    assert "pengelola aplikasi" in h
+    assert "pengelola" in h
+    # Pendaftar mandiri (/daftar) tidak punya "yang membuatkan akun" —
+    # jalurnya WA pengelola dengan nama akunnya sebagai identitas.
+    assert "daftar sendiri" in h
+    assert T.WA_SUPPORT in h
 
 
 def test_lupa_sandi_jelaskan_tanpa_email():

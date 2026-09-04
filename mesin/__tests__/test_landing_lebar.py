@@ -103,9 +103,69 @@ def test_tidak_mengklaim_tulis_tangan():
     assert "tulis tangan" not in h
 
 
-def test_tidak_mengklaim_gratis():
-    """Keputusan bisnis, belum diputuskan — jangan diklaim di landing."""
-    assert "gratis" not in _html().lower()
+def test_tidak_mengklaim_gratis_komersial():
+    """Keputusan bisnis harga final belum diputuskan — jangan klaim "gratis
+    selamanya" di landing. Pengecualian yang sah: penyebutan masa pilot
+    (blok "Ikut pilot"), yang memang gratis dan berbatas, bukan janji
+    harga produk. Guard menolak kata "gratis" di LUAR blok pilot."""
+    h = _html().lower()
+    dalam_pilot = h.split("ikut pilot", 1)[1] if "ikut pilot" in h else ""
+    luar_pilot = h.split("ikut pilot", 1)[0] if "ikut pilot" in h else h
+    assert "selamanya gratis" not in h
+    assert "gratis" not in luar_pilot, (
+        "klaim gratis di luar blok pilot — keputusan harga belum diputuskan"
+    )
+    assert "gratis selama masa pilot" in dalam_pilot
+
+
+# ──────────────── blok pilot (layak-GTM) ────────────────
+
+def test_landing_memuat_contoh_diagnosis_bkh():
+    """Bukti konversi pilot: 3 contoh B/K/H dari kartu pitch validasi
+    pasar + penanda contoh, bukan data anak mana pun."""
+    h = _html()
+    for frasa in ("Salah konsep", "Salah baca", "Salah hitung",
+                  "5/7", "Contoh tertulis"):
+        assert frasa in h, f"contoh diagnosis kehilangan: {frasa}"
+
+
+def test_landing_memuat_info_dan_syarat_pilot():
+    h = _html()
+    rendah = h.lower()
+    assert "ikut pilot" in rendah
+    for frasa in ("10–20 keluarga", "6 sesi", "anonim", "testimoni"):
+        assert frasa in rendah, f"syarat pilot kehilangan: {frasa}"
+
+
+def test_landing_faq_tanpa_js():
+    """FAQ memakai <details> bawaan browser — tanpa <script> baru di
+    blok konten yang ditambahkan. <script> mata sandi + cegah kirim
+    ganda adalah bawaan kerangka _halaman_publik_stitch di ekor
+    halaman, jadi batasnya </section> terakhir, bukan akhir body."""
+    h = _html()
+    assert h.count("<details>") >= 5
+    konten = h.split("Ikut pilot", 1)[1].rsplit("</section>", 1)[0]
+    assert "<details>" in konten
+    assert "<script" not in konten
+
+
+def test_landing_footer_memuat_kontak_wa():
+    """Footer menaut kebijakan + kontak WA dari T.WA_SUPPORT (sumber
+    tunggal, bukan nomor literal di markup)."""
+    h = _html()
+    footer = h[h.index("<footer"):]
+    assert 'href="/kebijakan-privasi"' in footer
+    assert T.WA_SUPPORT in footer
+
+
+def test_landing_tetap_single_cta():
+    """Blok baru tidak boleh menambah CTA tandingan — satu-satunya
+    anchor coral tetap "Mulai — daftar sekarang" ke /daftar. (Hitungan
+    dibatasi ke markup <a>, karena string "tombol-coral" juga muncul di
+    blok <style> CSS.)"""
+    h = _html()
+    assert h.count('href="/daftar"') == 1
+    assert h.count('<a class="tombol-coral"') == 1
 
 
 # ──────────────── zero-JS & kontrol mati ────────────────
