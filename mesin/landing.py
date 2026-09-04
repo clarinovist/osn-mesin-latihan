@@ -86,7 +86,7 @@ def halaman_daftar(
 <div class="publik-bungkus-st">
 <section class="publik-kartu-st">
 <h1 class="publik-judul-st">Daftar {n}</h1>
-<p class="publik-sub-st">Buat akun pengelola — untuk orang tua yang menemani anak,
+<p class="publik-sub-st">Buat akun orang tua — untuk orang tua yang menemani anak,
 guru, atau les privat. Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
 {kotak}
 <form class="masuk-form-st" method="post" action="/daftar">

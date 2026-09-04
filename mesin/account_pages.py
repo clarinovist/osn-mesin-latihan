@@ -281,8 +281,8 @@ def halaman_akun(
         f"<label>Nama login anak (opsional — bawaan sama dengan nama anak)"
         f"</label>"
         f'<input type="text" name="nama_akun" '
-        f'placeholder="diisi bila nama anak sudah dipakai keluarga lain">'
-        f"<label>Kata sandi anak (minimal 8 karakter)</label>"
+        f'placeholder="mis. aisha2 — isi bila nama anak dipakai keluarga lain">'
+        f"<label>Kata sandi anak (minimal 8 karakter, boleh sama polanya dengan sandimu)</label>"
         f'<input type="password" name="sandi_anak" autocomplete="new-password" '
         f'required minlength="8">'
         f'<p style="font-size:.9rem">'
@@ -429,7 +429,8 @@ def proses_akun(
         ).fetchone():
             return "", f"Siswa bernama {nama} sudah ada di keluargamu."
         if auth.cari_akun(nama_akun) is not None:
-            return "", f"Nama {nama_akun} sudah dipakai akun lain. Pakai nama lain."
+            return "", (f"Nama login {nama_akun} sudah dipakai keluarga lain. "
+                        "Tambahkan angka/inisial, mis. aisha2.")
 
         siswa_id = database.tambah_siswa(kon, nama, tingkat, pemilik=pengguna_kini)
         try:
@@ -446,7 +447,8 @@ def proses_akun(
         catatan = " (persetujuan orang tua dicatat)" if data.get("persetujuan_ortu") else ""
         return (
             f"Anak {nama} ditambahkan ({tingkat}) beserta akun latihannya{catatan}. "
-            f"Anak masuk lewat /murid dengan nama {nama_akun}.",
+            f"Langkah 3: kembali ke beranda, klik nama {nama}, lalu tekan "
+            f"“Buat sesi baru”. Anak masuk lewat /murid dengan nama {nama_akun}.",
             "",
         )
 

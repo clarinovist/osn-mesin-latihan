@@ -334,8 +334,13 @@ def halaman_utama_stitch(
         )
 
     isi_utama = "".join(baris) or (
-        '<div class="st-kartu">Belum ada siswa. '
-        '<a href="/akun">Buat siswa</a> dari halaman Akun &amp; Siswa.</div>'
+        '<div class="st-kartu"><p style="margin:0 0 .6rem">'
+        "<b>Langkah 1 dari 3 selesai ✓</b> — akunmu sudah jadi.</p>"
+        '<p style="margin:0 0 .6rem"><b>Langkah 2:</b> '
+        '<a href="/akun?section=siswa">Tambah anak</a> '
+        "(nama panggilan + kata sandi untuk anak).</p>"
+        '<p class="sub" style="margin:0">Langkah 3: klik nama anak di sini, '
+        "lalu tekan “Buat sesi baru”.</p></div>"
     )
 
     kabar = (
@@ -725,8 +730,13 @@ def halaman_utama(
         )
 
     isi_utama = "".join(baris) or (
-        '<div class="kartu kosong-hint-guru">Belum ada siswa. '
-        '<a href="/akun">Buat siswa</a> dari halaman Akun &amp; Siswa.</div>'
+        '<div class="kartu kosong-hint-guru"><p style="margin:0 0 .6rem">'
+        "<b>Langkah 1 dari 3 selesai ✓</b> — akunmu sudah jadi.</p>"
+        '<p style="margin:0 0 .6rem"><b>Langkah 2:</b> '
+        '<a href="/akun?section=siswa">Tambah anak</a> '
+        "(nama panggilan + kata sandi untuk anak).</p>"
+        '<p class="sub" style="margin:0">Langkah 3: klik nama anak di sini, '
+        "lalu tekan “Buat sesi baru”.</p></div>"
     )
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
