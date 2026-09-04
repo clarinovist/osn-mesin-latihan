@@ -36,12 +36,14 @@ kotak Caraku, padahal itu inti lembarnya.
 kotak "Caraku". Kode diagnosis muncul otomatis; kolom Kode hanya diisi kalau
 kamu tidak setuju dengan usulan mesin.
 
-**4. Baca laporan** — tautan "Lihat laporan" di tiap anak. Tiga bagian:
+**4. Baca laporan** — tautan "Lihat laporan" di tiap anak. Dibuka dengan
+ringkasan 3 kalimat + kartu arti nilai (bahasa sehari-hari), lalu angka
+dan grafik, lalu detail teknis yang dilipat:
 
-- **Tren per sesi** — yang dipantau kolom K, bukan Benar
-- **Miskonsepsi yang bertahan** — muncul di >1 sesi berarti belum tuntas
-  meski angkanya sudah diganti
-- **Materi yang belum diajarkan** — dari centang "belum pernah lihat"
+- **Ringkasan untuk orang tua** — kondisi, pola kesalahan, langkah berikut
+- **Arti nilai anak** — kamus 7 sebutan tanpa jargon
+- **Tren per sesi / Yang perlu dilatih / Materi baru** — tabel teknis
+  (dilipat di `<details>`, tetap ada untuk guru)
 
 ## Membaca kodenya
 
@@ -121,8 +123,7 @@ tidak bisa dibangun ulang), jadi siswa ber-riwayat sengaja tidak bisa
 dihapus; siswa tanpa riwayat (salah ketik / data uji) boleh dihapus dan
 akun latihannya ikut dihapus sekalian.
 
-Admin hanya melihat section **akun** (ganti sandi sendiri); section siswa
-dan akun-murid tidak ditampilkan.
+Admin melihat ketiga section dengan daftar SEMUA keluarga.
 
 Untuk pemasangan lokal di Mac, daftar awal ada di `SISWA` pada
 `setup_db.py` (aman dijalankan ulang).
@@ -134,14 +135,12 @@ Aplikasi ini sekarang dipakai beberapa keluarga. Setiap akun di
 
 - **admin** — pengelola produk: dashboard khusus di **/admin** berisi
   ringkasan jumlah keluarga/siswa/sesi, tabel keluarga dengan nama anak
-  sebagai tautan ke `/laporan/<id>` (baca untuk dukungan), dan form buat
-  akun orang tua. Kebijakan **baca-semua-tulis-tidak**: semua halaman
-  baca (laporan, sesi, lembar, lampiran) terbuka, tapi SEMUA aksi tulis
-  data murid ditolak 404 — termasuk sesi baru, simpan/hapus sesi, cerita,
-  upload lampiran, dan proses_akun (kecuali ganti sandi sendiri). Halaman
-  sesi untuk admin tampil hanya-baca (fieldset disabled, tanpa tombol
-  hapus/upload/cerita). Admin bukan pengganti guru — dia pengawas dan
-  pembuat akun.
+  sebagai tautan ke `/laporan/<id>`, form buat akun orang tua, setel ulang
+  sandi, dan hapus akun orang tua (typo/duplikat — anak & sesinya tetap).
+  Admin full-write: boleh menulis data murid keluarga mana pun persis
+  seperti guru (sesi baru, simpan/hapus sesi, cerita, lampiran, /akun
+  semua section). Satu-satunya yang tetap tertutup: menyentuh akun/sandi
+  sesama pengelola (milik deploy).
 - **guru** — orang tua: hanya melihat anak yang jadi miliknya. Keluarga
   lain tidak lewat di matamu — bukan disembunyikan setengah-setengah,
   memang tidak ada di datamu.
