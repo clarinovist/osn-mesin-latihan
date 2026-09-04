@@ -95,3 +95,28 @@ def test_pengandaian_malrule_mengikuti_pernyataan_bukan_huruf():
                     f"malrule nyasar {lv}/{sd}: opsi {opsi[posisi]} berisi "
                     f"pernyataan {indeks_pernyataan}, dapat {per_huruf[opsi[posisi]]}"
                 )
+
+
+# ── T4: benda pada varian bekal harus benar-benar makanan ──────────────
+
+MAKANAN_BEKAL = {"roti", "nasi", "buah", "telur", "sandwich"}
+
+
+def test_pengandaian_bekal_memakai_makanan_bukan_perlengkapan():
+    """Semua barang lama (pensil, buku, tas, sepatu, topi) menghasilkan
+    frasa mustahil seperti 'membawa bekal tas'."""
+    jumlah_bekal = 0
+    for lv in LEVEL:
+        for sd in range(SEED):
+            par = tl._parameter(
+                "benar_salah_pengandaian", random.Random(sd), lv
+            )
+            if par["varian"] != "bekal":
+                continue
+            jumlah_bekal += 1
+            assert par["barang"] in MAKANAN_BEKAL, (
+                f"bukan makanan {lv}/{sd}: {par['barang']}"
+            )
+            soal = tl.benar_salah_pengandaian(**par)
+            assert f"bekal {par['barang']}" in soal.teks
+    assert jumlah_bekal > 0, "audit tidak pernah menyentuh varian bekal"

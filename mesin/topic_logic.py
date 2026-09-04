@@ -463,7 +463,7 @@ def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
         varian = rng.choice(("warna", "bekal"))
         nama = rng.choice(("Andi", "Budi", "Citra", "Dewi", "Eko"))
         warna = rng.choice(("merah", "biru", "hijau", "kuning", "hitam"))
-        barang = rng.choice(("pensil", "buku", "tas", "sepatu", "topi"))
+        barang = rng.choice(("roti", "nasi", "buah", "telur", "sandwich"))
         # P3: kelas 3 (cerita sesuai usia); P5/P6 tetap 4-6
         kelas = 3 if level == "P3" else rng.choice((4, 5, 6))
         pilihan_benar = rng.randint(0, 4)
