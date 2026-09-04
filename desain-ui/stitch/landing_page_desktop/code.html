@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Caraku - Latih. Tulis caramu. Ketahui letak salahmu.</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#313030",
+                        "surface-dim": "#dcd9d9",
+                        "primary-fixed": "#7ff5f4",
+                        "on-background": "#1c1b1b",
+                        "surface-container": "#f0edec",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fcf9f8",
+                        "secondary-fixed": "#ffdad5",
+                        "surface-container-highest": "#e5e2e1",
+                        "outline-variant": "#bcc9c8",
+                        "surface": "#fcf9f8",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#60d8d8",
+                        "tertiary-container": "#c68600",
+                        "secondary": "#ae3026",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb1",
+                        "on-secondary-container": "#690003",
+                        "on-tertiary-fixed": "#291800",
+                        "secondary-fixed-dim": "#ffb4aa",
+                        "inverse-primary": "#60d8d8",
+                        "on-tertiary-container": "#3e2700",
+                        "on-surface-variant": "#3d4949",
+                        "primary": "#006a6a",
+                        "outline": "#6d7a79",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#002020",
+                        "on-secondary-fixed": "#410001",
+                        "secondary-container": "#fc6959",
+                        "tertiary": "#815600",
+                        "surface-variant": "#e5e2e1",
+                        "primary-container": "#0fa3a3",
+                        "on-surface": "#1c1b1b",
+                        "on-tertiary-fixed-variant": "#624000",
+                        "on-secondary-fixed-variant": "#8c1712",
+                        "surface-container-high": "#ebe7e7",
+                        "tertiary-fixed-dim": "#ffba4b",
+                        "background": "#FFF8EE", // Overridden as requested
+                        "on-primary-container": "#003131",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#004f50",
+                        "inverse-on-surface": "#f3f0ef",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f6f3f2",
+                        "surface-tint": "#006a6a",
+                        "dark-blue": "#16213E" // Custom added for the prompt
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "btn": "10px",
+                        "card": "12px"
+                    },
+                    "spacing": {
+                        "touch_target": "44px",
+                        "sm": "8px",
+                        "xxl": "32px",
+                        "xs": "4px",
+                        "max_width": "46rem",
+                        "lg": "16px",
+                        "md": "12px",
+                        "xl": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Be Vietnam Pro", "sans-serif"],
+                        "headline-lg": ["Plus Jakarta Sans", "sans-serif"],
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "headline-md": ["Plus Jakarta Sans", "sans-serif"],
+                        "print": ["Helvetica Neue", "sans-serif"],
+                        "body-md": ["Be Vietnam Pro", "sans-serif"],
+                        "label-md": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }], // Increased size for desktop hero
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "print": ["14px", { "lineHeight": "1.5" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .pill-k { background-color: #e5e2e1; color: #1c1b1b; } /* Konsep */
+        .pill-b { background-color: #ffdad6; color: #93000a; } /* Baca */
+        .pill-h { background-color: #ffddb1; color: #3e2700; } /* Hitung */
+        .pill-e { background-color: #7ff5f4; color: #002020; } /* Estimasi */
+        .pill-t { background-color: #dcd9d9; color: #1c1b1b; } /* Tulis */
+        .pill-n { background-color: #fcf9f8; color: #1c1b1b; border: 1px solid #bcc9c8; } /* Not identified */
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full bg-background border-b border-outline-variant/10 z-50 h-[72px] flex items-center">
+<div class="flex justify-between items-center px-lg w-full max-w-[1200px] mx-auto">
+<div class="flex items-center gap-sm">
+<img alt="Caraku Logo" class="h-10 w-10 rounded-md object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqDxT4Ws2IZqiZwvQbb7d_2rphLC4v76U8y3bg5Do0whWpTYX4n5wiQ9SQQ4oAMUWdTBzMcVBY0XXbYPw6NjYmkMlNZlNhRrOI8Kz1JcO8RWT8h4ed_LXKSVtWMD3aWrIMnR61onwUPCqPnNcku_80npKns0e35qzMB_LOdrrwOihPCGmoCpNXOoHWhvT27uy8xMmkgcTko9bpf1RwR7jJPfGvI-ItzxRhSztsXfrdaiTxk74BGog8"/>
+<span class="text-headline-lg font-headline-lg text-primary">Caraku</span>
+</div>
+<button class="bg-[#FF6B5B] text-white hover:opacity-90 font-label-md text-label-md px-xl py-sm rounded-btn transition-transform duration-200 active:scale-95 h-touch_target flex items-center justify-center">
+                Coba sekarang
+            </button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow pt-[100px] pb-xxl px-lg max-w-[1200px] mx-auto w-full flex flex-col items-center">
+<!-- Hero Section -->
+<section class="flex flex-col md:flex-row items-center justify-between gap-xxl w-full mb-20">
+<!-- Left: Content -->
+<div class="flex flex-col items-start gap-xl md:w-1/2">
+<h1 class="text-[48px] font-display text-[#16213E] leading-[1.1]">
+                    Latih. Tulis caramu. Ketahui letak salahmu.
+                </h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-lg">
+                    Aplikasi latihan soal matematika SD dengan diagnosis miskonsepsi yang dirancang khusus untuk mengurangi kecemasan belajar dan meningkatkan pemahaman konsep.
+                </p>
+<button class="bg-[#FF6B5B] text-white hover:opacity-90 font-label-md text-label-md px-xxl py-sm rounded-btn transition-transform duration-200 active:scale-95 h-[56px] flex items-center justify-center text-lg mt-sm shadow-sm">
+                    Coba sekarang — gratis
+                </button>
+</div>
+<!-- Right: Mockup -->
+<div class="md:w-1/2 flex justify-center w-full">
+<div class="bg-white rounded-[24px] p-xl shadow-lg border border-outline-variant/20 w-full max-w-md relative overflow-hidden">
+<div class="absolute -top-4 -right-4 w-24 h-24 bg-primary-fixed/20 rounded-full blur-xl"></div>
+<!-- App Mockup UI -->
+<div class="flex flex-col gap-lg relative z-10">
+<div class="flex justify-between items-center border-b border-surface-container pb-sm">
+<span class="font-label-md text-label-md text-outline">Soal 4/10</span>
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[#FFba4b]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[#FFba4b]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<div class="text-headline-md font-headline-md text-on-surface">
+                            Berapa hasil dari 345 + 128?
+                        </div>
+<!-- Simulated handwriting input -->
+<div class="bg-surface-container-lowest rounded-card border-2 border-primary border-dashed p-lg min-h-[150px] flex flex-col justify-center items-center">
+<div class="font-print text-[24px] text-on-surface-variant leading-relaxed text-center">
+                                  345<br/>
+                                + 128<br/>
+                                -----<br/>
+                                  463
+                            </div>
+</div>
+<!-- Diagnosis Pills -->
+<div class="bg-surface-container-low rounded-card p-md border border-outline-variant/10">
+<p class="text-label-md font-label-md mb-md text-on-surface-variant">Diagnosis Miskonsepsi:</p>
+<div class="flex flex-wrap gap-sm">
+<span class="px-md py-xs rounded-full text-[12px] font-bold pill-h">H: Hitung</span>
+<span class="px-md py-xs rounded-full text-[12px] font-bold pill-n opacity-50">K: Konsep</span>
+<span class="px-md py-xs rounded-full text-[12px] font-bold pill-n opacity-50">B: Baca</span>
+</div>
+<p class="text-sm mt-sm text-on-surface-variant">
+<strong>Oops!</strong> Ada sedikit kesalahan dalam menjumlahkan satuan (5+8). Yuk coba hitung lagi pelan-pelan.
+                            </p>
+</div>
+<button class="bg-primary text-white rounded-btn h-touch_target font-label-md text-label-md w-full mt-sm flex items-center justify-center gap-xs">
+                            Cek Jawaban <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Section -->
+<section class="w-full flex justify-center py-xl mb-xxl">
+<div class="flex flex-col md:flex-row gap-xl justify-center items-center">
+<div class="bg-primary-container text-white px-xl py-sm rounded-full flex items-center gap-sm shadow-sm hover:-translate-y-1 transition-transform cursor-default">
+<span class="material-symbols-outlined">edit_document</span>
+<span class="font-label-md text-label-md">Tulis Tangan</span>
+</div>
+<div class="bg-primary-container text-white px-xl py-sm rounded-full flex items-center gap-sm shadow-sm hover:-translate-y-1 transition-transform cursor-default">
+<span class="material-symbols-outlined">health_and_safety</span>
+<span class="font-label-md text-label-md">Diagnosis Detail</span>
+</div>
+<div class="bg-primary-container text-white px-xl py-sm rounded-full flex items-center gap-sm shadow-sm hover:-translate-y-1 transition-transform cursor-default">
+<span class="material-symbols-outlined">mood</span>
+<span class="font-label-md text-label-md">Bebas Stres</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl bg-surface-container text-center mt-auto">
+<div class="flex flex-col items-center gap-md w-full px-lg max-w-max_width mx-auto">
+<div class="flex gap-lg font-label-md text-label-md text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Bantuan</a>
+<a class="hover:text-primary transition-colors" href="#">Privasi</a>
+<a class="hover:text-primary transition-colors" href="#">Syarat &amp; Ketentuan</a>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant opacity-80 mt-sm">© 2024 Caraku Math</p>
+</div>
+</footer>
+</body></html>

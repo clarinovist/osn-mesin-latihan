@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Caraku — Lembar Soal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Helvetica+Neue&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#313030",
+                    "surface-dim": "#dcd9d9",
+                    "primary-fixed": "#7ff5f4",
+                    "on-background": "#1c1b1b",
+                    "surface-container": "#f0edec",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#fcf9f8",
+                    "secondary-fixed": "#ffdad5",
+                    "surface-container-highest": "#e5e2e1",
+                    "outline-variant": "#bcc9c8",
+                    "surface": "#fcf9f8",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#60d8d8",
+                    "tertiary-container": "#c68600",
+                    "secondary": "#ae3026",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#ffddb1",
+                    "on-secondary-container": "#690003",
+                    "on-tertiary-fixed": "#291800",
+                    "secondary-fixed-dim": "#ffb4aa",
+                    "inverse-primary": "#60d8d8",
+                    "on-tertiary-container": "#3e2700",
+                    "on-surface-variant": "#3d4949",
+                    "primary": "#006a6a",
+                    "outline": "#6d7a79",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#002020",
+                    "on-secondary-fixed": "#410001",
+                    "secondary-container": "#fc6959",
+                    "tertiary": "#815600",
+                    "surface-variant": "#e5e2e1",
+                    "primary-container": "#0fa3a3",
+                    "on-surface": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#624000",
+                    "on-secondary-fixed-variant": "#8c1712",
+                    "surface-container-high": "#ebe7e7",
+                    "tertiary-fixed-dim": "#ffba4b",
+                    "background": "#fcf9f8",
+                    "on-primary-container": "#003131",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#004f50",
+                    "inverse-on-surface": "#f3f0ef",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f6f3f2",
+                    "surface-tint": "#006a6a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "touch_target": "44px",
+                    "sm": "8px",
+                    "xxl": "32px",
+                    "xs": "4px",
+                    "max_width": "46rem",
+                    "lg": "16px",
+                    "md": "12px",
+                    "xl": "24px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Be Vietnam Pro"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "print": ["Helvetica Neue", "Arial", "sans-serif"],
+                    "body-md": ["Be Vietnam Pro"],
+                    "label-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "display": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "print": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Print specific styles to ensure pure white and no shadows when actually printing */
+        @media print {
+            body {
+                background-color: white !important;
+            }
+            .a4-container {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        /* A4 Aspect Ratio Simulation for screen viewing */
+        .a4-container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 2rem auto;
+            background-color: white;
+        }
+        
+        @media (max-width: 210mm) {
+            .a4-container {
+                width: 100%;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-surface-container-highest text-on-surface antialiased flex flex-col items-center">
+<!-- Screen-only helper text -->
+<div class="no-print w-full bg-primary text-on-primary text-center py-xs font-label-md text-label-md">
+        Tampilan Cetak (Tekan Ctrl+P / Cmd+P untuk mencetak)
+    </div>
+<!-- Printable A4 Container -->
+<main class="a4-container shadow-xl px-[20mm] py-[25mm] bg-surface-container-lowest flex flex-col">
+<!-- Header -->
+<header class="border-b-2 border-on-surface pb-md mb-xl flex flex-col gap-md">
+<div class="flex justify-between items-end">
+<h1 class="font-headline-lg text-headline-lg text-on-surface m-0 tracking-tight">Caraku — Lembar Soal</h1>
+<span class="font-print text-print text-on-surface-variant uppercase tracking-widest">Matematika Dasar</span>
+</div>
+<div class="flex justify-between items-center font-print text-print text-on-surface mt-sm">
+<div class="flex items-center gap-sm flex-1">
+<span>Nama:</span>
+<div class="border-b border-outline flex-1 mr-xl h-[1.2em]"></div>
+</div>
+<div class="flex items-center gap-sm w-48">
+<span>Kelas:</span>
+<div class="border-b border-outline flex-1 h-[1.2em]"></div>
+</div>
+</div>
+<div class="flex justify-between items-center font-print text-print text-on-surface">
+<div class="flex items-center gap-sm flex-1">
+<span>Sekolah:</span>
+<div class="border-b border-outline flex-1 mr-xl h-[1.2em]"></div>
+</div>
+<div class="flex items-center gap-sm w-48">
+<span>Tanggal:</span>
+<div class="border-b border-outline flex-1 h-[1.2em]"></div>
+</div>
+</div>
+</header>
+<!-- Instructions -->
+<div class="mb-xl">
+<p class="font-print text-print text-on-surface italic">
+                Petunjuk: Kerjakan soal-soal di bawah ini dengan teliti. Tuliskan cara penyelesaian di tempat yang tersedia jika diperlukan.
+            </p>
+</div>
+<!-- Questions List -->
+<div class="flex-1 flex flex-col gap-xl">
+<!-- Question 1 -->
+<div class="border border-on-surface p-md rounded-DEFAULT flex flex-col gap-sm">
+<div class="flex gap-md">
+<span class="font-print text-print font-bold w-6">1.</span>
+<p class="font-print text-print text-on-surface flex-1">
+                        Budi memiliki 15 buah apel. Kemudian, ia membeli lagi 8 buah apel di pasar. Berapa jumlah total apel Budi sekarang?
+                    </p>
+</div>
+<div class="h-24"></div> <!-- Empty space for working out -->
+</div>
+<!-- Question 2 -->
+<div class="border border-on-surface p-md rounded-DEFAULT flex flex-col gap-sm">
+<div class="flex gap-md">
+<span class="font-print text-print font-bold w-6">2.</span>
+<p class="font-print text-print text-on-surface flex-1">
+                        Hitunglah hasil dari operasi pengurangan berikut: <br/><br/>
+<strong>452 - 128 = ...</strong>
+</p>
+</div>
+<div class="h-16"></div>
+</div>
+<!-- Question 3 -->
+<div class="border border-on-surface p-md rounded-DEFAULT flex flex-col gap-sm">
+<div class="flex gap-md">
+<span class="font-print text-print font-bold w-6">3.</span>
+<div class="flex-1 flex flex-col gap-md">
+<p class="font-print text-print text-on-surface">
+                            Perhatikan gambar bangun datar di bawah ini. Hitunglah keliling bangun persegi panjang tersebut jika panjangnya 12 cm dan lebarnya 5 cm.
+                        </p>
+<div class="w-48 h-24 border-2 border-outline mx-auto flex items-center justify-center bg-surface-container-low relative">
+<span class="absolute top-[-20px] font-print text-print text-xs">12 cm</span>
+<span class="absolute right-[-45px] font-print text-print text-xs">5 cm</span>
+</div>
+</div>
+</div>
+<div class="h-20"></div>
+</div>
+<!-- Question 4 -->
+<div class="border border-on-surface p-md rounded-DEFAULT flex flex-col gap-sm">
+<div class="flex gap-md">
+<span class="font-print text-print font-bold w-6">4.</span>
+<p class="font-print text-print text-on-surface flex-1">
+                        Sebuah toko buku menjual 3 lusin pensil setiap hari. Berapa banyak pensil yang terjual dalam waktu 5 hari?
+                    </p>
+</div>
+<div class="h-24"></div>
+</div>
+<!-- Question 5 -->
+<div class="border border-on-surface p-md rounded-DEFAULT flex flex-col gap-sm">
+<div class="flex gap-md">
+<span class="font-print text-print font-bold w-6">5.</span>
+<p class="font-print text-print text-on-surface flex-1">
+                        Selesaikan persamaan matematika sederhana ini: 
+                        <br/><br/>
+<strong>( 15 + 5 ) × 2 = ...</strong>
+</p>
+</div>
+<div class="h-16"></div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="mt-xl pt-md border-t border-outline flex justify-center items-center">
+<span class="font-print text-print text-on-surface-variant">Halaman 1 dari 1</span>
+</footer>
+</main>
+</body></html>

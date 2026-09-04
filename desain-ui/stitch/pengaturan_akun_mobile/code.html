@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pengaturan Akun - Caraku</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#313030",
+                        "surface-dim": "#dcd9d9",
+                        "primary-fixed": "#7ff5f4",
+                        "on-background": "#1c1b1b",
+                        "surface-container": "#f0edec",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fcf9f8",
+                        "secondary-fixed": "#ffdad5",
+                        "surface-container-highest": "#e5e2e1",
+                        "outline-variant": "#bcc9c8",
+                        "surface": "#fcf9f8",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#60d8d8",
+                        "tertiary-container": "#c68600",
+                        "secondary": "#ae3026",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb1",
+                        "on-secondary-container": "#690003",
+                        "on-tertiary-fixed": "#291800",
+                        "secondary-fixed-dim": "#ffb4aa",
+                        "inverse-primary": "#60d8d8",
+                        "on-tertiary-container": "#3e2700",
+                        "on-surface-variant": "#3d4949",
+                        "primary": "#006a6a",
+                        "outline": "#6d7a79",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#002020",
+                        "on-secondary-fixed": "#410001",
+                        "secondary-container": "#fc6959",
+                        "tertiary": "#815600",
+                        "surface-variant": "#e5e2e1",
+                        "primary-container": "#0fa3a3",
+                        "on-surface": "#1c1b1b",
+                        "on-tertiary-fixed-variant": "#624000",
+                        "on-secondary-fixed-variant": "#8c1712",
+                        "surface-container-high": "#ebe7e7",
+                        "tertiary-fixed-dim": "#ffba4b",
+                        "background": "#fcf9f8",
+                        "on-primary-container": "#003131",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#004f50",
+                        "inverse-on-surface": "#f3f0ef",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f6f3f2",
+                        "surface-tint": "#006a6a"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "touch_target": "44px",
+                        "sm": "8px",
+                        "xxl": "32px",
+                        "xs": "4px",
+                        "max_width": "46rem",
+                        "lg": "16px",
+                        "md": "12px",
+                        "xl": "24px"
+                    },
+                    fontFamily: {
+                        "body-lg": ["Be Vietnam Pro"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "print": ["Helvetica Neue"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "label-md": ["Plus Jakarta Sans"]
+                    },
+                    fontSize: {
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "headline-lg": ["24px", { lineHeight: "32px", fontWeight: "700" }],
+                        "display": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "800" }],
+                        "headline-md": ["20px", { lineHeight: "28px", fontWeight: "700" }],
+                        "print": ["14px", { lineHeight: "1.5" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #fcf9f8; } /* surface */
+        .card-shadow { box-shadow: 0 1px 2px rgba(109, 122, 121, 0.1); }
+        .input-focus:focus-within { border-color: #0fa3a3; border-width: 2px; }
+        .btn-active:active { transform: scale(0.98); }
+    </style>
+</head>
+<body class="font-body-md text-on-background max-w-max_width mx-auto pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface border-b border-outline-variant/10 fixed top-0 w-full h-touch_target flex justify-between items-center px-lg w-full max-w-max_width mx-auto z-50">
+<div class="text-headline-lg font-headline-lg text-primary dark:text-primary-fixed flex items-center gap-sm font-bold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">face</span>
+            Caraku
+        </div>
+<button class="text-primary dark:text-primary-fixed text-label-md font-label-md font-bold hover:opacity-90 active:scale-95 transition-transform duration-200 min-w-touch_target h-touch_target flex items-center justify-center">
+            Lanjut
+        </button>
+</header>
+<!-- Main Content -->
+<main class="mt-touch_target pt-lg px-lg space-y-xl">
+<!-- Header -->
+<div class="text-center mb-xl">
+<h1 class="text-headline-md font-headline-md text-primary mb-xs">Pengaturan Akun</h1>
+<p class="text-body-md font-body-md text-on-surface-variant">Kelola siswa dan keamanan</p>
+</div>
+<!-- Student List Section -->
+<section class="space-y-md">
+<h2 class="text-headline-md font-headline-md text-on-surface">Daftar Siswa</h2>
+<div class="space-y-sm">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-md rounded-xl card-shadow border border-outline-variant/10 flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md">Budi Santoso</span>
+<div class="flex gap-xs">
+<button class="w-touch_target h-touch_target flex items-center justify-center text-primary bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="w-touch_target h-touch_target flex items-center justify-center text-secondary bg-error-container rounded-lg hover:bg-secondary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-sm input-focus rounded-lg border border-outline-variant/30 p-xs pl-sm bg-surface">
+<span class="material-symbols-outlined text-outline text-sm">lock</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-[8.5rem] p-0" placeholder="Ubah Sandi" type="password"/>
+<button class="ml-auto bg-primary text-on-primary text-label-md font-label-md px-sm py-xs rounded-md btn-active">Simpan</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest p-md rounded-xl card-shadow border border-outline-variant/10 flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md">Siti Aminah</span>
+<div class="flex gap-xs">
+<button class="w-touch_target h-touch_target flex items-center justify-center text-primary bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="w-touch_target h-touch_target flex items-center justify-center text-secondary bg-error-container rounded-lg hover:bg-secondary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-sm input-focus rounded-lg border border-outline-variant/30 p-xs pl-sm bg-surface">
+<span class="material-symbols-outlined text-outline text-sm">lock</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-[8.5rem] p-0" placeholder="Ubah Sandi" type="password"/>
+<button class="ml-auto bg-primary text-on-primary text-label-md font-label-md px-sm py-xs rounded-md btn-active">Simpan</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Add Student Form -->
+<section class="bg-surface-container-lowest p-lg rounded-xl card-shadow border border-outline-variant/10">
+<h2 class="text-headline-md font-headline-md text-on-surface mb-md">Tambah Siswa Baru</h2>
+<form class="space-y-md">
+<div class="input-focus rounded-lg border border-outline-variant/30 p-xs pl-sm bg-surface flex items-center min-h-[44px]">
+<span class="material-symbols-outlined text-outline mr-sm">person</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full p-0" placeholder="Nama Lengkap" type="text"/>
+</div>
+<div class="input-focus rounded-lg border border-outline-variant/30 p-xs pl-sm bg-surface flex items-center min-h-[44px]">
+<span class="material-symbols-outlined text-outline mr-sm">key</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full p-0" placeholder="Kata Sandi Awal" type="password"/>
+</div>
+<button class="w-full bg-secondary-container text-on-secondary-container font-label-md text-label-md rounded-[10px] min-h-[44px] flex items-center justify-center gap-xs btn-active hover:bg-secondary-fixed transition-colors" type="button">
+<span class="material-symbols-outlined text-sm">add</span> Tambah Siswa
+                </button>
+</form>
+</section>
+<!-- Change Admin Password Form -->
+<section class="bg-surface-container-lowest p-lg rounded-xl card-shadow border border-outline-variant/10 mb-xl">
+<h2 class="text-headline-md font-headline-md text-on-surface mb-md">Ubah Sandi Pengelola</h2>
+<form class="space-y-md">
+<div class="input-focus rounded-lg border border-outline-variant/30 p-xs pl-sm bg-surface flex items-center min-h-[44px]">
+<span class="material-symbols-outlined text-outline mr-sm">lock_open</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full p-0" placeholder="Sandi Lama" type="password"/>
+</div>
+<div class="input-focus rounded-lg border border-outline-variant/30 p-xs pl-sm bg-surface flex items-center min-h-[44px]">
+<span class="material-symbols-outlined text-outline mr-sm">lock</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full p-0" placeholder="Sandi Baru" type="password"/>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container font-label-md text-label-md rounded-[10px] min-h-[44px] flex items-center justify-center gap-xs btn-active hover:bg-primary-fixed-dim transition-colors" type="button">
+                    Simpan Sandi Baru
+                </button>
+</form>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant/10 fixed bottom-0 w-full z-50 fixed bottom-0 left-0 w-full flex justify-around items-center px-sm py-xs">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-xl py-xs hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors rounded-xl" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-label-md font-label-md mt-xs text-xs">Belajar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-xl py-xs hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors rounded-xl" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-label-md font-label-md mt-xs text-xs">Riwayat</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-xl py-xs hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors rounded-xl" href="#">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="text-label-md font-label-md mt-xs text-xs">Peringkat</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full px-xl py-xs scale-95 transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-md font-label-md mt-xs text-xs">Profil</span>
+</a>
+</nav>
+</body></html>

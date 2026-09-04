@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Caraku - Kerjakan Soal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#313030",
+                    "surface-dim": "#dcd9d9",
+                    "primary-fixed": "#7ff5f4",
+                    "on-background": "#1c1b1b",
+                    "surface-container": "#f0edec",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#fcf9f8",
+                    "secondary-fixed": "#ffdad5",
+                    "surface-container-highest": "#e5e2e1",
+                    "outline-variant": "#bcc9c8",
+                    "surface": "#fcf9f8",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#60d8d8",
+                    "tertiary-container": "#c68600",
+                    "secondary": "#ae3026",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#ffddb1",
+                    "on-secondary-container": "#690003",
+                    "on-tertiary-fixed": "#291800",
+                    "secondary-fixed-dim": "#ffb4aa",
+                    "inverse-primary": "#60d8d8",
+                    "on-tertiary-container": "#3e2700",
+                    "on-surface-variant": "#3d4949",
+                    "primary": "#006a6a",
+                    "outline": "#6d7a79",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#002020",
+                    "on-secondary-fixed": "#410001",
+                    "secondary-container": "#fc6959",
+                    "tertiary": "#815600",
+                    "surface-variant": "#e5e2e1",
+                    "primary-container": "#0fa3a3",
+                    "on-surface": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#624000",
+                    "on-secondary-fixed-variant": "#8c1712",
+                    "surface-container-high": "#ebe7e7",
+                    "tertiary-fixed-dim": "#ffba4b",
+                    "background": "#fcf9f8",
+                    "on-primary-container": "#003131",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#004f50",
+                    "inverse-on-surface": "#f3f0ef",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f6f3f2",
+                    "surface-tint": "#006a6a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "touch_target": "44px",
+                    "sm": "8px",
+                    "xxl": "32px",
+                    "xs": "4px",
+                    "max_width": "46rem",
+                    "lg": "16px",
+                    "md": "12px",
+                    "xl": "24px"
+            },
+            "fontFamily": {
+                    "body-lg": [
+                            "Be Vietnam Pro"
+                    ],
+                    "headline-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "display": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "print": [
+                            "Helvetica Neue"
+                    ],
+                    "body-md": [
+                            "Be Vietnam Pro"
+                    ],
+                    "label-md": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "display": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "800"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "print": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.5"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #fcf9f8; }
+        .diagnostic-pill.active {
+            background-color: #0fa3a3;
+            color: #ffffff;
+            border-color: #0fa3a3;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-surface antialiased max-w-max_width mx-auto relative pb-24 min-h-screen">
+<!-- Top AppBar (Sticky) -->
+<header class="fixed top-0 w-full h-touch_target bg-surface border-b border-outline-variant/10 flex justify-between items-center px-lg max-w-max_width mx-auto z-50">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">pets</span>
+<span class="text-headline-lg font-headline-lg text-primary">Caraku</span>
+</div>
+<button class="text-secondary-container font-label-md text-label-md px-md py-xs rounded-full hover:bg-surface-variant transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined">close</span> Tutup
+        </button>
+</header>
+<!-- Sticky Teal Timer Bar -->
+<div class="fixed top-touch_target w-full bg-primary-container text-on-primary-container px-lg py-sm flex justify-between items-center z-40 max-w-max_width mx-auto shadow-sm">
+<span class="font-label-md text-label-md font-bold">Waktu Tersisa</span>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-headline-md text-headline-md">14:59</span>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="pt-[90px] px-lg pb-xl flex flex-col gap-xl">
+<!-- Question Card -->
+<section class="bg-surface-container-lowest rounded-[12px] p-lg shadow-sm border border-outline-variant/10 relative mt-xl">
+<!-- Question Number Badge -->
+<div class="absolute -top-4 left-4 bg-primary-container text-on-primary w-8 h-8 rounded-full flex items-center justify-center font-headline-md text-headline-md shadow-md border-2 border-surface">
+                1
+            </div>
+<div class="mt-md">
+<p class="font-headline-md text-headline-md text-on-surface mb-sm">Berapakah hasil dari 25 × 4 + 10?</p>
+<div class="bg-surface-container-low rounded-lg p-md text-center">
+<img class="w-full h-32 object-contain rounded-md" data-alt="A simple, clear illustration of a math problem involving apples in baskets. The style is cute, flat vector art, suitable for a children's educational app. The color palette features warm creams, teals, and soft corals. The lighting is bright and cheerful." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgZN_MMjlepKJ-BD-VgEOK7dwBGV9veHBpPqKKoLwbwA7kS8MSzZVLBLBXBafIwHYGJxpuYgQ71YvAXAHvhqnuvxuiVyp-nFgfGxi1KCtN6CZuJAg9NJK4IvXEMgRMXm4-6__vx4C3zG-PMcs4UFEbOyXddj19OTr8Lj-7avznxyrE044znulESKDek9GdqigKwcegFBcRXqjv2zWubu59Hb4e-nXcDfEHUB6NTfFfknBGpto0y4st"/>
+</div>
+</div>
+</section>
+<!-- Jawabanku Block -->
+<section class="flex flex-col gap-sm">
+<label class="font-headline-md text-headline-md text-on-surface flex items-center gap-xs" for="answer">
+<span class="material-symbols-outlined text-primary-container">edit</span> Jawabanku
+            </label>
+<input class="w-full h-touch_target bg-surface-container-lowest border border-outline-variant rounded-[12px] px-md font-body-lg text-body-lg text-center focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline/50 shadow-sm" id="answer" placeholder="Ketik jawabanmu di sini..." type="text"/>
+</section>
+<!-- Caraku (Diagnostic) Block -->
+<section class="flex flex-col gap-sm bg-surface-container-low p-md rounded-[12px] border border-outline-variant/10">
+<label class="font-headline-md text-headline-md text-on-surface flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary-container">psychology</span> Caraku
+            </label>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xs">Pilih salah satu yang paling sesuai dengan perasaanmu saat mengerjakan soal ini:</p>
+<div class="grid grid-cols-2 gap-sm">
+<!-- Diagnostic Pills -->
+<button class="diagnostic-pill active w-full h-touch_target rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center justify-center transition-all hover:bg-surface-variant">
+                    Sudah paham
+                </button>
+<button class="diagnostic-pill w-full h-touch_target rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center justify-center transition-all hover:bg-surface-variant">
+                    Pernah lihat
+                </button>
+<button class="diagnostic-pill w-full h-touch_target rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center justify-center transition-all hover:bg-surface-variant">
+                    Lupa rumusnya
+                </button>
+<button class="diagnostic-pill w-full h-touch_target rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center justify-center transition-all hover:bg-surface-variant">
+                    Bingung mulai
+                </button>
+<button class="diagnostic-pill w-full h-touch_target rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center justify-center transition-all hover:bg-surface-variant">
+                    Menebak
+                </button>
+<button class="diagnostic-pill w-full h-touch_target rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center justify-center transition-all hover:bg-surface-variant">
+                    Belum pernah
+                </button>
+</div>
+</section>
+</main>
+<!-- Floating Action Area for CTA -->
+<div class="fixed bottom-0 left-0 w-full p-lg bg-gradient-to-t from-surface to-transparent z-40 max-w-max_width mx-auto">
+<button class="w-full h-[48px] bg-secondary-container text-on-secondary rounded-[10px] font-headline-md text-headline-md flex items-center justify-center gap-xs shadow-md active:scale-95 transition-transform">
+<span>Simpan jawaban</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<script>
+        // Simple diagnostic pill toggle logic
+        document.querySelectorAll('.diagnostic-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.diagnostic-pill').forEach(p => p.classList.remove('active', 'bg-primary-container', 'text-on-primary'));
+                pill.classList.add('active');
+            });
+        });
+    </script>
+</body></html>

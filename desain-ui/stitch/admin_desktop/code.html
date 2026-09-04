@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin - Caraku</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#313030",
+                        "surface-dim": "#dcd9d9",
+                        "primary-fixed": "#7ff5f4",
+                        "on-background": "#1c1b1b",
+                        "surface-container": "#f0edec",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fcf9f8",
+                        "secondary-fixed": "#ffdad5",
+                        "surface-container-highest": "#e5e2e1",
+                        "outline-variant": "#bcc9c8",
+                        "surface": "#fcf9f8",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#60d8d8",
+                        "tertiary-container": "#c68600",
+                        "secondary": "#ae3026",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb1",
+                        "on-secondary-container": "#690003",
+                        "on-tertiary-fixed": "#291800",
+                        "secondary-fixed-dim": "#ffb4aa",
+                        "inverse-primary": "#60d8d8",
+                        "on-tertiary-container": "#3e2700",
+                        "on-surface-variant": "#3d4949",
+                        "primary": "#006a6a",
+                        "outline": "#6d7a79",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#002020",
+                        "on-secondary-fixed": "#410001",
+                        "secondary-container": "#fc6959",
+                        "tertiary": "#815600",
+                        "surface-variant": "#e5e2e1",
+                        "primary-container": "#0fa3a3",
+                        "on-surface": "#1c1b1b",
+                        "on-tertiary-fixed-variant": "#624000",
+                        "on-secondary-fixed-variant": "#8c1712",
+                        "surface-container-high": "#ebe7e7",
+                        "tertiary-fixed-dim": "#ffba4b",
+                        "background": "#fcf9f8",
+                        "on-primary-container": "#003131",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#004f50",
+                        "inverse-on-surface": "#f3f0ef",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f6f3f2",
+                        "surface-tint": "#006a6a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch_target": "44px",
+                        "sm": "8px",
+                        "xxl": "32px",
+                        "xs": "4px",
+                        "max_width": "46rem",
+                        "lg": "16px",
+                        "md": "12px",
+                        "xl": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Be Vietnam Pro"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "print": ["Helvetica Neue"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "label-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "display": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "print": ["14px", { "lineHeight": "1.5" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Modal transitions */
+        .modal-backdrop {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .modal-backdrop.show .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-lg text-on-surface min-h-screen pt-touch_target md:pt-[60px]">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full h-[60px] bg-surface border-b border-outline-variant/10 flex justify-between items-center px-lg max-w-max_width mx-auto z-50 left-0 right-0">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[28px]" data-weight="fill">face</span>
+<span class="text-headline-lg font-headline-lg text-primary">Caraku Admin</span>
+</div>
+<div class="flex items-center gap-md">
+<span class="text-label-md font-label-md text-on-surface-variant bg-tertiary-fixed text-on-tertiary-fixed px-md py-[2px] rounded-full">Pengelola</span>
+<button class="w-touch_target h-touch_target flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">logout</span>
+</button>
+</div>
+</header>
+<main class="max-w-max_width mx-auto px-lg py-xxl pb-[100px] md:pb-xxl">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-xl gap-md">
+<div>
+<h1 class="text-display font-display text-on-surface">Daftar Pengguna</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-xs">Kelola akses dan data siswa serta orang tua.</p>
+</div>
+<div class="relative w-full md:w-auto flex-shrink-0">
+<input class="w-full md:w-[300px] h-[48px] pl-[40px] pr-lg bg-surface-container-lowest border border-outline-variant/30 rounded-[10px] text-body-md font-body-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-outline-variant" placeholder="Cari nama atau email..." type="text"/>
+<span class="material-symbols-outlined absolute left-[12px] top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+</div>
+</div>
+<!-- User List Cards -->
+<div class="flex flex-col gap-md">
+<!-- Card 1: Pengelola -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-lg hover:border-primary/30 transition-colors shadow-sm">
+<div class="flex items-center gap-lg">
+<div class="w-[50px] h-[50px] rounded-full bg-surface-variant overflow-hidden flex-shrink-0 border-2 border-surface">
+<img alt="Avatar" class="w-full h-full object-cover" data-alt="A small circular avatar placeholder image showing a friendly cartoon owl face with large glasses, representing a teacher or admin in a light educational app setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW0E1Z9OOQDtGmvS5ZfZ6Xvl7vSMXF4dnrwqRk7SUOtGTFbSbgW0V_p0NWNAYhEI-ApiyaOzsAY3-Aj-D9dWhuLlKecIKh7E7I2YDbXgXWRCJImzfN-kgyVq4P6uwsXhbPnk36l7fcAqSatjznvbtQewSDl_MvfTqJ_Z2RTJh_5nhkulf_kGRtQgjvxK_yJ2c2pIXCLv8ogMHcaHQS9WR8W0-ysKh9VMBgfVNIVMvm3F4MLrmtpWty"/>
+</div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface">Budi Santoso</h3>
+<div class="flex items-center gap-sm mt-[2px]">
+<span class="text-label-md font-label-md bg-tertiary-fixed text-on-tertiary-fixed px-sm py-[2px] rounded border border-tertiary-fixed-dim/30">Pengelola</span>
+<span class="text-body-md font-body-md text-on-surface-variant">budi.admin@caraku.id</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-sm w-full md:w-auto border-t md:border-t-0 border-outline-variant/10 pt-md md:pt-0">
+<button class="h-touch_target px-lg bg-surface-variant text-on-surface rounded-[10px] text-label-md font-label-md hover:bg-outline-variant/20 transition-transform active:scale-95 flex-1 md:flex-none">
+                        Edit
+                    </button>
+<!-- Admin cannot delete other admins easily, so no delete button here -->
+</div>
+</div>
+<!-- Card 2: Orang Tua -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-lg hover:border-primary/30 transition-colors shadow-sm">
+<div class="flex items-center gap-lg">
+<div class="w-[50px] h-[50px] rounded-full bg-primary-fixed/20 overflow-hidden flex-shrink-0 flex items-center justify-center border-2 border-surface">
+<span class="material-symbols-outlined text-primary">person</span>
+</div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface">Siti Rahma</h3>
+<div class="flex items-center gap-sm mt-[2px]">
+<span class="text-label-md font-label-md bg-primary-container text-on-primary-container px-sm py-[2px] rounded border border-primary/20">Orang Tua</span>
+<span class="text-body-md font-body-md text-on-surface-variant">siti.r@email.com</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-sm w-full md:w-auto border-t md:border-t-0 border-outline-variant/10 pt-md md:pt-0">
+<button class="h-touch_target px-md bg-surface border border-outline-variant/30 text-on-surface rounded-[10px] text-label-md font-label-md hover:bg-surface-variant transition-transform active:scale-95 flex items-center justify-center" title="Reset Password">
+<span class="material-symbols-outlined text-[20px]">lock_reset</span>
+</button>
+<button class="h-touch_target px-md bg-surface border border-outline-variant/30 text-error rounded-[10px] text-label-md font-label-md hover:bg-error-container transition-transform active:scale-95 flex items-center justify-center delete-btn" data-name="Siti Rahma" title="Hapus Pengguna">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Card 3: Siswa (implied by context of deletion) -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-lg hover:border-primary/30 transition-colors shadow-sm">
+<div class="flex items-center gap-lg">
+<div class="w-[50px] h-[50px] rounded-full bg-secondary-fixed/30 overflow-hidden flex-shrink-0 flex items-center justify-center border-2 border-surface">
+<span class="material-symbols-outlined text-secondary">child_care</span>
+</div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface">Andi Pratama</h3>
+<div class="flex items-center gap-sm mt-[2px]">
+<span class="text-label-md font-label-md bg-surface-container-highest text-on-surface px-sm py-[2px] rounded border border-outline-variant/30">Siswa</span>
+<span class="text-body-md font-body-md text-on-surface-variant">Kelas 4A</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-sm w-full md:w-auto border-t md:border-t-0 border-outline-variant/10 pt-md md:pt-0">
+<button class="h-touch_target px-md bg-surface border border-outline-variant/30 text-on-surface rounded-[10px] text-label-md font-label-md hover:bg-surface-variant transition-transform active:scale-95 flex items-center justify-center" title="Reset Password">
+<span class="material-symbols-outlined text-[20px]">lock_reset</span>
+</button>
+<button class="h-touch_target px-md bg-surface border border-outline-variant/30 text-error rounded-[10px] text-label-md font-label-md hover:bg-error-container transition-transform active:scale-95 flex items-center justify-center delete-btn" data-name="Andi Pratama" title="Hapus Siswa">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Delete Confirmation Modal -->
+<div class="modal-backdrop fixed inset-0 z-[100] bg-on-background/40 backdrop-blur-sm flex items-center justify-center p-lg" id="deleteModal">
+<div class="modal-content bg-surface-container-lowest w-full max-w-[400px] rounded-[16px] shadow-lg p-xl flex flex-col gap-md">
+<div class="flex items-center gap-md text-error">
+<span class="material-symbols-outlined text-[32px]">warning</span>
+<h2 class="text-headline-md font-headline-md">Hapus Pengguna?</h2>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant">
+                Tindakan ini tidak dapat dibatalkan. Anda akan menghapus <strong class="text-on-surface" id="deleteTargetName">Pengguna</strong> beserta seluruh data riwayat belajarnya.
+            </p>
+<div class="mt-sm">
+<label class="block text-label-md font-label-md text-on-surface mb-xs" for="confirmDelete">Ketik "hapus" untuk konfirmasi:</label>
+<input autocomplete="off" class="w-full h-[48px] px-md bg-surface-container border border-outline-variant/50 rounded-[8px] text-body-md font-body-md focus:border-error focus:ring-1 focus:ring-error focus:outline-none transition-all" id="confirmDelete" type="text"/>
+</div>
+<div class="flex items-center justify-end gap-sm mt-lg">
+<button class="h-touch_target px-lg text-label-md font-label-md text-on-surface-variant hover:bg-surface-variant rounded-[10px] transition-colors" id="cancelDelete">
+                    Batal
+                </button>
+<button class="h-touch_target px-lg bg-secondary-container text-on-secondary-container rounded-[10px] text-label-md font-label-md opacity-50 cursor-not-allowed transition-all" disabled="" id="confirmDeleteBtn">
+                    Hapus Permanen
+                </button>
+</div>
+</div>
+</div>
+<!-- BottomNavBar (Hidden on Desktop) -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-lowest border-t border-outline-variant/10 md:hidden pb-safe">
+<div class="flex justify-around items-center px-sm py-xs">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-xl py-xs hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="text-[10px] font-label-md mt-1">Beranda</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-tertiary-fixed text-on-tertiary-fixed rounded-[12px] px-xl py-xs transition-all scale-100 shadow-sm border border-tertiary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined text-[24px]" data-weight="fill">group</span>
+<span class="text-[10px] font-label-md mt-1 font-bold">Pengguna</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-xl py-xs hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+<span class="text-[10px] font-label-md mt-1">Sistem</span>
+</a>
+</div>
+</nav>
+<script>
+        // Modal Logic
+        const deleteBtns = document.querySelectorAll('.delete-btn');
+        const modal = document.getElementById('deleteModal');
+        const cancelBtn = document.getElementById('cancelDelete');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const confirmInput = document.getElementById('confirmDelete');
+        const targetNameSpan = document.getElementById('deleteTargetName');
+
+        function openModal(name) {
+            targetNameSpan.textContent = name;
+            confirmInput.value = '';
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            modal.classList.add('show');
+            setTimeout(() => confirmInput.focus(), 100);
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        deleteBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const name = e.currentTarget.getAttribute('data-name');
+                openModal(name);
+            });
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Input validation for 'hapus'
+        confirmInput.addEventListener('input', (e) => {
+            if (e.target.value.toLowerCase() === 'hapus') {
+                confirmBtn.disabled = false;
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                // Change to solid coral when active
+                confirmBtn.classList.remove('bg-secondary-container', 'text-on-secondary-container');
+                confirmBtn.classList.add('bg-secondary', 'text-on-secondary', 'hover:opacity-90', 'active:scale-95');
+            } else {
+                confirmBtn.disabled = true;
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                // Revert
+                confirmBtn.classList.add('bg-secondary-container', 'text-on-secondary-container');
+                confirmBtn.classList.remove('bg-secondary', 'text-on-secondary', 'hover:opacity-90', 'active:scale-95');
+            }
+        });
+
+        confirmBtn.addEventListener('click', () => {
+            if (!confirmBtn.disabled) {
+                // Simulate deletion
+                alert(`Menghapus ${targetNameSpan.textContent}... (Simulasi)`);
+                closeModal();
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lampiran Sesi - Caraku</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#313030",
+                        "surface-dim": "#dcd9d9",
+                        "primary-fixed": "#7ff5f4",
+                        "on-background": "#1c1b1b",
+                        "surface-container": "#f0edec",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fcf9f8",
+                        "secondary-fixed": "#ffdad5",
+                        "surface-container-highest": "#e5e2e1",
+                        "outline-variant": "#bcc9c8",
+                        "surface": "#fcf9f8",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#60d8d8",
+                        "tertiary-container": "#c68600",
+                        "secondary": "#ae3026",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb1",
+                        "on-secondary-container": "#690003",
+                        "on-tertiary-fixed": "#291800",
+                        "secondary-fixed-dim": "#ffb4aa",
+                        "inverse-primary": "#60d8d8",
+                        "on-tertiary-container": "#3e2700",
+                        "on-surface-variant": "#3d4949",
+                        "primary": "#006a6a",
+                        "outline": "#6d7a79",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#002020",
+                        "on-secondary-fixed": "#410001",
+                        "secondary-container": "#fc6959",
+                        "tertiary": "#815600",
+                        "surface-variant": "#e5e2e1",
+                        "primary-container": "#0fa3a3",
+                        "on-surface": "#1c1b1b",
+                        "on-tertiary-fixed-variant": "#624000",
+                        "on-secondary-fixed-variant": "#8c1712",
+                        "surface-container-high": "#ebe7e7",
+                        "tertiary-fixed-dim": "#ffba4b",
+                        "background": "#fcf9f8",
+                        "on-primary-container": "#003131",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#004f50",
+                        "inverse-on-surface": "#f3f0ef",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f6f3f2",
+                        "surface-tint": "#006a6a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch_target": "44px",
+                        "sm": "8px",
+                        "xxl": "32px",
+                        "xs": "4px",
+                        "max_width": "46rem",
+                        "lg": "16px",
+                        "md": "12px",
+                        "xl": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Be Vietnam Pro"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "print": ["Helvetica Neue"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "label-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "display": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "print": ["14px", { "lineHeight": "1.5" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fcf9f8; /* Warm cream background */
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+    </style>
+</head>
+<body class="text-on-background min-h-screen flex flex-col">
+<!-- TopAppBar (From JSON Blueprint for Web/Desktop) -->
+<header class="hidden md:flex bg-surface dark:bg-surface border-b border-outline-variant/10 fixed top-0 w-full h-touch_target justify-between items-center px-lg max-w-max_width mx-auto z-50 shadow-sm" style="left:50%; transform:translateX(-50%);">
+<div class="text-headline-lg font-headline-lg text-primary dark:text-primary-fixed flex items-center gap-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">face</span>
+            Caraku
+        </div>
+<!-- Web Navigation Tabs -->
+<nav class="flex gap-lg h-full items-center">
+<a class="text-on-surface-variant font-label-md text-label-md hover:opacity-90 transition-transform duration-200" href="#">
+                Belajar
+            </a>
+<a class="text-primary font-bold font-label-md text-label-md hover:opacity-90 transition-transform duration-200" href="#">
+                Riwayat
+            </a>
+<a class="text-on-surface-variant font-label-md text-label-md hover:opacity-90 transition-transform duration-200" href="#">
+                Peringkat
+            </a>
+<a class="text-on-surface-variant font-label-md text-label-md hover:opacity-90 transition-transform duration-200" href="#">
+                Profil
+            </a>
+</nav>
+<button class="bg-secondary-container text-on-secondary font-label-md text-label-md px-lg py-sm rounded-lg hover:opacity-90 transition-transform duration-200 active:scale-95 flex items-center h-touch_target">
+            Lanjut
+        </button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 max-w-max_width mx-auto w-full px-lg pt-xxl md:pt-24 pb-xxl">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-xl border-b border-outline-variant/20 pb-sm">
+<div>
+<h1 class="text-display font-display text-on-surface mb-xs">Lampiran Sesi</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant">Dokumen dan catatan pekerjaan siswa.</p>
+</div>
+<button class="bg-secondary-container text-on-secondary h-touch_target px-lg rounded-[10px] flex items-center gap-sm hover:opacity-90 active:scale-95 transition-all shadow-sm">
+<span class="material-symbols-outlined">photo_camera</span>
+<span class="font-label-md text-label-md">Foto lembar jawaban</span>
+</button>
+</div>
+<!-- Attachments Grid -->
+<div class="bento-grid">
+<!-- Attachment Card 1 (Baru) -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl overflow-hidden hover:border-primary hover:border-2 transition-all cursor-pointer relative group">
+<div class="h-48 relative overflow-hidden bg-surface-container">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A close-up photograph of a child's hand-written math worksheet on lined paper. The writing is slightly messy but legible, done in pencil. The lighting is soft and warm, typical of a cozy study desk setup. The image feels authentic, educational, and encouraging." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiE0AqSatukvKsDYWBi1_sIZr0ihjMD1SKFF2vCpUrLYKk3oJxw7Ojirl9IXLV5jjqi6hjbtJWkF1P4N6oBbCqKhoRFARJcDjBfGM90sZ75UMX-dSI-Td0i6cTMv5KuK1i_jAvtGmSsx1q3sGfkg110FMcOpfRyXtffKlD625vg9ZWMgCuyyp5RLsYd3-gNc5Kwj0OwqD2Lly1rx8U-5Rnq6WXNkvsP9Re0aWQG62kNUtjPUaWC_xv"/>
+<div class="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+<!-- Pill -->
+<div class="absolute top-sm left-sm bg-primary-container text-on-primary-container px-sm py-xs rounded-full flex items-center gap-xs font-label-md text-[12px] uppercase shadow-sm">
+<span class="material-symbols-outlined text-[14px]">fiber_new</span>
+                        Baru
+                    </div>
+</div>
+<div class="p-md">
+<h3 class="font-headline-md text-headline-md text-on-surface truncate">Latihan_Pecahan_1.jpg</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm mt-xs">Ditambahkan hari ini, 10:30 AM</p>
+</div>
+</div>
+<!-- Attachment Card 2 (Diterapkan) -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl overflow-hidden hover:border-primary hover:border-2 transition-all cursor-pointer relative group">
+<div class="h-48 relative overflow-hidden bg-surface-container">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A brightly lit photo of a math textbook page showing geometry problems. The page has some highlighted sections in yellow and neat pencil notes in the margins. Shot from directly above with warm, even lighting on a clean wooden desk surface. Educational and clear." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkvN-FUApOX3V5R71l1EgEP6JBb2DyUgf8LWeDOUXUTNTsvZgm_BmQ83ZgoJn79M31f7IoTShkP2UgvndoRmklXAierHA49qwdYF99pkUSJ-iZoSAujUpeMF_UilIHmEOX0mJ5Gq1i02ZsxhFKTKx8JKLI7IBEza62gZ-aIKhM4pJQvhrGsNwDSBFSB1EqdhndJ70pSJIEqBDvnE6OwPSLuO0k42GLQE5VFYqljM38WeQDncuK4shz"/>
+<div class="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+<!-- Pill (Positive/Applied state - using primary color as positive indicator) -->
+<div class="absolute top-sm left-sm bg-[#e6f4ea] text-[#137333] px-sm py-xs rounded-full flex items-center gap-xs font-label-md text-[12px] uppercase shadow-sm border border-[#137333]/20">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                        Diterapkan
+                    </div>
+</div>
+<div class="p-md">
+<h3 class="font-headline-md text-headline-md text-on-surface truncate">PR_Geometri_Bab3.png</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm mt-xs">Kemarin, 15:45 PM</p>
+</div>
+</div>
+<!-- Attachment Card 3 (Baru) -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl overflow-hidden hover:border-primary hover:border-2 transition-all cursor-pointer relative group">
+<div class="h-48 relative overflow-hidden bg-surface-container">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A casual photo of a whiteboard with colorful marker drawings explaining a basic algebra equation. There are smiley faces drawn next to the correct answers. The lighting is bright classroom lighting, creating a cheerful, engaging, and supportive learning environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-lvJutF2WeK_pLsgLBqlat2Eu1PZOKK8DUINyI451vSHsEHXHBxVzPZBgcGToIG-H-alu5C6-y-PJRTTsR9oatj7gzJYKR-5uSsMq90EtpIsVoJLrme99Ai_ZwdpKBH0OxWL5KB5RUgEBFmLrD_sXsCrxfrfboPRG9Dbeg_RRRusvMt4CA-cd7TmTcDbWQENpVMMq8eqUaWB_02b-l3wdDwHsqQedYxDYP_w07SX-STakAeeLXp-G"/>
+<div class="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+<!-- Pill -->
+<div class="absolute top-sm left-sm bg-primary-container text-on-primary-container px-sm py-xs rounded-full flex items-center gap-xs font-label-md text-[12px] uppercase shadow-sm">
+<span class="material-symbols-outlined text-[14px]">fiber_new</span>
+                        Baru
+                    </div>
+</div>
+<div class="p-md">
+<h3 class="font-headline-md text-headline-md text-on-surface truncate">Catatan_Papan_Tulis.jpg</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm mt-xs">Hari ini, 09:15 AM</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (From JSON Blueprint) -->
+<footer class="bg-surface-container dark:bg-surface-container-high w-full py-xl mt-auto">
+<div class="flex flex-col items-center gap-md w-full px-lg max-w-max_width mx-auto text-center">
+<div class="text-primary font-bold text-headline-md font-headline-md flex items-center gap-xs">
+<span class="material-symbols-outlined">face</span> Caraku
+            </div>
+<div class="flex gap-lg flex-wrap justify-center">
+<a class="text-on-surface-variant font-label-md text-label-md hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Bantuan</a>
+<a class="text-on-surface-variant font-label-md text-label-md hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Privasi</a>
+<a class="text-on-surface-variant font-label-md text-label-md hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Syarat &amp; Ketentuan</a>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant mt-sm">© 2024 Caraku Math</p>
+</div>
+</footer>
+</body></html>

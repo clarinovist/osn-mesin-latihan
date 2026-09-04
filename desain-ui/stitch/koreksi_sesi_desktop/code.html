@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Halaman Koreksi - Caraku</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@100..900&family=Plus+Jakarta+Sans:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#313030",
+                        "surface-dim": "#dcd9d9",
+                        "primary-fixed": "#7ff5f4",
+                        "on-background": "#1c1b1b",
+                        "surface-container": "#f0edec",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fcf9f8",
+                        "secondary-fixed": "#ffdad5",
+                        "surface-container-highest": "#e5e2e1",
+                        "outline-variant": "#bcc9c8",
+                        "surface": "#fcf9f8",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#60d8d8",
+                        "tertiary-container": "#c68600",
+                        "secondary": "#ae3026",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#ffddb1",
+                        "on-secondary-container": "#690003",
+                        "on-tertiary-fixed": "#291800",
+                        "secondary-fixed-dim": "#ffb4aa",
+                        "inverse-primary": "#60d8d8",
+                        "on-tertiary-container": "#3e2700",
+                        "on-surface-variant": "#3d4949",
+                        "primary": "#006a6a",
+                        "outline": "#6d7a79",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed": "#002020",
+                        "on-secondary-fixed": "#410001",
+                        "secondary-container": "#fc6959",
+                        "tertiary": "#815600",
+                        "surface-variant": "#e5e2e1",
+                        "primary-container": "#0fa3a3",
+                        "on-surface": "#1c1b1b",
+                        "on-tertiary-fixed-variant": "#624000",
+                        "on-secondary-fixed-variant": "#8c1712",
+                        "surface-container-high": "#ebe7e7",
+                        "tertiary-fixed-dim": "#ffba4b",
+                        "background": "#fcf9f8",
+                        "on-primary-container": "#003131",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#004f50",
+                        "inverse-on-surface": "#f3f0ef",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f6f3f2",
+                        "surface-tint": "#006a6a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch_target": "44px",
+                        "sm": "8px",
+                        "xxl": "32px",
+                        "xs": "4px",
+                        "max_width": "46rem",
+                        "lg": "16px",
+                        "md": "12px",
+                        "xl": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Be Vietnam Pro"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "print": ["Helvetica Neue"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "label-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "display": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "print": ["14px", { "lineHeight": "1.5" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<!-- Warm Cream Background (Level 0) -->
+<body class="bg-surface-container-low text-on-surface min-h-screen flex flex-col font-body-md">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface border-b border-outline-variant/10 fixed top-0 w-full h-touch_target flex justify-between items-center px-lg max-w-max_width mx-auto z-50 left-0 right-0">
+<div class="flex items-center gap-sm text-headline-lg-mobile font-headline-lg-mobile text-primary dark:text-primary-fixed">
+<span class="material-symbols-outlined" data-icon="face">face</span>
+<span class="font-bold">Caraku</span>
+</div>
+<button class="text-label-md font-label-md text-primary dark:text-primary-fixed hover:opacity-90 active:scale-98 transition-transform duration-200">
+            Lanjut
+        </button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-max_width mx-auto px-lg pt-[80px] pb-xxl flex flex-col gap-xxl mt-lg">
+<!-- Header Section -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Halaman Koreksi</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Sesi: Pecahan Dasar Kelas 4</p>
+</div>
+<div class="inline-flex items-center gap-xs bg-tertiary-container/10 border border-tertiary-container/30 text-on-tertiary-container px-md py-xs rounded-full">
+<span class="material-symbols-outlined text-[16px]">edit_document</span>
+<span class="font-label-md text-label-md">Mode Diagnosis Manual</span>
+</div>
+</div>
+<!-- Question Cards List -->
+<div class="flex flex-col gap-xl">
+<!-- Card 1 (State: Unsaved/Editing) -->
+<div class="kartu-soal bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg md:p-xl flex flex-col sm:flex-row gap-xl transition-all focus-within:border-primary focus-within:border-2 relative overflow-hidden">
+<!-- Left Content -->
+<div class="flex-1 flex flex-col gap-xl">
+<!-- Question Header -->
+<div class="flex gap-md items-start">
+<!-- Number Badge (Teal circle, 28px) -->
+<div class="w-[28px] h-[28px] shrink-0 bg-primary-container text-on-primary-container rounded-full flex justify-center items-center font-label-md text-label-md">1</div>
+<div class="font-body-md text-body-md text-on-surface pt-xs">
+                            Selesaikan penjumlahan berikut: <br/>
+<span class="font-headline-md text-headline-md inline-block mt-xs bg-surface-container py-xs px-sm rounded">1/4 + 2/4 = ...</span>
+</div>
+</div>
+<!-- Student Answer Input -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">edit</span> Jawaban Siswa
+                        </label>
+<textarea class="w-full bg-surface-bright border border-outline rounded-lg p-md font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[80px] resize-y placeholder:text-outline-variant" placeholder="Ketik jawaban atau cara siswa di sini...">3/8</textarea>
+</div>
+<!-- Diagnosis Grid -->
+<div class="flex flex-col gap-md">
+<label class="font-label-md text-label-md text-on-surface-variant">Pilih Diagnosis 'Caramu'</label>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-sm">
+<button class="border border-outline-variant text-on-surface rounded-full py-sm px-md font-label-md text-label-md hover:bg-surface-container-high transition-colors text-left flex justify-between items-center group">
+                                Sudah paham <span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-[18px]">check_circle</span>
+</button>
+<button class="border border-primary bg-primary/5 text-on-primary-container rounded-full py-sm px-md font-label-md text-label-md transition-colors text-left flex justify-between items-center font-bold">
+                                Pernah lihat <span class="material-symbols-outlined text-[18px]">check_circle</span>
+</button>
+<button class="border border-outline-variant text-on-surface rounded-full py-sm px-md font-label-md text-label-md hover:bg-surface-container-high transition-colors text-left flex justify-between items-center group">
+                                Lupa rumusnya <span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-[18px]">check_circle</span>
+</button>
+<button class="border border-outline-variant text-on-surface rounded-full py-sm px-md font-label-md text-label-md hover:bg-surface-container-high transition-colors text-left flex justify-between items-center group">
+                                Bingung mulai <span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-[18px]">check_circle</span>
+</button>
+<button class="border border-outline-variant text-on-surface rounded-full py-sm px-md font-label-md text-label-md hover:bg-surface-container-high transition-colors text-left flex justify-between items-center group">
+                                Menebak <span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-[18px]">check_circle</span>
+</button>
+<button class="border border-outline-variant text-on-surface rounded-full py-sm px-md font-label-md text-label-md hover:bg-surface-container-high transition-colors text-left flex justify-between items-center group">
+                                Belum pernah <span class="material-symbols-outlined opacity-0 group-hover:opacity-100 text-[18px]">check_circle</span>
+</button>
+</div>
+</div>
+<!-- Action Button (Coral specifically for Save) -->
+<div class="pt-sm">
+<button class="bg-secondary-container text-on-secondary-container font-label-md text-label-md py-md px-xl rounded-lg active:scale-95 transition-transform w-full sm:w-auto inline-flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined">save</span>
+                            Simpan & Diagnosis
+                        </button>
+</div>
+</div>
+<!-- Right Content (Status Pill - Pending) -->
+<div class="sm:w-24 sm:border-l sm:border-outline-variant/20 sm:pl-lg flex sm:flex-col items-center justify-center sm:justify-start gap-md pt-lg sm:pt-0 border-t border-outline-variant/20 sm:border-t-0 mt-lg sm:mt-0">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-headline-md text-headline-md font-bold shadow-inner">
+                        ?
+                    </div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center hidden sm:block">Belum<br/>Dinilai</span>
+</div>
+</div>
+<!-- Card 2 (State: Diagnosed Error) -->
+<div class="kartu-soal bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg md:p-xl flex flex-col sm:flex-row gap-xl transition-all relative">
+<!-- Left Content -->
+<div class="flex-1 flex flex-col gap-lg opacity-80">
+<!-- Question Header -->
+<div class="flex gap-md items-start">
+<div class="w-[28px] h-[28px] shrink-0 bg-primary-container text-on-primary-container rounded-full flex justify-center items-center font-label-md text-label-md">2</div>
+<div class="font-body-md text-body-md text-on-surface pt-xs">
+                            Selesaikan penjumlahan berikut: <br/>
+<span class="font-headline-md text-headline-md inline-block mt-xs bg-surface-container py-xs px-sm rounded">1/2 + 1/3 = ...</span>
+</div>
+</div>
+<div class="bg-surface-variant p-md rounded-lg">
+<span class="font-label-md text-label-md text-on-surface-variant block mb-xs">Jawaban Tersimpan:</span>
+<p class="font-body-md text-body-md text-on-surface">2/5</p>
+</div>
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Diagnosis:</span>
+<span class="bg-surface-container-high px-md py-xs rounded-full font-label-md text-label-md text-on-surface">Bingung mulai</span>
+<button class="text-primary hover:underline font-label-md text-label-md ml-auto">Edit</button>
+</div>
+</div>
+<!-- Right Content (Status Pill - K untuk Konsep) -->
+<div class="sm:w-24 sm:border-l sm:border-outline-variant/20 sm:pl-lg flex sm:flex-col items-center justify-center sm:justify-start gap-md pt-lg sm:pt-0 border-t border-outline-variant/20 sm:border-t-0 mt-lg sm:mt-0">
+<div class="w-12 h-12 rounded-full bg-error-container text-on-error-container flex items-center justify-center font-headline-md text-headline-md font-bold shadow-sm">
+                        K
+                    </div>
+<span class="font-label-md text-label-md text-error text-center">Konsep</span>
+</div>
+</div>
+<!-- Card 3 (State: Diagnosed Correct) -->
+<div class="kartu-soal bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg md:p-xl flex flex-col sm:flex-row gap-xl transition-all relative">
+<!-- Left Content -->
+<div class="flex-1 flex flex-col gap-lg opacity-80">
+<!-- Question Header -->
+<div class="flex gap-md items-start">
+<div class="w-[28px] h-[28px] shrink-0 bg-primary-container text-on-primary-container rounded-full flex justify-center items-center font-label-md text-label-md">3</div>
+<div class="font-body-md text-body-md text-on-surface pt-xs">
+                            Bandingkan pecahan berikut (>, <, atau =): <br/>
+<span class="font-headline-md text-headline-md inline-block mt-xs bg-surface-container py-xs px-sm rounded">3/4 ... 1/2</span>
+</div>
+</div>
+<div class="bg-surface-variant p-md rounded-lg">
+<span class="font-label-md text-label-md text-on-surface-variant block mb-xs">Jawaban Tersimpan:</span>
+<p class="font-body-md text-body-md text-on-surface">3/4 ></p>
+</div>
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Diagnosis:</span>
+<span class="bg-surface-container-high px-md py-xs rounded-full font-label-md text-label-md text-on-surface">Sudah paham</span>
+<button class="text-primary hover:underline font-label-md text-label-md ml-auto">Edit</button>
+</div>
+</div>
+<!-- Right Content (Status Pill - BENAR) -->
+<div class="sm:w-24 sm:border-l sm:border-outline-variant/20 sm:pl-lg flex sm:flex-col items-center justify-center sm:justify-start gap-md pt-lg sm:pt-0 border-t border-outline-variant/20 sm:border-t-0 mt-lg sm:mt-0">
+<div class="w-16 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-md text-label-md font-bold shadow-sm px-sm">
+                        BENAR
+                    </div>
+<span class="font-label-md text-label-md text-primary text-center hidden sm:block">Tepat</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container dark:bg-surface-container-high w-full py-xl flex flex-col items-center gap-md px-lg max-w-max_width mx-auto text-center mt-auto">
+<div class="text-primary font-bold text-label-md font-label-md">
+            © 2024 Caraku Math
+        </div>
+<div class="flex gap-xl text-body-md font-body-md text-on-surface-variant">
+<a class="hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Bantuan</a>
+<a class="hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Privasi</a>
+<a class="hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Syarat & Ketentuan</a>
+</div>
+</footer>
+</body></html>

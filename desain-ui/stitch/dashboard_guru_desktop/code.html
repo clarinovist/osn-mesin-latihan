@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dashboard Guru - Caraku</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-surface": "#313030",
+                      "surface-dim": "#dcd9d9",
+                      "primary-fixed": "#7ff5f4",
+                      "on-background": "#1c1b1b",
+                      "surface-container": "#f0edec",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#fcf9f8",
+                      "secondary-fixed": "#ffdad5",
+                      "surface-container-highest": "#e5e2e1",
+                      "outline-variant": "#bcc9c8",
+                      "surface": "#fcf9f8",
+                      "on-secondary": "#ffffff",
+                      "primary-fixed-dim": "#60d8d8",
+                      "tertiary-container": "#c68600",
+                      "secondary": "#ae3026",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed": "#ffddb1",
+                      "on-secondary-container": "#690003",
+                      "on-tertiary-fixed": "#291800",
+                      "secondary-fixed-dim": "#ffb4aa",
+                      "inverse-primary": "#60d8d8",
+                      "on-tertiary-container": "#3e2700",
+                      "on-surface-variant": "#3d4949",
+                      "primary": "#006a6a",
+                      "outline": "#6d7a79",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed": "#002020",
+                      "on-secondary-fixed": "#410001",
+                      "secondary-container": "#fc6959",
+                      "tertiary": "#815600",
+                      "surface-variant": "#e5e2e1",
+                      "primary-container": "#0fa3a3",
+                      "on-surface": "#1c1b1b",
+                      "on-tertiary-fixed-variant": "#624000",
+                      "on-secondary-fixed-variant": "#8c1712",
+                      "surface-container-high": "#ebe7e7",
+                      "tertiary-fixed-dim": "#ffba4b",
+                      "background": "#fcf9f8",
+                      "on-primary-container": "#003131",
+                      "on-error-container": "#93000a",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed-variant": "#004f50",
+                      "inverse-on-surface": "#f3f0ef",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f6f3f2",
+                      "surface-tint": "#006a6a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "touch_target": "44px",
+                      "sm": "8px",
+                      "xxl": "32px",
+                      "xs": "4px",
+                      "max_width": "46rem",
+                      "lg": "16px",
+                      "md": "12px",
+                      "xl": "24px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Be Vietnam Pro"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "display": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "print": ["Helvetica Neue"],
+                      "body-md": ["Be Vietnam Pro"],
+                      "label-md": ["Plus Jakarta Sans"]
+              },
+              "fontSize": {
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "display": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                      "print": ["14px", {"lineHeight": "1.5"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen font-body-md text-on-background flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full h-touch_target bg-surface dark:bg-surface border-b border-outline-variant/10 z-50">
+<div class="flex justify-between items-center px-lg w-full max-w-7xl mx-auto h-full">
+<div class="text-headline-lg font-headline-lg text-primary dark:text-primary-fixed flex items-center gap-sm">
+<span class="material-symbols-outlined text-[32px]">face</span>
+                Caraku
+            </div>
+<nav class="hidden md:flex items-center gap-xl">
+<a class="text-label-md font-label-md text-primary font-bold" href="#">Dashboard</a>
+<a class="text-label-md font-label-md text-on-surface-variant hover:opacity-90" href="#">Siswa</a>
+<a class="text-label-md font-label-md text-on-surface-variant hover:opacity-90" href="#">Laporan</a>
+</nav>
+<button class="text-label-md font-label-md text-on-surface-variant hover:opacity-90 flex items-center gap-xs">
+                Lanjut <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow pt-[80px] pb-xxl px-lg md:px-xl max-w-7xl mx-auto w-full">
+<!-- Success Banner -->
+<div class="bg-[#e6f4f1] border border-primary/20 rounded-xl p-md mb-xl flex items-center gap-md shadow-sm">
+<div class="bg-primary-container text-on-primary-container rounded-full w-8 h-8 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface">Sesi baru untuk Budi berhasil dibuat dan siap dimulai.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-xl">
+<!-- Left Column: Form -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<div class="bg-surface-container-lowest rounded-xl p-xl border border-outline-variant/10 shadow-sm relative overflow-hidden">
+<h2 class="text-headline-md font-headline-md text-on-surface mb-lg">Buat Sesi Baru</h2>
+<form class="flex flex-col gap-md">
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface-variant">Siswa</label>
+<select class="w-full h-touch_target bg-surface-container-lowest border border-outline-variant rounded-lg px-md text-body-md font-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors appearance-none">
+<option>Pilih Siswa...</option>
+<option>Budi Santoso</option>
+<option>Siti Aminah</option>
+</select>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface-variant">Topik Pembelajaran</label>
+<select class="w-full h-touch_target bg-surface-container-lowest border border-outline-variant rounded-lg px-md text-body-md font-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors appearance-none">
+<option>Pilih Topik...</option>
+<option>Penjumlahan Dasar</option>
+<option>Perkalian Bersusun</option>
+<option>Pecahan</option>
+</select>
+</div>
+<button class="mt-sm w-full h-touch_target bg-secondary-container text-on-secondary-container text-label-md font-label-md rounded-lg flex items-center justify-center gap-sm hover:opacity-90 active:scale-95 transition-all shadow-sm" type="button">
+<span class="material-symbols-outlined">add</span>
+                            Buat Sesi
+                        </button>
+</form>
+</div>
+</div>
+<!-- Right Column: Stats & List -->
+<div class="lg:col-span-8 flex flex-col gap-xl">
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 gap-md">
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg flex flex-col justify-center shadow-sm">
+<span class="text-label-md font-label-md text-on-surface-variant mb-xs">Murid Aktif</span>
+<div class="flex items-end gap-sm">
+<span class="text-display font-display text-primary">24</span>
+<span class="text-body-md font-body-md text-outline mb-1">/ 30</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-lg flex flex-col justify-center shadow-sm">
+<span class="text-label-md font-label-md text-on-surface-variant mb-xs">Sesi Minggu Ini</span>
+<div class="flex items-end gap-sm">
+<span class="text-display font-display text-tertiary-container">12</span>
+</div>
+</div>
+</div>
+<!-- Sessions Table/List -->
+<div class="tabel-wrap flex flex-col gap-md">
+<h3 class="text-headline-md font-headline-md text-on-surface">Jadwal Sesi</h3>
+<div class="flex flex-col gap-sm">
+<!-- Card 1 -->
+<div class="kartu-sesi cursor-pointer bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/50 hover:shadow-md transition-all rounded-xl p-md flex items-center gap-md group">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">menu_book</span>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-sm">
+<h4 class="text-label-md font-label-md text-on-surface">Budi Santoso</h4>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Baru</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant text-sm">Penjumlahan Dasar • 09:00 AM</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<!-- Card 2 -->
+<div class="kartu-sesi cursor-pointer bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/50 hover:shadow-md transition-all rounded-xl p-md flex items-center gap-md group">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary-container group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">calculate</span>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-sm">
+<h4 class="text-label-md font-label-md text-on-surface">Siti Aminah</h4>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant text-sm">Perkalian Bersusun • 10:30 AM</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<!-- Card 3 -->
+<div class="kartu-sesi cursor-pointer bg-surface-container-lowest border border-outline-variant/10 hover:border-primary/50 hover:shadow-md transition-all rounded-xl p-md flex items-center gap-md group">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed-dim/20 flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">extension</span>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-sm">
+<h4 class="text-label-md font-label-md text-on-surface">Agus Pratama</h4>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant text-sm">Pecahan Sederhana • 13:00 PM</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl bg-surface-container dark:bg-surface-container-high mt-auto">
+<div class="flex flex-col items-center gap-md w-full px-lg max-w-max_width mx-auto text-center">
+<span class="text-body-md font-body-md text-primary font-bold">© 2024 Caraku Math</span>
+<div class="flex gap-lg">
+<a class="text-label-md font-label-md text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Bantuan</a>
+<a class="text-label-md font-label-md text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Privasi</a>
+<a class="text-label-md font-label-md text-on-surface-variant hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">Syarat &amp; Ketentuan</a>
+</div>
+</div>
+</footer>
+</body></html>

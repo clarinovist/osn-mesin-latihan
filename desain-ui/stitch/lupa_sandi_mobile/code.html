@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Caraku - Lupa Sandi</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#313030",
+                    "surface-dim": "#dcd9d9",
+                    "primary-fixed": "#7ff5f4",
+                    "on-background": "#1c1b1b",
+                    "surface-container": "#f0edec",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#fcf9f8",
+                    "secondary-fixed": "#ffdad5",
+                    "surface-container-highest": "#e5e2e1",
+                    "outline-variant": "#bcc9c8",
+                    "surface": "#fcf9f8",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#60d8d8",
+                    "tertiary-container": "#c68600",
+                    "secondary": "#ae3026",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#ffddb1",
+                    "on-secondary-container": "#690003",
+                    "on-tertiary-fixed": "#291800",
+                    "secondary-fixed-dim": "#ffb4aa",
+                    "inverse-primary": "#60d8d8",
+                    "on-tertiary-container": "#3e2700",
+                    "on-surface-variant": "#3d4949",
+                    "primary": "#006a6a",
+                    "outline": "#6d7a79",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#002020",
+                    "on-secondary-fixed": "#410001",
+                    "secondary-container": "#fc6959",
+                    "tertiary": "#815600",
+                    "surface-variant": "#e5e2e1",
+                    "primary-container": "#0fa3a3",
+                    "on-surface": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#624000",
+                    "on-secondary-fixed-variant": "#8c1712",
+                    "surface-container-high": "#ebe7e7",
+                    "tertiary-fixed-dim": "#ffba4b",
+                    "background": "#fcf9f8",
+                    "on-primary-container": "#003131",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#004f50",
+                    "inverse-on-surface": "#f3f0ef",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f6f3f2",
+                    "surface-tint": "#006a6a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "touch_target": "44px",
+                    "sm": "8px",
+                    "xxl": "32px",
+                    "xs": "4px",
+                    "max_width": "46rem",
+                    "lg": "16px",
+                    "md": "12px",
+                    "xl": "24px"
+            },
+            "fontFamily": {
+                    "body-lg": [
+                            "Be Vietnam Pro"
+                    ],
+                    "headline-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "display": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-md": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "print": [
+                            "Helvetica Neue"
+                    ],
+                    "body-md": [
+                            "Be Vietnam Pro"
+                    ],
+                    "label-md": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "display": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "800"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "print": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.5"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex items-center justify-center p-lg font-body-md antialiased">
+<!-- Suppressed TopAppBar and BottomNavBar as this is a transactional 'dead-end' page -->
+<main class="w-full max-w-sm w-full mx-auto flex flex-col items-center">
+<!-- Logo / Branding Area -->
+<div class="mb-xl flex flex-col items-center gap-xs">
+<div class="w-16 h-16 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-display font-display" style="font-variation-settings: 'FILL' 1;">psychology_alt</span>
+</div>
+<h1 class="text-display font-display text-primary">Caraku</h1>
+</div>
+<!-- The White Card (Level 1 Elevation) -->
+<div class="w-full bg-surface-container-lowest rounded-xl p-xl border border-outline-variant/10 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col gap-lg relative overflow-hidden">
+<!-- Decorative minimal background accent -->
+<div class="absolute -top-10 -right-10 w-24 h-24 bg-primary-fixed/20 rounded-full blur-2xl pointer-events-none"></div>
+<!-- Header & Instruction -->
+<div class="text-center flex flex-col gap-sm relative z-10">
+<h2 class="text-headline-md font-headline-md text-on-background">Lupa Sandi</h2>
+<p class="text-body-md font-body-md text-on-surface-variant">
+                    Silakan hubungi Pengelola akunmu untuk mereset sandi.
+                </p>
+</div>
+<!-- Form -->
+<form action="#" class="flex flex-col gap-lg relative z-10" method="POST" onsubmit="event.preventDefault(); alert('Permintaan terkirim!');">
+<!-- Input Field -->
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface" for="accountName">Nama Akun</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">person</span>
+<input class="w-full min-h-touch_target bg-surface-container-lowest border border-outline-variant rounded-lg pl-10 pr-lg text-body-md font-body-md text-on-background placeholder:text-outline-variant focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" id="accountName" name="accountName" placeholder="Masukkan nama akunmu" required="" type="text"/>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-md mt-sm">
+<button class="w-full min-h-touch_target bg-secondary-container text-on-secondary-container rounded-lg text-label-md font-label-md flex items-center justify-center gap-xs active:scale-[0.98] transition-transform duration-200" type="submit">
+<span class="material-symbols-outlined" style="font-size: 20px;">send</span>
+                        Kirim Permintaan
+                    </button>
+<a class="w-full min-h-touch_target bg-transparent text-primary rounded-lg text-label-md font-label-md flex items-center justify-center active:bg-surface-container hover:bg-surface-container-low transition-colors duration-200" href="#">
+                        Kembali ke Masuk
+                    </a>
+</div>
+</form>
+</div>
+<!-- Optional subtle footer for support if needed -->
+<div class="mt-xl text-center">
+<p class="text-print font-print text-outline">
+                Butuh bantuan lain? <a class="text-primary underline hover:text-primary-container transition-colors" href="#">Pusat Bantuan</a>
+</p>
+</div>
+</main>
+</body></html>

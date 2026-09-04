@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Caraku - Halaman Murid</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#313030",
+                    "surface-dim": "#dcd9d9",
+                    "primary-fixed": "#7ff5f4",
+                    "on-background": "#1c1b1b",
+                    "surface-container": "#f0edec",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#fcf9f8",
+                    "secondary-fixed": "#ffdad5",
+                    "surface-container-highest": "#e5e2e1",
+                    "outline-variant": "#bcc9c8",
+                    "surface": "#fcf9f8",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#60d8d8",
+                    "tertiary-container": "#c68600",
+                    "secondary": "#ae3026",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#ffddb1",
+                    "on-secondary-container": "#690003",
+                    "on-tertiary-fixed": "#291800",
+                    "secondary-fixed-dim": "#ffb4aa",
+                    "inverse-primary": "#60d8d8",
+                    "on-tertiary-container": "#3e2700",
+                    "on-surface-variant": "#3d4949",
+                    "primary": "#006a6a",
+                    "outline": "#6d7a79",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#002020",
+                    "on-secondary-fixed": "#410001",
+                    "secondary-container": "#fc6959",
+                    "tertiary": "#815600",
+                    "surface-variant": "#e5e2e1",
+                    "primary-container": "#0fa3a3",
+                    "on-surface": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#624000",
+                    "on-secondary-fixed-variant": "#8c1712",
+                    "surface-container-high": "#ebe7e7",
+                    "tertiary-fixed-dim": "#ffba4b",
+                    "background": "#fcf9f8",
+                    "on-primary-container": "#003131",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#004f50",
+                    "inverse-on-surface": "#f3f0ef",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f6f3f2",
+                    "surface-tint": "#006a6a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px",
+                    "card": "12px",
+                    "btn": "10px"
+            },
+            "spacing": {
+                    "touch_target": "44px",
+                    "sm": "8px",
+                    "xxl": "32px",
+                    "xs": "4px",
+                    "max_width": "46rem",
+                    "lg": "16px",
+                    "md": "12px",
+                    "xl": "24px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Be Vietnam Pro"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "print": ["Helvetica Neue"],
+                    "body-md": ["Be Vietnam Pro"],
+                    "label-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "display": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "print": ["14px", {"lineHeight": "1.5"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #fcf9f8; } /* Warm cream base */
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+        .level-1-card { border: 1px solid rgba(188, 201, 200, 0.1); background-color: white; }
+        .level-2-card:active { border: 2px solid #006a6a; transform: scale(0.98); }
+        .btn-active:active { transform: scale(0.98); }
+    </style>
+</head>
+<body class="text-on-background font-body-md antialiased pb-24 max-w-max_width mx-auto">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full h-touch_target bg-surface dark:bg-surface text-primary dark:text-primary-fixed flex justify-between items-center px-lg max-w-max_width mx-auto z-50 border-b border-outline-variant/10">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cruelty_free</span>
+<span class="text-headline-md font-headline-md">Caraku</span>
+</div>
+<div>
+<button class="bg-secondary-container text-on-secondary flex items-center justify-center rounded-btn px-lg py-sm min-h-[44px] min-w-[44px] font-label-md text-label-md btn-active transition-transform">
+                Lanjut
+            </button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="pt-[60px] px-lg">
+<!-- Hero Section -->
+<section class="py-xl flex items-center gap-lg">
+<div class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container overflow-hidden border-2 border-primary-container shrink-0">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A cute, stylized 3D avatar of a young elementary school student with bright eyes and a friendly smile, set against a solid teal background. The character design is soft, colorful, and highly polished, resembling a premium educational game mascot. Warm studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOqBlnwg1vkuvOTBugK6ZSoxwk_bEAZxgJASQtuP62FWQciBJtV4ANoJI70X3R8lcgS-hepJZTygnksRamWAYWjCcJO0nvRDJ_UiOtjBqZr10YfyVhgijmMaHoMAUS7gNV_xKIBJaEMZkZose8feHhjxgfbmRX6bvjNMrOkugmZCHgrhZg8ulDdHGjCkM0NeexBXO0dInKbg3MyApOntdKB78u8a3Tt6R-op9t0gxtK5SSXxt8h2aU"/>
+</div>
+<div>
+<h1 class="text-display font-display text-on-background">Halo, Budi!</h1>
+<p class="text-body-md font-body-md text-on-surface-variant mt-xs">Siap untuk petualangan matematika hari ini?</p>
+</div>
+</section>
+<!-- Session Cards List -->
+<section class="flex flex-col gap-md">
+<!-- Card 1: Diagnostic (New) -->
+<article class="level-1-card level-2-card rounded-card p-lg flex items-center gap-lg transition-all duration-200 cursor-pointer relative overflow-hidden group">
+<div class="absolute top-0 right-0 bg-secondary-container text-on-secondary px-sm py-xs rounded-bl-lg text-[10px] font-bold uppercase tracking-wider">
+                    Baru
+                </div>
+<div class="w-14 h-14 rounded-full bg-primary-container/20 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">quiz</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-primary text-on-primary text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">Diagnostik</span>
+<span class="text-label-md font-label-md text-outline">Pecahan Dasar</span>
+</div>
+<h3 class="text-headline-md font-headline-md text-on-background">Misi Penilaian 1</h3>
+<p class="text-sm text-on-surface-variant line-clamp-1 mt-1">Mari cari tahu kekuatan matematikamu!</p>
+</div>
+<div class="text-outline group-hover:text-primary transition-colors shrink-0">
+<span class="material-symbols-outlined text-3xl">chevron_right</span>
+</div>
+</article>
+<!-- Card 2: Practice (In Progress) -->
+<article class="level-1-card level-2-card rounded-card p-lg flex items-center gap-lg transition-all duration-200 cursor-pointer group">
+<div class="w-14 h-14 rounded-full bg-tertiary-fixed-dim/30 flex items-center justify-center text-tertiary-container shrink-0">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">calculate</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-tertiary-fixed-dim text-on-tertiary-fixed-variant text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">Latihan</span>
+<span class="text-label-md font-label-md text-outline">Penjumlahan</span>
+</div>
+<h3 class="text-headline-md font-headline-md text-on-background">Latihan Harian</h3>
+<div class="w-full bg-surface-container-highest rounded-full h-2 mt-2">
+<div class="bg-tertiary-fixed-dim h-2 rounded-full" style="width: 45%"></div>
+</div>
+</div>
+<div class="text-outline group-hover:text-primary transition-colors shrink-0">
+<span class="material-symbols-outlined text-3xl">chevron_right</span>
+</div>
+</article>
+<!-- Card 3: Completed -->
+<article class="level-1-card rounded-card p-lg flex items-center gap-lg opacity-75 grayscale-[20%]">
+<div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center text-outline shrink-0">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-surface-variant text-on-surface-variant text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">Selesai</span>
+<span class="text-label-md font-label-md text-outline">Pengurangan</span>
+</div>
+<h3 class="text-headline-md font-headline-md text-on-background line-through">Latihan Kemarin</h3>
+</div>
+<div class="text-outline shrink-0">
+<span class="material-symbols-outlined text-3xl">chevron_right</span>
+</div>
+</article>
+</section>
+<!-- Decorative Mascot (Floating slightly) -->
+<div class="mt-xl flex justify-center opacity-80 pointer-events-none">
+<div class="w-32 h-32 relative">
+<img alt="Mascot" class="w-full h-full object-contain" data-alt="A cute 3D rendered owl mascot wearing thick glasses and holding a small pencil. The owl is designed with soft geometry and a warm pastel color palette, characteristic of modern educational apps. It floats gently in a brightly lit, void-like cream environment, offering a sense of friendly encouragement." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdpVV7RWSJxOvKo3J14EAONu8cdWM6JMnhXnfy24b8NieJlERCie2IRolEvRUbxOZmOw7nmvklDYRdiXMC99oJUXStkyQHY_SfghH1B_3Y86hk_SLDCwHK5A7WwQsyrxRFzf4qdtAhQHRp50K6NU8pI9NRvyWh53HILk5MOgmM4OhrFiH5jTxriuFZv7HN6NdPq5KAXkiOJAA1CxOtc5xMFDSDVP8UeP_SX51ioNdq8sOXUzUzCLxq"/>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-sm py-xs bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant/10 z-50 max-w-max_width mx-auto left-1/2 -translate-x-1/2">
+<!-- Active Tab: Belajar -->
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full px-xl py-xs scale-95 transition-all w-[80px]" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="text-[12px] font-label-md text-label-md">Belajar</span>
+</a>
+<!-- Inactive Tabs -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-xl py-xs hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-full transition-colors w-[80px]" href="#">
+<span class="material-symbols-outlined mb-1">history</span>
+<span class="text-[12px] font-label-md text-label-md">Riwayat</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-xl py-xs hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-full transition-colors w-[80px]" href="#">
+<span class="material-symbols-outlined mb-1">leaderboard</span>
+<span class="text-[12px] font-label-md text-label-md">Peringkat</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-xl py-xs hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-full transition-colors w-[80px]" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="text-[12px] font-label-md text-label-md">Profil</span>
+</a>
+</nav>
+</body></html>
