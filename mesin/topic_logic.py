@@ -60,16 +60,27 @@ def benar_salah_pengandaian(
     kunci = opsi[pilihan_benar]
     blok = "\n".join(f"{opsi[i]}. {pernyataan[urutan_tampil[i]]}" for i in range(5))
     teks = f"{fakta}\nManakah pernyataan yang PASTI benar?\n{blok}"
-    jawaban_salah = [o for i, o in enumerate(opsi) if i != pilihan_benar]
+    # Malrule harus mengikuti MAKNA pernyataan setelah pengacakan, bukan
+    # urutan huruf salah. Cari posisi layar tiap indeks pernyataan lalu
+    # petakan ke hurufnya. Ini menjaga alasan/kode tetap melekat pada
+    # kesalahan yang benar meski pilihan_benar pindah A–E.
+    huruf_per_pernyataan = {
+        indeks: opsi[posisi]
+        for posisi, indeks in enumerate(urutan_tampil)
+    }
+    spesifikasi_malrule = (
+        (1, "pengandaian.mungkin_saja", "K",
+         "memilih pernyataan yang mungkin tapi tidak pasti benar"),
+        (2, "pengandaian.negasi", "K",
+         "memilih pernyataan yang bertentangan dengan fakta"),
+        (3, "pengandaian.salah_baca", "B",
+         "salah membaca fakta — membalik arah implikasi"),
+        (4, "pengandaian.ekstrem", "H",
+         "memilih pernyataan yang terlalu umum/menyimpang"),
+    )
     mal = [
-        Malrule("pengandaian.mungkin_saja", jawaban_salah[0], "K",
-                "memilih pernyataan yang mungkin tapi tidak pasti benar"),
-        Malrule("pengandaian.negasi", jawaban_salah[1], "K",
-                "memilih pernyataan yang bertentangan dengan fakta"),
-        Malrule("pengandaian.salah_baca", jawaban_salah[2], "B",
-                "salah membaca fakta — membalik arah implikasi"),
-        Malrule("pengandaian.ekstrem", jawaban_salah[3], "H",
-                "memilih pernyataan yang terlalu umum/menyimpang"),
+        Malrule(rule_id, huruf_per_pernyataan[indeks], kode, alasan)
+        for indeks, rule_id, kode, alasan in spesifikasi_malrule
     ]
     return Soal(
         "benar_salah_pengandaian",

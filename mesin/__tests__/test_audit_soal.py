@@ -63,3 +63,35 @@ def test_tabel_penalaran_punya_jalur_k_dan_h():
             kode = {m.kode for m in tl.tabel_penalaran(**par).malrule}
             assert "K" in kode, f"tanpa jalur K: {lv}/{sd} {par}"
             assert "H" in kode, f"tanpa jalur H: {lv}/{sd} {par}"
+
+
+# ── T3: alasan malrule harus mengikuti pernyataan yang diacak ──────────
+
+MAKNA_PENGANDAIAN = {
+    1: ("pengandaian.mungkin_saja", "K"),
+    2: ("pengandaian.negasi", "K"),
+    3: ("pengandaian.salah_baca", "B"),
+    4: ("pengandaian.ekstrem", "H"),
+}
+
+
+def test_pengandaian_malrule_mengikuti_pernyataan_bukan_huruf():
+    """`urutan_tampil` mengacak pernyataan ke huruf A–E. Malrule lama
+    sekadar menempelkan alasan 1–4 ke daftar huruf salah berurutan,
+    sehingga alasan guru sering menjelaskan pernyataan yang berbeda."""
+    opsi = ("A", "B", "C", "D", "E")
+    for lv in LEVEL:
+        for sd in range(SEED):
+            par = tl._parameter(
+                "benar_salah_pengandaian", random.Random(sd), lv
+            )
+            soal = tl.benar_salah_pengandaian(**par)
+            per_huruf = {m.jawaban: (m.id, m.kode) for m in soal.malrule}
+            for posisi, indeks_pernyataan in enumerate(par["urutan_tampil"]):
+                if indeks_pernyataan == 0:
+                    assert opsi[posisi] == soal.kunci
+                    continue
+                assert per_huruf[opsi[posisi]] == MAKNA_PENGANDAIAN[indeks_pernyataan], (
+                    f"malrule nyasar {lv}/{sd}: opsi {opsi[posisi]} berisi "
+                    f"pernyataan {indeks_pernyataan}, dapat {per_huruf[opsi[posisi]]}"
+                )
