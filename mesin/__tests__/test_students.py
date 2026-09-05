@@ -582,6 +582,7 @@ def test_http_semua_terisi_langsung_ke_daftar_sesi_dengan_banner(server):
             f"jwb_{b['sesi_soal_id']}": str(i)
             for i, b in enumerate(database.isi_sesi(kon, sesi_id), start=1)
         }
+        data["aksi"] = "selesai"
 
     kode, isi, _ = server.minta(
         f"/murid/kerjakan/{sesi_id}",
@@ -607,6 +608,7 @@ def test_http_guru_membuka_sesi_terisi_mencatat_direview(server):
             f"jwb_{b['sesi_soal_id']}": str(i)
             for i, b in enumerate(database.isi_sesi(kon, sesi_id), start=1)
         }
+        data["aksi"] = "selesai"
     server.minta(
         f"/murid/kerjakan/{sesi_id}",
         auth=("feby", SANDI_MURID),
@@ -741,6 +743,7 @@ def test_http_semua_terisi_mencatat_selesai(server):
     with server.buka() as kon:
         daftar = database.isi_sesi(kon, sesi_id)
         data = {f"jwb_{b['sesi_soal_id']}": "1" for b in daftar}
+        data["aksi"] = "selesai"
 
     server.minta(
         f"/murid/kerjakan/{sesi_id}",
@@ -762,6 +765,7 @@ def test_http_post_ulang_setelah_selesai_tidak_menggeser_selesai(server):
     with server.buka() as kon:
         daftar = database.isi_sesi(kon, sesi_id)
         data = {f"jwb_{b['sesi_soal_id']}": "1" for b in daftar}
+        data["aksi"] = "selesai"
 
     server.minta(
         f"/murid/kerjakan/{sesi_id}",

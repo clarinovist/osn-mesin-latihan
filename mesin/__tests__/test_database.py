@@ -161,6 +161,7 @@ def test_alur_penuh_sampai_ringkasan(db):
                 kon, jid, u.benar, u.kode, u.kode, u.malrule_id, u.alasan
             )
 
+        database.tandai_selesai(kon, sesi_id)
         r = database.ringkasan(kon, sid)[0]
 
     assert r["jumlah_soal"] == 12
@@ -198,6 +199,7 @@ def test_miskonsepsi_sama_lintas_sesi_terhitung_sebagai_satu(db):
                 database.simpan_diagnosis(
                     kon, jid, False, "K", "K", m["malrule_id"], m["alasan"]
                 )
+                database.tandai_selesai(kon, sesi_id)
 
         hasil = database.miskonsepsi_berulang(kon, sid)
 
@@ -218,6 +220,7 @@ def test_materi_bertanda_t_masuk_peta_bukan_nilai(db):
         )
         u = diagnosa(baris["kunci"], "", "", "", True, [], False)
         database.simpan_diagnosis(kon, jid, u.benar, u.kode, u.kode, None, u.alasan)
+        database.tandai_selesai(kon, sesi_id)
 
         peta = database.peta_materi_baru(kon, sid)
 

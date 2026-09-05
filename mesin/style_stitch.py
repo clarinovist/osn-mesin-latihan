@@ -642,13 +642,15 @@ tr.sorot-baru, div.sorot-baru {{
   margin-top: .5rem; font-size: .85rem; color: {T.AKSEN_KORAL_TUA};
 }}
 
-/* Save strip sticky bawah. */
+/* Save strip sticky bawah: simpan sementara + kirim final. */
 .kerja-simpan-strip-st {{
   position: sticky; bottom: 0; padding: {T.SP_3} 0 {T.SP_2};
   background: linear-gradient(to top, {T.LATAR_MURID} 70%, transparent);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: {T.SP_2};
 }}
 .kerja-simpan-strip-st button {{
-  width: 100%; font-size: 1.1rem; padding: .95rem;
+  width: 100%; font-size: 1rem; padding: .85rem {T.SP_2};
   background: {T.AKSEN_MURID_KORAL}; color: {T.TEKS_PUTIH};
   border: 0; border-radius: {T.RADIUS_PIL};
   font-family: {T.FONT_HEADLINE}; font-weight: 700; cursor: pointer;
@@ -657,7 +659,14 @@ tr.sorot-baru, div.sorot-baru {{
   box-shadow: 0 4px 12px rgba(255,107,91,.30);
 }}
 .kerja-simpan-strip-st button:hover {{ filter: brightness(1.06); }}
+.kerja-simpan-strip-st button.sekunder {{
+  background: {T.LATAR_KARTU}; color: {T.AKSEN_TEAL_TUA};
+  border: 1px solid {T.AKSEN_TEAL_TUA}; box-shadow: none;
+}}
 .kerja-simpan-strip-st button:disabled {{ opacity: .55; cursor: not-allowed; }}
+@media (max-width: 24rem) {{
+  .kerja-simpan-strip-st {{ grid-template-columns: 1fr; }}
+}}
 
 /* Tombol sekunder Cetak/PDF + Sesi lain. */
 .kerja-btn-sekunder-st {{
@@ -1278,9 +1287,24 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
   font-size: .88rem; color: {T.TEKS_VARIAN}; margin-top: .2rem;
 }}
 
-"""
+/* Ikon aksi pada kartu sesi guru. Berada di GAYA_STITCH karena halaman
+   /anak memakai _halaman_stitch tanpa CSS_SESI. */
+.aksi-bagikan-st {{ display: flex; gap: {T.SP_1}; justify-content: flex-end; }}
+.tombol-ikon-st {{
+  width: {T.TARGET_SENTUH}; height: {T.TARGET_SENTUH}; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_BULAT};
+  background: {T.LATAR_KARTU}; color: {T.AKSEN_TEAL_TUA}; cursor: pointer;
+  -webkit-appearance: none; appearance: none; touch-action: manipulation;
+}}
+.tombol-ikon-st * {{ pointer-events: none; }}
+.tombol-ikon-st:hover {{ background: {T.LATAR_SEKUNDER_LEMBUT}; }}
+.tombol-ikon-st:focus-visible {{
+  outline: 3px solid {T.FOKUS_AKSEN}; outline-offset: 2px;
+}}
+.tombol-ikon-st:disabled {{ opacity: .55; cursor: wait; }}
 
-# Bagian CSS khusus halaman koreksi sesi (S5). Dipisah agar modul tetap bisa
+"""
 # diimpor utuh; dipanggil oleh halaman_sesi_stitch lewat gaya_stitch() + blok
 # tambahan ini.
 CSS_SESI = f"""
@@ -1331,6 +1355,20 @@ CSS_SESI = f"""
 .pil-sesi-st a.aktif {{
   background: {T.LATAR_SEKUNDER_NETRAL}; color: {T.TEKS_JUDUL};
   border-color: {T.BORDER_VARIAN};
+}}
+
+/* Status alur sesi sebelum/ sesudah pengumpulan. */
+.status-sesi-st {{
+  display: flex; align-items: flex-start; gap: {T.SP_3};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_3} {T.SP_4};
+  margin: 0 0 {T.SP_4}; border: 1px solid {T.BORDER_VARIAN};
+  background: {T.LATAR_SEKUNDER_LEMBUT}; color: {T.TEKS_UTAMA};
+}}
+.status-sesi-st .material-symbols-outlined {{ color: {T.AKSEN_MURID_UTAMA}; flex: none; }}
+.status-sesi-st b {{ font-family: {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; }}
+.status-sesi-st p {{ margin: {T.SP_1} 0 0; font-size: .9rem; color: {T.TEKS_VARIAN}; }}
+.status-sesi-st.selesai {{
+  background: {T.LATAR_TERSIMPAN}; border-color: {T.BORDER_TERSIMPAN};
 }}
 
 /* Kartu soal koreksi — satu kolom. Status menyatu dengan nomor dan jenis

@@ -421,7 +421,7 @@ def test_http_drill_alur_penuh_tanpa_kode_N(server):
     kode, _, _ = server.minta(
         f"/murid/kerjakan/{sesi_id}",
         auth=("feby", SANDI_MURID),
-        data={f"jwb_{ssid}": kunci},
+        data={f"jwb_{ssid}": kunci, "aksi": "selesai"},
     )
     assert kode == 200
 

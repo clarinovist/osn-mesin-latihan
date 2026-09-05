@@ -200,7 +200,8 @@ def test_laporan_menampilkan_kolom_topik(db):
     yang tercampur diam-diam adalah kegagalan desain (aturan plan §4)."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Laporan Bertopik")
-        database.buat_sesi(kon, sid, seed=79)
+        sesi_id = database.buat_sesi(kon, sid, seed=79)
+        database.tandai_selesai(kon, sesi_id)
         isi = reports.halaman_laporan(kon, sid).decode()
     assert '<th scope="col">Topik</th>' in isi
     assert "Pola Bilangan" in isi
@@ -243,6 +244,11 @@ def test_alur_aritmetika_memakai_judul_dan_laporan_topik_sendiri(server):
     )
     assert kode == 200
     assert "Latihan Aritmetika Dasar" in isi
+    kode, _, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}", auth=("feby", SANDI_MURID),
+        data={"aksi": "selesai"},
+    )
+    assert kode == 200
 
     kode, isi, _ = server.minta(f"/laporan/{siswa_id}", auth=("guru", SANDI_GURU))
     assert kode == 200
@@ -269,6 +275,7 @@ def test_laporan_detail_menampilkan_topik_pada_dua_tabel(db):
                 malrule_id="uji.topik" if kode == "K" else None,
                 alasan="uji topik",
             )
+            database.tandai_selesai(kon, sesi_id)
         isi = reports.halaman_laporan(kon, sid).decode()
 
     assert isi.count('<th scope="col">Topik</th>') == 3
@@ -336,7 +343,11 @@ def test_alur_guru_murid_jawab_laporan_bertopik(server):
     kode, _, _ = server.minta(
         f"/murid/kerjakan/{sesi_id}",
         auth=("feby", SANDI_MURID),
-        data={f"jwb_{ssid}": "42", f"cara_{ssid}": "aku hitung"},
+        data={
+            f"jwb_{ssid}": "42",
+            f"cara_{ssid}": "aku hitung",
+            "aksi": "selesai",
+        },
     )
     assert kode == 200
 
@@ -441,6 +452,11 @@ def test_alur_geometri_datar_guru_murid_laporan(server):
     )
     assert kode == 200
     assert "Latihan Geometri Datar" in isi
+    kode, _, _ = server.minta(
+        f"/murid/kerjakan/{sesi_id}", auth=("feby", SANDI_MURID),
+        data={"aksi": "selesai"},
+    )
+    assert kode == 200
 
     # laporan guru menampilkan nama ramah, bukan ID internal
     kode, isi, _ = server.minta(f"/laporan/{siswa_id}", auth=("guru", SANDI_GURU))

@@ -209,7 +209,11 @@ def test_http_murid_simpan_guru_langsung_lihat_benar(server):
     kode, _, _ = server.minta(
         f"/murid/kerjakan/{sesi_id}",
         auth=("feby", SANDI_MURID),
-        data={f"jwb_{ssid}": kunci, f"cara_{ssid}": "lihat polanya"},
+        data={
+            f"jwb_{ssid}": kunci,
+            f"cara_{ssid}": "lihat polanya",
+            "aksi": "selesai",
+        },
     )
     assert kode == 200
 

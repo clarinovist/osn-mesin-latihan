@@ -453,6 +453,7 @@ def sasaran_remedial(
            JOIN sesi se      ON se.id = ss.sesi_id
            JOIN soal s       ON s.id  = ss.soal_id
            WHERE se.siswa_id = ?
+             AND se.selesai IS NOT NULL
              AND d.benar = 0
              AND IFNULL(d.kode_final, IFNULL(d.kode_usulan, '')) <> 'T'
            GROUP BY s.template_id
@@ -703,11 +704,16 @@ def simpan_diagnosis(
 def ringkasan(kon: sqlite3.Connection, siswa_id: int | None = None) -> list[sqlite3.Row]:
     if siswa_id is None:
         return kon.execute(
-            "SELECT * FROM ringkasan_sesi ORDER BY tanggal DESC, sesi_id DESC"
+            """SELECT r.* FROM ringkasan_sesi r
+               JOIN sesi s ON s.id = r.sesi_id
+               WHERE s.selesai IS NOT NULL
+               ORDER BY r.tanggal DESC, r.sesi_id DESC"""
         ).fetchall()
     return kon.execute(
-        """SELECT * FROM ringkasan_sesi WHERE siswa_id = ?
-           ORDER BY tanggal DESC, sesi_id DESC""",
+        """SELECT r.* FROM ringkasan_sesi r
+           JOIN sesi s ON s.id = r.sesi_id
+           WHERE r.siswa_id = ? AND s.selesai IS NOT NULL
+           ORDER BY r.tanggal DESC, r.sesi_id DESC""",
         (siswa_id,),
     ).fetchall()
 
@@ -737,6 +743,7 @@ def miskonsepsi_berulang(
            JOIN sesi se      ON se.id = ss.sesi_id
            JOIN soal s       ON s.id  = ss.soal_id
            WHERE se.siswa_id = ?
+             AND se.selesai IS NOT NULL
              AND d.kode_final = 'K'
              AND d.malrule_id IS NOT NULL
            GROUP BY d.malrule_id, s.template_id, se.topik
@@ -756,7 +763,8 @@ def peta_materi_baru(kon: sqlite3.Connection, siswa_id: int) -> list[sqlite3.Row
            JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
            JOIN sesi se      ON se.id = ss.sesi_id
            JOIN soal s       ON s.id  = ss.soal_id
-           WHERE se.siswa_id = ? AND d.kode_final = 'T'
+           WHERE se.siswa_id = ? AND se.selesai IS NOT NULL
+             AND d.kode_final = 'T'
            GROUP BY s.template_id, se.topik
            ORDER BY kali DESC""",
         (siswa_id,),

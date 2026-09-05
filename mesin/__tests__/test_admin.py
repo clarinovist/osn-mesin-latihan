@@ -197,6 +197,7 @@ def test_admin_boleh_simpan_jawaban(server):
 
     _, sesi_a = _ids_siswa_dan_sesi(server)
     with server.buka() as kon:
+        database.tandai_selesai(kon, sesi_a)
         sid = database.isi_sesi(kon, sesi_a)[0]["sesi_soal_id"]
     kode, isi, _ = server.minta(
         f"/sesi/{sesi_a}",
@@ -206,7 +207,7 @@ def test_admin_boleh_simpan_jawaban(server):
     assert kode == 200
     # Tulisnya commit sesaat setelah respons (pola konteks buka()), jadi
     # yang diassert responsnya — bukan baca-ulang yang balapan dengan commit.
-    assert "1 soal tersimpan" in isi, "simpan admin tidak jalan"
+    assert "1 koreksi tersimpan" in isi, "simpan admin tidak jalan"
 
 
 def test_admin_boleh_variasi_cerita_dan_lampiran(server):
@@ -255,11 +256,13 @@ def test_admin_boleh_ubah_tingkat_dan_ganti_sandi_di_akun(server):
 def test_halaman_sesi_admin_bisa_tulis(server):
     """Admin full-write: form tulis tampil untuk admin, bukan fieldset mati."""
     _, sesi_a = _ids_siswa_dan_sesi(server)
+    with server.buka() as kon:
+        database.tandai_selesai(kon, sesi_a)
     kode, isi, _ = server.minta(
         f"/sesi/{sesi_a}", auth=("pengelola", SANDI_ADMIN)
     )
     assert kode == 200
-    assert "Simpan &amp; diagnosis" in isi, "form tulis hilang untuk admin"
+    assert "Simpan koreksi" in isi, "form tulis hilang untuk admin"
     assert "Hapus sesi" in isi
     # alat sesi pindah ke /cetak & /lampiran — /sesi hanya koreksi
     kode2, isi2, _ = server.minta(

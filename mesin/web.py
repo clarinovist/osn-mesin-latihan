@@ -15,6 +15,7 @@ impor terlambat di dalam handler (lihat _rute_murid_get).
 from __future__ import annotations
 
 import html
+import json
 import os
 import random
 import urllib.parse
@@ -42,7 +43,6 @@ from teacher_pages import (
     _topik_untuk_level,
     buat_sesi_seed_baru,
     halaman_konfirmasi_hapus,
-    halaman_bagikan_sesi,
     halaman_anak,
     halaman_lembar,
     halaman_sesi,
@@ -61,6 +61,18 @@ class Penangan(BaseHTTPRequestHandler):
         self.send_response(kode)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(isi)))
+        self.end_headers()
+        self.wfile.write(isi)
+
+    def _kirim_json(self, data: dict, kode: int = 200) -> None:
+        """Kirim JSON privat untuk aksi halaman yang tidak bernavigasi."""
+        isi = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(kode)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(isi)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Robots-Tag", "noindex, nofollow")
         self.end_headers()
         self.wfile.write(isi)
 
@@ -364,21 +376,27 @@ class Penangan(BaseHTTPRequestHandler):
                 return self._kirim_tautan(tidak_ada, 404)
             siswa_id = int(akses["siswa_id"])
             sesi_id = int(akses["sesi_id"])
+            if data.get("aksi") == "mulai":
+                database.tandai_mulai(kon, sesi_id)
+                kon.commit()
+                # Respons capability tetap memakai semua header anti-bocor.
+                return self._kirim_tautan(
+                    json.dumps({"mulai": True}).encode("utf-8")
+                )
             hasil = students.simpan_jawaban_murid(
                 kon, siswa_id, sesi_id, data
             )
             if hasil is None:
                 return self._kirim_tautan(tidak_ada, 404)
+            aksi = data.get("aksi", "simpan")
+            if aksi not in ("simpan", "selesai"):
+                aksi = "simpan"
             if hasil:
-                # Stamp waktu & diagnosis hanya bila ada isian yang masuk —
-                # POST kosong (bot preview / salah buka) tidak boleh
-                # memulai timer dan tidak boleh memicu diagnosis ulang.
                 database.tandai_mulai(kon, sesi_id)
-                diagnosa_murid(kon, sesi_id)
-                selesai = students.semua_terisi(kon, siswa_id, sesi_id)
-            else:
-                selesai = False
+            selesai = aksi == "selesai"
             if selesai:
+                diagnosa_murid(kon, sesi_id)
+                database.tandai_mulai(kon, sesi_id)
                 database.tandai_selesai(kon, sesi_id)
                 # Commit sebelum respons — alasan sama dengan rute bagikan:
                 # GET /mulai/<token> berikutnya harus melihat selesai.
@@ -577,33 +595,16 @@ class Penangan(BaseHTTPRequestHandler):
                             _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                         )
                     ident = self._identitas()
-                    # Guru membuka sesi yang terisi penuh = momen review:
-                    # catat sekali supaya daftar sesi murid bisa menandai
-                    # "Selesai". Buka lembar kosong untuk dicetak tidak
-                    # dihitung.
-                    #
-                    # Commit sendiri sebelum respons: _kirim dijalankan di
-                    # dalam with buka(), jadi commit konteks baru terjadi
-                    # SETELAH respons pergi. Siapa pun yang membaca detik
-                    # itu juga (murid membuka daftar sesinya, test) akan
-                    # melihat keadaan pra-commit. Stamp peristiwa mandiri
-                    # — tidak ada tulisan lain yang menunggunya — aman
-                    # didahulukan commitnya.
+                    # Guru membuka sesi yang SUDAH DIKIRIM = momen review.
+                    # Pratinjau sebelum pengumpulan tidak pernah menandai review.
                     if ident and ident[1] == "guru":
-                        penuh = kon.execute(
-                            """SELECT 1 FROM sesi s
-                               WHERE s.id = ? AND s.direview IS NULL
-                                 AND (SELECT COUNT(*) FROM sesi_soal ss
-                                      WHERE ss.sesi_id = s.id) > 0
-                                 AND NOT EXISTS (
-                                     SELECT 1 FROM sesi_soal ss2
-                                     WHERE ss2.sesi_id = s.id
-                                       AND NOT EXISTS (
-                                           SELECT 1 FROM jawaban j
-                                           WHERE j.sesi_soal_id = ss2.id))""",
+                        siap = kon.execute(
+                            """SELECT 1 FROM sesi
+                               WHERE id = ? AND direview IS NULL
+                                 AND selesai IS NOT NULL""",
                             (sesi_id,),
                         ).fetchone()
-                        if penuh:
+                        if siap:
                             kon.execute(
                                 "UPDATE sesi SET direview = "
                                 "datetime('now', '+7 hours') WHERE id = ?",
@@ -959,8 +960,28 @@ class Penangan(BaseHTTPRequestHandler):
                 ).items()
             }
             sesi_id = int(jalur.split("/")[3])
+            aksi = data.get("aksi", "simpan")
+            if aksi not in ("simpan", "selesai"):
+                aksi = "simpan"
             with database.buka() as kon:
+                # Kunci pemeriksaan+penyimpanan agar POST simpan dan final
+                # yang bersamaan tidak melewati gerbang selesai.
+                kon.execute("BEGIN IMMEDIATE")
                 siswa_id = students.siswa_dari_akun(kon, kredensial[0])
+                info_sesi = (
+                    students.sesi_murid(kon, siswa_id, sesi_id)
+                    if siswa_id is not None
+                    else None
+                )
+                if info_sesi and info_sesi.get("selesai"):
+                    return self._kirim(
+                        _halaman(
+                            "Sudah dikirim",
+                            "<h1>Jawaban sudah dikirim</h1>"
+                            "<p>Sesi ini tidak dapat diubah lagi.</p>",
+                        ),
+                        409,
+                    )
                 hasil = (
                     students.simpan_jawaban_murid(kon, siswa_id, sesi_id, data)
                     if siswa_id is not None
@@ -970,25 +991,21 @@ class Penangan(BaseHTTPRequestHandler):
                 # mesin (usulan). Keputusan manual guru tidak pernah
                 # ditimpa — lihat web.diagnosa_murid. Guru membuka halaman
                 # sesi dan membaca hasil, bukan menekan tombol dulu.
-                selesai = False
+                selesai = aksi == "selesai"
                 if hasil:
-                    # Waktu pengerjaan: POST pertama yang mengisi soal =
-                    # mulai; semua terisi = selesai. Keduanya idempoten
-                    # (WHERE IS NULL) — lihat database.tandai_mulai.
+                    # Waktu mulai sudah dicatat saat lembar dibuka. POST tetap
+                    # idempoten untuk klien lama yang langsung mengirim tanpa GET.
                     database.tandai_mulai(kon, sesi_id)
+                # Diagnosis baru menjadi data laporan saat anak mengumpulkan.
+                # Draft boleh berubah atau dikosongkan tanpa meninggalkan nilai
+                # sementara di dashboard orang tua.
+                if selesai:
                     diagnosa_murid(kon, sesi_id)
-                    # Semua soal sudah terisi → arahkan ke daftar sesi
-                    # (?selesai= memicu banner perayaan di sana), bukan ke
-                    # lembar yang sama. Anak yang masih setengah jalan
-                    # tetap kembali ke lembar + banner tersimpan supaya
-                    # bisa lanjut mengerjakan.
-                    if siswa_id is not None:
-                        selesai = students.semua_terisi(kon, siswa_id, sesi_id)
-                        if selesai:
-                            database.tandai_selesai(kon, sesi_id)
+                    database.tandai_mulai(kon, sesi_id)
+                    database.tandai_selesai(kon, sesi_id)
             if hasil is None:
                 return self._kirim(
-                    _halaman("403", "<h1>Bukan sesimu</h1>"), 403
+                    _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                 )
             if selesai:
                 # Langsung kembali ke daftar sesi — banner ?selesai= sudah
@@ -1136,9 +1153,16 @@ class Penangan(BaseHTTPRequestHandler):
                     # baris token — 404 untuk link yang baru saja dibagikan.
                     kon.commit()
                     tautan = f"{brand.URL_SITUS}/mulai/{token}"
-                    isi = halaman_bagikan_sesi(
-                        tautan, sesi_id, int(info["siswa_id"]), info["nama"],
-                        ident[0], ident[1],
+                    if self.headers.get("X-Requested-With") == "fetch":
+                        return self._kirim_json({"tautan": tautan})
+                    # Fallback tanpa JavaScript: respons sederhana tetap
+                    # memungkinkan tautan dipilih dan disalin manual.
+                    isi = _halaman(
+                        f"Bagikan sesi #{sesi_id}",
+                        f'<h1>Bagikan sesi #{sesi_id}</h1>'
+                        f'<input id="tautan-sesi" type="text" readonly '
+                        f'value="{html.escape(tautan, quote=True)}">',
+                        ident=(ident[0], ident[1]), stitch=True,
                     )
                     return self._kirim_tautan(isi)
                 share_links.cabut(kon, sesi_id)
@@ -1615,6 +1639,18 @@ class Penangan(BaseHTTPRequestHandler):
             if not self._bisa_lihat_sesi(kon, sesi_id):
                 return self._kirim(
                     _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                )
+            status = kon.execute(
+                "SELECT selesai FROM sesi WHERE id = ?", (sesi_id,)
+            ).fetchone()
+            if not status or not status["selesai"]:
+                return self._kirim(
+                    _halaman(
+                        "Belum dikirim",
+                        "<h1>Koreksi belum tersedia</h1>"
+                        "<p>Anak belum menekan Selesai &amp; kirim.</p>",
+                    ),
+                    409,
                 )
             pesan = simpan_sesi(kon, sesi_id, data)
             ident = self._identitas()

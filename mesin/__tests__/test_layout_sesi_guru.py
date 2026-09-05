@@ -43,6 +43,7 @@ def _buat_sesi(db, seed=7):
         sesi_id = database.buat_sesi(
             kon, siswa_id, seed=seed, level="P3", topik="statistika"
         )
+        database.tandai_selesai(kon, sesi_id)
     return sesi_id
 
 

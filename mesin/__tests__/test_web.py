@@ -90,6 +90,7 @@ def test_jawaban_benar_tercatat_benar(db):
         data = _isi(kon, sesi_id, {b["nomor"]: b["kunci"] for b in isi})
 
         teacher_pages.simpan_sesi(kon, sesi_id, data)
+        database.tandai_selesai(kon, sesi_id)
         r = database.ringkasan(kon, sid)[0]
 
     assert r["benar"] == 12
@@ -224,6 +225,7 @@ def test_kode_t_lama_dipindahkan_ke_centang_dari_anak(db):
             alasan="ditandai guru pada versi lama",
             manual=True,
         )
+        database.tandai_selesai(kon, sesi_id)
         halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
 
         potongan = halaman.split(f'name="belum_{b["sesi_soal_id"]}"', 1)[1]

@@ -337,6 +337,7 @@ def halaman_kerja(
     timer_mode = info.get("timer_mode", "tanpa") or "tanpa"
     durasi_menit = int(info.get("durasi_menit") or 15)
     timer_auto = 1 if info.get("timer_auto") else 0
+    detik_lalu = int(info.get("detik_lalu") or 0)
 
     kartu: list[str] = []
     bagian_kini = None
@@ -449,7 +450,7 @@ def halaman_kerja(
             "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
             "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
             "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
-            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+            "tekan <b>Selesai &amp; kirim</b> di paling bawah. Kamu juga bisa menyimpan sementara dulu.</p>"
         )
     else:
         petunjuk = (
@@ -459,7 +460,7 @@ def halaman_kerja(
             "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
             "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
             "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
-            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+            "tekan <b>Selesai &amp; kirim</b> di paling bawah. Kamu juga bisa menyimpan sementara dulu.</p>"
         )
 
     # Timer Latihan Cepat. Per-sesi: strip countdown yang tampil jalan (sticky
@@ -482,8 +483,9 @@ def halaman_kerja(
 (function(){{
   var MODE = {json.dumps(timer_mode)};
   var DETIK = {durasi_menit * 60};
+  var DETIK_LALU = {detik_lalu};
   var AUTO = {1 if timer_auto else 0};
-  var mulai = Date.now();
+  var mulai = Date.now() - DETIK_LALU * 1000;
   function fmt(s){{ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }}
   if (MODE === "sesi") {{
     var strip = document.getElementById("timer-strip");
@@ -494,7 +496,12 @@ def halaman_kerja(
         sisa = 0;
         if (AUTO) {{
           var f = document.querySelector("form");
-          if (f) {{ f.dataset.kirimOtomatis = "1"; f.submit(); }}
+          if (f) {{
+            f.dataset.kirimOtomatis = "1";
+            var a = document.createElement("input");
+            a.type = "hidden"; a.name = "aksi"; a.value = "selesai";
+            f.appendChild(a); f.submit();
+          }}
           return;
         }}
         var p = document.getElementById("timer-pesan");
@@ -834,6 +841,22 @@ def halaman_kerja_baru(
     timer_mode = info.get("timer_mode", "tanpa") or "tanpa"
     durasi_menit = int(info.get("durasi_menit") or 15)
     timer_auto = 1 if info.get("timer_auto") else 0
+    detik_lalu = int(info.get("detik_lalu") or 0)
+    sudah_dikirim = bool(info.get("selesai"))
+
+    if sudah_dikirim:
+        if akses_tautan:
+            return None
+        isi = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{brand.judul("Jawaban sudah dikirim")}</title>{brand.tag_kepala()}
+<style>{gaya_stitch()}</style></head><body class="st">
+<div class="kerja-badan-st"><div class="kerja-tersimpan-st">
+<span class="ikon">✓</span><span><b>Jawabanmu sudah dikirim.</b><br>
+Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
+<p><a class="kerja-btn-sekunder-st" href="/murid">Kembali ke sesi lain</a></p>
+</div></body></html>"""
+        return isi.encode()
 
     kartu: list[str] = []
     bagian_kini = None
@@ -945,7 +968,7 @@ def halaman_kerja_baru(
             "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
             "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
             "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
-            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+            "tekan <b>Selesai &amp; kirim</b> di paling bawah. Kamu juga bisa menyimpan sementara dulu.</p>"
         )
     else:
         petunjuk = (
@@ -955,7 +978,7 @@ def halaman_kerja_baru(
             "<p>Kalau ada soal yang belum pernah kamu lihat, centang kotaknya. Itu "
             "<b>bukan</b> salah — itu berguna untuk gurumu.</p>"
             "<p>Tidak apa-apa ada yang kosong. Jangan menebak asal. Kalau sudah selesai, "
-            "tekan <b>Simpan jawabanku</b> di paling bawah.</p>"
+            "tekan <b>Selesai &amp; kirim</b> di paling bawah. Kamu juga bisa menyimpan sementara dulu.</p>"
         )
 
     # Timer Latihan Cepat — strip id timer-strip & timer-tampil dipertahankan
@@ -979,8 +1002,9 @@ def halaman_kerja_baru(
 (function(){{
   var MODE = {json.dumps(timer_mode)};
   var DETIK = {durasi_menit * 60};
+  var DETIK_LALU = {detik_lalu};
   var AUTO = {1 if timer_auto else 0};
-  var mulai = Date.now();
+  var mulai = Date.now() - DETIK_LALU * 1000;
   function fmt(s){{ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }}
   if (MODE === "sesi") {{
     var strip = document.getElementById("timer-strip");
@@ -991,7 +1015,12 @@ def halaman_kerja_baru(
         sisa = 0;
         if (AUTO) {{
           var f = document.querySelector("form");
-          if (f) {{ f.dataset.kirimOtomatis = "1"; f.submit(); }}
+          if (f) {{
+            f.dataset.kirimOtomatis = "1";
+            var a = document.createElement("input");
+            a.type = "hidden"; a.name = "aksi"; a.value = "selesai";
+            f.appendChild(a); f.submit();
+          }}
           return;
         }}
         var p = document.getElementById("timer-pesan");
@@ -1040,14 +1069,26 @@ def halaman_kerja_baru(
   var kotor = false;
   f.addEventListener('input', function(){ kotor = true; }, true);
   f.addEventListener('change', function(){ kotor = true; }, true);
-  f.addEventListener('submit', function(){
+  f.addEventListener('submit', function(e){
+    var pemicu = e.submitter;
     kotor = false;
-    var b = f.querySelector('button[type=submit]');
-    if (b) { b.disabled = true; b.textContent = 'Menyimpan\\u2026'; }
+    if (pemicu) {
+      if (pemicu.name) {
+        var aksi = document.createElement('input');
+        aksi.type = 'hidden'; aksi.name = pemicu.name; aksi.value = pemicu.value;
+        f.appendChild(aksi);
+      }
+      pemicu.disabled = true;
+      pemicu.dataset.labelAsli = pemicu.textContent;
+      pemicu.textContent = 'Menyimpan\\u2026';
+    }
   });
   window.addEventListener('pageshow', function(){
-    var b = f.querySelector('button[type=submit]');
-    if (b && b.disabled) { b.disabled = false; b.textContent = 'Simpan jawabanku'; }
+    var tombol = f.querySelectorAll('button[type=submit]');
+    for (var i=0;i<tombol.length;i++) {
+      tombol[i].disabled = false;
+      if (tombol[i].dataset.labelAsli) tombol[i].textContent = tombol[i].dataset.labelAsli;
+    }
   });
   window.addEventListener('beforeunload', function(e){
     if (kotor && f.dataset.kirimOtomatis !== '1') {
@@ -1101,6 +1142,13 @@ def halaman_kerja_baru(
         '<a class="cta-keluar hanya-layar" href="/murid">'
         '<span class="material-symbols-outlined" style="font-size:1.1rem">close</span> Tutup</a>'
     )
+    script_mulai = ""
+    if akses_tautan:
+        script_mulai = (
+            "<script>fetch(" + json.dumps(aksi)
+            + ", {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+            "body:'aksi=mulai',keepalive:true}).catch(function(){});</script>"
+        )
     navigasi_bawah = "" if akses_tautan else (
         '<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">'
         '<button class="kerja-btn-sekunder-st" type="button" onclick="window.print()">'
@@ -1142,12 +1190,15 @@ def halaman_kerja_baru(
 </div>
 <form method="post" action="{aksi}">
 {" ".join(kartu)}
-<div class="kerja-simpan-strip-st hanya-layar"><button type="submit">Simpan jawabanku
-<span class="material-symbols-outlined">arrow_forward</span></button></div>
+<div class="kerja-simpan-strip-st hanya-layar">
+  <button type="submit" name="aksi" value="simpan" class="sekunder">Simpan sementara</button>
+  <button type="submit" name="aksi" value="selesai">Selesai &amp; kirim
+    <span class="material-symbols-outlined">arrow_forward</span></button>
+</div>
 </form>
 {navigasi_bawah}
 {blok_foto}
-{jaga}{skrip}
+{jaga}{skrip}{script_mulai}
 </div></body></html>"""
     return isi.encode()
 

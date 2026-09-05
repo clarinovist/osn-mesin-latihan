@@ -114,16 +114,13 @@ def test_tautan_ikut_hilang_saat_sesi_dihapus(tmp_path):
     assert jumlah == 0
 
 
-def test_guru_membuat_tautan_absolut_dengan_tombol_share(server):
+def test_guru_membuat_tautan_absolut_untuk_fallback_tanpa_js(server):
     s, _, sesi_id = server
     kode, isi, _, tautan = _buat_tautan(s, sesi_id)
 
     assert kode == 200
     assert tautan.startswith("https://osn.lesprivate.id/mulai/")
-    assert "Bagikan ke anak" in isi
-    assert "navigator.share" in isi
-    assert "navigator.clipboard.writeText" in isi
-    assert "Berlaku 7 hari" in isi
+    assert 'id="tautan-sesi"' in isi
 
 
 def test_halaman_anak_menawarkan_bagikan_dan_cabut(server):
@@ -132,9 +129,9 @@ def test_halaman_anak_menawarkan_bagikan_dan_cabut(server):
 
     kode, isi, _ = s.minta(f"/anak/{siswa_id}", auth=("guru", SANDI_GURU))
     assert kode == 200
-    assert f'action="/sesi/{sesi_id}/bagikan"' in isi
+    assert f'data-bagikan-url="/sesi/{sesi_id}/bagikan"' in isi
     assert f'action="/sesi/{sesi_id}/cabut-tautan"' in isi
-    assert "Tautan aktif" in isi
+    assert 'aria-label="Cabut tautan sesi"' in isi
 
 
 def test_link_membuka_hanya_satu_sesi_tanpa_login(server):
@@ -160,6 +157,24 @@ def test_link_membuka_hanya_satu_sesi_tanpa_login(server):
     assert header["Cache-Control"] == "no-store"
     assert header["Referrer-Policy"] == "no-referrer"
     assert header["X-Robots-Tag"] == "noindex, nofollow"
+    assert "body:'aksi=mulai'" in isi
+
+
+def test_post_mulai_dari_browser_tautan_mencatat_waktu_tanpa_jawaban(server):
+    s, _, sesi_id = server
+    _, _, _, tautan = _buat_tautan(s, sesi_id)
+    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+
+    kode, _, header = s.minta(jalur, data={"aksi": "mulai"})
+
+    assert kode == 200
+    assert header["Cache-Control"] == "no-store"
+    with s.buka() as kon:
+        mulai = kon.execute(
+            "SELECT mulai FROM sesi WHERE id = ?", (sesi_id,),
+        ).fetchone()["mulai"]
+        assert mulai is not None
+        assert kon.execute("SELECT COUNT(*) FROM jawaban").fetchone()[0] == 0
 
 
 def test_post_tanpa_jawaban_tidak_memulai_timer(server):
@@ -204,7 +219,9 @@ def test_bagikan_sesi_selesai_ditolak_jelas(server):
     jalur = tautan.removeprefix("https://osn.lesprivate.id")
     with s.buka() as kon:
         soal = database.isi_sesi(kon, sesi_id)
-    s.minta(jalur, data={f"jwb_{b['sesi_soal_id']}": "1" for b in soal})
+    data = {f"jwb_{b['sesi_soal_id']}": "1" for b in soal}
+    data["aksi"] = "selesai"
+    s.minta(jalur, data=data)
 
     kode, isi, header = s.minta(
         f"/sesi/{sesi_id}/bagikan", auth=("guru", SANDI_GURU), data={}
@@ -254,6 +271,7 @@ def test_link_bisa_menyimpan_lalu_otomatis_mati_setelah_selesai(server):
     with s.buka() as kon:
         soal = database.isi_sesi(kon, sesi_id)
     data = {f"jwb_{b['sesi_soal_id']}": "1" for b in soal}
+    data["aksi"] = "selesai"
 
     kode, isi, _ = s.minta(jalur, data=data)
     assert kode == 200

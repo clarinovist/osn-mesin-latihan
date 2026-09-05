@@ -46,6 +46,7 @@ def _sesi_dinilai(kon, sid, benar=8, jumlah=10, kode="K"):
             data[f"cara_{b['sesi_soal_id']}"] = "coretan"
             data[f"kode_{b['sesi_soal_id']}"] = kode
     teacher_pages.simpan_sesi(kon, sesi_id, data)
+    database.tandai_selesai(kon, sesi_id)
     return sesi_id
 
 
@@ -132,6 +133,7 @@ def test_topik_tak_dikenal_tidak_500(db):
         sid = database.tambah_siswa(kon, "Warisan")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
         kon.execute("UPDATE sesi SET topik = ? WHERE id = ?", ("topik-hantu", sesi_id))
+        database.tandai_selesai(kon, sesi_id)
         h = reports.halaman_laporan(kon, sid).decode()
     assert "Ringkasan untuk orang tua" in h
     assert "topik-hantu" in h
@@ -173,6 +175,7 @@ def _beri_diagnosis(kon, sesi_id, indeks, kode, malrule_id=None, alasan=""):
         malrule_id=malrule_id,
         alasan=alasan,
     )
+    database.tandai_selesai(kon, sesi_id)
     return baris["template_id"]
 
 

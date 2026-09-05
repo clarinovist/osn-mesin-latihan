@@ -221,7 +221,7 @@ def test_murid_keluarga_a_tak_bisa_menjangkau_sesi_keluarga_b(dua_keluarga):
         auth=("feby", SANDI_MURID),
         data={},
     )
-    assert kode == 403
+    assert kode == 404
 
 
 def test_murid_keluarga_a_daftar_sesinya_sendiri(dua_keluarga):

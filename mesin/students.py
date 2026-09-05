@@ -38,6 +38,10 @@ def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     baris = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
                   s.mode, s.timer_mode, s.durasi_menit, s.timer_auto,
+                  s.mulai, s.selesai,
+                  CASE WHEN s.mulai IS NULL THEN 0 ELSE MAX(0,
+                    CAST(strftime('%s', datetime('now', '+7 hours')) AS INTEGER)
+                    - CAST(strftime('%s', s.mulai) AS INTEGER)) END AS detik_lalu,
                   w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id
            WHERE s.id = ? AND s.siswa_id = ?""",
@@ -223,8 +227,22 @@ def simpan_jawaban_murid(kon, siswa_id: int, sesi_id: int, data: dict) -> int | 
         else:
             cara = teks_cara
 
+        punya_field = any(
+            k in data
+            for k in (
+                f"jwb_{ssid}", f"cara_{ssid}", f"pilih_{ssid}",
+                f"restate_{ssid}", f"blm_{ssid}",
+            )
+        )
         if not (jawaban or cara or restate or belum):
-            continue  # soal dilewati anak: biarkan kosong, jangan buat baris
+            if punya_field:
+                # Form mengirim field kosong ketika anak menghapus isian lama.
+                # Hapus baris (diagnosis ikut cascade), jangan biarkan draft lama
+                # diam-diam hidup dan ikut terkirim saat finalisasi.
+                kon.execute(
+                    "DELETE FROM jawaban WHERE sesi_soal_id = ?", (ssid,)
+                )
+            continue
         from database import simpan_jawaban
 
         simpan_jawaban(

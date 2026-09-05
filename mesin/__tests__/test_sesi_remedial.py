@@ -56,6 +56,7 @@ def _sesi_dengan_kesalahan(kon, nama="AnakRemedial"):
         database.simpan_jawaban(kon, b["sesi_soal_id"],
                                 jawaban="999999", cara="hitung")
     reports.diagnosa_murid(kon, sesi_id)
+    database.tandai_selesai(kon, sesi_id)
     return sid, sesi_id
 
 
@@ -85,6 +86,7 @@ def test_sasaran_remedial_kosong_kalau_semua_benar(db):
             database.simpan_jawaban(kon, b["sesi_soal_id"],
                                     jawaban=b["kunci"], cara="hitung")
         reports.diagnosa_murid(kon, sesi_id)
+        database.tandai_selesai(kon, sesi_id)
         assert database.sasaran_remedial(kon, sid) == []
 
 
@@ -257,6 +259,7 @@ def _sesi_salah_topik(kon, nama, topik, level, jumlah=4):
         database.simpan_jawaban(kon, b["sesi_soal_id"],
                                 jawaban="999999", cara="hitung")
     reports.diagnosa_murid(kon, sesi_id)
+    database.tandai_selesai(kon, sesi_id)
     return sid, sesi_id
 
 
@@ -288,6 +291,7 @@ def test_remedial_lintas_dua_topik_sekaligus(db):
             database.simpan_jawaban(kon, b["sesi_soal_id"],
                                     jawaban="999999", cara="hitung")
         reports.diagnosa_murid(kon, sesi2)
+        database.tandai_selesai(kon, sesi2)
 
         sasaran = set(database.sasaran_remedial(kon, sid))
         rem = database.buat_sesi_remedial(

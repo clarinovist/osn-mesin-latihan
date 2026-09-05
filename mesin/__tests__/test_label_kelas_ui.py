@@ -135,7 +135,8 @@ def test_detail_sesi_guru_legacy_dan_cetak_memakai_label_kelas(db):
 def test_laporan_menampilkan_kelas_dan_nama_kolom_kelas(db):
     with database.buka(db) as kon:
         siswa_id = database.tambah_siswa(kon, "Alya", "P5")
-        database.buat_sesi(kon, siswa_id, seed=11, level="P5", topik="statistika")
+        sesi_id = database.buat_sesi(kon, siswa_id, seed=11, level="P5", topik="statistika")
+        database.tandai_selesai(kon, sesi_id)
         isi = _badan(reports.halaman_laporan(kon, siswa_id).decode())
 
     assert 'data-label="Kelas">Kelas 5</td>' in isi

@@ -373,37 +373,6 @@ def halaman_utama_stitch(
 
 
 
-def halaman_bagikan_sesi(
-    tautan: str, sesi_id: int, siswa_id: int, nama: str,
-    pengguna: str, peran: str,
-) -> bytes:
-    """Tampilkan token mentah sekali agar guru dapat membagikannya."""
-    tautan_esc = html.escape(tautan, quote=True)
-    return _halaman(
-        f"Bagikan sesi #{sesi_id}",
-        f'<div class="jejak"><a href="/anak/{siswa_id}">&larr; Kembali ke {html.escape(nama)}</a></div>'
-        f'<h1 class="st">Bagikan sesi #{sesi_id}</h1>'
-        '<p class="sub">Tautan ini langsung membuka satu sesi saja. '
-        'Berlaku 7 hari dan tautan sebelumnya otomatis tidak berlaku.</p>'
-        '<div class="st-kartu" style="display:grid;gap:.75rem">'
-        f'<input id="tautan-sesi" class="st-input" type="text" readonly value="{tautan_esc}">'
-        '<div style="display:flex;gap:.5rem;flex-wrap:wrap">'
-        '<button id="tombol-bagikan" type="button" class="st-tombol-coral">Bagikan ke anak</button>'
-        '<button id="tombol-salin" type="button" class="tombol-kecil-st">Salin tautan</button>'
-        '</div><p id="kabar-salin" class="sub" aria-live="polite"></p></div>'
-        '<script>(function(){var i=document.getElementById("tautan-sesi"),'
-        'b=document.getElementById("tombol-bagikan"),s=document.getElementById("tombol-salin"),'
-        'k=document.getElementById("kabar-salin");function pilih(){i.focus();i.select();'
-        'k.textContent="Tautan dipilih — tekan Salin bila belum tersalin.";}'
-        'async function salin(){try{await navigator.clipboard.writeText(i.value);'
-        'k.textContent="Tautan tersalin.";}catch(e){pilih();}}'
-        's.addEventListener("click",salin);b.addEventListener("click",async function(){'
-        'if(navigator.share){try{await navigator.share({title:"Sesi Jagomat",url:i.value});return;}'
-        'catch(e){if(e.name==="AbortError")return;}}await salin();});})();</script>',
-        ident=(pengguna, peran), stitch=True,
-    )
-
-
 def halaman_anak(
     kon,
     siswa,
@@ -447,21 +416,38 @@ def halaman_anak(
     def _kelas_sorot(rid):
         return "sorot-baru" if sorot is not None and rid == sorot else ""
 
-    def _aksi_tautan(rid):
-        buat = (
-            f'<form method="post" action="/sesi/{rid}/bagikan" style="margin:0">'
-            '<button type="submit" class="tombol-kecil-st">'
-            + ("Buat tautan baru" if share_links.aktif(kon, rid) else "Bagikan ke anak")
-            + "</button></form>"
-        )
-        if not share_links.aktif(kon, rid):
-            return buat
+    def _aksi_tautan(baris):
+        rid = baris["id"]
+        if baris["selesai"]:
+            return ""
+        aktif = share_links.aktif(kon, rid)
+        cabut = ""
+        if aktif:
+            cabut = (
+                f'<form method="post" action="/sesi/{rid}/cabut-tautan" style="margin:0">'
+                '<button type="submit" class="tombol-ikon-st" '
+                'aria-label="Cabut tautan sesi" title="Cabut tautan">'
+                '<span class="material-symbols-outlined">link_off</span></button></form>'
+            )
         return (
-            '<div style="display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end">'
-            f"{buat}"
-            f'<form method="post" action="/sesi/{rid}/cabut-tautan" style="margin:0">'
-            '<button type="submit" class="tombol-kecil-st">Tautan aktif · Cabut</button>'
-            "</form></div>"
+            '<div class="aksi-bagikan-st">'
+            f'<button type="button" class="tombol-ikon-st tombol-bagikan-st" '
+            f'data-bagikan-url="/sesi/{rid}/bagikan" '
+            f'data-bagikan-aktif="{1 if aktif else 0}" '
+            'aria-label="Bagikan sesi ke anak" title="Bagikan sesi">'
+            '<span class="material-symbols-outlined">share</span></button>'
+            f"{cabut}</div>"
+        )
+
+    def _angka_sesi(r):
+        benar = f'{r["benar"]}/{r["n"]}' if r["selesai"] else "—"
+        waktu = _fmt_durasi(
+            _ambil(r, "mulai", None), _ambil(r, "selesai", None),
+            _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None),
+        )
+        return (
+            f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
+            f'<div>Benar {benar}</div><div>Waktu {waktu}</div>'
         )
 
     if sesi:
@@ -474,14 +460,12 @@ def halaman_anak(
             f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
             f"</div>"
             f'<div style="text-align:right;font-variant-numeric:tabular-nums;margin-right:0.6rem">'
-            f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
-            f'<div>Benar {r["benar"]}/{r["n"]}</div>'
-            f'<div>Waktu {_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</div>'
+            f'{_angka_sesi(r)}'
             f"</div>"
             f'<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end">'
             f'{_badge_review_status(r)}'
             f'{_badge_mode_stitch(r)}'
-            f'{_aksi_tautan(r["id"])}'
+            f'{_aksi_tautan(r)}'
             f"</div>"
             f"</div>"
             for r, kelas in (
@@ -660,6 +644,8 @@ def halaman_anak(
         f'<p class="sub">History latihan — '
         f'<a href="/laporan/{siswa["id"]}">lihat laporan tren &rarr;</a></p>'
         f"{kabar}"
+        '<p id="kabar-bagikan" class="sub" aria-live="polite">'
+        'Tautan berlaku 7 hari. Membuat ulang akan menonaktifkan tautan sebelumnya.</p>'
         # Dua kolom di desktop (>= 64rem): history di kiri, alat buat-latihan
         # di kanan. Di HP grid mati dan urutan sumber yang berlaku — history
         # dulu, form menyusul, persis seperti sebelum kolom ini ada.
@@ -669,7 +655,14 @@ def halaman_anak(
         f"{blok_buat_latihan}"
         "</div>"
         "</div>"
-        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
+        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>"
+        "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st'),k=document.getElementById('kabar-bagikan');"
+        "async function salin(t){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil.';return false;}}"
+        "async function bagikan(t){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});return;}catch(e){if(e.name==='AbortError')return;}}await salin(t);}"
+        "for(var i=0;i<b.length;i++){b[i].addEventListener('click',async function(){var x=this;if(x.dataset.tautan){await bagikan(x.dataset.tautan);return;}if(x.dataset.bagikanAktif==='1'&&!window.confirm('Membuat tautan baru akan menonaktifkan tautan sebelumnya. Lanjutkan?'))return;x.disabled=true;"
+        "try{var r=await fetch(x.dataset.bagikanUrl,{method:'POST',headers:{'X-Requested-With':'fetch'}});"
+        "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan);}"
+        "catch(e){k.textContent='Tautan belum berhasil dibuat. Coba lagi.';}finally{x.disabled=false;}});}})()</script>",
         ident=(pengguna if pengguna else "guru", peran),
         kelas_bungkus="lebar",
     )
@@ -1186,18 +1179,26 @@ def halaman_sesi_stitch(
     kon, sesi_id: int, pesan: str = "", peran: str = "guru",
     pengguna: str = "",
 ) -> bytes:
-    """Detail sesi versi Stitch — HANYA koreksi (opsi 3)."""
+    """Detail sesi versi Stitch: pratinjau lalu koreksi setelah dikirim."""
     from style_stitch import gaya_stitch, CSS_SESI
 
     info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.direview,
-                   w.nama, w.id AS siswa_id
+        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                  s.mulai, s.selesai, s.direview,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   WHERE ss.sesi_id = s.id) AS jumlah_soal,
+                  (SELECT COUNT(*) FROM sesi_soal ss
+                   JOIN jawaban j ON j.sesi_soal_id = ss.id
+                   WHERE ss.sesi_id = s.id) AS terisi,
+                  w.nama, w.id AS siswa_id
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
     ).fetchone()
     if not info:
         return _halaman("Tidak ada", "<h1>Sesi tidak ditemukan</h1>")
 
+    sudah_dikirim = bool(info["selesai"])
+    drill = info["mode"] == "drill"
     kartu = []
     for b in database.isi_sesi(kon, sesi_id):
         soal = _soal_dari_baris(b)
@@ -1252,10 +1253,13 @@ def halaman_sesi_stitch(
                 "</div>"
             )
 
+        pilihan_kode = (
+            (v, t) for v, t in KODE_PILIHAN if not (drill and v == "N")
+        )
         pilih = "".join(
             f'<option value="{v}"{" selected" if (v == kode or (v == "benar" and benar)) else ""}>'
             f"{html.escape(t)}</option>"
-            for v, t in KODE_PILIHAN
+            for v, t in pilihan_kode
         )
 
         nomor = f'<span class="koreksi-nomor-st">{b["nomor"]}</span>'
@@ -1270,6 +1274,26 @@ def halaman_sesi_stitch(
                 '<div class="pembahasan-soal-st">'
                 f'<b>Perhitungan/Langkah:</b> {html.escape(soal.pembahasan)}'
                 '</div>'
+            )
+
+        if not sudah_dikirim:
+            kartu.append(f"""
+<div class="koreksi-kartu-st pratinjau">
+  <div class="koreksi-isi-st">
+    <div class="koreksi-kepala-st">{nomor}{tipe}</div>
+    <div class="teks-soal-st">{html.escape(soal.teks)}</div>
+    <div class="kunci-baris-st">Kunci: <span class="kunci-val">{html.escape(b["kunci"])}</span></div>
+  </div>
+</div>""")
+            continue
+
+        cara_html = ""
+        if not drill:
+            cara_html = (
+                '<label class="koreksi-label-st">Isi kotak &quot;Caraku&quot; — '
+                'ringkas saja, cukup yang menunjukkan caranya</label>'
+                f'<textarea class="koreksi-textarea-st" name="cara_{b["sesi_soal_id"]}">'
+                f'{html.escape(b["cara"] or "")}</textarea>'
             )
 
         kartu.append(f"""
@@ -1291,8 +1315,7 @@ def halaman_sesi_stitch(
         <select class="koreksi-select-st" name="kode_{b["sesi_soal_id"]}">{pilih}</select>
       </div>
     </div>
-    <label class="koreksi-label-st">Isi kotak "Caraku" — ringkas saja, cukup yang menunjukkan caranya</label>
-    <textarea class="koreksi-textarea-st" name="cara_{b["sesi_soal_id"]}">{html.escape(b["cara"] or "")}</textarea>
+    {cara_html}
     <div class="koreksi-centang-st info-anak-st">
       <input type="checkbox" id="bp{b["sesi_soal_id"]}"
              name="belum_{b["sesi_soal_id"]}"
@@ -1306,18 +1329,41 @@ def halaman_sesi_stitch(
     kabar = f'<div class="pesan-st">{html.escape(pesan)}</div>' if pesan else ""
     badge_mode = _badge_mode(info)
     pil = _pil_sesi_stitch(kon, sesi_id, "koreksi")
+    if not sudah_dikirim:
+        pil = pil.replace(">Koreksi</a>", ">Soal &amp; kunci</a>")
+
+    if sudah_dikirim:
+        status_sesi = (
+            '<div class="status-sesi-st selesai">'
+            '<span class="material-symbols-outlined">task_alt</span>'
+            '<div><b>Sudah dikirim — siap dikoreksi</b>'
+            '<p>Diagnosis awal dibuat otomatis. Simpan hanya jika kamu mengubah koreksi.</p>'
+            '</div></div>'
+        )
+        blok_isi = (
+            f'<form method="post" action="/sesi/{sesi_id}">'
+            f'{"".join(kartu)}'
+            f'<div class="koreksi-simpan-st"><button type="submit">'
+            "Simpan koreksi</button></div></form>"
+        )
+    else:
+        label_status = "Sedang dikerjakan" if info["terisi"] else "Menunggu anak"
+        ikon_status = "pending_actions" if info["terisi"] else "schedule"
+        status_sesi = (
+            '<div class="status-sesi-st menunggu">'
+            f'<span class="material-symbols-outlined">{ikon_status}</span>'
+            f'<div><b>{label_status}</b>'
+            f'<p>Terisi {info["terisi"]} dari {info["jumlah_soal"]}. '
+            'Koreksi terbuka setelah anak menekan “Selesai &amp; kirim”.</p>'
+            '</div></div>'
+        )
+        blok_isi = "".join(kartu)
 
     tombol_hapus = (
         f'<form method="get" action="/sesi/{sesi_id}/hapus" '
         f'style="margin:.4rem 0">'
         f'<button type="submit" class="tombol-kecil-st">'
         f"Hapus sesi</button></form>"
-    )
-    blok_isi = (
-        f'<form method="post" action="/sesi/{sesi_id}">'
-        f'{"".join(kartu)}'
-        f'<div class="koreksi-simpan-st"><button type="submit">'
-        "Simpan &amp; diagnosis</button></div></form>"
     )
 
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
@@ -1331,6 +1377,7 @@ def halaman_sesi_stitch(
         f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"
         f"{pil}"
+        f"{status_sesi}"
         f"{blok_isi}"
         f'<div class="danger-zone-st">'
         f'<p class="sub">Zona bahaya — hapus tidak bisa dibatalkan.</p>'
@@ -1355,11 +1402,16 @@ def halaman_sesi_stitch(
 
 
 def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
-    """Simpan jawaban lalu jalankan diagnosis otomatis.
+    """Simpan koreksi guru tanpa mengubah kontrak mode sesi."""
+    mode_baris = kon.execute(
+        "SELECT mode FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()
+    drill = bool(mode_baris and mode_baris["mode"] == "drill")
+    awalan_drill = ""
+    if drill:
+        from students import AWALAN_DRILL
+        awalan_drill = AWALAN_DRILL
 
-    Kode dari guru menang atas usulan mesin, dan bedanya dicatat lewat kolom
-    `manual` supaya nanti bisa diukur seberapa sering mesin meleset.
-    """
     diubah = 0
     for b in database.isi_sesi(kon, sesi_id):
         sid = b["sesi_soal_id"]
@@ -1369,6 +1421,8 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
         belum = f"belum_{sid}" in data
         pilihan = data.get(f"kode_{sid}", "").strip()
         kode_diizinkan = {nilai for nilai, _label in KODE_PILIHAN if nilai}
+        if drill:
+            kode_diizinkan.discard("N")
         if pilihan not in kode_diizinkan:
             pilihan = ""
 
@@ -1377,9 +1431,10 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
 
         jid = database.simpan_jawaban(kon, sid, jwb, cara, restate, belum)
 
+        cara_diagnosis = awalan_drill + cara if drill else cara
         soal = _soal_dari_baris(b)
         u = diagnosa(
-            b["kunci"], jwb, cara, restate, belum,
+            b["kunci"], jwb, cara_diagnosis, restate, belum,
             database.malrule_soal(kon, b["soal_id"]),
             soal.minta_restatement,
         )
@@ -1396,7 +1451,7 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
         )
         diubah += 1
 
-    return f"{diubah} soal tersimpan dan didiagnosis."
+    return f"{diubah} koreksi tersimpan."
 
 def buat_sesi_seed_baru(
     kon,
