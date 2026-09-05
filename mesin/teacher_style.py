@@ -298,17 +298,37 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .tombol-mata:hover {{ color: {T.TEKS_UTAMA}; }}
 .tombol-mata svg {{ display: block; }}
 
-/* ── Pilihan mode & timer saat buat sesi (Latihan Cepat) ───────────── */
+/* ── Pilihan mode & batas waktu saat buat sesi ──────────────────────── */
 .mode-pilih {{ display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .2rem; }}
 .mode-opsi {{ display: flex; align-items: center; gap: .4rem; font-size: .88rem;
   color: {T.TEKS_UTAMA}; margin: 0; }}
 .mode-opsi input {{ width: auto; margin: 0; }}
+.mode-teks {{ display: flex; flex-direction: column; gap: .15rem; }}
+.mode-desk {{ color: {T.TEKS_SUBTLE}; font-size: .82rem; font-weight: 400; }}
 .pengaturan-timer {{
+  display: flex; flex-basis: 100%; margin: 0;
   border: 1.5px dashed {T.BORDER_HALUS}; border-radius: {T.RADIUS_KECIL};
   padding: .55rem .7rem; background: {T.LATAR_KARTU_MURID};
+  flex-direction: column; gap: .5rem;
 }}
-.pengaturan-timer label {{ margin: .2rem 0; }}
-.pengaturan-timer input[type=number] {{ padding: .3rem .45rem; }}
+.rincian-timer {{ display: flex; flex-direction: column; gap: .55rem; }}
+@supports selector(:has(*)) {{
+  .pengaturan-timer {{ display: none; }}
+  .strip-sesi:has(input[name=mode][value=drill]:checked) .pengaturan-timer {{
+    display: flex;
+  }}
+  .rincian-timer {{ display: none; }}
+  .pengaturan-timer:has(.timer-toggle input:checked) .rincian-timer {{ display: flex; }}
+}}
+.pengaturan-timer > legend, .akibat-timer > legend {{
+  padding: 0 .25rem; color: {T.TEKS_SUBTLE}; font-size: .82rem;
+  font-weight: 600;
+}}
+.durasi-timer {{ display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }}
+.durasi-timer small {{ flex-basis: 100%; color: {T.TEKS_SUBTLE}; font-size: .78rem; }}
+.akibat-timer {{ display: flex; flex-direction: column; gap: .4rem; margin: 0;
+  padding: .45rem; border: 1px solid {T.BORDER_HALUS}; border-radius: {T.RADIUS_KECIL}; }}
+.pengaturan-timer input[name=durasi_menit] {{ padding: .3rem .45rem; width: 4.5rem; }}
 
 /* ── Halaman sesi: kartu soal (mockup guru-sesi) ───────────────────── */
 .peta {{ margin-bottom: 1rem; }}

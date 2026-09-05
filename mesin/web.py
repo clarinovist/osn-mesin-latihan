@@ -1495,7 +1495,7 @@ class Penangan(BaseHTTPRequestHandler):
                     return self._kirim(_halaman("Mode tidak dikenal", pesan), 400)
                 timer_mode, durasi_menit, timer_auto = "tanpa", 15, 0
                 if pilihan_mode == "drill":
-                    timer_mode = (data.get("timer_mode") or ["sesi"])[0].strip()
+                    timer_mode = (data.get("timer_mode") or ["tanpa"])[0].strip()
                     if timer_mode not in ("tanpa", "sesi", "soal"):
                         pesan = (
                             f"<h1>Timer tidak dikenal</h1>"
@@ -1504,16 +1504,21 @@ class Penangan(BaseHTTPRequestHandler):
                             f"soal (per soal, internal).</p>"
                         )
                         return self._kirim(_halaman("Timer tidak dikenal", pesan), 400)
-                    nilai_durasi = (data.get("durasi_menit") or [""])[0].strip()
-                    if not nilai_durasi.isdigit() or not 1 <= int(nilai_durasi) <= 180:
-                        pesan = (
-                            "<h1>Durasi tidak wajar</h1>"
-                            f"<p>Durasi Latihan Cepat harus angka 1–180 menit "
-                            f"(terima: {html.escape(nilai_durasi or '(kosong)')}).</p>"
-                        )
-                        return self._kirim(_halaman("Durasi tidak wajar", pesan), 400)
-                    durasi_menit = int(nilai_durasi)
-                    timer_auto = 1 if (data.get("timer_auto") or ["0"])[0] == "1" else 0
+                    if timer_mode in ("sesi", "soal"):
+                        nilai_durasi = (data.get("durasi_menit") or [""])[0].strip()
+                        try:
+                            durasi_diajukan = int(nilai_durasi)
+                        except ValueError:
+                            durasi_diajukan = 0
+                        if not 1 <= durasi_diajukan <= 180:
+                            pesan = (
+                                "<h1>Durasi tidak wajar</h1>"
+                                f"<p>Durasi Latihan Cepat harus angka 1–180 menit "
+                                f"(terima: {html.escape(nilai_durasi or '(kosong)')}).</p>"
+                            )
+                            return self._kirim(_halaman("Durasi tidak wajar", pesan), 400)
+                        durasi_menit = durasi_diajukan
+                        timer_auto = 1 if (data.get("timer_auto") or ["0"])[0] == "1" else 0
                 nilai_jumlah = (data.get("jumlah_soal") or [""])[0].strip()
                 jumlah_soal = int(nilai_jumlah) if nilai_jumlah.isdigit() and 1 <= int(nilai_jumlah) <= 50 else None
                 sesi_id = buat_sesi_seed_baru(

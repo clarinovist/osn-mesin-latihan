@@ -191,6 +191,19 @@ def test_daftar_anak_punya_gaya_di_stitch():
 # ── Guard anti-regresi ────────────────────────────────────────────────
 
 
+def test_timer_form_mengandalkan_state_css_bukan_javascript(anak):
+    """Panel mengikuti radio/checkbox agar relasi pilihan terlihat konsisten."""
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert 'class="pengaturan-timer"' in markup
+    assert 'class="rincian-timer"' in markup
+    assert "querySelectorAll('input[name=\"mode\"]')" not in markup
+
+    aturan = _tanpa_komentar(GAYA_STITCH)
+    assert ".strip-sesi:has(input[name=mode][value=drill]:checked) .pengaturan-timer" in aturan
+    assert ".pengaturan-timer:has(.timer-toggle input:checked) .rincian-timer" in aturan
+
+
 def test_halaman_anak_tetap_utuh(anak):
     db, sid = anak
     html = _render_anak(db, sid)

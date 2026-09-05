@@ -892,23 +892,55 @@ tr.sorot-baru, div.sorot-baru {{
   box-shadow: 0 0 0 3px rgba(15,163,163,0.12);
 }}
 
-/* Blok timer — default hidden, tampil saat Latihan Cepat dipilih. */
+/* Batas waktu adalah opsi Latihan Cepat, bukan mode latihan ketiga.
+   Fallback browser tanpa :has(): tampilkan panel agar kontrol tidak hilang. */
 .pengaturan-timer {{
+  display: flex;
+  margin: 0; min-width: 0;
   background: {T.LATAR_SEKUNDER_NETRAL};
   border: 1px solid {T.BORDER_VARIAN};
   border-radius: {T.RADIUS_SEDANG};
   padding: {T.SP_3};
-  display: flex; flex-direction: column; gap: {T.SP_2};
+  flex-direction: column; gap: {T.SP_2};
 }}
-.pengaturan-timer > label {{
+.rincian-timer {{
+  display: flex; flex-direction: column; gap: {T.SP_3};
+  padding-top: {T.SP_1};
+}}
+@supports selector(:has(*)) {{
+  .pengaturan-timer {{ display: none; }}
+  .strip-sesi:has(input[name=mode][value=drill]:checked) .pengaturan-timer {{
+    display: flex;
+  }}
+  .rincian-timer {{ display: none; }}
+  .pengaturan-timer:has(.timer-toggle input:checked) .rincian-timer {{
+    display: flex;
+  }}
+}}
+.pengaturan-timer > legend, .akibat-timer > legend {{
+  padding: 0 {T.SP_1};
   font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .82rem;
-  color: {T.TEKS_VARIAN}; margin-bottom: {T.SP_1};
+  color: {T.TEKS_VARIAN};
 }}
 .pengaturan-timer .mode-opsi {{
   min-height: 0; padding: {T.SP_2} {T.SP_3};
   font-weight: 500; font-size: .88rem;
 }}
-.pengaturan-timer input[type=number] {{
+.durasi-timer {{
+  display: flex; flex-wrap: wrap; align-items: center; gap: {T.SP_2};
+  font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .88rem;
+  color: {T.TEKS_JUDUL};
+}}
+.durasi-timer small {{
+  flex-basis: 100%; font-family: {T.FONT_BODY}; font-weight: 400;
+  color: {T.TEKS_VARIAN}; font-size: .78rem;
+}}
+.akibat-timer {{
+  display: flex; flex-direction: column; gap: {T.SP_2};
+  margin: 0; min-width: 0; padding: {T.SP_2};
+  border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
+}}
+.pengaturan-timer input[name=durasi_menit] {{
   width: 4.5rem; display: inline-block;
   font: inherit; font-size: 1rem; min-height: {T.TARGET_SENTUH};
   border-radius: {T.RADIUS_SEDANG}; border: 1px solid {T.BORDER_VARIAN};

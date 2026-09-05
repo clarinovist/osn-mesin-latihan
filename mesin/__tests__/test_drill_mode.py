@@ -146,17 +146,33 @@ def test_buat_sesi_seed_baru_drill_via_web(db):
 # ── 1.3 Form guru + rute /sesi-baru ──────────────────────────────────
 
 
-def test_form_buat_sesi_memuat_pilihan_mode_dan_timer(db):
-    """Halaman utama guru: radio Diagnosa/Latihan Cepat + timer fields."""
+def test_form_buat_sesi_memisahkan_mode_dari_batas_waktu(db):
+    """Mode menentukan cara menjawab; timer hanya opsi tambahan Latihan Cepat."""
     with database.buka(db) as kon:
-        database.tambah_siswa(kon, "AnakUji", pemilik="guru")
-        html = teacher_pages.halaman_utama(kon).decode()
-        assert 'name="mode"' in html
-        assert 'value="diagnostik"' in html
-        assert 'value="drill"' in html
-        assert 'name="durasi_menit"' in html
-        assert 'name="timer_mode"' in html
-        assert 'name="timer_auto"' in html
+        siswa_id = database.tambah_siswa(kon, "AnakUji", pemilik="guru")
+        siswa = kon.execute(
+            "SELECT * FROM siswa WHERE id = ?", (siswa_id,)
+        ).fetchone()
+        html = teacher_pages.halaman_anak(
+            kon, siswa, pengguna="guru", peran="guru",
+        ).decode()
+
+    assert "Jawaban dan cara berpikir anak ikut diperiksa." in html
+    assert "Anak langsung mengisi jawaban. Cocok untuk pengulangan." in html
+    assert 'type="checkbox" name="timer_mode" value="sesi"' in html
+    assert "Gunakan batas waktu" in html
+    assert "Durasi sesi" in html
+    assert 'name="durasi_menit" value="30"' in html
+    assert 'name="durasi_menit" value="30" min=' not in html
+    assert "Saran: sekitar 3 menit per soal." in html
+    assert "Ketika waktu habis" in html
+    assert 'name="timer_auto" value="0" checked' in html
+    assert "Ingatkan anak, tetapi tetap boleh menyelesaikan" in html
+    assert 'name="timer_auto" value="1"' in html
+    assert "Kirim jawaban secara otomatis" in html
+    assert 'value="soal"' not in html
+    assert "Per soal (internal)" not in html
+    assert "Auto-submit" not in html
 
 
 @pytest.fixture()
@@ -192,6 +208,142 @@ def test_http_buat_sesi_drill_dengan_timer(server):
         assert baris["timer_mode"] == "sesi"
         assert baris["durasi_menit"] == 10
         assert baris["timer_auto"] == 1
+
+
+def test_http_buat_latihan_cepat_tanpa_batas_waktu(server):
+    """Checkbox timer yang tidak dicentang tidak dikirim oleh browser."""
+    db = server.db
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(
+            kon, "AnakTanpaTimer", pemilik="guru"
+        )
+
+    kode, _, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={
+            "topik": "pola-bilangan",
+            "mode": "drill",
+            "durasi_menit": "30",
+            "timer_auto": "0",
+        },
+    )
+
+    assert kode == 200
+    with database.buka(db) as kon:
+        baris = kon.execute(
+            "SELECT timer_mode, durasi_menit, timer_auto FROM sesi"
+        ).fetchone()
+    assert baris["timer_mode"] == "tanpa"
+    assert baris["durasi_menit"] == 15
+    assert baris["timer_auto"] == 0
+
+
+def test_http_latihan_cepat_tanpa_timer_mengabaikan_isian_durasi(server):
+    """Tanpa timer harus sah meski browser/pemanggil tidak mengirim durasi."""
+    db = server.db
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(
+            kon, "AnakDurasiDiabaikan", pemilik="guru"
+        )
+
+    kode, _, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={"topik": "pola-bilangan", "mode": "drill"},
+    )
+
+    assert kode == 200
+    with database.buka(db) as kon:
+        baris = kon.execute(
+            "SELECT timer_mode, durasi_menit, timer_auto FROM sesi"
+        ).fetchone()
+    assert dict(baris) == {
+        "timer_mode": "tanpa",
+        "durasi_menit": 15,
+        "timer_auto": 0,
+    }
+
+
+def test_http_timer_per_soal_lama_tetap_memproses_konfigurasinya(server):
+    """API lama tetap sah meski form baru tidak lagi menawarkan per-soal."""
+    db = server.db
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(
+            kon, "AnakTimerLama", pemilik="guru"
+        )
+
+    kode, _, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={
+            "topik": "pola-bilangan",
+            "mode": "drill",
+            "timer_mode": "soal",
+            "durasi_menit": "7",
+            "timer_auto": "1",
+        },
+    )
+
+    assert kode == 200
+    with database.buka(db) as kon:
+        baris = kon.execute(
+            "SELECT timer_mode, durasi_menit, timer_auto FROM sesi"
+        ).fetchone()
+    assert dict(baris) == {
+        "timer_mode": "soal",
+        "durasi_menit": 7,
+        "timer_auto": 1,
+    }
+
+
+def test_http_timer_aktif_menolak_durasi_di_luar_batas(server):
+    db = server.db
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(
+            kon, "AnakDurasiTidakSah", pemilik="guru"
+        )
+
+    kode, html, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={
+            "topik": "pola-bilangan",
+            "mode": "drill",
+            "timer_mode": "sesi",
+            "durasi_menit": "181",
+        },
+    )
+
+    assert kode == 400
+    assert "Durasi tidak wajar" in html
+    with database.buka(db) as kon:
+        assert kon.execute("SELECT COUNT(*) FROM sesi").fetchone()[0] == 0
+
+
+def test_http_timer_aktif_menolak_digit_unicode_yang_tidak_bisa_diubah(server):
+    """Input teks tidak boleh membuat handler melempar ValueError dan HTTP 500."""
+    db = server.db
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(
+            kon, "AnakDigitUnicode", pemilik="guru"
+        )
+
+    kode, html, _ = server.minta(
+        f"/sesi-baru/{siswa_id}",
+        auth=("guru", SANDI_GURU),
+        data={
+            "topik": "pola-bilangan",
+            "mode": "drill",
+            "timer_mode": "sesi",
+            "durasi_menit": "²",
+        },
+    )
+
+    assert kode == 400
+    assert "Durasi tidak wajar" in html
+    with database.buka(db) as kon:
+        assert kon.execute("SELECT COUNT(*) FROM sesi").fetchone()[0] == 0
 
 
 def test_http_buat_sesi_mode_asing_ditolak(server):

@@ -498,11 +498,46 @@ def halaman_utama_stitch(
         f'<h1 class="st">{T.NAMA_PRODUK} — Latihan Matematika SD</h1>'
         '<p class="sub">Klik nama anak untuk melihat history dan membuat sesi latihan.</p>'
         f"{kabar}"
-        f'<div class="daftar-anak">{isi_utama}</div>'
-        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>",
+        f'<div class="daftar-anak">{isi_utama}</div>',
         ident=(pemilik if pemilik else "guru", peran),
     )
 
+
+
+def _kontrol_mode_sesi() -> str:
+    """Pilihan cara menjawab dan batas waktu sebagai dua keputusan terpisah."""
+    return (
+        '<div class="strip-kolom"><label>Mode sesi</label>'
+        '<div class="mode-pilih">'
+        '<label class="mode-opsi"><input type="radio" name="mode" '
+        'value="diagnostik" checked>'
+        '<span class="mode-teks">Mode Diagnosa'
+        '<span class="mode-desk">Jawaban dan cara berpikir anak ikut diperiksa.</span>'
+        '</span></label>'
+        '<label class="mode-opsi"><input type="radio" name="mode" value="drill">'
+        '<span class="mode-teks">Latihan Cepat'
+        '<span class="mode-desk">Anak langsung mengisi jawaban. Cocok untuk pengulangan.</span>'
+        '</span></label>'
+        '</div></div>'
+        '<fieldset class="pengaturan-timer">'
+        '<legend>Batas waktu</legend>'
+        '<label class="mode-opsi timer-toggle">'
+        '<input type="checkbox" name="timer_mode" value="sesi">'
+        '<span class="mode-teks">Gunakan batas waktu'
+        '<span class="mode-desk">Hitung mundur ditampilkan selama seluruh sesi.</span>'
+        '</span></label>'
+        '<div class="rincian-timer">'
+        '<label class="durasi-timer">Durasi sesi '
+        '<span><input type="text" inputmode="numeric" '
+        'name="durasi_menit" value="30"> menit</span>'
+        '<small>Saran: sekitar 3 menit per soal.</small></label>'
+        '<fieldset class="akibat-timer"><legend>Ketika waktu habis</legend>'
+        '<label class="mode-opsi"><input type="radio" name="timer_auto" '
+        'value="0" checked> Ingatkan anak, tetapi tetap boleh menyelesaikan</label>'
+        '<label class="mode-opsi"><input type="radio" name="timer_auto" '
+        'value="1"> Kirim jawaban secara otomatis</label>'
+        '</fieldset></div></fieldset>'
+    )
 
 
 def halaman_anak(
@@ -655,28 +690,7 @@ def halaman_anak(
         f'<option value="25">25 soal (± 75 mnt)</option>'
         f'<option value="30">30 soal (± 90 mnt)</option>'
         f'</select></div>'
-        '<div class="strip-kolom"><label>Mode Sesi</label>'
-        '<div class="mode-pilih">'
-        '<label class="mode-opsi"><input type="radio" name="mode" value="diagnostik" checked>'
-        '<span class="mode-teks">Mode Diagnosa'
-        '<span class="mode-desk">Identifikasi area kelemahan secara otomatis.</span>'
-        '</span></label>'
-        '<label class="mode-opsi"><input type="radio" name="mode" value="drill">'
-        '<span class="mode-teks">Mode Latihan Cepat'
-        '<span class="mode-desk">Latihan intensif dengan pengaturan waktu.</span>'
-        '</span></label>'
-        "</div></div>"
-        '<div class="pengaturan-timer" style="display:none">'
-        '<label>Pengaturan Waktu</label>'
-        '<div class="mode-pilih">'
-        '<label class="mode-opsi"><input type="radio" name="timer_mode" value="tanpa" checked> Tanpa timer</label>'
-        '<label class="mode-opsi"><input type="radio" name="timer_mode" value="sesi"> Per sesi (tampil)</label>'
-        '<label class="mode-opsi"><input type="radio" name="timer_mode" value="soal"> Per soal (internal)</label>'
-        "</div>"
-        '<label>Durasi '
-        '<input type="number" name="durasi_menit" value="15" min="1" max="180"> menit</label>'
-        '<label class="mode-opsi"><input type="checkbox" name="timer_auto" value="1"> Auto-submit ketika waktu habis</label>'
-        "</div>"
+        f'{_kontrol_mode_sesi()}'
         '<button type="submit" class="st-tombol-coral">'
         '<span class="material-symbols-outlined" style="font-size:1.1rem">play_arrow</span>'
         "Buat sesi baru</button>"
@@ -806,7 +820,6 @@ def halaman_anak(
         f"{blok_buat_latihan}"
         "</div>"
         "</div>"
-        "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>"
         "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
         "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin dan berlaku 7 hari.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil. Tautan berlaku 7 hari.';return false;}}"
         "async function bagikan(t,k){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});k.textContent='Tautan dibagikan dan berlaku 7 hari.';return;}catch(e){if(e.name==='AbortError'){k.textContent='';return;}}}await salin(t,k);}"
@@ -889,24 +902,7 @@ def halaman_utama(
             f'<option value="25">25 soal (± 75 mnt)</option>'
             f'<option value="30">30 soal (± 90 mnt)</option>'
             f'</select></div>'
-            f'<div class="strip-kolom"><label>Mode</label>'
-            f'<div class="mode-pilih">'
-            f'<label class="mode-opsi"><input type="radio" name="mode" '
-            f'value="diagnostik" checked> Diagnosa</label>'
-            f'<label class="mode-opsi"><input type="radio" name="mode" '
-            f'value="drill"> Latihan Cepat</label>'
-            f'</div></div>'
-            f'<div class="pengaturan-timer" style="display:none">'
-            f'<label>Durasi '
-            f'<input type="number" name="durasi_menit" value="15" '
-            f'min="1" max="180" style="width:4.5rem"> menit</label>'
-            f'<label class="mode-opsi"><input type="radio" name="timer_mode" '
-            f'value="sesi" checked> per sesi (tampil)</label>'
-            f'<label class="mode-opsi"><input type="radio" name="timer_mode" '
-            f'value="soal"> per soal (internal)</label>'
-            f'<label class="mode-opsi"><input type="checkbox" '
-            f'name="timer_auto" value="1"> auto-submit</label>'
-            f'</div>'
+            f'{_kontrol_mode_sesi()}'
             f'<button type="submit" class="tombol-coral">Buat sesi baru</button>'
             f'</form>'
         )
@@ -945,17 +941,7 @@ def halaman_utama(
         f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
         f"untuk melihat tren.</p>"
         f"{kabar}"
-        f'<div class="daftar-anak">{isi_utama}</div>'
-        f'<script>'
-        f'(function(){{'
-        f'var r=document.querySelectorAll(\'input[name="mode"]\');'
-        f'for(var i=0;i<r.length;i++){{'
-        f'r[i].addEventListener("change",function(){{'
-        f'var t=this.closest("form").querySelector(".pengaturan-timer");'
-        f'if(t)t.style.display=this.value==="drill"?"":"none";'
-        f'}});}}'
-        f'}})()'
-        f'</script>',
+        f'<div class="daftar-anak">{isi_utama}</div>',
         ident=(pemilik if pemilik else "guru", peran),
     )
 
