@@ -108,6 +108,18 @@ CREATE TABLE IF NOT EXISTS sesi (
 
 CREATE INDEX IF NOT EXISTS idx_sesi_siswa ON sesi(siswa_id, tanggal);
 
+-- Tautan bearer untuk satu sesi. Token mentah tidak disimpan: hanya hash
+-- SHA-256, supaya salinan basis data tidak langsung menjadi kunci masuk.
+-- Satu sesi hanya punya satu tautan; buat ulang mengganti tautan sebelumnya.
+CREATE TABLE IF NOT EXISTS tautan_sesi (
+    sesi_id      INTEGER PRIMARY KEY REFERENCES sesi(id) ON DELETE CASCADE,
+    token_hash   TEXT    NOT NULL UNIQUE,
+    dibuat       INTEGER NOT NULL,
+    kedaluarsa   INTEGER NOT NULL,
+    dicabut      INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_tautan_sesi_hash ON tautan_sesi(token_hash);
+
 -- Urutan soal dalam satu sesi.
 CREATE TABLE IF NOT EXISTS sesi_soal (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -803,8 +803,13 @@ def _badan_teks_st(teks: str) -> str:
 def halaman_kerja_baru(
     kon, siswa_id: int, sesi_id: int, tersimpan: int = 0,
     topik_paket: Topik | None = None, kabar_foto: str = "",
+    jalur_aksi: str | None = None, akses_tautan: bool = False,
 ) -> bytes | None:
     """Versi Stitch dari halaman kerja murid (S4).
+
+    ``akses_tautan`` dipakai untuk tautan satu-sesi tanpa login. Data yang
+    dirender tetap melewati palang siswa+sesi yang sama; yang berubah hanya
+    tujuan form dan hilangnya navigasi menuju area akun/sesi lain.
 
     Logika data, struktur kartu, mode drill, timer, jaga (guard submit/
     beforeunload) — SEMUA persis sama dengan halaman_kerja; yang berubah hanya
@@ -1054,26 +1059,26 @@ def halaman_kerja_baru(
 </script>
 """
 
-    # Kirim foto cara pengerjaan (poin 1 & 4 feedback Filia 2 Sep 2026).
-    # Untuk anak yang mengerjakan di KERTAS (lembar dicetak): tidak ada
-    # tempat mengetik, jadi foto adalah satu-satunya jalan masuk. Blok ini
-    # hanya mengunggah — tidak menampilkan hasil bacaan AI, tidak
-    # menampilkan benar/salah. Guru yang memeriksa dan menerapkan.
-    daftar_foto = ""
-    kabar_foto_html = ""
-    if kabar_foto:
-        kabar_foto_html = (
-            f'<p class="kerja-foto-kabar-st">{_escape(kabar_foto)}</p>'
-        )
-    n_foto = kon.execute(
-        "SELECT COUNT(*) AS n FROM lampiran WHERE sesi_id = ?", (sesi_id,)
-    ).fetchone()["n"]
-    if n_foto:
-        daftar_foto = (
-            f'<p class="kerja-foto-jumlah-st">Sudah terkirim: {n_foto} foto. '
-            "Boleh kirim lagi kalau ada lembar lain.</p>"
-        )
-    blok_foto = f"""
+    # Kirim foto cara pengerjaan hanya tersedia untuk akun murid. Tautan
+    # berbagi sengaja hanya memberi kapabilitas mengerjakan satu sesi; upload
+    # berkas merupakan permukaan terpisah dan tidak ikut dibuka.
+    blok_foto = ""
+    if not akses_tautan:
+        daftar_foto = ""
+        kabar_foto_html = ""
+        if kabar_foto:
+            kabar_foto_html = (
+                f'<p class="kerja-foto-kabar-st">{_escape(kabar_foto)}</p>'
+            )
+        n_foto = kon.execute(
+            "SELECT COUNT(*) AS n FROM lampiran WHERE sesi_id = ?", (sesi_id,)
+        ).fetchone()["n"]
+        if n_foto:
+            daftar_foto = (
+                f'<p class="kerja-foto-jumlah-st">Sudah terkirim: {n_foto} foto. '
+                "Boleh kirim lagi kalau ada lembar lain.</p>"
+            )
+        blok_foto = f"""
 <div class="kerja-foto-st hanya-layar">
   <div class="kerja-foto-kepala-st">
     <span class="material-symbols-outlined">photo_camera</span>
@@ -1091,6 +1096,20 @@ def halaman_kerja_baru(
   </form>
 </div>"""
 
+    aksi = _escape(jalur_aksi or f"/murid/kerjakan/{sesi_id}")
+    tautan_tutup = "" if akses_tautan else (
+        '<a class="cta-keluar hanya-layar" href="/murid">'
+        '<span class="material-symbols-outlined" style="font-size:1.1rem">close</span> Tutup</a>'
+    )
+    navigasi_bawah = "" if akses_tautan else (
+        '<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">'
+        '<button class="kerja-btn-sekunder-st" type="button" onclick="window.print()">'
+        '<span class="material-symbols-outlined" style="font-size:1.1rem">print</span> Cetak / PDF</button>'
+        '<a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a></div>'
+        '<form method="post" action="/keluar" class="hanya-layar" style="margin-top:0.7rem">'
+        '<button class="kerja-btn-sekunder-st" type="submit">Keluar</button></form>'
+    )
+
     isi = f"""<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1105,7 +1124,7 @@ def halaman_kerja_baru(
     {brand.mark("topbar", kelas="ik-owl")}
     <span class="nama-osn">{T.NAMA_PRODUK}</span>
   </div>
-  <a class="cta-keluar hanya-layar" href="/murid"><span class="material-symbols-outlined" style="font-size:1.1rem">close</span> Tutup</a>
+  {tautan_tutup}
 </div>
 <div class="kerja-badan-st">
 <p class="kerja-meta-st"><b>Halo, {_escape(info['nama'])}</b> &middot; {_escape(info['tanggal'])}
@@ -1121,18 +1140,13 @@ def halaman_kerja_baru(
     </div>
   </div>
 </div>
-<form method="post" action="/murid/kerjakan/{sesi_id}">
+<form method="post" action="{aksi}">
 {" ".join(kartu)}
 <div class="kerja-simpan-strip-st hanya-layar"><button type="submit">Simpan jawabanku
 <span class="material-symbols-outlined">arrow_forward</span></button></div>
 </form>
-<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">
-  <button class="kerja-btn-sekunder-st" type="button" onclick="window.print()">
-    <span class="material-symbols-outlined" style="font-size:1.1rem">print</span> Cetak / PDF</button>
-  <a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a>
-</div>
+{navigasi_bawah}
 {blok_foto}
-<form method="post" action="/keluar" class="hanya-layar" style="margin-top:0.7rem"><button class="kerja-btn-sekunder-st" type="submit">Keluar</button></form>
 {jaga}{skrip}
 </div></body></html>"""
     return isi.encode()

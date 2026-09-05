@@ -18,6 +18,7 @@ from datetime import datetime
 import database
 import brand
 import design_tokens as T
+import share_links
 import worksheets
 from diagnosis import diagnosa
 from generator import LEVEL_BAWAAN
@@ -373,6 +374,37 @@ def halaman_utama_stitch(
 
 
 
+def halaman_bagikan_sesi(
+    tautan: str, sesi_id: int, siswa_id: int, nama: str,
+    pengguna: str, peran: str,
+) -> bytes:
+    """Tampilkan token mentah sekali agar guru dapat membagikannya."""
+    tautan_esc = html.escape(tautan, quote=True)
+    return _halaman(
+        f"Bagikan sesi #{sesi_id}",
+        f'<div class="jejak"><a href="/anak/{siswa_id}">&larr; Kembali ke {html.escape(nama)}</a></div>'
+        f'<h1 class="st">Bagikan sesi #{sesi_id}</h1>'
+        '<p class="sub">Tautan ini langsung membuka satu sesi saja. '
+        'Berlaku 7 hari dan tautan sebelumnya otomatis tidak berlaku.</p>'
+        '<div class="st-kartu" style="display:grid;gap:.75rem">'
+        f'<input id="tautan-sesi" class="st-input" type="text" readonly value="{tautan_esc}">'
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap">'
+        '<button id="tombol-bagikan" type="button" class="st-tombol-coral">Bagikan ke anak</button>'
+        '<button id="tombol-salin" type="button" class="tombol-kecil-st">Salin tautan</button>'
+        '</div><p id="kabar-salin" class="sub" aria-live="polite"></p></div>'
+        '<script>(function(){var i=document.getElementById("tautan-sesi"),'
+        'b=document.getElementById("tombol-bagikan"),s=document.getElementById("tombol-salin"),'
+        'k=document.getElementById("kabar-salin");function pilih(){i.focus();i.select();'
+        'k.textContent="Tautan dipilih — tekan Salin bila belum tersalin.";}'
+        'async function salin(){try{await navigator.clipboard.writeText(i.value);'
+        'k.textContent="Tautan tersalin.";}catch(e){pilih();}}'
+        's.addEventListener("click",salin);b.addEventListener("click",async function(){'
+        'if(navigator.share){try{await navigator.share({title:"Sesi Jagomat",url:i.value});return;}'
+        'catch(e){if(e.name==="AbortError")return;}}await salin();});})();</script>',
+        ident=(pengguna, peran), stitch=True,
+    )
+
+
 def halaman_anak(
     kon,
     siswa,
@@ -416,6 +448,23 @@ def halaman_anak(
     def _kelas_sorot(rid):
         return "sorot-baru" if sorot is not None and rid == sorot else ""
 
+    def _aksi_tautan(rid):
+        buat = (
+            f'<form method="post" action="/sesi/{rid}/bagikan" style="margin:0">'
+            '<button type="submit" class="tombol-kecil-st">'
+            + ("Buat tautan baru" if share_links.aktif(kon, rid) else "Bagikan ke anak")
+            + "</button></form>"
+        )
+        if not share_links.aktif(kon, rid):
+            return buat
+        return (
+            '<div style="display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end">'
+            f"{buat}"
+            f'<form method="post" action="/sesi/{rid}/cabut-tautan" style="margin:0">'
+            '<button type="submit" class="tombol-kecil-st">Tautan aktif · Cabut</button>'
+            "</form></div>"
+        )
+
     if sesi:
         item = "".join(
             f'<div class="st-kartu-baris kartu-sesi-guru {kelas}">'
@@ -433,6 +482,7 @@ def halaman_anak(
             f'<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end">'
             f'{_badge_review_status(r)}'
             f'{_badge_mode_stitch(r)}'
+            f'{_aksi_tautan(r["id"])}'
             f"</div>"
             f"</div>"
             for r, kelas in (

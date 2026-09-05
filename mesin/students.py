@@ -50,17 +50,25 @@ def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
 def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
     """Daftar soal versi murid: identitas + teks saja, tanpa kunci.
 
-    Teks soal dibangun ulang dari parameter (aturan yang sama dengan halaman
-    guru), lalu objek Soal-nya langsung dipangkas: hanya template_id dan teks
-    yang boleh keluar. Kalau besok Soal mendapat field baru yang sensitif,
-    daftar putih ini tetap aman — yang tidak disebut, tidak lolos.
+    Query di sini sengaja berupa daftar putih. Jalur lama memakai
+    ``database.isi_sesi`` yang ikut SELECT kunci dan diagnosis meski hasilnya
+    tidak dimasukkan ke HTML; capability bearer tidak boleh membaca data yang
+    tidak dibutuhkan.
     """
     from web import _soal_dari_baris  # impor terlambat: hindari siklus impor
 
-    # pastikan sesi ini benar milik murid SEBELUM satu pun baris dibaca
     if not sesi_murid(kon, siswa_id, sesi_id):
         return []
-    baris_baris = isi_sesi(kon, sesi_id)
+    baris_baris = kon.execute(
+        """SELECT ss.id AS sesi_soal_id, ss.nomor,
+                  s.id AS soal_id, s.template_id, s.parameter,
+                  s.bagian, s.tantangan, s.level, s.cerita
+           FROM sesi_soal ss
+           JOIN soal s ON s.id = ss.soal_id
+           WHERE ss.sesi_id = ?
+           ORDER BY ss.nomor""",
+        (sesi_id,),
+    ).fetchall()
     keluar: list[dict] = []
     for b in baris_baris:
         soal: Soal = _soal_dari_baris(b)
@@ -187,7 +195,13 @@ def simpan_jawaban_murid(kon, siswa_id: int, sesi_id: int, data: dict) -> int | 
         return None
     kode_sah = {k for k, _ in PILIHAN_CARA}
     jumlah = 0
-    for b in isi_sesi(kon, sesi_id):
+    baris_soal = kon.execute(
+        """SELECT ss.id AS sesi_soal_id
+           FROM sesi_soal ss
+           WHERE ss.sesi_id = ? ORDER BY ss.nomor""",
+        (sesi_id,),
+    ).fetchall()
+    for b in baris_soal:
         ssid = b["sesi_soal_id"]
         jawaban = data.get(f"jwb_{ssid}", "").strip()
         teks_cara = data.get(f"cara_{ssid}", "").strip()
