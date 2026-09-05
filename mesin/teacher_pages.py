@@ -79,22 +79,15 @@ def _form_remedial(
         direkomendasikan = bool(kandidat["direkomendasikan"])
         checked = direkomendasikan and not sudah_dipilih
         sudah_dipilih = sudah_dipilih or checked
-        nama_topik, _ = _nama_topik_sesi(str(kandidat["topik"] or ""))
         label_kode = LABEL_KODE_REMEDIAL.get(kode, "Perlu diperhatikan")
-        alasan = str(kandidat["alasan"] or "Perlu latihan dengan contoh baru.")
-        meta = (
-            f'{html.escape(label_kode)} · salah {int(kandidat["kali_salah"])} kali · '
-            f'sesi #{int(kandidat["sesi_terakhir"])} pada '
-            f'{html.escape(str(kandidat["tanggal_terakhir"]))}'
-        )
+        meta = f'{html.escape(label_kode)} · {int(kandidat["kali_salah"])} kali'
         pilihan.append(
             '<label class="pilihan-remedial-st">'
             f'<input type="checkbox" name="template_id" value="{html.escape(template_id)}"'
             f'{" checked" if checked else ""}>'
             '<span class="isi-pilihan-remedial-st">'
             f'<b>{html.escape(_nama_template(template_id))}</b>'
-            f'<span class="meta-remedial-st">{html.escape(nama_topik)} · {meta}</span>'
-            f'<span class="alasan-remedial-st">{html.escape(alasan)}</span>'
+            f'<span class="meta-remedial-st">{meta}</span>'
             '</span></label>'
         )
     sumber = (

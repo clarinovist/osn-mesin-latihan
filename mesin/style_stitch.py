@@ -863,7 +863,7 @@ tr.sorot-baru, div.sorot-baru {{
   accent-color: {T.AKSEN_MURID_UTAMA};
 }}
 .isi-pilihan-remedial-st {{ display: flex; flex-direction: column; gap: {T.SP_1}; min-width: 0; }}
-.meta-remedial-st, .alasan-remedial-st, .batas-remedial-st {{
+.meta-remedial-st, .batas-remedial-st {{
   color: {T.TEKS_VARIAN}; font-size: .82rem; line-height: 1.45;
 }}
 .batas-remedial-st {{ margin: 0; }}

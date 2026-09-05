@@ -66,16 +66,26 @@ def test_profil_menjelaskan_dan_memilih_fokus_remedial(db):
         siswa_id = database.tambah_siswa(kon, "Anak Fokus", pemilik="guru")
         _catat(kon, siswa_id, "soal_umur", "K")
         _catat(kon, siswa_id, "soal_uang", "H")
+        kon.execute(
+            "UPDATE sesi SET tanggal = '2099-12-31' WHERE siswa_id = ?",
+            (siswa_id,),
+        )
         siswa = kon.execute("SELECT * FROM siswa WHERE id = ?", (siswa_id,)).fetchone()
         halaman = teacher_pages.halaman_anak(kon, siswa).decode()
 
     assert "Perkuat kelemahan" in halaman
     assert "Pilihan yang dicentang adalah rekomendasi berdasarkan hasil terbaru" in halaman
-    assert "Soal tentang umur" in halaman
-    assert "Salah konsep" in halaman
-    assert "Salah hitung" in halaman
-    assert 'name="template_id" value="soal_umur" checked' in halaman
-    assert 'name="template_id" value="soal_uang" checked' not in halaman
+    panel = halaman.split('<section class="remedial-st">', 1)[1].split("</section>", 1)[0]
+    assert "Soal tentang umur" in panel
+    assert "Salah konsep · 1 kali" in panel
+    assert "Salah hitung · 1 kali" in panel
+    assert 'name="template_id" value="soal_umur" checked' in panel
+    assert 'name="template_id" value="soal_uang" checked' not in panel
+    assert "Logika &amp; Penalaran" not in panel
+    assert "Belum memahami hubungan umur" not in panel
+    assert "Perlu lebih teliti" not in panel
+    assert "sesi #" not in panel
+    assert "2099-12-31" not in panel
     assert "soal_umur" not in halaman.replace('value="soal_umur"', "")
 
 
