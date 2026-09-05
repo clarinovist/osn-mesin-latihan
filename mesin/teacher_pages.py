@@ -35,7 +35,6 @@ KODE_PILIHAN = [
     ("B", "B — salah baca soal"),
     ("H", "H — salah hitung"),
     ("E", "E — salah tulis akhir"),
-    ("T", "T — belum pernah lihat"),
     ("N", "N — menebak"),
 ]
 
@@ -1215,11 +1214,12 @@ def halaman_sesi_stitch(
             )
             bulat_label = (
                 "Tepat" if benar
-                else "Konsep" if kode == "K"
-                else "Baca" if kode == "B"
-                else "Hitung" if kode == "H"
-                else "Tulis" if kode == "E"
-                else "Belum lihat" if kode == "T"
+                else "Salah konsep" if kode == "K"
+                else "Salah baca" if kode == "B"
+                else "Salah hitung" if kode == "H"
+                else "Salah tulis" if kode == "E"
+                else "Belum pernah lihat" if kode == "T"
+                else "Menebak" if kode == "N"
                 else ""
             )
         elif sudah:
@@ -1227,13 +1227,11 @@ def halaman_sesi_stitch(
         else:
             kelas_isi, bulat_cls, lencana, bulat_label = "", "", "", ""
 
-        kolom_status = ""
+        status = ""
         if lencana:
-            kolom_status = (
-                '<div class="koreksi-status-st">'
-                f'<div class="koreksi-bulat-st {bulat_cls}">{lencana}</div>'
-                f'<span class="koreksi-bulat-label-st">{bulat_label}</span>'
-                "</div>"
+            status = (
+                f'<span class="koreksi-status-st {bulat_cls}">{lencana}'
+                f'<span class="koreksi-status-label-st">{bulat_label}</span></span>'
             )
 
         usulan = ""
@@ -1246,13 +1244,12 @@ def halaman_sesi_stitch(
             )
 
         restate = ""
-        if soal.minta_restatement:
+        if b["restatement"]:
             restate = (
-                '<label class="koreksi-label-st">Kotak "mintanya apa" — '
-                "tulis ulang apa yang anak isi</label>"
-                f'<input type="text" class="koreksi-input-st"'
-                f' name="restate_{b["sesi_soal_id"]}" '
-                f'value="{html.escape(b["restatement"] or "")}">'
+                '<div class="info-anak-st">'
+                '<span class="info-anak-label-st">Dari anak:</span> '
+                f'{html.escape(b["restatement"])}'
+                "</div>"
             )
 
         pilih = "".join(
@@ -1278,7 +1275,7 @@ def halaman_sesi_stitch(
         kartu.append(f"""
 <div class="koreksi-kartu-st">
   <div class="koreksi-isi-st {kelas_isi}">
-    <div class="koreksi-kepala-st">{nomor}{tipe}</div>
+    <div class="koreksi-kepala-st">{nomor}{tipe}{status}</div>
     <div class="teks-soal-st">{html.escape(soal.teks)}</div>
     <div class="kunci-baris-st">Kunci: <span class="kunci-val">{html.escape(b["kunci"])}</span></div>
     {pembahasan_html}
@@ -1296,15 +1293,14 @@ def halaman_sesi_stitch(
     </div>
     <label class="koreksi-label-st">Isi kotak "Caraku" — ringkas saja, cukup yang menunjukkan caranya</label>
     <textarea class="koreksi-textarea-st" name="cara_{b["sesi_soal_id"]}">{html.escape(b["cara"] or "")}</textarea>
-    <div class="koreksi-centang-st">
+    <div class="koreksi-centang-st info-anak-st">
       <input type="checkbox" id="bp{b["sesi_soal_id"]}"
              name="belum_{b["sesi_soal_id"]}"
-             {"checked" if b["belum_pernah"] else ""}>
-      <label for="bp{b["sesi_soal_id"]}">anak mencentang "belum pernah lihat soal seperti ini"</label>
+             {"checked" if (b["belum_pernah"] or kode == "T") else ""}>
+      <label for="bp{b["sesi_soal_id"]}"><span class="info-anak-label-st">Dari anak:</span> Belum pernah melihat soal seperti ini</label>
     </div>
     {usulan}
   </div>
-  {kolom_status}
 </div>""")
 
     kabar = f'<div class="pesan-st">{html.escape(pesan)}</div>' if pesan else ""
@@ -1369,9 +1365,12 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
         sid = b["sesi_soal_id"]
         jwb = data.get(f"jwb_{sid}", "").strip()
         cara = data.get(f"cara_{sid}", "").strip()
-        restate = data.get(f"restate_{sid}", "").strip()
+        restate = b["restatement"] or ""
         belum = f"belum_{sid}" in data
         pilihan = data.get(f"kode_{sid}", "").strip()
+        kode_diizinkan = {nilai for nilai, _label in KODE_PILIHAN if nilai}
+        if pilihan not in kode_diizinkan:
+            pilihan = ""
 
         if not (jwb or cara or restate or belum or pilihan):
             continue

@@ -185,6 +185,64 @@ def test_centang_belum_pernah_lihat_jadi_kode_t(db):
     assert hasil["kode_final"] == "T"
 
 
+def test_kode_t_tidak_bisa_dipilih_guru_tanpa_centang(db):
+    """T adalah informasi dari anak, bukan diagnosis manual guru."""
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Tidak manual")
+        sesi_id = database.buat_sesi(kon, sid, seed=10)
+        b = database.isi_sesi(kon, sesi_id)[-1]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{b['sesi_soal_id']}": "jawaban lain",
+                f"kode_{b['sesi_soal_id']}": "T",
+            },
+        )
+        hasil = database.isi_sesi(kon, sesi_id)[-1]
+
+    assert hasil["kode_final"] != "T"
+    assert not hasil["belum_pernah"]
+
+
+def test_kode_t_lama_dipindahkan_ke_centang_dari_anak(db):
+    """Data lama dengan T manual tidak boleh hilang saat form disimpan ulang."""
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Data T lama")
+        sesi_id = database.buat_sesi(kon, sid, seed=10)
+        b = database.isi_sesi(kon, sesi_id)[-1]
+        jawaban_id = database.simpan_jawaban(
+            kon, b["sesi_soal_id"], jawaban="jawaban lama"
+        )
+        database.simpan_diagnosis(
+            kon,
+            jawaban_id,
+            benar=False,
+            kode_usulan="N",
+            kode_final="T",
+            malrule_id=None,
+            alasan="ditandai guru pada versi lama",
+            manual=True,
+        )
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+        potongan = halaman.split(f'name="belum_{b["sesi_soal_id"]}"', 1)[1]
+        assert "checked" in potongan.split(">", 1)[0]
+
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{b['sesi_soal_id']}": "jawaban lama",
+                f"belum_{b['sesi_soal_id']}": "on",
+            },
+        )
+        hasil = database.isi_sesi(kon, sesi_id)[-1]
+
+    assert hasil["kode_final"] == "T"
+    assert hasil["belum_pernah"]
+
+
 # ── Halaman tampil ──────────────────────────────────────────────────────
 
 

@@ -1333,8 +1333,8 @@ CSS_SESI = f"""
   border-color: {T.BORDER_VARIAN};
 }}
 
-/* Kartu soal koreksi — layout dua kolom (isi kiri, status kanan) di layar
-   lebar; tumpuk vertikal di HP. */
+/* Kartu soal koreksi — satu kolom. Status menyatu dengan nomor dan jenis
+   soal di kepala kartu agar hasil dapat dipindai tanpa menoleh ke sisi kanan. */
 .koreksi-kartu-st {{
   background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
   border-radius: {T.RADIUS_KARTU}; padding: {T.SP_4};
@@ -1342,17 +1342,11 @@ CSS_SESI = f"""
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
   display: flex; flex-direction: column; gap: {T.SP_4};
 }}
-@media (min-width: 40rem) {{
-  .koreksi-kartu-st {{ flex-direction: row; align-items: stretch; }}
-  .koreksi-kartu-st .koreksi-isi-st {{ flex: 1; min-width: 0; }}
-  .koreksi-kartu-st .koreksi-status-st {{ width: 6rem; flex: none;
-    border-left: 1px solid {T.BORDER_VARIAN}; padding-left: {T.SP_4}; }}
-}}
 .koreksi-isi-st {{ display: flex; flex-direction: column; gap: {T.SP_3}; }}
 .koreksi-isi-st.sudah {{ opacity: .85; }}
 
-/* Nomor + template_id badge. */
-.koreksi-kepala-st {{ display: flex; align-items: center; gap: {T.SP_3}; }}
+/* Nomor, jenis soal, dan hasil koreksi dalam satu baris pemindaian. */
+.koreksi-kepala-st {{ display: flex; align-items: center; gap: {T.SP_3}; flex-wrap: wrap; }}
 .koreksi-nomor-st {{
   flex: none; width: 2rem; height: 2rem;
   background: {T.AKSEN_MURID_UTAMA}; color: {T.TEKS_PUTIH};
@@ -1444,6 +1438,15 @@ CSS_SESI = f"""
 .koreksi-centang-st input {{ width: 1.3rem; height: 1.3rem; flex: none; accent-color: {T.AKSEN_MURID_UTAMA}; }}
 .koreksi-centang-st label {{ margin: 0; cursor: pointer; }}
 
+.info-anak-st {{
+  background: {T.LATAR_SEKUNDER_LEMBUT}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_SEDANG}; padding: {T.SP_2} {T.SP_3};
+  color: {T.TEKS_VARIAN}; font-size: .9rem; line-height: 1.45;
+}}
+.info-anak-label-st {{
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; color: {T.TEKS_JUDUL};
+}}
+
 .usulan-st {{
   background: {T.LATAR_SEKUNDER_NETRAL}; border-left: 3px solid {T.AKSEN_MURID_UTAMA};
   border-radius: 0 {T.RADIUS_KECIL} {T.RADIUS_KECIL} 0;
@@ -1453,33 +1456,31 @@ CSS_SESI = f"""
 .usulan-st.ragu {{ border-left-color: {T.AKSEN_KORAL_TUA}; }}
 .usulan-st b {{ color: {T.TEKS_JUDUL}; }}
 
-/* Kolom status kanan (badge BENAR/?/K/H/E/T). */
+/* Status hasil koreksi menyatu dengan kepala kartu. */
 .koreksi-status-st {{
-  display: flex; align-items: center; justify-content: center;
-  padding-top: {T.SP_3};
-  border-top: 1px solid {T.BORDER_VARIAN};
-  gap: {T.SP_2}; flex-direction: column;
+  display: inline-flex; align-items: center; gap: {T.SP_1};
+  margin-left: auto; padding: .25rem .65rem;
+  border-radius: {T.RADIUS_PIL};
+  font-family: {T.FONT_HEADLINE}; font-weight: 700; font-size: .78rem;
+  white-space: nowrap;
 }}
-@media (min-width: 40rem) {{
-  .koreksi-status-st {{ border-top: 0; border-left: 1px solid {T.BORDER_VARIAN}; padding-top: 0; }}
+.koreksi-status-st .kode {{
+  display: none;
+  color: inherit; background: none; padding: 0; border: 0; font: inherit;
 }}
-.koreksi-bulat-st {{
-  width: 3rem; height: 3rem; border-radius: {T.RADIUS_BULAT};
-  display: inline-flex; align-items: center; justify-content: center;
-  font-family: {T.FONT_HEADLINE}; font-weight: 800; font-size: 1.1rem;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,.08);
+/* Teks kode tetap ada sebagai marker kompatibilitas test lama, tetapi label
+   ramah seperti "Tepat" dan "Salah hitung" menjadi satu-satunya teks visual. */
+.koreksi-status-st.benar {{ background: {T.KODE_BENAR_BG}; color: {T.KODE_BENAR_TEKS}; }}
+.koreksi-status-st.N {{ background: {T.KODE_MENEBAK_BG}; color: {T.KODE_MENEBAK_TEKS}; }}
+.koreksi-status-st.K {{ background: {T.KODE_SALAH_KONSEP_BG}; color: {T.KODE_SALAH_KONSEP_TEKS}; }}
+.koreksi-status-st.B {{ background: {T.KODE_SALAH_BACA_BG}; color: {T.TEKS_JUDUL}; }}
+.koreksi-status-st.H {{ background: {T.KODE_SALAH_HITUNG_BG}; color: {T.KODE_SALAH_HITUNG_TEKS}; }}
+.koreksi-status-st.E {{ background: {T.KODE_SALAH_TULIS_BG}; color: {T.KODE_SALAH_TULIS_TEKS}; }}
+.koreksi-status-st.T {{ background: {T.KODE_BELUM_LIAT_BG}; color: {T.TEKS_JUDUL}; }}
+.koreksi-status-label-st {{ font-weight: 600; }}
+@media (max-width: 30rem) {{
+  .koreksi-status-st {{ margin-left: 0; }}
 }}
-/* Marker span.kode dipertahankan untuk test; di dalam bulat, warnanya
-   mewarisi lingkaran supaya BENAR putih di atas teal, dst. */
-.koreksi-bulat-st .kode {{ color: inherit; background: none; padding: 0; border: 0; font: inherit; }}
-.koreksi-bulat-st.benar {{ background: {T.AKSEN_MURID_UTAMA}; color: {T.TEKS_PUTIH}; }}
-.koreksi-bulat-st.N {{ background: {T.LATAR_ELEVASI}; color: {T.TEKS_VARIAN}; }}
-.koreksi-bulat-st.K {{ background: {T.KODE_SALAH_KONSEP_BG}; color: {T.KODE_SALAH_KONSEP_TEKS}; }}
-.koreksi-bulat-st.B {{ background: {T.KODE_SALAH_BACA_BG}; color: {T.KODE_SALAH_BACA_TEKS}; }}
-.koreksi-bulat-st.H {{ background: {T.KODE_SALAH_HITUNG_BG}; color: {T.KODE_SALAH_HITUNG_TEKS}; }}
-.koreksi-bulat-st.E {{ background: {T.KODE_SALAH_TULIS_BG}; color: {T.KODE_SALAH_TULIS_TEKS}; }}
-.koreksi-bulat-st.T {{ background: {T.KODE_BELUM_LIAT_BG}; color: {T.KODE_BELUM_LIAT_TEKS}; }}
-.koreksi-bulat-label-st {{ font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .76rem; color: {T.TEKS_VARIAN}; text-align: center; }}
 
 /* Simpan & diagnosis — tombol coral penuh. */
 .koreksi-simpan-st {{

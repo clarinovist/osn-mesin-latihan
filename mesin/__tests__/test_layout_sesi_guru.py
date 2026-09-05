@@ -179,3 +179,104 @@ def test_alasan_mesin_yang_membantu_tetap_tampil(db):
 
     assert hasil["alasan"]
     assert f'<b>Mesin:</b> {hasil["alasan"]}' in halaman
+
+
+def test_status_menyatu_dengan_nomor_dan_jenis_soal(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{baris['sesi_soal_id']}": baris["kunci"],
+                f"kode_{baris['sesi_soal_id']}": "benar",
+            },
+        )
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    kepala = re.search(r'<div class="koreksi-kepala-st">(.*?)</div>', halaman, re.S)
+    assert kepala
+    assert "koreksi-nomor-st" in kepala.group(1)
+    assert "koreksi-tipe-st" in kepala.group(1)
+    assert "koreksi-status-st" in kepala.group(1)
+    assert '<span class="kode benar">BENAR</span>' in kepala.group(1)
+    assert '<span class="koreksi-status-label-st">Tepat</span>' in kepala.group(1)
+    assert f"background: {style_stitch.T.KODE_BENAR_BG}" in _blok(
+        style_stitch.CSS_SESI, ".koreksi-status-st.benar"
+    )
+    assert f"color: {style_stitch.T.KODE_BENAR_TEKS}" in _blok(
+        style_stitch.CSS_SESI, ".koreksi-status-st.benar"
+    )
+    assert f"color: {style_stitch.T.TEKS_JUDUL}" in _blok(
+        style_stitch.CSS_SESI, ".koreksi-status-st.B"
+    )
+    assert f"color: {style_stitch.T.TEKS_JUDUL}" in _blok(
+        style_stitch.CSS_SESI, ".koreksi-status-st.T"
+    )
+    assert "display: none" in _blok(
+        style_stitch.CSS_SESI, ".koreksi-status-st .kode"
+    )
+    assert 'class="koreksi-bulat-st' not in halaman
+
+
+def test_kartu_tidak_memakai_kolom_status_kanan(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    kartu = _blok(style_stitch.CSS_SESI, ".koreksi-kartu-st")
+    status = _blok(style_stitch.CSS_SESI, ".koreksi-status-st")
+    assert "flex-direction: row" not in kartu
+    assert "margin-left: auto" in status
+    assert ".koreksi-kartu-st .koreksi-status-st" not in style_stitch.CSS_SESI
+    assert "width: 6rem" not in style_stitch.CSS_SESI
+
+
+def test_mintanya_apa_bukan_input_guru_dan_nilai_anak_tetap_terjaga(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        database.simpan_jawaban(
+            kon,
+            baris["sesi_soal_id"],
+            restatement="Yang dicari adalah banyak data",
+        )
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {
+                f"jwb_{baris['sesi_soal_id']}": "jawaban baru",
+                f"restate_{baris['sesi_soal_id']}": "nilai manipulasi",
+            },
+        )
+        hasil = database.isi_sesi(kon, sesi_id)[0]
+
+    sid = baris["sesi_soal_id"]
+    assert "Kotak &quot;mintanya apa&quot;" not in halaman
+    assert '<span class="info-anak-label-st">Dari anak:</span>' in halaman
+    assert "Yang dicari adalah banyak data" in halaman
+    assert f'name="restate_{sid}"' not in halaman
+    assert hasil["restatement"] == "Yang dicari adalah banyak data"
+
+
+def test_belum_pernah_hanya_satu_kontrol_dari_anak(db):
+    sesi_id = _buat_sesi(db)
+    with database.buka(db) as kon:
+        baris = database.isi_sesi(kon, sesi_id)[0]
+        teacher_pages.simpan_sesi(
+            kon,
+            sesi_id,
+            {f"belum_{baris['sesi_soal_id']}": "on"},
+        )
+        halaman = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
+
+    sid = baris["sesi_soal_id"]
+    assert '<option value="T"' not in halaman
+    assert halaman.count(f'name="belum_{sid}"') == 1
+    assert '<span class="info-anak-label-st">Dari anak:</span>' in halaman
+    assert "Belum pernah melihat soal seperti ini" in halaman
+    assert f'name="belum_{sid}"' in halaman
+    assert "checked" in halaman.split(f'name="belum_{sid}"', 1)[1].split(">", 1)[0]
