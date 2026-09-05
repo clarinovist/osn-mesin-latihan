@@ -404,6 +404,62 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .dot.lemah {{ background: {T.STATUS_LEMAH}; }}
 .dot.salah {{ background: {T.STATUS_SALAH}; }}
 
+/* Laporan orang tua: tindakan didahulukan, istilah teknis dilipat. */
+.sr-only {{
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}}
+.ringkasan-laporan p:last-child {{ margin-bottom: 0; }}
+.grid-tindakan-laporan {{
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem; align-items: start;
+}}
+.grid-tindakan-laporan > .kartu {{ height: 100%; }}
+.daftar-aksi-laporan {{ list-style: none; margin: 0; padding: 0; }}
+.aksi-laporan {{
+  border: 1px solid {T.BORDER_HALUS}; border-left-width: .3rem;
+  border-radius: {T.RADIUS_KECIL}; padding: .8rem .9rem;
+  margin-bottom: .7rem; background: {T.LATAR_KARTU_MURID};
+}}
+.aksi-laporan:last-child {{ margin-bottom: 0; }}
+.aksi-laporan.salah {{ border-left-color: {T.STATUS_SALAH}; }}
+.aksi-laporan.baru {{ border-left-color: {T.STATUS_LEMAH}; }}
+.aksi-laporan.kuat {{ border-left-color: {T.STATUS_KUAT}; }}
+.aksi-laporan p {{ margin: .45rem 0 0; font-size: .9rem; }}
+.meta-laporan {{
+  display: block; color: {T.TEKS_SUBTLE}; font-size: .8rem; margin-top: .15rem;
+}}
+.skor-sekunder {{ margin-bottom: .4rem; }}
+.tanggal-ringkas {{ white-space: nowrap; font-variant-numeric: tabular-nums; }}
+.cara-baca-laporan summary,
+.detail-teknis-laporan summary {{ cursor: pointer; }}
+.cara-baca-laporan summary h2,
+.detail-teknis-laporan summary h2 {{ display: inline; margin-right: .5rem; }}
+.cara-baca-laporan summary .sub,
+.detail-teknis-laporan summary .sub {{ display: inline; margin: 0; }}
+.cara-baca-laporan[open] summary,
+.detail-teknis-laporan[open] summary {{ margin-bottom: 1rem; }}
+.legenda-teknis {{
+  color: {T.TEKS_SUBTLE}; font-size: .82rem; line-height: 1.7;
+  padding: .65rem .75rem; background: {T.LATAR_KARTU_SEKUNDER};
+  border-radius: {T.RADIUS_KECIL};
+}}
+.detail-teknis-laporan .tabel-wrap {{ margin-top: 1.2rem; }}
+.detail-teknis-laporan h3 {{
+  color: {T.TEKS_JUDUL}; font-size: 1rem; margin: 0 0 .55rem;
+}}
+@media (max-width: 46rem) {{
+  .grid-tindakan-laporan {{ grid-template-columns: 1fr; }}
+  .kartu-stat {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }}
+  .kartu-stat .stat:last-child {{ grid-column: 1 / -1; }}
+  .cara-baca-laporan summary .sub,
+  .detail-teknis-laporan summary .sub {{ display: block; margin-top: .25rem; }}
+}}
+@media (max-width: 23rem) {{
+  .kartu-stat {{ grid-template-columns: 1fr; }}
+  .kartu-stat .stat:last-child {{ grid-column: auto; }}
+}}
+
 /* ── Halaman akun (mockup guru-akun) ───────────────────────────────── */
 .kartu-judul {{
   display: flex; align-items: center; gap: .6rem; margin: 0 0 .7rem;

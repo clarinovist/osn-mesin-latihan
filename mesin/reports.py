@@ -7,6 +7,7 @@ identik. Frame halaman diimpor dari teacher_pages.
 from __future__ import annotations
 
 import html
+from datetime import datetime
 
 import database
 import design_tokens as T
@@ -149,7 +150,7 @@ def _topik_terlemah(ring) -> str:
 
 # Kamus kode diagnosis dalam bahasa sehari-hari (untuk orang tua).
 # Kunci = kode di basis data; nilai = (sebutan ramah, arti 1 kalimat).
-# Dipakai kartu "Arti nilai anak" — bebas jargon teknis (malrule,
+# Dipakai panel "Cara membaca laporan" — bebas jargon teknis (malrule,
 # miskonsepsi, diagnosis tidak boleh muncul di sini).
 KAMUS_ORTU = (
     ("BENAR", "Tepat", "jawabannya cocok dengan kunci."),
@@ -176,12 +177,89 @@ def _nama_topik(topik_id: str) -> str:
         return topik_id
 
 
-def _ringkasan_ortu(nama: str, ring, mis) -> str:
-    """Tiga kalimat otomatis dari data nyata: kondisi, pola, langkah berikut.
+NAMA_TIPE_SOAL = {
+    "benar_salah_pengandaian": "Pengandaian benar atau salah",
+    "luas_kotak_satuan": "Menghitung luas dengan kotak satuan",
+    "simetri_bangun": "Simetri bangun datar",
+    "soal_umur": "Soal tentang umur",
+    "fpb_kpk_hubungan": "Hubungan FPB dan KPK",
+}
 
-    K=0 total -> kalimat perayaan (tanpa kata yang menakuti). Tanpa sesi ->
-    ajakan membuat sesi pertama. Topik disebut dengan nama ramah.
-    """
+BULAN_PENDEK = (
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+)
+
+SARAN_TIPE_SOAL = {
+    "benar_salah_pengandaian": (
+        "Baca syarat satu per satu, lalu uji apakah kesimpulannya selalu benar."
+    ),
+    "luas_kotak_satuan": (
+        "Hitung kotak satuan per baris, lalu jumlahkan semua baris yang terisi."
+    ),
+    "simetri_bangun": (
+        "Lipat atau bayangkan bangun dilipat untuk mencari bagian yang berhimpit."
+    ),
+    "soal_umur": (
+        "Buat garis waktu sederhana: umur sekarang, selisih umur, lalu tahun yang ditanya."
+    ),
+}
+
+SARAN_TOPIK = {
+    "logika": "Minta anak menjelaskan alasan setiap jawaban dengan satu kalimat.",
+    "geometri-datar": "Gunakan gambar atau benda nyata sebelum beralih ke hitungan.",
+    "statistika": "Mulai dari tabel kecil, lalu minta anak menceritakan arti datanya.",
+    "pola-bilangan": "Minta anak menyebut perubahan antarangka sebelum meneruskan pola.",
+}
+
+
+def _nama_tipe_soal(template_id: str) -> str:
+    """Terjemahkan ID internal menjadi nama yang wajar bagi orang tua."""
+    return NAMA_TIPE_SOAL.get(
+        template_id,
+        template_id.replace("_", " ").replace("-", " ").capitalize(),
+    )
+
+
+def _rapikan_kalimat(teks: str) -> str:
+    """Kapitalisasi awal dan akhiri kalimat tanpa merusak singkatan."""
+    bersih = teks.strip()
+    if not bersih:
+        return ""
+    hasil = bersih[0].upper() + bersih[1:]
+    return hasil if hasil.endswith((".", "!", "?")) else hasil + "."
+
+
+def _tanggal_pendek(nilai) -> str:
+    """Tanggal Indonesia ringkas; data warisan yang aneh tetap tampil aman."""
+    mentah = str(nilai or "")
+    try:
+        tanggal = datetime.strptime(mentah, "%Y-%m-%d")
+    except ValueError:
+        return f'<span class="tanggal-ringkas">{html.escape(mentah or "—")}</span>'
+    label = f"{tanggal.day} {BULAN_PENDEK[tanggal.month - 1]} {tanggal.year}"
+    return (
+        f'<time class="tanggal-ringkas" datetime="{html.escape(mentah)}">'
+        f"{label}</time>"
+    )
+
+
+def _saran_latihan(template_id: str, topik_id: str, materi_baru: bool = False) -> str:
+    """Satu tindakan pendek, spesifik bila tipe dikenal dan aman bila warisan."""
+    khusus = SARAN_TIPE_SOAL.get(template_id)
+    if khusus:
+        awalan = "Kenalkan dengan contoh sederhana. " if materi_baru else ""
+        return awalan + khusus
+    saran_topik = SARAN_TOPIK.get(topik_id)
+    if saran_topik:
+        return saran_topik
+    if materi_baru:
+        return "Kenalkan satu contoh bersama, lalu biarkan anak mencoba satu soal serupa."
+    return "Ulangi satu contoh bersama, lalu coba dua soal baru dengan angka berbeda."
+
+
+def _ringkasan_ortu(nama: str, ring, mis) -> str:
+    """Ringkasan singkat: kondisi, pola berulang, dan arah berikutnya."""
     if not ring:
         return (
             f"<p><b>{html.escape(nama)}</b> belum punya sesi yang dinilai. "
@@ -196,32 +274,31 @@ def _ringkasan_ortu(nama: str, ring, mis) -> str:
             f"Tantang dengan topik atau level berikutnya bila latihan "
             f"sudah terasa mudah.</p>"
         )
-    hitung = {"K": 0, "B": 0, "H": 0, "E": 0, "T": 0, "N": 0}
-    for r in ring:
-        for kode in hitung:
-            hitung[kode] += r[kode.lower()] or 0
-    dominan = max(hitung, key=hitung.get)
-    sebutan = dict((k, s) for k, s, _ in KAMUS_ORTU).get(dominan, dominan)
-    lemah = _topik_terlemah(ring)
-    lemah_nama = _nama_topik(lemah) if lemah != "tidak ada" else "belum terlihat"
-    pola = (
-        f"Pola yang paling sering muncul: <b>{html.escape(sebutan)}</b>."
-        if hitung[dominan]
-        else "Belum ada pola kesalahan yang menonjol."
+    if not mis:
+        return (
+            f"<p><b>{html.escape(nama)}</b> sempat mengalami kekeliruan konsep, "
+            f"tetapi belum cukup data untuk menetapkan satu topik sebagai fokus. "
+            f"Amati apakah pola yang sama muncul lagi di sesi berikutnya.</p>"
+        )
+    topik_berulang: dict[str, int] = {}
+    for m in mis:
+        topik_id = str(m["topik"])
+        topik_berulang[topik_id] = topik_berulang.get(topik_id, 0) + int(
+            m["jumlah_sesi"] or 0
+        )
+    fokus = max(topik_berulang, key=lambda topik: topik_berulang[topik])
+    fokus_nama = _nama_topik(fokus)
+    pola_fokus = [m for m in mis if str(m["topik"]) == fokus]
+    pola_utama = max(
+        pola_fokus,
+        key=lambda m: (int(m["jumlah_sesi"] or 0), int(m["kemunculan"] or 0)),
     )
-    saran = (
-        f"Latih ulang topik <b>{html.escape(lemah_nama)}</b> dengan soal baru, "
-        f"lalu lihat apakah kekeliruannya hilang di sesi berikutnya."
-        if lemah != "tidak ada"
-        else "Lanjutkan latihan seperti biasa."
-    )
-    n_sesi = len(ring)
+    nama_tipe = _nama_tipe_soal(str(pola_utama["template_id"]))
     return (
-        f"<p>Dari <b>{n_sesi} sesi</b> terakhir, <b>{html.escape(nama)}</b> "
-        f"punya <b>{total_k} kekeliruan konsep</b> yang perlu dilatih — "
-        f"angka inilah yang dipantau, bukan skor benarnya.</p>"
-        f"<p>{pola}</p>"
-        f"<p>Langkah berikut: {saran}</p>"
+        f"<p>Untuk <b>{html.escape(nama)}</b>, pola berulang yang paling perlu "
+        f"diperhatikan adalah <b>{html.escape(nama_tipe)}</b>. Mulai dari topik "
+        f"<b>{html.escape(fokus_nama)}</b>; langkah konkretnya ada pada prioritas "
+        f"latihan di bawah.</p>"
     )
 
 
@@ -232,45 +309,71 @@ def _kartu_kamus() -> str:
         for kode, sebutan, arti in KAMUS_ORTU
     )
     return (
-        f'<div class="kartu"><h2>Arti nilai anak</h2>'
+        f'<details class="kartu cara-baca-laporan"><summary><h2>'
+        f"Cara membaca laporan</h2>"
+        f'<span class="sub">Arti istilah penilaian</span></summary>'
         f'<p class="sub">Tiap soal dinilai dengan salah satu sebutan ini:</p>'
-        f'<ul class="diagnosis-lis">{baris}</ul></div>'
+        f'<ul class="diagnosis-lis">{baris}</ul></details>'
     )
 
-def _daftar_diagnosis(mis, peta, total_k: int = 0) -> str:
-    """Daftar diagnosis dengan dot warna (mockup guru-laporan).
 
-    Sumber data nyata: miskonsepsi_berulang (kode K -> titik coral) dan
-    peta_materi_baru (kode T -> titik amber). Tidak ada data yang dikarang:
-    kuat (teal) hanya muncul kalau tidak ada kekeliruan sama sekali.
-    Bahasa untuk orang tua — kata "miskonsepsi"/"salah konsep" tidak dipakai
-    di sini (artinya ada di kartu kamus).
-
-    `total_k` = jumlah K di ringkasan. K yang diberi manual oleh guru tanpa
-    malrule tidak masuk `mis` (dihitung per malrule_id) — tanpa ini kartunya
-    bilang "belum ada kekeliruan" sementara ringkasan bilang ada K.
-    """
+def _kartu_prioritas(mis, total_k: int) -> str:
+    """Kesalahan konsep berulang saja; materi baru tidak dicampur di sini."""
     item = []
     for m in mis:
+        nama = _nama_tipe_soal(m["template_id"])
+        topik = _nama_topik(m["topik"])
+        alasan = m["alasan"] or "cara yang dipakai belum tepat"
+        saran = _saran_latihan(m["template_id"], m["topik"])
         item.append(
-            f'<li><span class="dot salah"></span>'
-            f'<span><b>{html.escape(m["alasan"] or m["malrule_id"])}</b> — '
-            f"perlu dilatih ulang ({m['jumlah_sesi']} sesi)</span></li>"
-        )
-    for p in peta:
-        item.append(
-            f'<li><span class="dot lemah"></span>'
-            f'<span><b>{html.escape(p["template_id"])}</b> — belum diajarkan '
-            f'({p["kali"]}×)</span></li>'
+            '<li class="aksi-laporan salah">'
+            f'<div><b>{html.escape(nama)}</b>'
+            f'<span class="meta-laporan">{html.escape(topik)} · muncul di '
+            f'{m["jumlah_sesi"]} sesi</span></div>'
+            f'<p>{html.escape(_rapikan_kalimat(alasan))}</p>'
+            f'<p><b>Yang bisa dilakukan:</b> {html.escape(saran)}</p></li>'
         )
     if not item:
-        if total_k:
-            return ('<li><span class="dot salah"></span>'
-                    f'<span>Ada <b>{total_k} kekeliruan konsep</b> yang perlu '
-                    'dilatih — rinciannya ada di tabel teknis di bawah.</span></li>')
-        return ('<li><span class="dot kuat"></span>'
-                '<span>Belum ada kekeliruan yang bertahan — polanya kuat.</span></li>')
-    return "".join(item)
+        pesan = (
+            f"Ada {total_k} kekeliruan konsep, tetapi polanya belum berulang. "
+            "Amati lagi di sesi berikutnya sebelum memilih latihan khusus."
+            if total_k else
+            "Belum ada kekeliruan konsep yang berulang. Pertahankan cara belajar saat ini."
+        )
+        item.append(f'<li class="aksi-laporan kuat"><p>{pesan}</p></li>')
+    return (
+        '<section class="kartu"><h2>Prioritas latihan</h2>'
+        '<p class="sub">Fokus pada pola keliru yang muncul kembali, bukan semua jawaban salah.</p>'
+        f'<ul class="daftar-aksi-laporan">{"".join(item)}</ul></section>'
+    )
+
+
+def _kartu_materi_baru(peta) -> str:
+    """Kode T sebagai urutan belajar, terpisah tegas dari kesalahan anak."""
+    item = []
+    for p in peta:
+        nama = _nama_tipe_soal(p["template_id"])
+        topik = _nama_topik(p["topik"])
+        saran = _saran_latihan(p["template_id"], p["topik"], materi_baru=True)
+        item.append(
+            '<li class="aksi-laporan baru">'
+            f'<div><b>{html.escape(nama)}</b>'
+            f'<span class="meta-laporan">{html.escape(topik)} · ditemui '
+            f'{p["kali"]}×</span></div>'
+            f'<p><b>Yang bisa dilakukan:</b> {html.escape(saran)}</p></li>'
+        )
+    if not item:
+        item.append(
+            '<li class="aksi-laporan kuat"><p>Tidak ada materi baru yang perlu '
+            "dikenalkan dari sesi-sesi ini.</p></li>"
+        )
+    return (
+        '<section class="kartu"><h2>Materi berikutnya untuk dikenalkan</h2>'
+        '<p class="sub">Bagian ini belum familiar bagi anak. Ini bukan kesalahan '
+        'anak, melainkan petunjuk urutan belajar berikutnya.</p>'
+        f'<ul class="daftar-aksi-laporan">{"".join(item)}</ul></section>'
+    )
+
 
 def halaman_laporan(
     kon, siswa_id: int, pengguna: str = "", peran: str = "guru"
@@ -284,14 +387,30 @@ def halaman_laporan(
     benar_sum = sum(r["benar"] or 0 for r in ring)
     soal_sum = sum(r["jumlah_soal"] or 0 for r in ring)
     persen = round(benar_sum / soal_sum * 100) if soal_sum else 0
-    topik_lemah = _topik_terlemah(ring)
-    topik_lemah_nama = _nama_topik(topik_lemah) if topik_lemah != "tidak ada" else "tidak ada"
+
+    mis_semua = database.miskonsepsi_berulang(kon, siswa_id)
+    # Prioritas latihan berarti pola yang bertahan lintas sesi. Dua kemunculan
+    # dalam satu sesi belum cukup untuk menyimpulkan pola berulang.
+    mis = [m for m in mis_semua if m["jumlah_sesi"] > 1]
+    if mis:
+        jumlah_per_topik: dict[str, int] = {}
+        for m in mis:
+            topik_id = str(m["topik"])
+            jumlah_per_topik[topik_id] = jumlah_per_topik.get(topik_id, 0) + int(
+                m["jumlah_sesi"] or 0
+            )
+        topik_fokus = max(
+            jumlah_per_topik, key=lambda topik: jumlah_per_topik[topik]
+        )
+        topik_fokus_nama = _nama_topik(topik_fokus)
+    else:
+        topik_fokus_nama = "Belum cukup data"
 
     tren = "".join(
         f'<tr><td data-label="Sesi"><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
-        f'<td data-label="Tanggal">{r["tanggal"]}</td>'
-        f'<td class="tipe" data-label="Level">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
-        f'<td class="tipe" data-label="Topik">{html.escape(_nama_topik(_ambil(r, "topik", TOPIK_BAWAAN) or TOPIK_BAWAAN))} <span class="sub">{html.escape(_ambil(r, "topik", TOPIK_BAWAAN) or TOPIK_BAWAAN)}</span></td>'
+        f'<td data-label="Tanggal">{_tanggal_pendek(r["tanggal"])}</td>'
+        f'<td class="tipe" data-label="Level">{html.escape(str(_ambil(r, "level", LEVEL_BAWAAN)))}</td>'
+        f'<td data-label="Topik">{html.escape(_nama_topik(_ambil(r, "topik", TOPIK_BAWAAN) or TOPIK_BAWAAN))}</td>'
         f'<td class="angka" data-label="Benar">{r["benar"] or 0}/{r["jumlah_soal"]}</td>'
         f'<td class="angka" data-label="K"><b>{r["k"] or 0}</b></td>'
         f'<td class="angka" data-label="B">{r["b"] or 0}</td><td class="angka" data-label="H">{r["h"] or 0}</td>'
@@ -300,23 +419,23 @@ def halaman_laporan(
         for r in ring
     ) or '<tr><td colspan="11" class="kosong">belum ada sesi dinilai</td></tr>'
 
-    mis = database.miskonsepsi_berulang(kon, siswa_id)
     daftar_mis = "".join(
-        f'<tr><td>{html.escape(m["alasan"] or m["malrule_id"])}</td>'
-        f'<td class="tipe">{m["template_id"]}</td>'
-        f'<td class="tipe">{html.escape(_nama_topik(m["topik"]))} <span class="sub">{html.escape(m["topik"])}</span></td>'
+        f'<tr><td>{html.escape(m["alasan"] or "Cara yang dipakai belum tepat")}</td>'
+        f'<td>{html.escape(_nama_tipe_soal(m["template_id"]))}</td>'
+        f'<td>{html.escape(_nama_topik(m["topik"]))}</td>'
         f'<td class="angka">{m["jumlah_sesi"]}</td>'
-        f'<td class="tipe">{m["pertama"]} &rarr; {m["terakhir"]}</td></tr>'
+        f'<td>{_tanggal_pendek(m["pertama"])} &rarr; '
+        f'{_tanggal_pendek(m["terakhir"])}</td></tr>'
         for m in mis
     ) or ('<tr><td colspan="5" class="kosong">belum ada kekeliruan '
           "yang bertahan</td></tr>")
 
     peta = database.peta_materi_baru(kon, siswa_id)
     daftar_peta = "".join(
-        f'<tr><td>{p["template_id"]}</td>'
-        f'<td class="tipe">{html.escape(_nama_topik(p["topik"]))} <span class="sub">{html.escape(p["topik"])}</span></td>'
+        f'<tr><td>{html.escape(_nama_tipe_soal(p["template_id"]))}</td>'
+        f'<td>{html.escape(_nama_topik(p["topik"]))}</td>'
         f'<td class="angka">{p["kali"]}</td>'
-        f'<td class="tipe">{p["terakhir"]}</td></tr>'
+        f'<td>{_tanggal_pendek(p["terakhir"])}</td></tr>'
         for p in peta
     ) or '<tr><td colspan="4" class="kosong">tidak ada</td></tr>'
 
@@ -331,43 +450,57 @@ def halaman_laporan(
         f"Laporan {siswa['nama']}",
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1>Laporan — {html.escape(siswa["nama"])}</h1>'
-        f'<div class="kartu"><h2>Ringkasan untuk orang tua</h2>'
+        f'<div class="kartu ringkasan-laporan"><h2>Ringkasan untuk orang tua</h2>'
         f"{_ringkasan_ortu(siswa['nama'], ring, mis)}</div>"
-        f"{_kartu_kamus()}"
-        f'<p class="sub">Yang dipantau adalah <b>jumlah K</b>, bukan skor. '
-        f"Anak dengan 9 H skor 3 lebih siap daripada anak dengan 3 K skor 9.</p>"
         f'<div class="kartu-stat">'
         f'<div class="stat"><div class="angka-besar">{total_sesi}</div>'
-        f'<div class="stat-label">sesi</div></div>'
-        f'<div class="stat"><div class="angka-besar">{persen}%</div>'
-        f'<div class="stat-label">benar</div></div>'
+        f'<div class="stat-label">sesi diikuti</div></div>'
+        f'<div class="stat"><div class="angka-besar">{total_k}</div>'
+        f'<div class="stat-label">kekeliruan konsep</div></div>'
         f'<div class="stat"><div class="stat-nilai-utama">'
-        f"{html.escape(topik_lemah_nama)}</div>"
-        f'<div class="stat-label">topik terlemah</div></div>'
+        f"{html.escape(topik_fokus_nama)}</div>"
+        f'<div class="stat-label">fokus latihan</div></div>'
         f"</div>"
-        f'<div class="layout-laporan">'
-        f'<div class="kartu"><h2>Perkembangan % benar per sesi</h2>'
-        f"{blok_chart}</div>"
-        f'<div class="kartu"><h2>Perlu perhatian</h2>'
-        f'<ul class="diagnosis-lis">{_daftar_diagnosis(mis, peta, total_k)}</ul></div>'
+        f'<div class="grid-tindakan-laporan">'
+        f"{_kartu_prioritas(mis, total_k)}"
+        f"{_kartu_materi_baru(peta)}"
         f"</div>"
-        f'<details class="kartu"><summary><h2 style="display:inline">Detail per sesi (teknis)</h2>'
-        f'<p class="sub">Rincian angka per sesi untuk guru — ringkasannya '
-        f"sudah ada di atas.</p></summary>"
-        f'<div class="tabel-wrap tabel-tren"><div class="kartu"><h2>Tren per sesi</h2><table>'
-        f"<thead><tr><th>Sesi</th><th>Tanggal</th><th>Level</th><th>Topik</th><th>Benar</th><th>K</th>"
-        f"<th>B</th><th>H</th><th>E</th><th>T</th><th>N</th></tr></thead><tbody>{tren}</tbody></table></div></div>"
-        f'<div class="tabel-wrap"><div class="kartu"><h2>Yang perlu dilatih</h2>'
-        f'<p class="sub">Kekeliruan yang sama dan muncul di lebih dari satu '
-        f"sesi berarti belum tuntas meski angkanya sudah diganti. "
-        f"Dihitung per gagasan keliru, bukan per soal.</p><table>"
-        f"<tr><th>Kekeliruan</th><th>Tipe soal</th><th>Topik</th><th>Jumlah sesi</th>"
-        f"<th>Rentang</th></tr>{daftar_mis}</table></div></div>"
-        f'<div class="tabel-wrap"><div class="kartu"><h2>Materi baru untuk anak</h2>'
-        f'<p class="sub">Dari soal yang dicentang "belum pernah lihat". Ini '
-        f"peta urutan belajar, bukan daftar kegagalan.</p><table>"
-        f"<tr><th>Tipe soal</th><th>Topik</th><th>Berapa kali</th><th>Terakhir</th></tr>"
-        f"{daftar_peta}</table></div></div></details>",
+        f'<div class="kartu"><h2>Perkembangan jawaban tepat</h2>'
+        f'<p class="sub skor-sekunder"><b>{persen}% jawaban tepat</b> dari '
+        f'{soal_sum} soal pada {total_sesi} sesi. Angka ini membantu melihat '
+        f"tren, tetapi tidak menentukan sendiri apa yang perlu dilatih.</p>"
+        f'<div class="chart-wrap">{blok_chart}</div></div>'
+        f"{_kartu_kamus()}"
+        f'<details class="kartu detail-teknis-laporan"><summary><h2>'
+        f"Detail per sesi (teknis)</h2>"
+        f'<span class="sub">Rincian untuk guru</span></summary>'
+        f'<p class="sub">Dalam rincian ini, jumlah <b>K</b> yang berulang '
+        f"lebih penting untuk menentukan latihan, bukan skor semata.</p>"
+        f'<p class="legenda-teknis"><b>K = keliru konsep</b> · '
+        f'B = salah baca · H = salah hitung · E = salah tulis akhir · '
+        f"T = belum pernah lihat · N = menebak</p>"
+        f'<div class="tabel-wrap tabel-tren"><h3>Tren per sesi</h3><table>'
+        f'<caption class="sr-only">Rincian hasil dan jenis kekeliruan setiap sesi</caption>'
+        f'<thead><tr><th scope="col">Sesi</th><th scope="col">Tanggal</th>'
+        f'<th scope="col">Level</th><th scope="col">Topik</th>'
+        f'<th scope="col">Benar</th><th scope="col">K</th>'
+        f'<th scope="col">B</th><th scope="col">H</th>'
+        f'<th scope="col">E</th><th scope="col">T</th>'
+        f'<th scope="col">N</th></tr></thead><tbody>{tren}</tbody></table></div>'
+        f'<div class="tabel-wrap"><h3>Yang perlu dilatih</h3>'
+        f'<p class="sub">Rincian pola keliru yang sama dan muncul kembali.</p>'
+        f'<table><caption class="sr-only">Pola keliru yang berulang lintas sesi</caption>'
+        f'<thead><tr><th scope="col">Kekeliruan</th>'
+        f'<th scope="col">Tipe soal</th><th scope="col">Topik</th>'
+        f'<th scope="col">Jumlah sesi</th><th scope="col">Rentang</th>'
+        f'</tr></thead><tbody>{daftar_mis}</tbody></table></div>'
+        f'<div class="tabel-wrap"><h3>Materi baru untuk anak</h3>'
+        f'<p class="sub">Rincian soal yang ditandai belum pernah dilihat.</p>'
+        f'<table><caption class="sr-only">Materi yang belum pernah dilihat anak</caption>'
+        f'<thead><tr><th scope="col">Tipe soal</th>'
+        f'<th scope="col">Topik</th><th scope="col">Berapa kali</th>'
+        f'<th scope="col">Terakhir</th></tr></thead>'
+        f'<tbody>{daftar_peta}</tbody></table></div></details>',
         ident=(pengguna, peran) if pengguna else None,
         stitch=True,
     )
