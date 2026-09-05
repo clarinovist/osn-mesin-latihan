@@ -367,12 +367,21 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 }}
 .simpan-strip button {{ width: 100%; font-size: 1.05rem; padding: .85rem; }}
 
-/* ── Halaman laporan (mockup guru-laporan) ─────────────────────────── */
+/* ── Halaman laporan (dashboard responsif) ─────────────────────────── */
+.ringkasan-dashboard-laporan {{
+  display: flex; flex-direction: column; gap: 1rem;
+  margin-bottom: 1rem;
+}}
 .kartu-stat {{
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;
   margin-bottom: 1.2rem;
 }}
-@media (max-width: 42rem) {{ .kartu-stat {{ grid-template-columns: 1fr; }} }}
+.kartu-stat-admin {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+.ringkasan-dashboard-laporan .kartu-stat {{
+  grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem;
+  margin-bottom: 0;
+}}
+.ringkasan-dashboard-laporan .kartu-stat .stat:last-child {{ grid-column: 1 / -1; }}
 .stat {{
   background: {T.LATAR_KARTU_MURID}; border: 1px solid {T.BORDER_HALUS};
   border-radius: {T.RADIUS_KARTU}; padding: 1rem; text-align: center;
@@ -412,7 +421,7 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .ringkasan-laporan p:last-child {{ margin-bottom: 0; }}
 .grid-tindakan-laporan {{
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem; align-items: start;
+  gap: 1rem; align-items: stretch;
 }}
 .grid-tindakan-laporan > .kartu {{ height: 100%; }}
 .daftar-aksi-laporan {{ list-style: none; margin: 0; padding: 0; }}
@@ -448,16 +457,44 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
 .detail-teknis-laporan h3 {{
   color: {T.TEKS_JUDUL}; font-size: 1rem; margin: 0 0 .55rem;
 }}
+@media (min-width: 64rem) {{
+  .bungkus-st.laporan-lebar {{ max-width: 72rem; }}
+  .bungkus-st.laporan-lebar > .st-topbar {{ max-width: none; }}
+  .bungkus-st.laporan-lebar .sesi-badan-st {{ max-width: none; }}
+  .ringkasan-dashboard-laporan {{
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, .8fr);
+    grid-template-areas: "ringkasan metrik";
+    gap: 1rem; align-items: stretch;
+  }}
+  .ringkasan-dashboard-laporan > .ringkasan-laporan {{
+    grid-area: ringkasan; margin-bottom: 0; height: 100%;
+  }}
+  .ringkasan-dashboard-laporan > .kartu-stat {{
+    grid-area: metrik;
+  }}
+  .ringkasan-dashboard-laporan .kartu-stat {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .ringkasan-dashboard-laporan .kartu-stat .stat:last-child {{ grid-column: 1 / -1; }}
+}}
+@media (max-width: 42rem) {{
+  .kartu-stat {{ grid-template-columns: 1fr; }}
+  .ringkasan-dashboard-laporan .kartu-stat {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .ringkasan-dashboard-laporan .kartu-stat .stat:last-child {{ grid-column: 1 / -1; }}
+}}
 @media (max-width: 46rem) {{
   .grid-tindakan-laporan {{ grid-template-columns: 1fr; }}
-  .kartu-stat {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }}
-  .kartu-stat .stat:last-child {{ grid-column: 1 / -1; }}
   .cara-baca-laporan summary .sub,
   .detail-teknis-laporan summary .sub {{ display: block; margin-top: .25rem; }}
 }}
 @media (max-width: 23rem) {{
-  .kartu-stat {{ grid-template-columns: 1fr; }}
-  .kartu-stat .stat:last-child {{ grid-column: auto; }}
+  .kartu-stat,
+  .ringkasan-dashboard-laporan .kartu-stat {{ grid-template-columns: 1fr; }}
+  .kartu-stat .stat:last-child,
+  .ringkasan-dashboard-laporan .kartu-stat .stat:last-child {{ grid-column: auto; }}
 }}
 
 /* ── Halaman akun (mockup guru-akun) ───────────────────────────────── */

@@ -7,6 +7,7 @@ tabel teknisnya dilipat di <details> (tetap ada untuk guru).
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -16,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
 import reports  # noqa: E402
+import teacher_style  # noqa: E402
 
 
 @pytest.fixture()
@@ -272,7 +274,9 @@ def test_ringkasan_memasangkan_tipe_dengan_topik_fokus(db):
         }
         h = reports.halaman_laporan(kon, sid).decode()
 
-    ringkasan = h.split('<div class="kartu-stat">', 1)[0]
+    awal = h.index('<div class="kartu ringkasan-laporan">')
+    akhir = h.index("</div>", awal) + 6
+    ringkasan = h[awal:akhir]
     assert "Geometri Datar" in ringkasan
     assert pola_geo
     assert any(nama in ringkasan for nama in pola_geo)
@@ -286,7 +290,8 @@ def test_hierarki_utama_mengutamakan_konsep_bukan_persentase(db):
         h = reports.halaman_laporan(kon, sid).decode()
 
     utama = h.split("Detail per sesi", 1)[0]
-    assert "sesi diikuti" in utama
+    assert "sesi dinilai" in utama
+    assert "sesi diikuti" not in utama
     assert "kekeliruan konsep" in utama
     assert "fokus latihan" in utama
     assert "% jawaban tepat" in utama
@@ -294,6 +299,65 @@ def test_hierarki_utama_mengutamakan_konsep_bukan_persentase(db):
     assert "<summary><h2" in utama
     assert "Cara membaca laporan" in utama
     assert "Arti nilai anak" not in utama
+
+
+def test_laporan_memakai_kanvas_lebar_dan_kembali_ke_riwayat_anak(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Claudia")
+        h = reports.halaman_laporan(kon, sid, pengguna="ortu").decode()
+
+    isi = h.split("</style>", 1)[1]
+    assert 'class="bungkus-st laporan-lebar"' in h
+    assert f'<a href="/anak/{sid}">&larr; Riwayat Claudia</a>' in isi
+    assert "Laporan perkembangan Claudia" in isi
+    assert "Laporan — Claudia" not in isi
+
+
+def test_urutan_mobile_metrik_lalu_ringkasan_lalu_tindakan(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Urutan")
+        _sesi_dinilai(kon, sid, benar=6, jumlah=10, kode="K")
+        h = reports.halaman_laporan(kon, sid).decode()
+
+    isi = h.split("</style>", 1)[1]
+    assert isi.index('class="kartu-stat"') < isi.index("Ringkasan untuk orang tua")
+    assert isi.index("Ringkasan untuk orang tua") < isi.index("Prioritas latihan")
+    assert 'class="ringkasan-dashboard-laporan"' in isi
+
+
+def _blok_css(css: str, selektor: str) -> str:
+    cocok = re.search(
+        r"^" + re.escape(selektor) + r"\s*\{(.*?)\}", css, re.S | re.M
+    )
+    assert cocok, f"selektor {selektor} tidak ditemukan"
+    return cocok.group(1)
+
+
+def test_css_laporan_lebar_hanya_di_desktop_dan_mobile_tetap_satu_kolom():
+    css = teacher_style.GAYA_GURU
+    mulai_desktop = css.index("@media (min-width: 64rem)")
+    blok_desktop = css[mulai_desktop:css.index("@media (max-width: 46rem)", mulai_desktop)]
+    blok_metrik_umum = _blok_css(css, ".kartu-stat")
+    blok_admin = _blok_css(css, ".kartu-stat-admin")
+
+    assert ".bungkus-st.laporan-lebar" in blok_desktop
+    assert "max-width: 72rem" in blok_desktop
+    assert ".bungkus-st.laporan-lebar .sesi-badan-st" in blok_desktop
+    assert 'grid-template-areas: "ringkasan metrik"' in blok_desktop
+    assert "grid-template-columns: repeat(3" in blok_metrik_umum
+    assert "grid-template-columns: repeat(3" in blok_admin
+    assert ".ringkasan-dashboard-laporan .kartu-stat" in css
+    assert "align-items: stretch" in _blok_css(css, ".grid-tindakan-laporan")
+
+
+def test_nama_siswa_di_laporan_di_escape(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, 'Ayu <B> & "C"')
+        h = reports.halaman_laporan(kon, sid, pengguna="ortu").decode()
+
+    isi = h.split("</style>", 1)[1]
+    assert 'Ayu &lt;B&gt; &amp; &quot;C&quot;' in isi
+    assert 'Ayu <B> & "C"' not in isi
 
 
 def test_detail_teknis_semantik_dan_legenda_dekat_tabel(db):

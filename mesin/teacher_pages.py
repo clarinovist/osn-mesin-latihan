@@ -52,16 +52,18 @@ def _nama_template(template_id: str) -> str:
 
 def _halaman(
     judul: str, isi: str, ident: tuple[str, str] | None = None,
-    stitch: bool = False,
+    stitch: bool = False, kelas_bungkus: str = "",
 ) -> bytes:
     """Bingkai semua halaman pengelola. `ident=(pengguna, peran)` menampilkan
     topbar dengan menu pengguna di atas isi — satu pintu agar konsisten.
 
     stitch=True: pakai GAYA_STITCH + body.st + <link> font CDN (S11-S17).
+    `kelas_bungkus` hanya berlaku pada bingkai Stitch untuk kanvas khusus.
     """
     if stitch:
         from style_stitch import gaya_stitch, CSS_SESI
         batang = _topbar_stitch(*ident) if ident else ""
+        kelas = f"bungkus-st {kelas_bungkus}".strip()
         return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(judul))}</title>
@@ -70,7 +72,7 @@ def _halaman(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
 <style>{GAYA}{gaya_stitch()}{CSS_SESI}</style></head>
-<body class="st"><div class="bungkus-st">{batang}<div class="sesi-badan-st">{isi}</div></div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+<body class="st"><div class="{kelas}">{batang}<div class="sesi-badan-st">{isi}</div></div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
     batang = _topbar(*ident) if ident else ""
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

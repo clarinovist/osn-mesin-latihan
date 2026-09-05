@@ -670,7 +670,7 @@ def halaman_admin(
     total_siswa = kon.execute("SELECT COUNT(*) AS n FROM siswa").fetchone()["n"]
     total_sesi = kon.execute("SELECT COUNT(*) AS n FROM sesi").fetchone()["n"]
     ringkas = (
-        '<div class="kartu-stat">'
+        '<div class="kartu-stat kartu-stat-admin">'
         f'<div class="stat"><div class="angka-besar">{n_keluarga}</div>'
         f'<div class="stat-label">keluarga</div></div>'
         f'<div class="stat"><div class="angka-besar">{total_siswa}</div>'

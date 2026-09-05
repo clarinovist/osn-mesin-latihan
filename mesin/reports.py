@@ -447,21 +447,25 @@ def halaman_laporan(
     )
     total_k = sum(r["k"] or 0 for r in ring)
 
+    nama_siswa = html.escape(siswa["nama"])
     return _halaman(
         f"Laporan {siswa['nama']}",
-        f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
-        f'<h1>Laporan — {html.escape(siswa["nama"])}</h1>'
-        f'<div class="kartu ringkasan-laporan"><h2>Ringkasan untuk orang tua</h2>'
-        f"{_ringkasan_ortu(siswa['nama'], ring, mis)}</div>"
+        f'<div class="jejak"><a href="/anak/{siswa_id}">&larr; Riwayat '
+        f"{nama_siswa}</a></div>"
+        f'<h1>Laporan perkembangan {nama_siswa}</h1>'
+        '<div class="ringkasan-dashboard-laporan">'
         f'<div class="kartu-stat">'
         f'<div class="stat"><div class="angka-besar">{total_sesi}</div>'
-        f'<div class="stat-label">sesi diikuti</div></div>'
+        f'<div class="stat-label">sesi dinilai</div></div>'
         f'<div class="stat"><div class="angka-besar">{total_k}</div>'
         f'<div class="stat-label">kekeliruan konsep</div></div>'
         f'<div class="stat"><div class="stat-nilai-utama">'
         f"{html.escape(topik_fokus_nama)}</div>"
         f'<div class="stat-label">fokus latihan</div></div>'
         f"</div>"
+        f'<div class="kartu ringkasan-laporan"><h2>Ringkasan untuk orang tua</h2>'
+        f"{_ringkasan_ortu(siswa['nama'], ring, mis)}</div>"
+        "</div>"
         f'<div class="grid-tindakan-laporan">'
         f"{_kartu_prioritas(mis, total_k)}"
         f"{_kartu_materi_baru(peta)}"
@@ -504,4 +508,5 @@ def halaman_laporan(
         f'<tbody>{daftar_peta}</tbody></table></div></details>',
         ident=(pengguna, peran) if pengguna else None,
         stitch=True,
+        kelas_bungkus="laporan-lebar",
     )
