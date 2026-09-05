@@ -277,6 +277,28 @@ def test_remedial_satu_template_mengisi_seluruh_sesi_dan_metadata(db):
     assert dict(metadata) == {"jenis": "remedial", "sumber_sesi_id": None}
 
 
+def test_remedial_menolak_jumlah_lebih_kecil_dari_banyak_fokus(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Anak Fokus Banyak", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", kode="K")
+        _catat_hasil(kon, sid, "soal_uang", kode="H")
+        sebelum = kon.execute(
+            "SELECT COUNT(*) FROM sesi WHERE siswa_id = ?", (sid,)
+        ).fetchone()[0]
+        with pytest.raises(ValueError, match="setiap fokus"):
+            database.buat_sesi_remedial(
+                kon,
+                sid,
+                template_ids=["soal_umur", "soal_uang"],
+                seed=102,
+                jumlah_soal=1,
+            )
+        sesudah = kon.execute(
+            "SELECT COUNT(*) FROM sesi WHERE siswa_id = ?", (sid,)
+        ).fetchone()[0]
+    assert sesudah == sebelum
+
+
 def test_remedial_multi_template_round_robin_tanpa_template_lain(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "AnakMulti", pemilik="guru")

@@ -640,6 +640,8 @@ def buat_sesi_remedial(
             raise ValueError("pilihan template duplikat")
         if len(template_ids) > 3:
             raise ValueError("pilihan template maksimal 3")
+        if jumlah_soal < len(template_ids):
+            raise ValueError("jumlah soal harus memuat setiap fokus")
         bukan_kandidat = set(template_ids) - set(kandidat_ids)
         if bukan_kandidat:
             raise ValueError("template bukan kandidat remedial")
