@@ -243,6 +243,26 @@ def test_pelebar_konten_hanya_untuk_kelas_lebar():
     assert ".bungkus-st.lebar" in _tanpa_komentar(GAYA_STITCH)
 
 
+def test_topbar_halaman_anak_mengikuti_kanvas_lebar():
+    """Topbar halaman anak harus selebar kanvas dua kolom di desktop."""
+    aturan = _tanpa_komentar(GAYA_STITCH)
+    cocok = re.search(
+        r"^\s+\.bungkus-st\.lebar > \.st-topbar\s*\{(.*?)\}",
+        aturan,
+        re.S | re.M,
+    )
+    assert cocok, "aturan topbar lebar tidak ditemukan di media query desktop"
+    assert "max-width: none" in cocok.group(1)
+
+
+def test_halaman_anak_kembali_ke_daftar_anak(anak):
+    """Label kembali menyebut halaman tujuan, bukan kumpulan yang ambigu."""
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert '<a href="/">&larr; Daftar anak</a>' in markup
+    assert "&larr; Semua anak" not in markup
+
+
 def test_halaman_lain_tidak_ikut_melebar(anak):
     """Dashboard memakai bingkai yang sama; ia harus tetap 46rem."""
     db, sid = anak

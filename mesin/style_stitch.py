@@ -371,6 +371,7 @@ tr.sorot-baru, div.sorot-baru {{
 
 @media (min-width: 64rem) {{
   .bungkus-st.lebar {{ max-width: 72rem; }}
+  .bungkus-st.lebar > .st-topbar {{ max-width: none; }}
   .anak-grid {{
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);

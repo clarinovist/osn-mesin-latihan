@@ -636,7 +636,7 @@ def halaman_anak(
 
     return _halaman_stitch(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
-        f'<div class="jejak"><a href="/">&larr; Semua anak</a></div>'
+        f'<div class="jejak"><a href="/">&larr; Daftar anak</a></div>'
         f'<h1 class="st">{html.escape(siswa["nama"])}'
         f'<span class="st-badge selesai">({html.escape(label_kelas(str(siswa["tingkat"])))})</span>'
         f"{label_keluarga}"
@@ -944,7 +944,8 @@ def halaman_sesi_cetak(
     pil = _pil_sesi(kon, sesi_id, "cetak")
     return _halaman(
         f"Sesi #{sesi_id} — Cetak",
-        f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke koreksi</a> &middot; <a href="/">&larr; Semua siswa</a></div>'
+        f'<div class="jejak"><a href="/anak/{info["siswa_id"]}">&larr; '
+        f'Semua sesi {html.escape(info["nama"])}</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
@@ -1009,7 +1010,8 @@ def halaman_sesi_lampiran(
     pil = _pil_sesi(kon, sesi_id, "lampiran")
     return _halaman(
         f"Sesi #{sesi_id} — Lampiran",
-        f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke koreksi</a> &middot; <a href="/">&larr; Semua siswa</a></div>'
+        f'<div class="jejak"><a href="/anak/{info["siswa_id"]}">&larr; '
+        f'Semua sesi {html.escape(info["nama"])}</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
@@ -1142,7 +1144,8 @@ def halaman_sesi(
 
     return _halaman(
         f"Sesi #{sesi_id}",
-        f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
+        f'<div class="jejak"><a href="/anak/{info["siswa_id"]}">&larr; '
+        f'Semua sesi {html.escape(info["nama"])}</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id} {badge_review_hdr}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
@@ -1369,7 +1372,8 @@ def halaman_sesi_stitch(
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
     isi = (
         f'<div class="sesi-badan-st">'
-        f'<div class="sesi-jejak-st"><a href="/">&larr; Semua siswa</a></div>'
+        f'<div class="sesi-jejak-st"><a href="/anak/{info["siswa_id"]}">&larr; '
+        f'Semua sesi {html.escape(info["nama"])}</a></div>'
         f'<h1 class="sesi-judul-st">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '

@@ -177,3 +177,22 @@ def test_halaman_utama_tautan_lembar_pindah_ke_halaman_cetak(db):
     assert f'href="/lembar/{sesi_id}"' in hc
     assert f'href="/lembar/{sesi_id}/penilaian"' in hc
     assert f'action="/sesi-baru/{sid}"' in h
+
+
+def test_navigasi_sesi_kembali_ke_semua_sesi_anak(db):
+    """Ketiga tab sesi kembali ke riwayat anak, bukan lompat ke dashboard."""
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(kon, "Claudia")
+        sesi_id = database.buat_sesi(kon, siswa_id, seed=42)
+        halaman = (
+            teacher_pages.halaman_sesi_stitch(kon, sesi_id),
+            teacher_pages.halaman_sesi_cetak(kon, sesi_id),
+            teacher_pages.halaman_sesi_lampiran(kon, sesi_id),
+        )
+
+    for isi in halaman:
+        html = html_dari(isi)
+        assert f'href="/anak/{siswa_id}"' in html
+        assert "&larr; Semua sesi Claudia" in html
+        assert "Kembali ke koreksi" not in html
+        assert "&larr; Semua siswa" not in html
