@@ -139,7 +139,7 @@ Terakhir diperbarui 30 Agustus 2026.</p>
 <h2>Data yang dikumpulkan</h2>
 <ul>
 <li>Nama akun orang tua/guru dan kata sandinya (disimpan sebagai hash).</li>
-<li>Nama panggilan anak dan tingkat sekolahnya (P3–P6).</li>
+<li>Nama panggilan anak dan kelas sekolahnya (kelas 3–6).</li>
 <li>Hasil latihan: jawaban anak, kode diagnosis kesalahan
 (K/B/H/E/T/N), dan catatan guru.</li>
 <li>Foto lembar jawaban — hanya jika kamu mengunggahnya sebagai
@@ -316,7 +316,7 @@ def halaman_landing() -> bytes:
   <span class="material-symbols-outlined">list_alt</span>Cara kerja</h2>
   <div class="landing-kartu-isi-st">
   <ol>
-    <li>Buat sesi latihan — pilih topik &amp; tingkat (P3–P6).</li>
+    <li>Buat sesi latihan — pilih topik &amp; kelas.</li>
     <li>Anak mengerjakan, lalu menuliskan caranya sendiri.</li>
     <li>Sistem mendiagnosis: jawaban benar, salah hitung, atau salah konsep
     — dan topik mana yang perlu diulang.</li>
@@ -401,7 +401,7 @@ tombol di atas — gratis selama masa pilot.</p>
 <section class="landing-faq-st">
 <h2 class="landing-contoh-judul-st">Sering ditanya</h2>
 <details><summary>Untuk kelas berapa?</summary>
-<p>Kelas 3–6 SD (tingkat P3–P6). Kelas 4–5 paling cocok untuk pilot.</p></details>
+<p>Kelas 3–6 SD. Kelas 4–5 paling cocok untuk pilot.</p></details>
 <details><summary>Anak mengerjakan di HP atau kertas?</summary>
 <p>Keduanya bisa: kerjakan langsung di HP lewat halaman murid, atau cetak
 lembarnya, kerjakan di kertas, lalu kirim foto lembarnya.</p></details>

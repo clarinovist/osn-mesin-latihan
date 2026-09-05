@@ -13,6 +13,7 @@ import database
 import design_tokens as T
 from diagnosis import diagnosa
 from generator import LEVEL_BAWAAN
+from templates import label_kelas
 from topics import TOPIK_BAWAAN
 from teacher_pages import _ambil, _halaman, _soal_dari_baris
 
@@ -271,7 +272,7 @@ def _ringkasan_ortu(nama: str, ring, mis) -> str:
         return (
             f"<p><b>{html.escape(nama)}</b> belum menunjukkan kekeliruan konsep "
             f"di sesi-sesi terakhir — pertahankan! "
-            f"Tantang dengan topik atau level berikutnya bila latihan "
+            f"Tantang dengan topik atau kelas berikutnya bila latihan "
             f"sudah terasa mudah.</p>"
         )
     if not mis:
@@ -409,7 +410,7 @@ def halaman_laporan(
     tren = "".join(
         f'<tr><td data-label="Sesi"><a href="/sesi/{r["sesi_id"]}">#{r["sesi_id"]}</a></td>'
         f'<td data-label="Tanggal">{_tanggal_pendek(r["tanggal"])}</td>'
-        f'<td class="tipe" data-label="Level">{html.escape(str(_ambil(r, "level", LEVEL_BAWAAN)))}</td>'
+        f'<td class="tipe" data-label="Kelas">{html.escape(label_kelas(str(_ambil(r, "level", LEVEL_BAWAAN))))}</td>'
         f'<td data-label="Topik">{html.escape(_nama_topik(_ambil(r, "topik", TOPIK_BAWAAN) or TOPIK_BAWAAN))}</td>'
         f'<td class="angka" data-label="Benar">{r["benar"] or 0}/{r["jumlah_soal"]}</td>'
         f'<td class="angka" data-label="K"><b>{r["k"] or 0}</b></td>'
@@ -482,7 +483,7 @@ def halaman_laporan(
         f'<div class="tabel-wrap tabel-tren"><h3>Tren per sesi</h3><table>'
         f'<caption class="sr-only">Rincian hasil dan jenis kekeliruan setiap sesi</caption>'
         f'<thead><tr><th scope="col">Sesi</th><th scope="col">Tanggal</th>'
-        f'<th scope="col">Level</th><th scope="col">Topik</th>'
+        f'<th scope="col">Kelas</th><th scope="col">Topik</th>'
         f'<th scope="col">Benar</th><th scope="col">K</th>'
         f'<th scope="col">B</th><th scope="col">H</th>'
         f'<th scope="col">E</th><th scope="col">T</th>'

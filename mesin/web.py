@@ -51,7 +51,7 @@ from teacher_pages import (
     halaman_utama_stitch,
     simpan_sesi,
 )
-from templates import LEVEL
+from templates import LEVEL, label_kelas
 from topics import TOPIK_BAWAAN, daftar_topik
 
 class Penangan(BaseHTTPRequestHandler):
@@ -1241,9 +1241,9 @@ class Penangan(BaseHTTPRequestHandler):
                 nama_siswa = siswa["nama"]
                 if pilihan_topik not in _topik_untuk_level(level):
                     pesan = (
-                        f"<h1>Topik belum tersedia untuk level ini</h1>"
+                        f"<h1>Topik belum tersedia untuk kelas ini</h1>"
                         f"<p><code>{html.escape(pilihan_topik)}</code> tidak tersedia "
-                        f"untuk level {html.escape(siswa['tingkat'])}.</p>"
+                        f"untuk {html.escape(label_kelas(siswa['tingkat']))}.</p>"
                     )
                     return self._kirim(_halaman("Topik belum tersedia", pesan), 400)
                 pilihan_mode = (data.get("mode") or ["diagnostik"])[0].strip()

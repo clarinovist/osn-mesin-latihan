@@ -21,7 +21,7 @@ import design_tokens as T
 import worksheets
 from diagnosis import diagnosa
 from generator import LEVEL_BAWAAN
-from templates import LEVEL, REGISTRI, Soal
+from templates import LEVEL, REGISTRI, Soal, label_kelas
 from topics import TOPIK_BAWAAN, ambil, daftar_topik, dari_sesi
 from teacher_style import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 from style_stitch import GAYA_STITCH
@@ -332,7 +332,7 @@ def halaman_utama_stitch(
             f'color:{T.AKSEN_MURID_UTAMA};flex:none">person</span>'
             '<span style="flex:1;min-width:0">'
             f'<h2 class="st" style="margin:0">{html.escape(s["nama"])}'
-            f'<span class="st-badge selesai">({html.escape(str(s["tingkat"]))})</span>'
+            f'<span class="st-badge selesai">({html.escape(label_kelas(str(s["tingkat"])))})</span>'
             f"{label_keluarga}"
             "</h2>"
             f'<span style="font-size:.9rem;color:{T.TEKS_VARIAN}">'
@@ -422,7 +422,7 @@ def halaman_anak(
             f'<div class="kolom-sesi" style="flex:1">'
             f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
             f'<div class="st-meta" style="font-size:.85rem;opacity:.75">{html.escape(r["tanggal"])}'
-            f'&middot; {html.escape(_ambil(r, "level", LEVEL_BAWAAN))}'
+            f'&middot; {html.escape(label_kelas(_ambil(r, "level", LEVEL_BAWAAN)))}'
             f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
             f"</div>"
             f'<div style="text-align:right;font-variant-numeric:tabular-nums;margin-right:0.6rem">'
@@ -605,7 +605,7 @@ def halaman_anak(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
         f'<div class="jejak"><a href="/">&larr; Semua anak</a></div>'
         f'<h1 class="st">{html.escape(siswa["nama"])}'
-        f'<span class="st-badge selesai">({html.escape(str(siswa["tingkat"]))})</span>'
+        f'<span class="st-badge selesai">({html.escape(label_kelas(str(siswa["tingkat"])))})</span>'
         f"{label_keluarga}"
         "</h1>"
         f'<p class="sub">History latihan — '
@@ -667,7 +667,7 @@ def halaman_utama(
             f'<tr class="{_kelas_sorot(r["id"])}"><td class="kolom-sesi"><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
             f'{_badge_mode(r)}</td>'
             f'<td class="kolom-tanggal">{r["tanggal"]}</td>'
-            f'<td class="tipe">{_ambil(r, "level", LEVEL_BAWAAN)}</td>'
+            f'<td class="tipe">{html.escape(label_kelas(_ambil(r, "level", LEVEL_BAWAAN)))}</td>'
             f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
             f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
             f'<td class="angka">{r["benar"]}/{r["n"]}</td>'
@@ -721,13 +721,13 @@ def halaman_utama(
             f'<div class="kartu kartu-siswa">'
             f'<div class="siswa-kepala">'
             f"<h2>{html.escape(s['nama'])}"
-            f'<span class="badge-tingkat">({s["tingkat"]})</span>'
+            f'<span class="badge-tingkat">({html.escape(label_kelas(str(s["tingkat"])))})</span>'
             f"{label_keluarga}"
             f"</h2>"
             f'<a class="btn" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
             f"</div>"
             f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
-            f"<th>Level</th><th>Topik</th><th>Terisi</th><th>Benar</th>"
+            f"<th>Kelas</th><th>Topik</th><th>Terisi</th><th>Benar</th>"
             f"<th>Waktu</th><th>Status Review</th></tr>"
             f"{item}</table></div>"
             f"{strip_sesi}"
@@ -849,7 +849,7 @@ def halaman_konfirmasi_hapus(
         f"<h1>Hapus sesi #{sesi_id}?</h1>"
         f'<div class="kartu">'
         f'<p>Sesi <b>#{sesi_id}</b> milik <b>{html.escape(info["nama"])}</b> '
-        f'&middot; {info["tanggal"]} &middot; {_ambil(info, "level", LEVEL_BAWAAN)} '
+        f'&middot; {info["tanggal"]} &middot; {html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} '
         f'&middot; {_ambil(info, "topik", TOPIK_BAWAAN)}</p>'
         f"<p>Yang ikut hilang bersama sesi ini:</p>"
         f"<ul><li><b>{n_jawaban} jawaban</b></li>"
@@ -905,7 +905,7 @@ def halaman_sesi_cetak(
         f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke koreksi</a> &middot; <a href="/">&larr; Semua siswa</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
-        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
         f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"
@@ -970,7 +970,7 @@ def halaman_sesi_lampiran(
         f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke koreksi</a> &middot; <a href="/">&larr; Semua siswa</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
-        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
         f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"
@@ -1103,7 +1103,7 @@ def halaman_sesi(
         f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id} {badge_review_hdr}</h1>'
         f'<p class="sub">{info["tanggal"]} &middot; '
-        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
         f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"
@@ -1280,7 +1280,7 @@ def halaman_sesi_stitch(
         f'<div class="sesi-jejak-st"><a href="/">&larr; Semua siswa</a></div>'
         f'<h1 class="sesi-judul-st">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
-        f'{_ambil(info, "level", LEVEL_BAWAAN)} &middot; '
+        f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
         f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"

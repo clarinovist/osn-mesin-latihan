@@ -253,7 +253,7 @@ def test_menaikkan_tingkat_tidak_mengubah_sesi_lama(db):
         db, {"aksi": "tingkat", "siswa_id": str(sid), "tingkat": "P6"}, "guru"
     )
     assert galat == ""
-    assert "P6" in pesan
+    assert "Kelas 6" in pesan
 
     baru = teacher_pages.buat_sesi_seed_baru(db, sid)
 
@@ -281,7 +281,7 @@ def test_tambah_siswa_menolak_tingkat_ngawur(db):
              "sandi_anak": "sandi-uji-12345"}, "guru"
     )
     assert pesan == ""
-    assert "P3" in galat
+    assert "Kelas 3" in galat
     assert db.execute("SELECT 1 FROM siswa WHERE nama = 'Salah'").fetchone() is None
 
 

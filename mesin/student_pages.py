@@ -12,6 +12,7 @@ import json
 
 import brand
 import design_tokens as T
+from templates import label_kelas
 from topics import Topik, dari_sesi
 from students import (
     AWALAN_PILIHAN,
@@ -581,7 +582,7 @@ def halaman_kerja(
           onclick="window.print()">Cetak / PDF</button>
   <a class="btn secondary hanya-layar" href="/murid">Sesi lain</a>
 </div>
-<p class="meta-sesi-line">{_escape(info['tanggal'])} &middot; level {_escape(info['level'])}
+<p class="meta-sesi-line">{_escape(info['tanggal'])} &middot; {_escape(label_kelas(info['level']))}
  &middot; {len(daftar)} soal
  {'&middot; Latihan Cepat' if drill else ''}</p>
 {strip}
@@ -707,7 +708,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
             '<span class="st-kartu-teks">'
             f'<span style="font-weight:700;font-size:1rem;color:{T.TEKS_JUDUL}">{_escape(b["tanggal"])}</span>'
             f'<span style="font-size:0.85rem;color:{T.TEKS_VARIAN};display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
-            f"level {_escape(b['level'])} &middot; {_escape(_ambil_topik(b))}"
+            f"{_escape(label_kelas(b['level']))} &middot; {_escape(_ambil_topik(b))}"
             f" {mode_label}"
             # 1 Sep:badge review = baris METANYA sendiri (flex-wrap) supaya
             # selalu dalam viewport di HP — terukur lewat piksel screenshot.
@@ -1108,7 +1109,7 @@ def halaman_kerja_baru(
 </div>
 <div class="kerja-badan-st">
 <p class="kerja-meta-st"><b>Halo, {_escape(info['nama'])}</b> &middot; {_escape(info['tanggal'])}
- &middot; level {_escape(info['level'])} &middot; {len(daftar)} soal
+ &middot; {_escape(label_kelas(info['level']))} &middot; {len(daftar)} soal
  {'&middot; Latihan Cepat' if drill else ''}</p>
 {strip}
 {kabar}
@@ -1199,7 +1200,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
             f'<span class="ikon-sesi" style="background:{warna}"></span>'
             f'<span class="isi-sesi">'
             f'<span class="tanggal-sesi">{_escape(b["tanggal"])}</span>'
-            f'<span class="meta-sesi">level {_escape(b["level"])} '
+            f'<span class="meta-sesi">{_escape(label_kelas(b["level"]))} '
             f"&middot; {_escape(_ambil_topik(b))} {tag_latihan}</span>"
             f"</span>"
             f'<span class="badge-soal">{b["jumlah"]} soal</span>'
@@ -1361,7 +1362,7 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
 </div>
 <div class="kerja-badan-st">
 <p class="kerja-meta-st"><b>Halo, {_escape(hasil['nama'])}</b> &middot;
- {_escape(hasil['tanggal'])} &middot; level {_escape(hasil['level'])}</p>
+ {_escape(hasil['tanggal'])} &middot; {_escape(label_kelas(hasil['level']))}</p>
 <div class="hasil-ringkas-st">
   <div class="hasil-skor-st">{n_benar}<span>/{n_soal}</span></div>
   <div class="hasil-pesan-st">{pesan}</div>

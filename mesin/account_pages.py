@@ -12,7 +12,7 @@ import html
 import auth
 import database
 from generator import LEVEL_BAWAAN
-from templates import LEVEL, level_valid
+from templates import LEVEL, label_kelas, level_valid
 from teacher_pages import _halaman
 
 
@@ -195,7 +195,7 @@ def halaman_akun(
         f'<input type="hidden" name="siswa_id" value="{s["id"]}">'
         f'<select name="tingkat" style="width:auto">'
         + "".join(
-            f'<option value="{lv}"{" selected" if lv == s["tingkat"] else ""}>{lv}</option>'
+            f'<option value="{lv}"{" selected" if lv == s["tingkat"] else ""}>{html.escape(label_kelas(lv))}</option>'
             for lv in LEVEL
         )
         + '</select>'
@@ -251,7 +251,7 @@ def halaman_akun(
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">📚</span>'
         f"<h2>Siswa</h2></div>"
-        f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Tingkat</th>'
+        f'<div class="tabel-wrap"><table><tr><th>Nama</th><th>Kelas</th>'
         f"<th>Sesi</th><th>Akun latihan</th><th>Aksi</th></tr>{daftar}</table></div>"
         f'<p class="sub" style="margin-top:.7rem">Anak baru ditambahkan dari '
         f'kartu "Tambah anak" di bawah — sekalian dengan akun latihannya.'
@@ -270,10 +270,10 @@ def halaman_akun(
         f'<div class="baris">'
         f'<div><label>Nama anak (nama panggilan)</label>'
         f'<input type="text" name="nama" placeholder="mis. Aisha" required></div>'
-        f'<div><label>Tingkat</label>'
+        f'<div><label>Kelas</label>'
         f'<select name="tingkat">'
         + "".join(
-            f'<option value="{lv}"{" selected" if lv == LEVEL_BAWAAN else ""}>{lv}</option>'
+            f'<option value="{lv}"{" selected" if lv == LEVEL_BAWAAN else ""}>{html.escape(label_kelas(lv))}</option>'
             for lv in LEVEL
         )
         + f"</select></div></div>"
@@ -417,7 +417,7 @@ def proses_akun(
         if len(nama) > 40:
             return "", "Nama terlalu panjang."
         if not level_valid(tingkat):
-            return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
+            return "", f"Kelas harus salah satu dari: {', '.join(label_kelas(lv) for lv in LEVEL)}."
         if len(sandi_anak) < 8:
             return "", "Kata sandi anak minimal 8 karakter."
         if kon.execute(
@@ -443,7 +443,7 @@ def proses_akun(
             return "", str(e)
         catatan = " (persetujuan orang tua dicatat)" if data.get("persetujuan_ortu") else ""
         return (
-            f"Anak {nama} ditambahkan ({tingkat}) beserta akun latihannya{catatan}. "
+            f"Anak {nama} ditambahkan ({label_kelas(tingkat)}) beserta akun latihannya{catatan}. "
             f"Langkah 3: kembali ke beranda, klik nama {nama}, lalu tekan "
             f"“Buat sesi baru”. Anak masuk lewat /murid dengan nama {nama_akun}.",
             "",
@@ -459,7 +459,7 @@ def proses_akun(
             return "", "Siswa tidak dikenal."
         tingkat = data.get("tingkat", "").strip()
         if not level_valid(tingkat):
-            return "", f"Tingkat harus salah satu dari: {', '.join(LEVEL)}."
+            return "", f"Kelas harus salah satu dari: {', '.join(label_kelas(lv) for lv in LEVEL)}."
         baris = kon.execute(
             "SELECT nama FROM siswa WHERE id = ?", (siswa_id,)
         ).fetchone()
@@ -472,8 +472,8 @@ def proses_akun(
             "UPDATE siswa SET tingkat = ? WHERE id = ?", (tingkat, siswa_id)
         )
         return (
-            f"{baris['nama']} sekarang {tingkat}. Sesi lama tetap pada "
-            f"levelnya masing-masing; yang berubah hanya sesi berikutnya.",
+            f"{baris['nama']} sekarang {label_kelas(tingkat)}. Sesi lama tetap pada "
+            f"kelasnya masing-masing; yang berubah hanya sesi berikutnya.",
             "",
         )
 

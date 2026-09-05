@@ -38,6 +38,11 @@ def level_valid(level: str) -> bool:
     return level in LEVEL
 
 
+def label_kelas(level: str) -> str:
+    """Nama kelas untuk UI; kode internal dan data lama tidak diubah."""
+    return f"Kelas {level[1:]}" if level in LEVEL else level
+
+
 @dataclass(frozen=True)
 class Malrule:
     """Satu kesalahan yang bisa diprediksi dari bentuk soal."""

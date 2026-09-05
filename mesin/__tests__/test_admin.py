@@ -236,7 +236,7 @@ def test_admin_boleh_ubah_tingkat_dan_ganti_sandi_di_akun(server):
     assert kode == 200
     # Tulisnya commit sesaat setelah respons (pola konteks buka()), jadi
     # yang diassert pesannya — bukan baca-ulang yang balapan dengan commit.
-    assert "sekarang P4" in isi, "ubah tingkat admin tidak jalan"
+    assert "sekarang Kelas 4" in isi, "ubah kelas admin tidak jalan"
 
     kode, isi, _ = server.minta(
         "/akun",
