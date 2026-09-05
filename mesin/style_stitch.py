@@ -272,12 +272,12 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
   .st-kartu-baris > *:nth-child(n+3) {{
     flex: 0 1 auto !important; margin-left: 0;
   }}
-  /* HANYA kartu sesi guru: anak pertama ("Sesi #N · tanggal · topik") ambil
-     baris penuh supaya tidak terjepit jadi 76px; angka & badge turun ke baris
-     kedua. !important karena markup memakai inline style="flex:1".
-     JANGAN digeneralkan ke .st-kartu-baris — anak pertama kartu MURID adalah
-     ikon bulat 2.5rem yang justru harus tetap flex:none. */
-  .kartu-sesi-guru > *:first-child {{ flex: 1 1 100% !important; }}
+  /* Kartu sesi guru baru punya dua anak: isi dan aksi. Isi mengambil ruang
+     utama; aksi tetap di kanan bila muat dan turun utuh bila layar sempit. */
+  .kartu-sesi-guru > .isi-kartu-sesi-st {{ flex: 1 1 15rem !important; }}
+  .kartu-sesi-guru > .aksi-sesi-st {{ margin-left: auto; }}
+  .kepala-riwayat-st {{ align-items: flex-start; flex-direction: column; gap: 0; }}
+  .tautan-laporan-st {{ margin-top: {T.SP_1}; }}
   .st-kartu-baris:not(.kartu-sesi-guru) > *:first-child {{ flex: none; }}
 }}
 
@@ -361,8 +361,67 @@ tr.sorot-baru, div.sorot-baru {{
    sehingga tiap anak yang tidak selebar penuh menempel ke tepi KANAN.
    Versi yang menang ada di bagian "Form buat sesi (S6)". */
 
-/* ── Halaman /anak/<id> (3 Sep): dua kolom di desktop ──
-   Mobile-first: bawaannya SATU kolom, jadi di HP tampilannya sama persis
+/* ── Halaman /anak/<id> (5 Sep): struktur & hierarki riwayat ── */
+.kepala-anak-st {{ margin-bottom: {T.SP_4}; }}
+.kepala-anak-st h1.st {{ margin-bottom: 0; }}
+.kepala-riwayat-st {{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: {T.SP_3}; margin-bottom: {T.SP_3};
+}}
+.kepala-riwayat-st h2.st {{ margin: 0; font-size: 1.2rem; }}
+.tautan-laporan-st {{
+  display: inline-flex; align-items: center; gap: {T.SP_1};
+  color: {T.AKSEN_TEAL_TUA}; font-family: {T.FONT_HEADLINE};
+  font-size: .86rem; font-weight: 700; text-decoration: none;
+  min-height: {T.TARGET_SENTUH};
+}}
+.tautan-laporan-st:hover {{ text-decoration: underline; }}
+.tautan-laporan-st .material-symbols-outlined {{ font-size: 1.1rem; }}
+
+.kartu-sesi-guru {{
+  align-items: flex-start; padding: {T.SP_4};
+}}
+.isi-kartu-sesi-st {{
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  gap: {T.SP_1};
+}}
+.judul-sesi-st {{
+  color: {T.TEKS_JUDUL}; font-family: {T.FONT_HEADLINE};
+  font-size: 1rem; font-weight: 800; line-height: 1.3;
+  text-decoration: none;
+}}
+.judul-sesi-st:hover {{ color: {T.AKSEN_TEAL_TUA}; text-decoration: underline; }}
+.rincian-topik-st {{
+  color: {T.TEKS_UTAMA}; font-size: .9rem; line-height: 1.45;
+  overflow-wrap: anywhere;
+}}
+.meta-sesi-st {{
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 {T.SP_2};
+  color: {T.TEKS_SUBTLE}; font-size: .8rem; line-height: 1.5;
+}}
+.nomor-sesi-st {{ color: {T.TEKS_VARIAN}; }}
+.ringkasan-sesi-st {{
+  margin-top: {T.SP_1}; color: {T.TEKS_JUDUL}; font-size: .9rem;
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}}
+.aksi-sesi-st {{
+  flex: none; display: flex; flex-direction: column;
+  gap: {T.SP_2}; align-items: flex-end;
+}}
+.blok-bagikan-st {{
+  display: flex; flex-direction: column; align-items: flex-end; gap: {T.SP_1};
+}}
+.kabar-bagikan-st {{
+  color: {T.TEKS_SUBTLE}; font-size: .75rem; line-height: 1.35;
+  max-width: 15rem; text-align: right;
+}}
+.kabar-bagikan-st:empty {{ display: none; }}
+.kabar-bagikan-st:not(:empty) {{
+  padding: {T.SP_1} {T.SP_2}; background: {T.LATAR_SEKUNDER_LEMBUT};
+  border-radius: {T.RADIUS_KECIL};
+}}
+
+/* Mobile-first: bawaannya SATU kolom, jadi di HP tampilannya sama persis
    seperti sebelum blok ini ada. Grid dan pelebar kanvas baru hidup di
    >= 64rem, tempat halaman lama menyisakan ~350px kosong di kiri-kanan
    sambil memanjang 1698px ke bawah. */

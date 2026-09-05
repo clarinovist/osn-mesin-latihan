@@ -40,7 +40,7 @@ def test_kartu_sesi_tidak_punya_kurung_nyasar_di_style(db):
     html = teacher_pages.halaman_anak(
         db, _siswa_dengan_sesi(db), peran="guru", pengguna="g"
     ).decode()
-    assert 'opacity:.75">' in html
+    assert 'class="meta-sesi-st"' in html
     # tidak ada atribut style yang ditutup `}` paras — pola bug f-string
     for baris in html.splitlines():
         assert 'style="' not in baris or "}}" not in baris.split('style="')[1], (
@@ -54,11 +54,9 @@ def test_kartu_sesi_meta_tertutup_sebagai_div(db):
     html = teacher_pages.halaman_anak(
         db, _siswa_dengan_sesi(db), peran="guru", pengguna="g"
     ).decode()
-    i = html.find('<div class="st-meta"')
+    i = html.find('<div class="meta-sesi-st"')
     potongan = html[i : html.find("</div>", i) + 6]
-    # Markup sehat: class + style = 2 atribut. Re-render rusak (dulu)`}`
-    # nyasar menelan seluruh halaman berikutnya sebagai atribut → ratusan `=`.
-    assert potongan.count('="') <= 2, (
-        f"meta tertelan atribut: {potongan[:200]}"
-    )
-    assert "pola-bilangan" in potongan or "Pola Bilangan" in potongan
+    # Markup sehat: class + atribut time terstruktur; tidak boleh tertelan
+    # atribut style rusak menjadi satu potongan raksasa.
+    assert len(potongan) < 500, f"meta tertelan atribut: {potongan[:200]}"
+    assert "Pola Bilangan" in html

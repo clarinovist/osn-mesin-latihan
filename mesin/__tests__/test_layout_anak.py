@@ -255,12 +255,68 @@ def test_topbar_halaman_anak_mengikuti_kanvas_lebar():
     assert "max-width: none" in cocok.group(1)
 
 
-def test_halaman_anak_kembali_ke_daftar_anak(anak):
-    """Label kembali menyebut halaman tujuan, bukan kumpulan yang ambigu."""
+def test_halaman_anak_kembali_ke_semua_anak(anak):
+    """Breadcrumb singkat tetap menunjukkan tujuan kembali dengan jelas."""
     db, sid = anak
     markup = _tanpa_gaya(_render_anak(db, sid))
-    assert '<a href="/">&larr; Daftar anak</a>' in markup
-    assert "&larr; Semua anak" not in markup
+    assert '<a href="/">&larr; Semua anak</a>' in markup
+    assert "&larr; Daftar anak" not in markup
+
+
+def test_kepala_riwayat_memuat_tautan_laporan(anak):
+    """Laporan adalah tindakan dari riwayat, bukan anak kalimat di bawah nama."""
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    kepala = markup[markup.index('class="kepala-riwayat-st"'):]
+    kepala = kepala[:kepala.index("</div>")]
+    assert "Riwayat latihan" in kepala
+    assert f'href="/laporan/{sid}"' in kepala
+    assert "Lihat laporan perkembangan" in kepala
+    assert "History latihan" not in markup
+
+
+def test_kartu_sesi_mengutamakan_topik_dan_metadata_ramah(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Claudia", pemilik="ortu", tingkat="P4")
+        sesi_id = database.buat_sesi_gabungan(
+            kon,
+            sid,
+            seed=23,
+            topik_ids=["logika", "geometri-datar", "statistika"],
+            level="P3",
+            jumlah_soal=10,
+        )
+        kon.execute(
+            "UPDATE sesi SET tanggal = '2026-09-04' WHERE id = ?", (sesi_id,)
+        )
+
+    markup = _tanpa_gaya(_render_anak(db, sid))
+
+    assert '<a class="judul-sesi-st"' in markup
+    assert "Gabungan 3 topik" in markup
+    assert "Logika &amp; Penalaran &middot; Geometri Datar &middot; Statistika" in markup
+    assert "gabungan:logika,geometri-datar,statistika" not in markup
+    assert '<time datetime="2026-09-04">4 Sep 2026</time>' in markup
+    assert "Kelas 3" in markup
+    assert "Mode Diagnosa" in markup
+    assert f"Sesi #{sesi_id}" in markup
+
+
+def test_kartu_belum_dikerjakan_tidak_memamerkan_statistik_kosong(anak):
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert "Belum Dikerjakan" in markup
+    assert "Terisi 0/" not in markup
+    assert "Benar &mdash;" not in markup
+    assert "Waktu &mdash;" not in markup
+
+
+def test_catatan_tautan_berada_di_dekat_aksi_bagikan(anak):
+    db, sid = anak
+    markup = _tanpa_gaya(_render_anak(db, sid))
+    assert 'id="kabar-bagikan"' not in markup
+    assert '<span class="kabar-bagikan-st" aria-live="polite"></span>' in markup
+    assert "Tautan berlaku 7 hari" not in markup
 
 
 def test_halaman_lain_tidak_ikut_melebar(anak):

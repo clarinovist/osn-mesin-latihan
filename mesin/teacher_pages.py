@@ -119,6 +119,73 @@ def _ambil(baris, kolom: str, bawaan):
         return bawaan
     return bawaan if nilai is None else nilai
 
+def _tanggal_ringkas(nilai) -> str:
+    """Tanggal Indonesia ringkas; nilai warisan tetap ditampilkan aman."""
+    mentah = str(nilai or "")
+    bulan = (
+        "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+        "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+    )
+    try:
+        tanggal = datetime.strptime(mentah, "%Y-%m-%d")
+    except ValueError:
+        return f'<span>{html.escape(mentah or "—")}</span>'
+    label = f"{tanggal.day} {bulan[tanggal.month - 1]} {tanggal.year}"
+    return f'<time datetime="{html.escape(mentah)}">{label}</time>'
+
+
+def _nama_topik_sesi(topik_id: str) -> tuple[str, str]:
+    """Judul dan rincian topik dalam bahasa orang tua, bukan ID basis data."""
+    if topik_id.startswith("gabungan:"):
+        ids = [nilai for nilai in topik_id.split(":", 1)[1].split(",") if nilai]
+        nama = []
+        for nilai in ids:
+            try:
+                nama.append(ambil(nilai).nama)
+            except KeyError:
+                nama.append(nilai.replace("-", " ").title())
+        return f"Gabungan {len(nama)} topik", " &middot; ".join(
+            html.escape(nilai) for nilai in nama
+        )
+    try:
+        nama_topik = ambil(topik_id).nama
+    except KeyError:
+        nama_topik = topik_id.replace("-", " ").title()
+    if topik_id == "campuran":
+        awalan_dekoratif = "✨ "
+        if nama_topik.startswith(awalan_dekoratif):
+            nama_topik = nama_topik[len(awalan_dekoratif):]
+        nama_topik = nama_topik.split(" (", 1)[0]
+    return nama_topik, ""
+
+
+def _mode_sesi(baris) -> str:
+    if _ambil(baris, "mode", "diagnostik") == "drill":
+        return "Latihan Cepat"
+    return "Mode Diagnosa"
+
+
+def _ringkasan_angka_sesi(baris) -> str:
+    """Hanya tampilkan angka yang sudah bermakna pada tahap sesi saat ini."""
+    terisi = int(_ambil(baris, "terisi", 0) or 0)
+    jumlah = int(_ambil(baris, "n", 0) or 0)
+    if terisi == 0:
+        return ""
+    bagian = [f"{terisi} dari {jumlah} terisi"]
+    if _ambil(baris, "selesai", None):
+        benar = int(_ambil(baris, "benar", 0) or 0)
+        bagian[0] = f"{benar} dari {jumlah} benar"
+        durasi = _fmt_durasi(
+            _ambil(baris, "mulai", None),
+            _ambil(baris, "selesai", None),
+            _ambil(baris, "dicatat_awal", None),
+            _ambil(baris, "dicatat_akhir", None),
+        )
+        if durasi != "&mdash;":
+            bagian.append(f"Waktu {durasi}")
+    return " &middot; ".join(bagian)
+
+
 def _topik_untuk_level(level: str) -> list[str]:
     """ID topik yang tersedia pada level resmi atau fallback data lama."""
     level_efektif = level if level in LEVEL else LEVEL_BAWAAN
@@ -430,6 +497,7 @@ def halaman_anak(
                 '<span class="material-symbols-outlined">link_off</span></button></form>'
             )
         return (
+            '<div class="blok-bagikan-st">'
             '<div class="aksi-bagikan-st">'
             f'<button type="button" class="tombol-ikon-st tombol-bagikan-st" '
             f'data-bagikan-url="/sesi/{rid}/bagikan" '
@@ -437,40 +505,48 @@ def halaman_anak(
             'aria-label="Bagikan sesi ke anak" title="Bagikan sesi">'
             '<span class="material-symbols-outlined">share</span></button>'
             f"{cabut}</div>"
+            '<span class="kabar-bagikan-st" aria-live="polite"></span>'
+            "</div>"
         )
 
-    def _angka_sesi(r):
-        benar = f'{r["benar"]}/{r["n"]}' if r["selesai"] else "—"
-        waktu = _fmt_durasi(
-            _ambil(r, "mulai", None), _ambil(r, "selesai", None),
-            _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None),
+    def _kartu_sesi(r, kelas):
+        topik_id = str(_ambil(r, "topik", TOPIK_BAWAAN))
+        judul_topik, rincian_topik = _nama_topik_sesi(topik_id)
+        rincian = (
+            f'<div class="rincian-topik-st">{rincian_topik}</div>'
+            if rincian_topik
+            else ""
+        )
+        angka = _ringkasan_angka_sesi(r)
+        ringkasan = (
+            f'<div class="ringkasan-sesi-st">{angka}</div>' if angka else ""
         )
         return (
-            f'<div>Terisi {r["terisi"]}/{r["n"]}</div>'
-            f'<div>Benar {benar}</div><div>Waktu {waktu}</div>'
+            f'<article class="st-kartu-baris kartu-sesi-guru {kelas}">'
+            '<div class="isi-kartu-sesi-st">'
+            f'<a class="judul-sesi-st" href="/sesi/{r["id"]}">'
+            f'{html.escape(judul_topik)}</a>'
+            f"{rincian}"
+            '<div class="meta-sesi-st">'
+            f'{_tanggal_ringkas(r["tanggal"])}<span aria-hidden="true">&middot;</span>'
+            f'<span>{html.escape(label_kelas(str(_ambil(r, "level", LEVEL_BAWAAN))))}</span>'
+            '<span aria-hidden="true">&middot;</span>'
+            f'<span>{html.escape(_mode_sesi(r))}</span>'
+            '<span aria-hidden="true">&middot;</span>'
+            f'<span class="nomor-sesi-st">Sesi #{r["id"]}</span>'
+            "</div>"
+            f"{ringkasan}"
+            "</div>"
+            '<div class="aksi-sesi-st">'
+            f'{_badge_review_status(r)}'
+            f'{_aksi_tautan(r)}'
+            "</div>"
+            "</article>"
         )
 
     if sesi:
         item = "".join(
-            f'<div class="st-kartu-baris kartu-sesi-guru {kelas}">'
-            f'<div class="kolom-sesi" style="flex:1">'
-            f'<a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
-            f'<div class="st-meta" style="font-size:.85rem;opacity:.75">{html.escape(r["tanggal"])}'
-            f'&middot; {html.escape(label_kelas(_ambil(r, "level", LEVEL_BAWAAN)))}'
-            f'&middot; {html.escape(_ambil(r, "topik", TOPIK_BAWAAN))}</div>'
-            f"</div>"
-            f'<div style="text-align:right;font-variant-numeric:tabular-nums;margin-right:0.6rem">'
-            f'{_angka_sesi(r)}'
-            f"</div>"
-            f'<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end">'
-            f'{_badge_review_status(r)}'
-            f'{_badge_mode_stitch(r)}'
-            f'{_aksi_tautan(r)}'
-            f"</div>"
-            f"</div>"
-            for r, kelas in (
-                (r, _kelas_sorot(r["id"])) for r in sesi
-            )
+            _kartu_sesi(r, _kelas_sorot(r["id"])) for r in sesi
         )
     else:
         item = '<p class="sub">Belum ada sesi — buat yang pertama di bawah.</p>'
@@ -636,32 +712,38 @@ def halaman_anak(
 
     return _halaman_stitch(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
-        f'<div class="jejak"><a href="/">&larr; Daftar anak</a></div>'
+        f'<div class="jejak"><a href="/">&larr; Semua anak</a></div>'
+        '<div class="kepala-anak-st">'
         f'<h1 class="st">{html.escape(siswa["nama"])}'
         f'<span class="st-badge selesai">({html.escape(label_kelas(str(siswa["tingkat"])))})</span>'
         f"{label_keluarga}"
         "</h1>"
-        f'<p class="sub">History latihan — '
-        f'<a href="/laporan/{siswa["id"]}">lihat laporan tren &rarr;</a></p>'
+        "</div>"
         f"{kabar}"
-        '<p id="kabar-bagikan" class="sub" aria-live="polite">'
-        'Tautan berlaku 7 hari. Membuat ulang akan menonaktifkan tautan sebelumnya.</p>'
-        # Dua kolom di desktop (>= 64rem): history di kiri, alat buat-latihan
-        # di kanan. Di HP grid mati dan urutan sumber yang berlaku — history
+        # Dua kolom di desktop (>= 64rem): riwayat di kiri, alat buat-latihan
+        # di kanan. Di HP grid mati dan urutan sumber yang berlaku — riwayat
         # dulu, form menyusul, persis seperti sebelum kolom ini ada.
         '<div class="anak-grid">'
-        f'<div class="anak-kolom-kiri"><div class="daftar-anak">{item}</div></div>'
+        '<section class="anak-kolom-kiri">'
+        '<div class="kepala-riwayat-st">'
+        '<h2 class="st">Riwayat latihan</h2>'
+        f'<a class="tautan-laporan-st" href="/laporan/{siswa["id"]}">'
+        '<span class="material-symbols-outlined" aria-hidden="true">trending_up</span>'
+        'Lihat laporan perkembangan <span aria-hidden="true">&rarr;</span></a>'
+        "</div>"
+        f'<div class="daftar-anak">{item}</div>'
+        "</section>"
         '<div class="anak-kolom-kanan">'
         f"{blok_buat_latihan}"
         "</div>"
         "</div>"
         "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>"
-        "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st'),k=document.getElementById('kabar-bagikan');"
-        "async function salin(t){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil.';return false;}}"
-        "async function bagikan(t){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});return;}catch(e){if(e.name==='AbortError')return;}}await salin(t);}"
-        "for(var i=0;i<b.length;i++){b[i].addEventListener('click',async function(){var x=this;if(x.dataset.tautan){await bagikan(x.dataset.tautan);return;}if(x.dataset.bagikanAktif==='1'&&!window.confirm('Membuat tautan baru akan menonaktifkan tautan sebelumnya. Lanjutkan?'))return;x.disabled=true;"
+        "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
+        "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil.';return false;}}"
+        "async function bagikan(t,k){k.textContent='Tautan siap dibagikan dan berlaku 7 hari.';if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});return;}catch(e){if(e.name==='AbortError')return;}}await salin(t,k);}"
+        "for(var i=0;i<b.length;i++){b[i].addEventListener('click',async function(){var x=this,k=x.closest('.blok-bagikan-st').querySelector('.kabar-bagikan-st');if(x.dataset.tautan){await bagikan(x.dataset.tautan,k);return;}if(x.dataset.bagikanAktif==='1'&&!window.confirm('Membuat tautan baru akan menonaktifkan tautan sebelumnya. Lanjutkan?'))return;x.disabled=true;"
         "try{var r=await fetch(x.dataset.bagikanUrl,{method:'POST',headers:{'X-Requested-With':'fetch'}});"
-        "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan);}"
+        "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan,k);}"
         "catch(e){k.textContent='Tautan belum berhasil dibuat. Coba lagi.';}finally{x.disabled=false;}});}})()</script>",
         ident=(pengguna if pengguna else "guru", peran),
         kelas_bungkus="lebar",

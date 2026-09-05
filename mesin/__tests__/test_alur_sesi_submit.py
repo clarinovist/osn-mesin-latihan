@@ -160,8 +160,9 @@ def test_simpan_sementara_tidak_mendiagnosis_atau_masuk_laporan(server):
         assert database.sasaran_remedial(kon, siswa_id) == []
     kode, isi, _ = s.minta(f"/anak/{siswa_id}", auth=("guru", SANDI_GURU))
     assert kode == 200
+    assert "1 dari 3 terisi" in isi
     assert "Benar 1/" not in isi
-    assert "Benar —" in isi
+    assert "Benar —" not in isi
 
 
 def test_simpan_sementara_bisa_mengosongkan_jawaban_lama(server):
@@ -301,14 +302,16 @@ def test_halaman_anak_memakai_ikon_share_inline_tanpa_navigasi_baru(server):
     assert f'data-bagikan-url="/sesi/{sesi_id}/bagikan"' in isi
     assert 'aria-label="Bagikan sesi ke anak"' in isi
     assert 'class="material-symbols-outlined">share</span>' in isi
-    assert 'id="kabar-bagikan"' in isi
-    assert 'aria-live="polite"' in isi
-    assert "Tautan berlaku 7 hari" in isi
+    assert '<span class="kabar-bagikan-st" aria-live="polite"></span>' in isi
+    assert "x.closest('.blok-bagikan-st').querySelector('.kabar-bagikan-st')" in isi
+    assert (
+        "k.textContent='Tautan siap dibagikan dan berlaku 7 hari.'" in isi
+    )
     assert "navigator.share" in isi
     assert "navigator.clipboard.writeText" in isi
     assert "window.prompt('Salin tautan ini:'" in isi
     assert "Membuat tautan baru akan menonaktifkan tautan sebelumnya" in isi
-    assert "if(x.dataset.tautan){await bagikan(x.dataset.tautan);return;}" in isi
+    assert "if(x.dataset.tautan){await bagikan(x.dataset.tautan,k);return;}" in isi
     assert "window.location" not in isi
     assert f"width: {style_stitch.T.TARGET_SENTUH}" in style_stitch.GAYA_STITCH
     assert f"height: {style_stitch.T.TARGET_SENTUH}" in style_stitch.GAYA_STITCH
