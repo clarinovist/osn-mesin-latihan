@@ -311,12 +311,38 @@ def test_kartu_belum_dikerjakan_tidak_memamerkan_statistik_kosong(anak):
     assert "Waktu &mdash;" not in markup
 
 
+def test_status_sesi_mengikuti_pengiriman_final_bukan_jumlah_isian():
+    tersimpan_penuh = {"direview": None, "selesai": None, "terisi": 3, "n": 3}
+    terkirim_sebagian = {
+        "direview": None, "selesai": "2026-09-05 10:00:00", "terisi": 1, "n": 3,
+    }
+    terkirim_kosong = {
+        "direview": None, "selesai": "2026-09-05 10:00:00", "terisi": 0, "n": 3,
+    }
+
+    assert "Sedang Dikerjakan" in teacher_pages._badge_review_status(tersimpan_penuh)
+    assert "Belum Direview" in teacher_pages._badge_review_status(terkirim_sebagian)
+    assert "Belum Direview" in teacher_pages._badge_review_status(terkirim_kosong)
+
+
+def test_tanggal_kartu_kanonis_aman_dan_tidak_terpotong():
+    assert teacher_pages._tanggal_ringkas("2026-9-4") == (
+        '<time datetime="2026-09-04">4 Sep 2026</time>'
+    )
+    assert teacher_pages._tanggal_ringkas("<script>x</script>") == (
+        "<span>&lt;script&gt;x&lt;/script&gt;</span>"
+    )
+    blok = _blok(GAYA_STITCH, ".meta-sesi-st time")
+    assert "white-space: nowrap" in blok
+
+
 def test_catatan_tautan_berada_di_dekat_aksi_bagikan(anak):
     db, sid = anak
     markup = _tanpa_gaya(_render_anak(db, sid))
-    assert 'id="kabar-bagikan"' not in markup
-    assert '<span class="kabar-bagikan-st" aria-live="polite"></span>' in markup
-    assert "Tautan berlaku 7 hari" not in markup
+    badan = markup.split("<script>", 1)[0]
+    assert 'id="kabar-bagikan"' not in badan
+    assert '<span class="kabar-bagikan-st" aria-live="polite"></span>' in badan
+    assert "Tautan berlaku 7 hari" not in badan
 
 
 def test_halaman_lain_tidak_ikut_melebar(anak):

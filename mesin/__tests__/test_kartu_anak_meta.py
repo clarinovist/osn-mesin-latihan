@@ -55,8 +55,13 @@ def test_kartu_sesi_meta_tertutup_sebagai_div(db):
         db, _siswa_dengan_sesi(db), peran="guru", pengguna="g"
     ).decode()
     i = html.find('<div class="meta-sesi-st"')
-    potongan = html[i : html.find("</div>", i) + 6]
+    assert i >= 0, "elemen metadata sesi hilang"
+    akhir = html.find("</div>", i)
+    assert akhir >= 0, "elemen metadata sesi tidak ditutup"
+    potongan = html[i : akhir + 6]
     # Markup sehat: class + atribut time terstruktur; tidak boleh tertelan
     # atribut style rusak menjadi satu potongan raksasa.
     assert len(potongan) < 500, f"meta tertelan atribut: {potongan[:200]}"
+    assert "<time " in potongan
+    assert "Kelas 3" in potongan
     assert "Pola Bilangan" in html

@@ -131,7 +131,8 @@ def _tanggal_ringkas(nilai) -> str:
     except ValueError:
         return f'<span>{html.escape(mentah or "—")}</span>'
     label = f"{tanggal.day} {bulan[tanggal.month - 1]} {tanggal.year}"
-    return f'<time datetime="{html.escape(mentah)}">{label}</time>'
+    nilai_datetime = tanggal.strftime("%Y-%m-%d")
+    return f'<time datetime="{nilai_datetime}">{label}</time>'
 
 
 def _nama_topik_sesi(topik_id: str) -> tuple[str, str]:
@@ -200,11 +201,11 @@ def _topik_untuk_level(level: str) -> list[str]:
 
 def _badge_review_status(baris) -> str:
     direview = _ambil(baris, "direview", None)
+    selesai = _ambil(baris, "selesai", None)
     terisi = _ambil(baris, "terisi", 0)
-    n = _ambil(baris, "n", 0)
     if direview is not None:
         return '<span class="badge-direview sudah" style="background:#d4edda;color:#155724;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;font-weight:bold;">✓ Sudah Direview</span>'
-    elif terisi == n and n > 0:
+    elif selesai is not None:
         return '<span class="badge-direview perlu" style="background:#fff3cd;color:#856404;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;font-weight:bold;">⏳ Belum Direview</span>'
     elif terisi > 0:
         return '<span class="badge-direview proses" style="background:#e2e8f0;color:#2d3748;padding:0.2rem 0.45rem;border-radius:4px;font-size:0.78rem;">✏️ Sedang Dikerjakan</span>'
@@ -739,8 +740,8 @@ def halaman_anak(
         "</div>"
         "<script>(function(){var r=document.querySelectorAll('input[name=\"mode\"]');for(var i=0;i<r.length;i++){r[i].addEventListener(\"change\",function(){var t=this.closest(\"form\").querySelector(\".pengaturan-timer\");if(t)t.style.display=this.value===\"drill\"?\"\":\"none\";});}})()</script>"
         "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
-        "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil.';return false;}}"
-        "async function bagikan(t,k){k.textContent='Tautan siap dibagikan dan berlaku 7 hari.';if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});return;}catch(e){if(e.name==='AbortError')return;}}await salin(t,k);}"
+        "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin dan berlaku 7 hari.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil. Tautan berlaku 7 hari.';return false;}}"
+        "async function bagikan(t,k){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});k.textContent='Tautan dibagikan dan berlaku 7 hari.';return;}catch(e){if(e.name==='AbortError'){k.textContent='';return;}}}await salin(t,k);}"
         "for(var i=0;i<b.length;i++){b[i].addEventListener('click',async function(){var x=this,k=x.closest('.blok-bagikan-st').querySelector('.kabar-bagikan-st');if(x.dataset.tautan){await bagikan(x.dataset.tautan,k);return;}if(x.dataset.bagikanAktif==='1'&&!window.confirm('Membuat tautan baru akan menonaktifkan tautan sebelumnya. Lanjutkan?'))return;x.disabled=true;"
         "try{var r=await fetch(x.dataset.bagikanUrl,{method:'POST',headers:{'X-Requested-With':'fetch'}});"
         "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan,k);}"

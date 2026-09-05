@@ -399,6 +399,7 @@ tr.sorot-baru, div.sorot-baru {{
   display: flex; flex-wrap: wrap; align-items: center; gap: 0 {T.SP_2};
   color: {T.TEKS_SUBTLE}; font-size: .8rem; line-height: 1.5;
 }}
+.meta-sesi-st time {{ white-space: nowrap; }}
 .nomor-sesi-st {{ color: {T.TEKS_VARIAN}; }}
 .ringkasan-sesi-st {{
   margin-top: {T.SP_1}; color: {T.TEKS_JUDUL}; font-size: .9rem;

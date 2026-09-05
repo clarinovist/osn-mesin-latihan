@@ -304,9 +304,8 @@ def test_halaman_anak_memakai_ikon_share_inline_tanpa_navigasi_baru(server):
     assert 'class="material-symbols-outlined">share</span>' in isi
     assert '<span class="kabar-bagikan-st" aria-live="polite"></span>' in isi
     assert "x.closest('.blok-bagikan-st').querySelector('.kabar-bagikan-st')" in isi
-    assert (
-        "k.textContent='Tautan siap dibagikan dan berlaku 7 hari.'" in isi
-    )
+    assert "k.textContent='Tautan tersalin dan berlaku 7 hari.'" in isi
+    assert "if(e.name==='AbortError'){k.textContent='';return;}" in isi
     assert "navigator.share" in isi
     assert "navigator.clipboard.writeText" in isi
     assert "window.prompt('Salin tautan ini:'" in isi
