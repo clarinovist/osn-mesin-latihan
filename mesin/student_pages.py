@@ -25,6 +25,24 @@ from students import (
 )
 
 
+def _nama_fokus_remedial(kon, sesi_id: int) -> str:
+    """Nama tipe soal aman untuk metadata kartu murid, tanpa diagnosis/kunci."""
+    nama_khusus = {"soal_umur": "Soal tentang umur"}
+    rows = kon.execute(
+        """SELECT DISTINCT so.template_id
+           FROM sesi_soal ss JOIN soal so ON so.id = ss.soal_id
+           WHERE ss.sesi_id = ? ORDER BY ss.nomor""",
+        (sesi_id,),
+    ).fetchall()
+    return " & ".join(
+        nama_khusus.get(
+            str(r["template_id"]),
+            str(r["template_id"]).replace("_", " ").capitalize(),
+        )
+        for r in rows
+    )
+
+
 def _badan_teks(teks: str) -> str:
     """Pecah teks soal: baris terakhir = pertanyaan (ditonjolkan), sisanya
     badan soal. Aturan yang sama dengan render._badan_soal untuk teks biasa.
@@ -629,7 +647,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
     _IKON_SESI = ["quiz", "calculate", "schedule", "extension"]
 
     baris = kon.execute(
-        """SELECT id, tanggal, level, topik, mode,
+        """SELECT id, tanggal, level, topik, mode, jenis,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
                   s.selesai, s.direview,
                   (SELECT COUNT(*) FROM sesi_soal ss
@@ -674,7 +692,13 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
         )
 
         # Badge mode (terpisah, di baris meta)
-        if b["mode"] == "drill":
+        if b["jenis"] == "remedial":
+            fokus = _nama_fokus_remedial(kon, int(b["id"]))
+            mode_label = (
+                '<span class="st-badge latihan">Remedial</span>'
+                f'<span>Fokus {_escape(fokus)}</span>'
+            )
+        elif b["mode"] == "drill":
             mode_label = '<span class="st-badge latihan">Latihan Cepat</span>'
         else:
             mode_label = '<span class="st-badge diagnostik">Diagnostik</span>'
@@ -1220,7 +1244,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
     _WARNA_ICON = ["#0FA3A3", "#FF6B5B", "#FFB020", "#8B5CF6"]
 
     baris = kon.execute(
-        """SELECT id, tanggal, level, topik, mode,
+        """SELECT id, tanggal, level, topik, mode, jenis,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
                   s.selesai, s.direview,
                   (SELECT COUNT(*) FROM sesi_soal ss
@@ -1256,10 +1280,15 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
             )
         # Tag "latihan" untuk sesi Latihan Cepat (drill) — biar anak tahu
         # sesi ini bukan diagnosa penuh.
-        tag_latihan = (
-            '<span class="badge-latihan">latihan</span>'
-            if b["mode"] == "drill" else ""
-        )
+        tag_latihan = ""
+        if b["jenis"] == "remedial":
+            fokus = _nama_fokus_remedial(kon, int(b["id"]))
+            tag_latihan = (
+                '<span class="badge-latihan">Remedial</span> '
+                f'<span>Fokus {_escape(fokus)}</span>'
+            )
+        elif b["mode"] == "drill":
+            tag_latihan = '<span class="badge-latihan">latihan</span>'
         kartu.append(
             f'<a class="kartu-sesi" href="/murid/kerjakan/{b["id"]}">'
             f'<span class="ikon-sesi" style="background:{warna}"></span>'

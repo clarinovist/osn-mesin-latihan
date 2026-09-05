@@ -843,6 +843,30 @@ tr.sorot-baru, div.sorot-baru {{
   font-family: {T.FONT_HEADLINE}; font-weight: 600; font-size: .82rem;
   color: {T.TEKS_VARIAN};
 }}
+.remedial-st {{
+  margin-top: {T.SP_5}; padding: {T.SP_4}; background: {T.LATAR_KARTU};
+  border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KARTU};
+}}
+.remedial-st > h2 {{ margin: 0 0 {T.SP_2}; font-family: {T.FONT_HEADLINE}; }}
+.remedial-st > .strip-sesi {{ margin-top: {T.SP_3}; }}
+.daftar-remedial-st {{ display: grid; gap: {T.SP_2}; }}
+.pilihan-remedial-st {{
+  display: flex; gap: {T.SP_3}; align-items: flex-start; padding: {T.SP_3};
+  min-height: {T.TARGET_SENTUH}; cursor: pointer; background: {T.LATAR_KARTU};
+  border: 1.5px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG};
+}}
+.pilihan-remedial-st:has(input:checked) {{
+  border-color: {T.AKSEN_MURID_UTAMA}; background: {T.LATAR_KARTU_SEKUNDER};
+}}
+.pilihan-remedial-st input {{
+  flex: none; width: 1.25rem; height: 1.25rem; margin-top: .15rem;
+  accent-color: {T.AKSEN_MURID_UTAMA};
+}}
+.isi-pilihan-remedial-st {{ display: flex; flex-direction: column; gap: {T.SP_1}; min-width: 0; }}
+.meta-remedial-st, .alasan-remedial-st, .batas-remedial-st {{
+  color: {T.TEKS_VARIAN}; font-size: .82rem; line-height: 1.45;
+}}
+.batas-remedial-st {{ margin: 0; }}
 
 /* Card radio mode (Diagnosa / Latihan Cepat) — bukan radio kecil. */
 .mode-pilih {{ display: flex; flex-direction: column; gap: {T.SP_2}; }}

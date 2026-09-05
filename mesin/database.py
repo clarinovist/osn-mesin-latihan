@@ -347,6 +347,8 @@ def buat_sesi_dari_urutan(
     topik: str | Any = TOPIK_BAWAAN,
     level: str = LEVEL_BAWAAN,
     mode: str = "diagnostik",
+    jenis: str = "biasa",
+    sumber_sesi_id: int | None = None,
 ) -> int:
     """Sesi dengan komposisi soal DITENTUKAN pemanggil, bukan dari paket.
 
@@ -359,13 +361,18 @@ def buat_sesi_dari_urutan(
     ke kolom `sesi.topik` adalah id-nya, supaya `topics.dari_sesi` bisa
     merekonstruksi paket yang sama saat lembar dicetak ulang.
     """
+    if jenis not in ("biasa", "remedial"):
+        raise ValueError(f"jenis sesi tidak dikenal: {jenis!r}")
+    if jenis == "biasa" and sumber_sesi_id is not None:
+        raise ValueError("sesi biasa tidak boleh memiliki sumber remedial")
     lembar = buat_lembar(seed, urutan=urutan, level=level, topik=topik)
     topik_id = getattr(topik, "id", topik)
     cur = kon.execute(
         """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
-                             timer_mode, durasi_menit, timer_auto)
-           VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0)""",
-        (siswa_id, seed, topik_id, lembar.level, mode),
+                             timer_mode, durasi_menit, timer_auto,
+                             jenis, sumber_sesi_id)
+           VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0, ?, ?)""",
+        (siswa_id, seed, topik_id, lembar.level, mode, jenis, sumber_sesi_id),
     )
     sesi_id = int(cur.lastrowid)
     for nomor, soal in enumerate(lembar.soal, start=1):
@@ -420,6 +427,95 @@ def buat_sesi_gabungan(
             (sesi_id, soal_id, nomor),
         )
     return sesi_id
+
+
+def _baris_sasaran_remedial(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    sesi_id: int | None = None,
+) -> list[sqlite3.Row]:
+    """Bukti diagnosis sah, terbaru lebih dulu per template."""
+    syarat_sesi = " AND se.id = ?" if sesi_id is not None else ""
+    parameter: tuple[int, ...] = (
+        (siswa_id, sesi_id) if sesi_id is not None else (siswa_id,)
+    )
+    return kon.execute(
+        """SELECT s.template_id,
+                  se.id AS sesi_id,
+                  se.tanggal,
+                  ss.nomor,
+                  d.benar,
+                  IFNULL(d.kode_final, d.kode_usulan) AS kode,
+                  d.alasan
+           FROM diagnosis d
+           JOIN jawaban j    ON j.id = d.jawaban_id
+           JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
+           JOIN sesi se      ON se.id = ss.sesi_id
+           JOIN soal s       ON s.id = ss.soal_id
+           WHERE se.siswa_id = ?
+             AND se.selesai IS NOT NULL
+             AND se.direview IS NOT NULL"""
+        + syarat_sesi
+        + " ORDER BY se.tanggal DESC, se.id DESC, ss.nomor DESC",
+        parameter,
+    ).fetchall()
+
+
+def _susun_sasaran(baris: list[sqlite3.Row]) -> list[dict[str, Any]]:
+    """Ringkas bukti per template; hanya kesalahan terbaru non-T yang aktif."""
+    from topics import pemilik_template
+
+    jumlah_salah: dict[str, int] = {}
+    for bukti in baris:
+        kode = bukti["kode"]
+        if not bukti["benar"] and kode != "T":
+            template_id = bukti["template_id"]
+            jumlah_salah[template_id] = jumlah_salah.get(template_id, 0) + 1
+
+    terbaru: dict[str, sqlite3.Row] = {}
+    for bukti in baris:
+        terbaru.setdefault(bukti["template_id"], bukti)
+
+    hasil: list[dict[str, Any]] = []
+    for template_id, bukti in terbaru.items():
+        kode = bukti["kode"]
+        if bukti["benar"] or kode == "T":
+            continue
+        hasil.append(
+            {
+                "template_id": template_id,
+                "topik": pemilik_template(template_id),
+                "kode": kode,
+                "alasan": bukti["alasan"],
+                "kali_salah": jumlah_salah[template_id],
+                "sesi_terakhir": int(bukti["sesi_id"]),
+                "tanggal_terakhir": bukti["tanggal"],
+                "direkomendasikan": kode == "K",
+            }
+        )
+    return hasil
+
+
+def sasaran_remedial_anak(
+    kon: sqlite3.Connection, siswa_id: int
+) -> list[dict[str, Any]]:
+    """Kandidat remedial aktif dari seluruh hasil yang sudah direview guru."""
+    return _susun_sasaran(_baris_sasaran_remedial(kon, siswa_id))
+
+
+def sasaran_remedial_sesi(
+    kon: sqlite3.Connection, siswa_id: int, sesi_id: int
+) -> list[dict[str, Any]]:
+    """Kandidat remedial dari satu sesi sah milik anak tersebut."""
+    sumber = kon.execute(
+        """SELECT 1 FROM sesi
+           WHERE id = ? AND siswa_id = ?
+             AND selesai IS NOT NULL AND direview IS NOT NULL""",
+        (sesi_id, siswa_id),
+    ).fetchone()
+    if sumber is None:
+        return []
+    return _susun_sasaran(_baris_sasaran_remedial(kon, siswa_id, sesi_id))
 
 
 def sasaran_remedial(
@@ -491,6 +587,8 @@ def buat_sesi_remedial(
     level: str = LEVEL_BAWAAN,
     topik: str | None = None,
     jumlah_soal: int = 10,
+    template_ids: list[str] | None = None,
+    sumber_sesi_id: int | None = None,
 ) -> int | None:
     """Sesi latihan ulang berisi HANYA konsep yang pernah dijawab salah.
 
@@ -513,7 +611,40 @@ def buat_sesi_remedial(
     None kalau tidak ada sasaran (anak belum punya kesalahan tercatat) —
     lebih jujur daripada membuat sesi acak dan menyebutnya remedial.
     """
-    sasaran = sasaran_remedial(kon, siswa_id)
+    if not isinstance(jumlah_soal, int) or not 1 <= jumlah_soal <= 50:
+        raise ValueError("jumlah_soal harus antara 1 dan 50")
+
+    if sumber_sesi_id is None:
+        kandidat = sasaran_remedial_anak(kon, siswa_id)
+        kandidat_ids = [b["template_id"] for b in kandidat]
+    else:
+        sumber = kon.execute(
+            """SELECT 1 FROM sesi
+               WHERE id = ? AND siswa_id = ?
+                 AND selesai IS NOT NULL AND direview IS NOT NULL""",
+            (sumber_sesi_id, siswa_id),
+        ).fetchone()
+        if sumber is None:
+            raise ValueError("sumber sesi remedial tidak sah")
+        kandidat_ids = [
+            b["template_id"]
+            for b in sasaran_remedial_sesi(kon, siswa_id, sumber_sesi_id)
+        ]
+
+    if template_ids is None:
+        sasaran = kandidat_ids[:6]
+    else:
+        if not template_ids:
+            raise ValueError("pilihan template kosong")
+        if len(template_ids) != len(set(template_ids)):
+            raise ValueError("pilihan template duplikat")
+        if len(template_ids) > 3:
+            raise ValueError("pilihan template maksimal 3")
+        bukan_kandidat = set(template_ids) - set(kandidat_ids)
+        if bukan_kandidat:
+            raise ValueError("template bukan kandidat remedial")
+        sasaran = list(template_ids)
+
     if not sasaran:
         return None
     if topik is None:
@@ -555,6 +686,7 @@ def buat_sesi_remedial(
         kon, siswa_id, seed,
         urutan=tuple(urutan[:jumlah_soal]),
         level=level, topik=paket,
+        jenis="remedial", sumber_sesi_id=sumber_sesi_id,
     )
 
 

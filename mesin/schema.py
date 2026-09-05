@@ -102,6 +102,11 @@ CREATE TABLE IF NOT EXISTS sesi (
     selesai   TEXT,
     -- diisi saat guru membuka halaman sesi yang sudah terisi penuh — penanda "guru sudah melihat hasilnya"
     direview  TEXT,
+    jenis     TEXT    NOT NULL DEFAULT 'biasa'
+        CHECK (jenis IN ('biasa', 'remedial')),
+    -- Sesi hasil latihan ulang boleh menunjuk sesi yang menjadi sumbernya.
+    -- Jika sumber dihapus, sesi remedial tetap dipertahankan sebagai riwayat.
+    sumber_sesi_id INTEGER REFERENCES sesi(id) ON DELETE SET NULL,
     catatan   TEXT    NOT NULL DEFAULT '',
     dibuat    TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
 );
@@ -235,6 +240,10 @@ MIGRASI: list[tuple[str, str, str]] = [
     # Penanda guru sudah melihat hasil sesi — pelengkap `selesai` untuk
     # badge status di daftar sesi anak (student_pages.halaman_daftar_sesi).
     ("sesi", "direview", "ALTER TABLE sesi ADD COLUMN direview TEXT"),
+    # Metadata latihan ulang. SQLite mengizinkan REFERENCES pada ADD COLUMN
+    # selama nilai bawaan NULL; SET NULL menjaga sesi remedial saat sumber dihapus.
+    ("sesi", "jenis", "ALTER TABLE sesi ADD COLUMN jenis TEXT NOT NULL DEFAULT 'biasa'"),
+    ("sesi", "sumber_sesi_id", "ALTER TABLE sesi ADD COLUMN sumber_sesi_id INTEGER REFERENCES sesi(id) ON DELETE SET NULL"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.

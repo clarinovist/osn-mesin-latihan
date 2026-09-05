@@ -41,6 +41,7 @@ from teacher_pages import (
     _halaman,
     _soal_dari_baris,
     _topik_untuk_level,
+    _nama_template,
     buat_sesi_seed_baru,
     halaman_konfirmasi_hapus,
     halaman_anak,
@@ -1355,15 +1356,25 @@ class Penangan(BaseHTTPRequestHandler):
                 self.rfile.read(panjang).decode("utf-8"),
                 keep_blank_values=True,
             )
+            jumlah_valid = True
             try:
                 jumlah = int((data.get("jumlah_soal") or ["10"])[0] or 10)
             except ValueError:
-                jumlah = 10
+                jumlah = 0
+                jumlah_valid = False
             if not 1 <= jumlah <= 50:
-                jumlah = 10
+                jumlah_valid = False
+
+            template_ids = [nilai for nilai in data.get("template_id", []) if nilai]
+            sumber_mentah = (data.get("sumber_sesi_id") or [""])[0]
+            try:
+                sumber_sesi_id = int(sumber_mentah) if sumber_mentah else None
+            except ValueError:
+                sumber_sesi_id = -1
 
             sesi_id = None
             nama_siswa = None
+            pesan_gagal = ""
             with database.buka() as kon:
                 if not self._bisa_lihat_siswa(kon, siswa_id):
                     return self._kirim(
@@ -1373,12 +1384,43 @@ class Penangan(BaseHTTPRequestHandler):
                     "SELECT nama, tingkat FROM siswa WHERE id = ?", (siswa_id,)
                 ).fetchone()
                 nama_siswa = baris["nama"] if baris else ""
-                sesi_id = database.buat_sesi_remedial(
-                    kon, siswa_id,
-                    level=(baris["tingkat"] if baris else LEVEL_BAWAAN),
-                    jumlah_soal=jumlah,
-                )
-            if sesi_id is None:
+                if (
+                    sumber_sesi_id is not None
+                    and not database.sasaran_remedial_sesi(
+                        kon, siswa_id, sumber_sesi_id
+                    )
+                ):
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
+                if not jumlah_valid:
+                    pesan_gagal = "Jumlah soal harus antara 1 dan 50."
+                else:
+                    try:
+                        sesi_id = database.buat_sesi_remedial(
+                            kon, siswa_id,
+                            level=(baris["tingkat"] if baris else LEVEL_BAWAAN),
+                            jumlah_soal=jumlah,
+                            template_ids=template_ids,
+                            sumber_sesi_id=sumber_sesi_id,
+                        )
+                    except ValueError as galat:
+                        detail = str(galat)
+                        if "bukan kandidat" in detail:
+                            pesan_gagal = "Pilihan itu bukan pilihan remedial yang tersedia."
+                        elif "kosong" in detail:
+                            pesan_gagal = "Pilih setidaknya satu tipe soal untuk remedial."
+                        elif "maksimal 3" in detail:
+                            pesan_gagal = "Pilih maksimal 3 tipe soal untuk satu remedial."
+                        elif "sumber" in detail:
+                            pesan_gagal = "Sesi sumber remedial tidak tersedia."
+                        elif "jumlah_soal" in detail:
+                            pesan_gagal = "Jumlah soal harus antara 1 dan 50."
+                        else:
+                            pesan_gagal = "Remedial belum dapat dibuat. Periksa pilihannya."
+            if pesan_gagal:
+                qs = urllib.parse.urlencode({"pesan": pesan_gagal})
+            elif sesi_id is None:
                 # Tidak ada kesalahan tercatat: katakan apa adanya, jangan
                 # membuat sesi acak lalu menyebutnya latihan ulang.
                 qs = urllib.parse.urlencode({
@@ -1386,10 +1428,12 @@ class Penangan(BaseHTTPRequestHandler):
                              "ulang — buat sesi biasa dulu, ya.",
                 })
             else:
+                fokus = " & ".join(
+                    _nama_template(template_id) for template_id in template_ids
+                )
                 qs = urllib.parse.urlencode({
-                    "pesan": f"Latihan ulang untuk {nama_siswa} dibuat — "
-                             f"sesi #{sesi_id}, {jumlah} soal dari konsep "
-                             "yang pernah salah.",
+                    "pesan": f"Remedial {fokus} dibuat — {jumlah} soal baru "
+                             f"untuk {nama_siswa} (sesi #{sesi_id}).",
                     "sorot": sesi_id,
                 })
             self.send_response(303)

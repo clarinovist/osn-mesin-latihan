@@ -17,6 +17,7 @@ Kontrak yang dikunci:
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -25,6 +26,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
+import topics  # noqa: E402
 from http_test_kit import SANDI_GURU, ServerUji  # noqa: E402
 
 
@@ -57,10 +59,146 @@ def _sesi_dengan_kesalahan(kon, nama="AnakRemedial"):
                                 jawaban="999999", cara="hitung")
     reports.diagnosa_murid(kon, sesi_id)
     database.tandai_selesai(kon, sesi_id)
+    kon.execute(
+        "UPDATE sesi SET direview = datetime('now', '+7 hours') WHERE id = ?",
+        (sesi_id,),
+    )
     return sid, sesi_id
 
 
+def _catat_hasil(
+    kon,
+    siswa_id,
+    template_id,
+    *,
+    kode="K",
+    benar=False,
+    tanggal="2026-09-01",
+    selesai=True,
+    direview=True,
+    alasan="Perlu memahami konsep ini lagi",
+    topik=None,
+):
+    """Buat satu sesi satu-soal dengan diagnosis terkontrol."""
+    paket = topics.paket_untuk_template([template_id])
+    level = next(iter(paket.komposisi))
+    sesi_id = database.buat_sesi_dari_urutan(
+        kon,
+        siswa_id,
+        seed=10_000 + kon.execute("SELECT COUNT(*) FROM sesi").fetchone()[0],
+        urutan=(template_id,),
+        topik=(topik or paket),
+        level=level,
+    )
+    butir = database.isi_sesi(kon, sesi_id)[0]
+    jawaban_id = database.simpan_jawaban(
+        kon,
+        butir["sesi_soal_id"],
+        jawaban=butir["kunci"] if benar else "999999",
+        cara="hitung",
+    )
+    database.simpan_diagnosis(
+        kon,
+        jawaban_id,
+        benar=benar,
+        kode_usulan=None if benar else kode,
+        kode_final=None if benar else kode,
+        alasan="" if benar else alasan,
+    )
+    kon.execute(
+        "UPDATE sesi SET tanggal = ?, selesai = ?, direview = ? WHERE id = ?",
+        (
+            tanggal,
+            "2026-09-01 10:00:00" if selesai else None,
+            "2026-09-01 11:00:00" if direview else None,
+            sesi_id,
+        ),
+    )
+    return sesi_id
+
+
 # ── 1. Sasaran remedial dari data nyata ───────────────────────────────
+
+
+def test_sasaran_anak_terstruktur_dan_k_hanya_yang_direkomendasikan(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakProfil", pemilik="guru")
+        sesi_k = _catat_hasil(
+            kon, sid, "soal_umur", kode="K", tanggal="2026-09-02",
+            alasan="Belum memahami hubungan umur",
+        )
+        _catat_hasil(
+            kon, sid, "soal_uang", kode="H", tanggal="2026-09-03",
+            alasan="Perhitungannya belum teliti",
+        )
+        _catat_hasil(kon, sid, "jumlah_selisih", kode="T")
+        sasaran = database.sasaran_remedial_anak(kon, sid)
+
+    per_id = {b["template_id"]: b for b in sasaran}
+    assert set(per_id) == {"soal_umur", "soal_uang"}
+    assert per_id["soal_umur"] == {
+        "template_id": "soal_umur",
+        "topik": "logika",
+        "kode": "K",
+        "alasan": "Belum memahami hubungan umur",
+        "kali_salah": 1,
+        "sesi_terakhir": sesi_k,
+        "tanggal_terakhir": "2026-09-02",
+        "direkomendasikan": True,
+    }
+    assert per_id["soal_uang"]["kode"] == "H"
+    assert per_id["soal_uang"]["direkomendasikan"] is False
+
+
+def test_sasaran_anak_hanya_sesi_selesai_dan_direview(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakBelumSah", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", selesai=False, direview=False)
+        _catat_hasil(kon, sid, "soal_uang", selesai=True, direview=False)
+        assert database.sasaran_remedial_anak(kon, sid) == []
+
+
+def test_bukti_terbaru_benar_menutup_kesalahan_lama(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakSudahBenar", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", tanggal="2026-09-01")
+        _catat_hasil(
+            kon, sid, "soal_umur", benar=True, tanggal="2026-09-04"
+        )
+        assert database.sasaran_remedial_anak(kon, sid) == []
+
+
+def test_sasaran_sesi_hanya_kesalahan_non_t_dari_sesi_itu(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakSatuSesi", pemilik="guru")
+        sumber = _catat_hasil(kon, sid, "soal_umur", kode="K")
+        _catat_hasil(kon, sid, "soal_uang", kode="H")
+        sasaran = database.sasaran_remedial_sesi(kon, sid, sumber)
+
+    assert [b["template_id"] for b in sasaran] == ["soal_umur"]
+    assert sasaran[0]["direkomendasikan"] is True
+    assert sasaran[0]["sesi_terakhir"] == sumber
+
+
+def test_sasaran_sesi_non_k_tampil_tapi_tidak_direkomendasikan(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakKodeLain", pemilik="guru")
+        sumber = _catat_hasil(kon, sid, "soal_uang", kode="B")
+        sasaran = database.sasaran_remedial_sesi(kon, sid, sumber)
+    assert sasaran[0]["kode"] == "B"
+    assert sasaran[0]["direkomendasikan"] is False
+
+
+def test_sasaran_sesi_menolak_lintas_anak_dan_belum_direview(db):
+    with database.buka(db) as kon:
+        a = database.tambah_siswa(kon, "AnakSumberA", pemilik="guru")
+        b = database.tambah_siswa(kon, "AnakSumberB", pemilik="guru")
+        sumber_a = _catat_hasil(kon, a, "soal_umur")
+        belum_review = _catat_hasil(
+            kon, b, "soal_uang", selesai=True, direview=False
+        )
+        assert database.sasaran_remedial_sesi(kon, b, sumber_a) == []
+        assert database.sasaran_remedial_sesi(kon, b, belum_review) == []
 
 
 def test_sasaran_remedial_hanya_template_yang_salah(db):
@@ -98,6 +236,151 @@ def test_sasaran_remedial_terpisah_per_anak(db):
 
 
 # ── 2. Sesi remedial: template sama, SOAL BARU ────────────────────────
+
+
+def test_buat_sesi_dari_urutan_menolak_jenis_asing(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Anak Jenis", pemilik="guru")
+        with pytest.raises(ValueError, match="jenis sesi"):
+            database.buat_sesi_dari_urutan(
+                kon,
+                sid,
+                seed=45,
+                urutan=("soal_umur",),
+                topik=topics.paket_untuk_template(["soal_umur"]),
+                level="P3",
+                jenis="asing",
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            kon.execute(
+                "INSERT INTO sesi (siswa_id, seed, jenis) VALUES (?, ?, ?)",
+                (sid, 46, "asing"),
+            )
+
+
+def test_remedial_satu_template_mengisi_seluruh_sesi_dan_metadata(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakFokus", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", kode="K")
+        rem = database.buat_sesi_remedial(
+            kon,
+            sid,
+            template_ids=["soal_umur"],
+            seed=99,
+            jumlah_soal=10,
+        )
+        isi = database.isi_sesi(kon, rem)
+        metadata = kon.execute(
+            "SELECT jenis, sumber_sesi_id FROM sesi WHERE id = ?", (rem,)
+        ).fetchone()
+    assert [b["template_id"] for b in isi] == ["soal_umur"] * 10
+    assert dict(metadata) == {"jenis": "remedial", "sumber_sesi_id": None}
+
+
+def test_remedial_multi_template_round_robin_tanpa_template_lain(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakMulti", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", kode="K")
+        _catat_hasil(kon, sid, "soal_uang", kode="H")
+        rem = database.buat_sesi_remedial(
+            kon,
+            sid,
+            template_ids=["soal_umur", "soal_uang"],
+            seed=101,
+            jumlah_soal=5,
+        )
+        ids = [b["template_id"] for b in database.isi_sesi(kon, rem)]
+    assert set(ids) == {"soal_umur", "soal_uang"}
+    assert sorted(ids.count(t) for t in set(ids)) == [2, 3]
+
+
+@pytest.mark.parametrize(
+    "template_ids, jumlah_soal, pesan",
+    [
+        ([], 10, "kosong"),
+        (["soal_umur", "soal_umur"], 10, "duplikat"),
+        (["soal_umur", "soal_uang", "jumlah_selisih", "tabel_penalaran"], 10,
+         "maksimal 3"),
+        (["soal_umur"], 0, "jumlah_soal"),
+        (["soal_umur"], 51, "jumlah_soal"),
+    ],
+)
+def test_remedial_menolak_boundary_tanpa_membuat_sesi(
+    db, template_ids, jumlah_soal, pesan
+):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakBoundary", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", kode="K")
+        sebelum = kon.execute(
+            "SELECT COUNT(*) FROM sesi WHERE siswa_id = ?", (sid,)
+        ).fetchone()[0]
+        with pytest.raises(ValueError, match=pesan):
+            database.buat_sesi_remedial(
+                kon,
+                sid,
+                template_ids=template_ids,
+                seed=1,
+                jumlah_soal=jumlah_soal,
+            )
+        sesudah = kon.execute(
+            "SELECT COUNT(*) FROM sesi WHERE siswa_id = ?", (sid,)
+        ).fetchone()[0]
+    assert sesudah == sebelum
+
+
+def test_remedial_menolak_template_bukan_kandidat(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakAsing", pemilik="guru")
+        _catat_hasil(kon, sid, "soal_umur", kode="K")
+        with pytest.raises(ValueError, match="bukan kandidat"):
+            database.buat_sesi_remedial(
+                kon, sid, template_ids=["soal_uang"], seed=2
+            )
+
+
+def test_remedial_sumber_menyimpan_id_dan_membatasi_kandidat(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "AnakSumber", pemilik="guru")
+        sumber = _catat_hasil(kon, sid, "soal_umur", kode="K")
+        _catat_hasil(kon, sid, "soal_uang", kode="K")
+        rem = database.buat_sesi_remedial(
+            kon,
+            sid,
+            template_ids=["soal_umur"],
+            sumber_sesi_id=sumber,
+            seed=3,
+        )
+        metadata = kon.execute(
+            "SELECT jenis, sumber_sesi_id FROM sesi WHERE id = ?", (rem,)
+        ).fetchone()
+        with pytest.raises(ValueError, match="bukan kandidat"):
+            database.buat_sesi_remedial(
+                kon,
+                sid,
+                template_ids=["soal_uang"],
+                sumber_sesi_id=sumber,
+                seed=4,
+            )
+    assert dict(metadata) == {"jenis": "remedial", "sumber_sesi_id": sumber}
+
+
+def test_remedial_menolak_sumber_lintas_anak_dan_belum_direview(db):
+    with database.buka(db) as kon:
+        a = database.tambah_siswa(kon, "AnakAmanA", pemilik="guru")
+        b = database.tambah_siswa(kon, "AnakAmanB", pemilik="guru")
+        sumber_a = _catat_hasil(kon, a, "soal_umur", kode="K")
+        belum_review = _catat_hasil(
+            kon, b, "soal_umur", kode="K", direview=False
+        )
+        for sumber in (sumber_a, belum_review):
+            with pytest.raises(ValueError, match="sumber"):
+                database.buat_sesi_remedial(
+                    kon,
+                    b,
+                    template_ids=["soal_umur"],
+                    sumber_sesi_id=sumber,
+                    seed=5,
+                )
 
 
 def test_sesi_remedial_hanya_berisi_template_yang_salah(db):
@@ -177,15 +460,16 @@ def test_http_buat_latihan_ulang(server):
     sid = _anak_dengan_kesalahan(server, "AnakHttpR")
     with server.buka() as kon:
         sasaran = set(database.sasaran_remedial(kon, sid))
+        fokus = next(iter(sasaran))
         sebelum = kon.execute(
             "SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (sid,)
         ).fetchone()["n"]
     kode, isi, _ = server.minta(
         f"/sesi-remedial/{sid}", auth=("guru", SANDI_GURU),
-        data={"jumlah_soal": "10"},
+        data={"template_id": fokus, "jumlah_soal": "10"},
     )
     assert kode == 200                       # 303 diikuti ke /anak/<id>
-    assert "Latihan ulang untuk" in isi
+    assert "Remedial" in isi
     with server.buka() as kon:
         sesudah = kon.execute(
             "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC", (sid,)
@@ -203,7 +487,7 @@ def test_http_latihan_ulang_tanpa_dasar_tidak_membuat_sesi(server):
         f"/sesi-remedial/{sid}", auth=("guru", SANDI_GURU), data={}
     )
     assert kode == 200
-    assert "Belum ada kesalahan tercatat" in isi
+    assert "Pilih setidaknya satu tipe soal" in isi
     with server.buka() as kon:
         n = kon.execute(
             "SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (sid,)
@@ -260,6 +544,10 @@ def _sesi_salah_topik(kon, nama, topik, level, jumlah=4):
                                 jawaban="999999", cara="hitung")
     reports.diagnosa_murid(kon, sesi_id)
     database.tandai_selesai(kon, sesi_id)
+    kon.execute(
+        "UPDATE sesi SET direview = datetime('now', '+7 hours') WHERE id = ?",
+        (sesi_id,),
+    )
     return sid, sesi_id
 
 
@@ -292,8 +580,14 @@ def test_remedial_lintas_dua_topik_sekaligus(db):
                                     jawaban="999999", cara="hitung")
         reports.diagnosa_murid(kon, sesi2)
         database.tandai_selesai(kon, sesi2)
+        kon.execute(
+            "UPDATE sesi SET direview = datetime('now', '+7 hours') WHERE id = ?",
+            (sesi2,),
+        )
 
-        sasaran = set(database.sasaran_remedial(kon, sid))
+        sasaran = {
+            b["template_id"] for b in database.sasaran_remedial_anak(kon, sid)
+        }
         rem = database.buat_sesi_remedial(
             kon, sid, seed=555, level="P5", jumlah_soal=8
         )
@@ -341,12 +635,13 @@ def test_http_remedial_lintas_topik_tidak_500(server):
     """Jalur HTTP penuh — inilah yang di produksi menjadi 502."""
     with server.buka() as kon:
         sid, _ = _sesi_salah_topik(kon, "AnakHttpLintas", "logika", "P5")
+        fokus = database.sasaran_remedial(kon, sid)[0]
     kode, isi, _ = server.minta(
         f"/sesi-remedial/{sid}", auth=("guru", SANDI_GURU),
-        data={"jumlah_soal": "10"},
+        data={"template_id": fokus, "jumlah_soal": "10"},
     )
     assert kode == 200, f"rute remedial gagal (kode {kode})"
-    assert "Latihan ulang untuk" in isi
+    assert "Remedial" in isi
     with server.buka() as kon:
         terakhir = kon.execute(
             "SELECT id FROM sesi WHERE siswa_id = ? ORDER BY id DESC", (sid,)

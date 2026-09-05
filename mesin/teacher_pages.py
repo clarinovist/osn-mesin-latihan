@@ -42,12 +42,81 @@ KODE_PILIHAN = [
 NAMA_TEMPLATE = {
     "median_modus": "Median & modus",
     "diagram_batang_garis": "Diagram batang & garis",
+    "soal_umur": "Soal tentang umur",
+}
+
+
+LABEL_KODE_REMEDIAL = {
+    "K": "Salah konsep",
+    "B": "Salah memahami soal",
+    "H": "Salah hitung",
+    "E": "Salah menyalin jawaban",
+    "N": "Menebak atau belum menunjukkan cara",
 }
 
 
 def _nama_template(template_id: str) -> str:
     """Nama template yang mudah dipindai; ID internal tetap tidak berubah."""
     return NAMA_TEMPLATE.get(template_id, template_id.replace("_", " ").capitalize())
+
+
+def _form_remedial(
+    sasaran,
+    siswa_id: int,
+    *,
+    judul: str,
+    penjelasan: str,
+    sumber_sesi_id: int | None = None,
+) -> str:
+    """Form pilihan remedial bersama untuk profil anak dan hasil satu sesi."""
+    if not sasaran:
+        return ""
+    pilihan = []
+    sudah_dipilih = False
+    for kandidat in sasaran:
+        template_id = str(kandidat["template_id"])
+        kode = str(kandidat["kode"] or "")
+        direkomendasikan = bool(kandidat["direkomendasikan"])
+        checked = direkomendasikan and not sudah_dipilih
+        sudah_dipilih = sudah_dipilih or checked
+        nama_topik, _ = _nama_topik_sesi(str(kandidat["topik"] or ""))
+        label_kode = LABEL_KODE_REMEDIAL.get(kode, "Perlu diperhatikan")
+        alasan = str(kandidat["alasan"] or "Perlu latihan dengan contoh baru.")
+        meta = (
+            f'{html.escape(label_kode)} · salah {int(kandidat["kali_salah"])} kali · '
+            f'sesi #{int(kandidat["sesi_terakhir"])} pada '
+            f'{html.escape(str(kandidat["tanggal_terakhir"]))}'
+        )
+        pilihan.append(
+            '<label class="pilihan-remedial-st">'
+            f'<input type="checkbox" name="template_id" value="{html.escape(template_id)}"'
+            f'{" checked" if checked else ""}>'
+            '<span class="isi-pilihan-remedial-st">'
+            f'<b>{html.escape(_nama_template(template_id))}</b>'
+            f'<span class="meta-remedial-st">{html.escape(nama_topik)} · {meta}</span>'
+            f'<span class="alasan-remedial-st">{html.escape(alasan)}</span>'
+            '</span></label>'
+        )
+    sumber = (
+        f'<input type="hidden" name="sumber_sesi_id" value="{sumber_sesi_id}">'
+        if sumber_sesi_id is not None else ""
+    )
+    return (
+        f'<section class="remedial-st"><h2>{html.escape(judul)}</h2>'
+        f'<p class="sub">{html.escape(penjelasan)}</p>'
+        f'<form method="post" action="/sesi-remedial/{siswa_id}" class="strip-sesi">'
+        f'{sumber}<div class="daftar-remedial-st">{"".join(pilihan)}</div>'
+        '<p class="batas-remedial-st">Pilih maksimal 3 tipe soal.</p>'
+        '<div class="strip-kolom"><label>Jumlah Soal</label>'
+        '<select name="jumlah_soal" class="st-input">'
+        '<option value="10" selected>10 soal (± 30 mnt)</option>'
+        '<option value="15">15 soal (± 45 mnt)</option>'
+        '<option value="20">20 soal (± 60 mnt)</option>'
+        '</select></div>'
+        '<button type="submit" class="st-tombol-coral">'
+        '<span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>'
+        'Buat latihan ulang terarah</button></form></section>'
+    )
 
 
 def _halaman(
@@ -463,6 +532,7 @@ def halaman_anak(
     )
     sesi = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                  s.jenis, s.sumber_sesi_id,
                   s.mulai, s.selesai, s.direview,
                   (SELECT MIN(j.dicatat) FROM sesi_soal ss
                    JOIN jawaban j ON j.sesi_soal_id = ss.id
@@ -524,12 +594,29 @@ def halaman_anak(
         ringkasan = (
             f'<div class="ringkasan-sesi-st">{angka}</div>' if angka else ""
         )
+        identitas_remedial = ""
+        if _ambil(r, "jenis", "biasa") == "remedial":
+            fokus_ids = [
+                b["template_id"] for b in database.isi_sesi(kon, int(r["id"]))
+            ]
+            fokus_unik = list(dict.fromkeys(fokus_ids))
+            fokus = " & ".join(_nama_template(t) for t in fokus_unik)
+            asal = (
+                f' · dari sesi #{int(r["sumber_sesi_id"])}'
+                if _ambil(r, "sumber_sesi_id", None) else ""
+            )
+            identitas_remedial = (
+                '<div class="rincian-topik-st"><span class="st-badge latihan">'
+                'Remedial</span> '
+                f'Fokus {html.escape(fokus)}{asal}</div>'
+            )
         return (
             f'<article class="st-kartu-baris kartu-sesi-guru {kelas}">'
             '<div class="isi-kartu-sesi-st">'
             f'<a class="judul-sesi-st" href="/sesi/{r["id"]}">'
             f'{html.escape(judul_topik)}</a>'
             f"{rincian}"
+            f"{identitas_remedial}"
             '<div class="meta-sesi-st">'
             f'{_tanggal_ringkas(r["tanggal"])}<span aria-hidden="true">&middot;</span>'
             f'<span>{html.escape(label_kelas(str(_ambil(r, "level", LEVEL_BAWAAN))))}</span>'
@@ -603,32 +690,18 @@ def halaman_anak(
         "</form>"
     )
 
-    # Latihan ulang (poin a feedback Filia): satu klik membuat sesi berisi
-    # HANYA konsep yang pernah dijawab salah anak ini, dengan soal baru.
-    # Tombol hanya muncul kalau memang ADA dasarnya — tanpa kesalahan
-    # tercatat, menawarkan "remedial" itu mengarang.
-    sasaran = database.sasaran_remedial(kon, siswa["id"])
-    strip_remedial = ""
-    if sasaran:
-        strip_remedial = (
-            '<form method="post" '
-            f'action="/sesi-remedial/{siswa["id"]}" class="strip-sesi">'
-            '<div class="strip-kolom">'
-            "<label>Latihan ulang — dari kesalahan yang tercatat</label>"
-            f'<p class="sub">{len(sasaran)} konsep akan dilatih ulang '
-            "dengan soal baru (angkanya berganti, konsepnya sama).</p>"
-            "</div>"
-            '<div class="strip-kolom"><label>Jumlah Soal</label>'
-            '<select name="jumlah_soal" class="st-input">'
-            '<option value="10" selected>10 soal (± 30 mnt)</option>'
-            '<option value="15">15 soal (± 45 mnt)</option>'
-            '<option value="20">20 soal (± 60 mnt)</option>'
-            "</select></div>"
-            '<button type="submit" class="st-tombol-coral">'
-            '<span class="material-symbols-outlined" style="font-size:1.1rem">'
-            "restart_alt</span>Buat latihan ulang</button>"
-            "</form>"
-        )
+    # Remedial terarah dari seluruh riwayat yang sudah ditinjau. Guru melihat
+    # bukti dan memilih fokus; sistem tidak lagi mencampur enam tipe diam-diam.
+    sasaran = database.sasaran_remedial_anak(kon, siswa["id"])
+    strip_remedial = _form_remedial(
+        sasaran,
+        int(siswa["id"]),
+        judul="Perkuat kelemahan",
+        penjelasan=(
+            "Pilih yang ingin dilatih. Pilihan yang dicentang adalah rekomendasi "
+            "berdasarkan hasil terbaru."
+        ),
+    )
 
     # Latihan gabungan (poin 4 tahap 2): guru memilih BEBERAPA topik saja,
     # mis. "geometri datar + pengukuran" untuk anak yang lemah di dua itu.
@@ -668,7 +741,7 @@ def halaman_anak(
     # menunjuk panel kosong.
     panel = [("baru", "add_circle", "Sesi baru", strip_sesi)]
     if strip_remedial:
-        panel.append(("ulang", "restart_alt", "Latihan ulang", strip_remedial))
+        panel.append(("ulang", "restart_alt", "Perkuat kelemahan", strip_remedial))
     if strip_gabungan:
         panel.append(("gabungan", "library_add", "Gabungan topik", strip_gabungan))
 
@@ -1272,6 +1345,7 @@ def halaman_sesi_stitch(
 
     info = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
+                  s.jenis, s.sumber_sesi_id,
                   s.mulai, s.selesai, s.direview,
                   (SELECT COUNT(*) FROM sesi_soal ss
                    WHERE ss.sesi_id = s.id) AS jumlah_soal,
@@ -1416,9 +1490,29 @@ def halaman_sesi_stitch(
 
     kabar = f'<div class="pesan-st">{html.escape(pesan)}</div>' if pesan else ""
     badge_mode = _badge_mode(info)
+    badge_remedial = (
+        '<span class="st-badge latihan">Remedial</span>'
+        if info["jenis"] == "remedial" else ""
+    )
     pil = _pil_sesi_stitch(kon, sesi_id, "koreksi")
     if not sudah_dikirim:
         pil = pil.replace(">Koreksi</a>", ">Soal &amp; kunci</a>")
+
+    blok_remedial = ""
+    if sudah_dikirim and info["direview"]:
+        sasaran_sesi = database.sasaran_remedial_sesi(
+            kon, int(info["siswa_id"]), sesi_id
+        )
+        blok_remedial = _form_remedial(
+            sasaran_sesi,
+            int(info["siswa_id"]),
+            judul="Perbaiki kesalahan dari sesi ini",
+            penjelasan=(
+                "Pilih tipe soal yang ingin diulang. Soal baru memakai angka "
+                "berbeda, tetapi melatih hal yang sama."
+            ),
+            sumber_sesi_id=sesi_id,
+        )
 
     if sudah_dikirim:
         status_sesi = (
@@ -1463,11 +1557,12 @@ def halaman_sesi_stitch(
         f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
-        f'seed {info["seed"]} {badge_mode}</p>'
+        f'seed {info["seed"]} {badge_mode} {badge_remedial}</p>'
         f"{kabar}"
         f"{pil}"
         f"{status_sesi}"
         f"{blok_isi}"
+        f"{blok_remedial}"
         f'<div class="danger-zone-st">'
         f'<p class="sub">Zona bahaya — hapus tidak bisa dibatalkan.</p>'
         f"{tombol_hapus}</div>"
