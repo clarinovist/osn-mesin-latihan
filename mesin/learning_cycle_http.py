@@ -42,9 +42,16 @@ class GalatForm(ValueError):
 
 def _baca_form(penangan) -> dict[str, str]:
     asal = penangan.headers.get("Origin")
-    if asal and (asal == "null" or urllib.parse.urlsplit(asal).netloc != penangan.headers.get("Host")):
+    situs = penangan.headers.get("Sec-Fetch-Site")
+    # no-referrer dapat membuat Origin null pada POST dari situs sendiri.
+    # Pengecualian hanya dengan bukti same-origin dari header milik browser.
+    if asal == "null":
+        asal_ditolak = situs != "same-origin"
+    else:
+        asal_ditolak = bool(asal) and urllib.parse.urlsplit(asal).netloc != penangan.headers.get("Host")
+    if asal_ditolak:
         raise GalatForm("Permintaan harus berasal dari situs ini.", 403)
-    if penangan.headers.get("Sec-Fetch-Site") == "cross-site":
+    if situs == "cross-site":
         raise GalatForm("Permintaan harus berasal dari situs ini.", 403)
     panjang = penangan.headers.get("Content-Length", "0")
     if not re.fullmatch(r"[0-9]+", panjang) or penangan.headers.get("Transfer-Encoding"):
