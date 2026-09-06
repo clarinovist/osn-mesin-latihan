@@ -122,18 +122,25 @@ CREATE TABLE IF NOT EXISTS sesi (
     -- tidak ada pengesahan, putaran, bagian checkpoint, atau pembatalan.
     tujuan    TEXT NOT NULL DEFAULT 'bebas'
         CHECK (tujuan IN ('bebas', 'pemetaan', 'latihan_terbimbing',
-                          'penguatan', 'evaluasi', 'checkpoint', 'pengenalan')),
+                          'penguatan', 'evaluasi', 'checkpoint', 'pengenalan',
+                          'maintenance')),
     dikonfirmasi_guru TEXT,
     fingerprint_konfirmasi TEXT,
     putaran_id INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT,
     bagian_checkpoint INTEGER
         CHECK (bagian_checkpoint IS NULL OR bagian_checkpoint IN (1, 2)),
+    -- Kunci occurrence aktif; NULL untuk sesi manual/warisan. Indeks parsial
+    -- di bawah membedakan double-submit dari retry setelah pembatalan.
+    kunci_idempotensi TEXT,
     dibatalkan TEXT,
     catatan   TEXT    NOT NULL DEFAULT '',
     dibuat    TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_sesi_siswa ON sesi(siswa_id, tanggal);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sesi_siklus_aktif
+    ON sesi(kunci_idempotensi)
+    WHERE kunci_idempotensi IS NOT NULL AND dibatalkan IS NULL;
 
 -- CHECK pada CREATE TABLE tidak ditambahkan ke tabel warisan oleh ALTER COLUMN.
 -- Trigger ini memberi aturan identik untuk pemasangan baru dan hasil migrasi.
@@ -141,7 +148,7 @@ CREATE TRIGGER IF NOT EXISTS sesi_validasi_insert
 BEFORE INSERT ON sesi
 WHEN NEW.tujuan NOT IN (
         'bebas', 'pemetaan', 'latihan_terbimbing', 'penguatan',
-        'evaluasi', 'checkpoint', 'pengenalan'
+ 'evaluasi', 'checkpoint', 'pengenalan', 'maintenance'
      )
   OR NEW.bagian_checkpoint IS NOT NULL
      AND NEW.bagian_checkpoint NOT IN (1, 2)
@@ -152,7 +159,7 @@ CREATE TRIGGER IF NOT EXISTS sesi_validasi_update
 BEFORE UPDATE OF tujuan, bagian_checkpoint ON sesi
 WHEN NEW.tujuan NOT IN (
         'bebas', 'pemetaan', 'latihan_terbimbing', 'penguatan',
-        'evaluasi', 'checkpoint', 'pengenalan'
+ 'evaluasi', 'checkpoint', 'pengenalan', 'maintenance'
      )
   OR NEW.bagian_checkpoint IS NOT NULL
      AND NEW.bagian_checkpoint NOT IN (1, 2)
@@ -280,6 +287,12 @@ CREATE TABLE IF NOT EXISTS snapshot_outcome (
         cek_pemahaman IS NULL OR
         cek_pemahaman IN ('bisa_menjelaskan', 'ragu', 'menghafal')
     ),
+    target_template_id TEXT,
+    target_kode_intervensi TEXT CHECK (
+        target_kode_intervensi IS NULL OR
+        target_kode_intervensi IN ('B','K','H','E','T','N')
+    ),
+    target_malrule_id TEXT,
     CHECK (
         (dilewati = 1 AND benar IS NULL AND kode_final IS NULL AND malrule_id IS NULL)
         OR
@@ -310,6 +323,14 @@ WHEN (NEW.dilewati = 1 AND (
       ))
 BEGIN
     SELECT RAISE(ABORT, 'outcome snapshot tidak valid');
+END;
+
+CREATE TRIGGER IF NOT EXISTS snapshot_outcome_target_validasi_insert
+BEFORE INSERT ON snapshot_outcome
+WHEN NEW.target_kode_intervensi IS NOT NULL
+ AND NEW.target_kode_intervensi NOT IN ('B','K','H','E','T','N')
+BEGIN
+    SELECT RAISE(ABORT, 'target fokus snapshot tidak valid');
 END;
 
 -- Kejadian domain append-only. `data` adalah JSON kanonis untuk payload yang
@@ -450,7 +471,11 @@ MIGRASI: list[tuple[str, str, str]] = [
     ("sesi", "fingerprint_konfirmasi", "ALTER TABLE sesi ADD COLUMN fingerprint_konfirmasi TEXT"),
     ("sesi", "putaran_id", "ALTER TABLE sesi ADD COLUMN putaran_id INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT"),
     ("sesi", "bagian_checkpoint", "ALTER TABLE sesi ADD COLUMN bagian_checkpoint INTEGER"),
+    ("sesi", "kunci_idempotensi", "ALTER TABLE sesi ADD COLUMN kunci_idempotensi TEXT"),
     ("sesi", "dibatalkan", "ALTER TABLE sesi ADD COLUMN dibatalkan TEXT"),
+    ("snapshot_outcome", "target_template_id", "ALTER TABLE snapshot_outcome ADD COLUMN target_template_id TEXT"),
+    ("snapshot_outcome", "target_kode_intervensi", "ALTER TABLE snapshot_outcome ADD COLUMN target_kode_intervensi TEXT"),
+    ("snapshot_outcome", "target_malrule_id", "ALTER TABLE snapshot_outcome ADD COLUMN target_malrule_id TEXT"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.

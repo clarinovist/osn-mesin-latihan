@@ -180,6 +180,12 @@ def test_validasi_tujuan_dan_checkpoint_dimigrasikan_idempoten_ke_skema_warisan(
                VALUES (?, 3, 'checkpoint', 1)""",
             (pemilik,),
         ).lastrowid
+        maintenance_id = kon.execute(
+            """INSERT INTO sesi (siswa_id, seed, tujuan)
+               VALUES (?, 4, 'maintenance')""",
+            (pemilik,),
+        ).lastrowid
+        assert maintenance_id
         with pytest.raises(sqlite3.IntegrityError):
             kon.execute("UPDATE sesi SET tujuan = 'liar' WHERE id = ?", (sesi_id,))
         with pytest.raises(sqlite3.IntegrityError):
@@ -191,7 +197,8 @@ def test_validasi_tujuan_dan_checkpoint_dimigrasikan_idempoten_ke_skema_warisan(
                WHERE type = 'trigger'
                  AND name IN (
                      'sesi_validasi_insert', 'sesi_validasi_update',
-                     'snapshot_outcome_validasi_insert'
+                     'snapshot_outcome_validasi_insert',
+                     'snapshot_outcome_target_validasi_insert'
                  )
                ORDER BY name"""
         ).fetchall()
@@ -199,6 +206,7 @@ def test_validasi_tujuan_dan_checkpoint_dimigrasikan_idempoten_ke_skema_warisan(
     assert [baris["name"] for baris in pemicu] == [
         "sesi_validasi_insert",
         "sesi_validasi_update",
+        "snapshot_outcome_target_validasi_insert",
         "snapshot_outcome_validasi_insert",
     ]
 
@@ -208,6 +216,10 @@ def test_daftar_migrasi_metadata_remedial_dan_siklus_tidak_duplikat():
     for kolom in (
         "jenis", "sumber_sesi_id", "tujuan", "dikonfirmasi_guru",
         "fingerprint_konfirmasi", "putaran_id", "bagian_checkpoint",
-        "dibatalkan",
+        "kunci_idempotensi", "dibatalkan",
     ):
         assert pasangan.count(("sesi", kolom)) == 1
+    for kolom in (
+        "target_template_id", "target_kode_intervensi", "target_malrule_id",
+    ):
+        assert pasangan.count(("snapshot_outcome", kolom)) == 1

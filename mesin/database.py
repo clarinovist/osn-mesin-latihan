@@ -694,6 +694,40 @@ def buat_sesi_remedial(
     )
 
 
+def tandai_pengenalan_selesai(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    putaran_id: int,
+    fokus,
+    pendekatan_id: str,
+) -> None:
+    from learning_sessions import tandai_pengenalan_selesai as tandai
+
+    tandai(kon, siswa_id, putaran_id, fokus, pendekatan_id)
+
+
+def buat_sesi_dari_rencana(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    rencana,
+    *,
+    putaran_id: int,
+    seed: int,
+    occurrence: int = 1,
+) -> int:
+    """Delegasikan orkestrasi sesi tanpa mencampur aturan ke akses DB dasar."""
+    from learning_sessions import buat_sesi_dari_rencana as buat
+
+    return buat(
+        kon,
+        siswa_id,
+        rencana,
+        putaran_id=putaran_id,
+        seed=seed,
+        occurrence=occurrence,
+    )
+
+
 def isi_sesi(kon: sqlite3.Connection, sesi_id: int) -> list[sqlite3.Row]:
     """Soal satu sesi beserta jawaban & diagnosisnya, urut nomor."""
     return kon.execute(
@@ -995,6 +1029,27 @@ def tambah_anggota_fokus(
     return anggota_id
 
 
+def _target_per_butir(
+    kon: sqlite3.Connection, sesi_id: int
+) -> dict[int, tuple[str, str, Optional[str]]]:
+    event = kon.execute(
+        """SELECT data FROM kejadian_belajar
+           WHERE sesi_id = ? AND jenis = 'sesi_dibuat'
+           ORDER BY id DESC LIMIT 1""",
+        (sesi_id,),
+    ).fetchone()
+    if event is None:
+        return {}
+    data = json.loads(event["data"] or "{}")
+    target = data.get("target_per_nomor", {}) if isinstance(data, dict) else {}
+    hasil = {}
+    for nomor, mentah in target.items():
+        if not isinstance(mentah, list) or len(mentah) != 3:
+            continue
+        hasil[int(nomor)] = (mentah[0], mentah[1], mentah[2])
+    return hasil
+
+
 def konfirmasi_hasil(
     kon: sqlite3.Connection,
     sesi_id: int,
@@ -1035,10 +1090,12 @@ def konfirmasi_hasil(
         ):
             raise ValueError("outcome belum lengkap")
 
+    target_per_butir = _target_per_butir(kon, sesi_id)
     kanonis = []
     for butir in outcome:
         butir_id = int(butir["sesi_soal_id"])
         lewat = butir_id in dilewati
+        target_fokus = target_per_butir.get(int(butir["nomor"]))
         kanonis.append(
             {
                 "nomor": int(butir["nomor"]),
@@ -1050,6 +1107,9 @@ def konfirmasi_hasil(
                 "dilewati": int(lewat),
                 "level_efektif": sesi["level"],
                 "cek_pemahaman": cek_pemahaman.get(butir_id),
+                "target_template_id": None if target_fokus is None else target_fokus[0],
+                "target_kode_intervensi": None if target_fokus is None else target_fokus[1],
+                "target_malrule_id": None if target_fokus is None else target_fokus[2],
             }
         )
     serial = json.dumps(kanonis, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -1087,8 +1147,9 @@ def konfirmasi_hasil(
             """INSERT INTO snapshot_outcome
                    (konfirmasi_id, sesi_soal_id, nomor, template_id, jawaban,
                     benar, kode_final, malrule_id, dilewati, level_efektif,
-                    cek_pemahaman)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    cek_pemahaman, target_template_id, target_kode_intervensi,
+                    target_malrule_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 konfirmasi_id,
                 butir["sesi_soal_id"],
@@ -1101,6 +1162,9 @@ def konfirmasi_hasil(
                 salinan["dilewati"],
                 salinan["level_efektif"],
                 salinan["cek_pemahaman"],
+                salinan["target_template_id"],
+                salinan["target_kode_intervensi"],
+                salinan["target_malrule_id"],
             ),
         )
     kon.execute(
@@ -1261,10 +1325,20 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
                         item["malrule_id"],
                         bool(item["dilewati"]),
                         item["cek_pemahaman"],
+                        (
+                            None
+                            if item["target_template_id"] is None
+                            else (
+                                item["target_template_id"],
+                                item["target_kode_intervensi"],
+                                item["target_malrule_id"],
+                            )
+                        ),
                     )
                     for item in kon.execute(
                         """SELECT template_id, benar, kode_final, malrule_id,
-                                  dilewati, cek_pemahaman
+                                  dilewati, cek_pemahaman, target_template_id,
+                                  target_kode_intervensi, target_malrule_id
                            FROM snapshot_outcome WHERE konfirmasi_id = ?
                            ORDER BY nomor""",
                         (aktif["id"],),
@@ -1292,12 +1366,27 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
                 _tanggal_domain_opsional(baris["dikonfirmasi_guru"]),
             )
         )
+    import interventions
+
+    pendekatan_tersedia = tuple(
+        (
+            kunci,
+            tuple(
+                materi.pendekatan_id
+                for materi in interventions.pilihan_untuk_fokus(kunci)
+                if materi.tersedia
+            ),
+        )
+        for satu_putaran in putaran
+        for kunci in satu_putaran.fokus
+    )
     return BuktiSiklus(
         siswa_id,
         siswa["tingkat"],
         tuple(sesi_hasil),
         putaran,
         kejadian,
+        pendekatan_tersedia,
     )
 
 

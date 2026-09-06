@@ -21,6 +21,7 @@ class OutcomeSiklus:
     malrule_id: Optional[str] = None
     dilewati: bool = False
     cek_pemahaman: Optional[str] = None
+    target_fokus: Optional[KunciFokus] = None
 
 
 @dataclass(frozen=True)
@@ -301,7 +302,19 @@ def _hasil_fokus(sesi: SesiSiklus, kunci: KunciFokus) -> Tuple[OutcomeSiklus, ..
     """
     if kunci not in sesi.target_fokus:
         return ()
-    return tuple(o for o in sesi.outcomes if o.template_id == kunci[0] and not o.dilewati)
+    target_template = tuple(
+        target for target in sesi.target_fokus if target[0] == kunci[0]
+    )
+    return tuple(
+        outcome
+        for outcome in sesi.outcomes
+        if outcome.template_id == kunci[0]
+        and not outcome.dilewati
+        and (
+            outcome.target_fokus == kunci
+            or (outcome.target_fokus is None and len(target_template) == 1)
+        )
+    )
 
 
 def _lulus(outcomes: Tuple[OutcomeSiklus, ...], minimum: int, semua_benar: bool = False) -> bool:
