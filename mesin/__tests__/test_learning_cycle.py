@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,15 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
+from learning_cycle import (  # noqa: E402
+    BuktiSiklus,
+    KejadianSiklus,
+    OutcomeSiklus,
+    PutaranSiklus,
+    SesiSiklus,
+    intervensi_untuk,
+    rencana_berikutnya,
+)
 
 
 @pytest.fixture()
@@ -605,3 +615,594 @@ def test_tabel_bukti_append_only(db):
                 "DELETE FROM snapshot_outcome WHERE konfirmasi_id = ?",
                 (konfirmasi_id,),
             )
+
+
+# ── Fase 1: reducer murni ──────────────────────────────────────────────
+
+
+def _outcome(template, kode=None, malrule=None, benar=False, paham=None):
+    return OutcomeSiklus(template, benar, kode, malrule, False, paham)
+
+
+def _sesi_domain(
+    identitas,
+    tanggal,
+    *,
+    tujuan="pemetaan",
+    level="P3",
+    putaran=1,
+    selesai="selesai",
+    dikonfirmasi="sah",
+    direview=None,
+    batal=None,
+    outcomes=(),
+    bagian=None,
+):
+    return SesiSiklus(
+        identitas,
+        1,
+        level,
+        tujuan,
+        date.fromisoformat(tanggal),
+        dibuat=f"{tanggal} 08:00:00",
+        selesai=selesai,
+        direview=direview,
+        dikonfirmasi=dikonfirmasi,
+        putaran_id=putaran,
+        bagian_checkpoint=bagian,
+        dibatalkan=batal,
+        outcomes=tuple(outcomes),
+    )
+
+
+def _event(identitas, jenis, tanggal, *, putaran=1, sesi=None, **data):
+    return KejadianSiklus(
+        identitas,
+        jenis,
+        date.fromisoformat(tanggal),
+        putaran,
+        sesi,
+        data=tuple(sorted(data.items())),
+    )
+
+
+def _bukti(*sesi, level="P3", putaran=None, kejadian=(), pendekatan=()):
+    if putaran is None:
+        putaran = (PutaranSiklus(1, 1, level, date(2026, 9, 1)),)
+    return BuktiSiklus(1, level, tuple(sesi), tuple(putaran), tuple(kejadian), tuple(pendekatan))
+
+
+def test_sesi_selesai_yang_sudah_direview_tetap_menunggu_konfirmasi():
+    sesi = _sesi_domain(
+        1, "2026-09-01", selesai="selesai", direview="sudah dilihat", dikonfirmasi=None
+    )
+
+    rencana = rencana_berikutnya(_bukti(sesi), 1, date(2026, 9, 2))
+
+    assert rencana.tindakan == "konfirmasi_hasil"
+    assert rencana.sesi_id == 1
+
+
+def test_sesi_pemblokir_memilih_yang_belum_selesai_paling_tua():
+    baru = _sesi_domain(2, "2026-09-02", selesai=None, dikonfirmasi=None)
+    lama = _sesi_domain(1, "2026-09-01", selesai=None, dikonfirmasi=None)
+
+    rencana = rencana_berikutnya(_bukti(baru, lama), 1, date(2026, 9, 3))
+
+    assert rencana.tindakan == "lanjutkan_sesi"
+    assert rencana.sesi_id == 1
+
+
+def test_sesi_manual_stale_dibatalkan_dan_beda_level_tidak_memblokir():
+    manual = _sesi_domain(1, "2026-09-01", tujuan="bebas", putaran=None, selesai=None)
+    stale = _sesi_domain(2, "2026-09-01", putaran=99, selesai=None)
+    beda_level = _sesi_domain(3, "2026-09-01", level="P4", selesai=None)
+    batal = _sesi_domain(4, "2026-09-01", selesai=None, batal="batal")
+
+    rencana = rencana_berikutnya(
+        _bukti(manual, stale, beda_level, batal), 1, date(2026, 9, 2)
+    )
+
+    assert rencana.tindakan == "pemetaan"
+
+
+def test_pemetaan_harus_tiga_tanggal_berbeda_dan_level_aktif():
+    sesi = (
+        _sesi_domain(1, "2026-09-01"),
+        _sesi_domain(2, "2026-09-01"),
+        _sesi_domain(3, "2026-09-02"),
+        _sesi_domain(4, "2026-09-03", level="P4"),
+    )
+
+    rencana = rencana_berikutnya(_bukti(*sesi), 1, date(2026, 9, 2))
+
+    assert rencana.tindakan == "tunggu_pemetaan"
+    assert rencana.tersedia_pada == date(2026, 9, 3)
+
+
+def test_kunci_k_sama_baru_menjadi_fokus_setelah_dua_sesi():
+    satu = _sesi_domain(1, "2026-09-01", outcomes=(_outcome("deret", "K", "m1"),))
+    rencana_satu = rencana_berikutnya(_bukti(satu), 1, date(2026, 9, 2))
+    dua = _sesi_domain(2, "2026-09-02", outcomes=(_outcome("deret", "K", "m1"),))
+    tiga = _sesi_domain(3, "2026-09-03")
+
+    rencana_dua_tanggal = rencana_berikutnya(
+        _bukti(satu, dua), 1, date(2026, 9, 3)
+    )
+    rencana_dua = rencana_berikutnya(_bukti(satu, dua, tiga), 1, date(2026, 9, 4))
+
+    assert rencana_satu.tindakan in {"tunggu_pemetaan", "pemetaan"}
+    assert rencana_satu.putaran is None or not rencana_satu.putaran.fokus
+    assert rencana_dua_tanggal.tindakan == "pemetaan"
+    assert rencana_dua.putaran.fokus[0].kunci == ("deret", "K", "m1")
+
+
+def test_satu_k_dan_satu_h_tidak_digabung_menjadi_fokus():
+    sesi = (
+        _sesi_domain(1, "2026-09-01", outcomes=(_outcome("deret", "K", "m1"),)),
+        _sesi_domain(2, "2026-09-02", outcomes=(_outcome("deret", "H", "m1"),)),
+        _sesi_domain(3, "2026-09-03"),
+    )
+
+    rencana = rencana_berikutnya(_bukti(*sesi), 1, date(2026, 9, 4))
+
+    assert rencana.tindakan == "probe_diagnostik"
+    assert not rencana.putaran.fokus
+
+
+def test_ranking_fokus_maksimal_dua_mendahulukan_jumlah_lalu_k_dan_terbaru():
+    sesi = (
+        _sesi_domain(1, "2026-09-01", outcomes=(
+            _outcome("a", "H"), _outcome("b", "K", "b")
+        )),
+        _sesi_domain(2, "2026-09-02", outcomes=(
+            _outcome("a", "H"), _outcome("b", "K", "b"), _outcome("c", "K", "c")
+        )),
+        _sesi_domain(3, "2026-09-03", outcomes=(
+            _outcome("a", "H"), _outcome("c", "K", "c")
+        )),
+    )
+
+    fokus = rencana_berikutnya(_bukti(*sesi), 1, date(2026, 9, 4)).putaran.fokus
+
+    assert [f.kunci for f in fokus] == [("a", "H", None), ("c", "K", "c")]
+
+
+def test_anchor_maksimal_lima_k_ke_h_lalu_terbaru_dan_sisanya_dibawa():
+    outcomes = tuple(_outcome(f"k{i}", "K", f"m{i}") for i in range(4)) + tuple(
+        _outcome(f"h{i}", "H") for i in range(4)
+    )
+    sesi = _sesi_domain(1, "2026-09-01", outcomes=outcomes)
+
+    rencana = rencana_berikutnya(_bukti(sesi), 1, date(2026, 9, 2))
+
+    assert rencana.tindakan == "pemetaan"
+    assert len(rencana.kandidat) == 5
+    assert [k[1] for k in rencana.kandidat] == ["K", "K", "K", "K", "H"]
+
+
+def test_kandidat_baru_di_pemetaan_ketiga_memicu_probe_lanjutan():
+    sesi = (
+        _sesi_domain(1, "2026-09-01"),
+        _sesi_domain(2, "2026-09-02"),
+        _sesi_domain(3, "2026-09-03", outcomes=(_outcome("baru", "K", "m"),)),
+    )
+
+    rencana = rencana_berikutnya(_bukti(*sesi), 1, date(2026, 9, 4))
+
+    assert rencana.tindakan == "probe_diagnostik"
+    assert rencana.kandidat == (("baru", "K", "m"),)
+
+
+@pytest.mark.parametrize("kode", list("BKHENT"))
+def test_setiap_kode_memiliki_tindakan_berbeda(kode):
+    semua = {k: intervensi_untuk(k).tindakan for k in "BKHENT"}
+
+    assert len(set(semua.values())) == 6
+    assert intervensi_untuk(kode).kode == kode
+
+
+def test_n_ragu_menjadi_kandidat_k_derived_tanpa_mengubah_outcome_historis():
+    n1 = _outcome("rasio", "N", None, paham="ragu")
+    n2 = _outcome("rasio", "N", None, paham="menghafal")
+    sesi = (
+        _sesi_domain(1, "2026-09-01", outcomes=(n1,)),
+        _sesi_domain(2, "2026-09-02", outcomes=(n2,)),
+        _sesi_domain(3, "2026-09-03"),
+    )
+
+    fokus = rencana_berikutnya(_bukti(*sesi), 1, date(2026, 9, 4)).putaran.fokus
+
+    assert fokus[0].kunci == ("rasio", "K", None)
+    assert n1.kode_final == n2.kode_final == "N"
+
+
+def test_penguat_dan_latihan_terbimbing_tidak_menambah_bukti_kelemahan():
+    pemetaan = _sesi_domain(1, "2026-09-01", outcomes=(_outcome("deret", "K", "m"),))
+    terbimbing = _sesi_domain(
+        2, "2026-09-02", tujuan="latihan_terbimbing", outcomes=(_outcome("deret", "K", "m"),)
+    )
+    penguatan = _sesi_domain(
+        3, "2026-09-03", tujuan="penguatan", outcomes=(_outcome("deret", "K", "m"),)
+    )
+
+    rencana = rencana_berikutnya(_bukti(pemetaan, terbimbing, penguatan), 1, date(2026, 9, 4))
+
+    assert rencana.putaran is None or not rencana.putaran.fokus
+
+
+def test_sesi_bebas_hanya_masuk_pemetaan_dengan_opt_in_event():
+    bebas = _sesi_domain(
+        1, "2026-09-01", tujuan="bebas", putaran=None, outcomes=(_outcome("deret", "K", "m"),)
+    )
+    pemetaan = _sesi_domain(2, "2026-09-02", outcomes=(_outcome("deret", "K", "m"),))
+    ketiga = _sesi_domain(3, "2026-09-03")
+    tanpa = rencana_berikutnya(_bukti(bebas, pemetaan, ketiga), 1, date(2026, 9, 4))
+    opt_in = _event(1, "sertakan_pemetaan", "2026-09-01", putaran=None, sesi=1)
+
+    dengan = rencana_berikutnya(
+        _bukti(bebas, pemetaan, ketiga, kejadian=(opt_in,)), 1, date(2026, 9, 4)
+    )
+
+    assert tanpa.putaran is None or not tanpa.putaran.fokus
+    assert dengan.putaran.fokus[0].kunci == ("deret", "K", "m")
+
+
+def _fokus_deret():
+    return ("deret", "K", "m")
+
+
+def _putaran_fokus_deret():
+    return (PutaranSiklus(1, 1, "P3", date(2026, 9, 1), (_fokus_deret(),)),)
+
+
+def test_penguatan_terkonfirmasi_memulai_jeda_evaluasi_tiga_hari():
+    penguatan = _sesi_domain(
+        1, "2026-09-05", tujuan="penguatan", outcomes=(_outcome("deret", benar=True),)
+    )
+    events = (
+        _event(1, "intervensi_selesai", "2026-09-03", fokus=_fokus_deret(), pendekatan_id="visual-1"),
+    )
+
+    sebelum = rencana_berikutnya(
+        _bukti(penguatan, putaran=_putaran_fokus_deret(), kejadian=events),
+        1,
+        date(2026, 9, 7),
+    )
+    jatuh_tempo = rencana_berikutnya(
+        _bukti(penguatan, putaran=_putaran_fokus_deret(), kejadian=events),
+        1,
+        date(2026, 9, 8),
+    )
+
+    assert sebelum.tindakan == "tunggu_evaluasi"
+    assert sebelum.tersedia_pada == date(2026, 9, 8)
+    assert jatuh_tempo.tindakan == "evaluasi"
+    assert jatuh_tempo.jumlah_probe_minimum == 4
+
+
+def test_penguatan_belum_dikonfirmasi_tidak_memulai_jeda():
+    penguatan = _sesi_domain(
+        1, "2026-09-05", tujuan="penguatan", dikonfirmasi=None,
+        outcomes=(_outcome("deret", benar=True),)
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(penguatan, putaran=_putaran_fokus_deret()), 1, date(2026, 9, 20)
+    )
+
+    assert rencana.tindakan == "konfirmasi_hasil"
+
+
+def _evaluasi(identitas, tanggal, benar, *, paham="bisa_menjelaskan", kode=None):
+    outcomes = tuple(
+        _outcome("deret", kode if i == 0 else None, "m" if kode and i == 0 else None,
+                 benar=benar if not kode or i else True, paham=paham)
+        for i in range(4)
+    )
+    return _sesi_domain(identitas, tanggal, tujuan="evaluasi", outcomes=outcomes)
+
+
+def test_evaluasi_lulus_dengan_75_persen_nol_k_dan_bisa_menjelaskan():
+    evaluasi = _sesi_domain(
+        1,
+        "2026-09-08",
+        tujuan="evaluasi",
+        outcomes=(
+            _outcome("deret", benar=True, paham="bisa_menjelaskan"),
+            _outcome("deret", benar=True, paham="bisa_menjelaskan"),
+            _outcome("deret", benar=True, paham="bisa_menjelaskan"),
+            _outcome("deret", "H", benar=False, paham="bisa_menjelaskan"),
+        ),
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(evaluasi, putaran=_putaran_fokus_deret()), 1, date(2026, 9, 9)
+    )
+
+    assert rencana.putaran.fokus[0].status == "mulai_membaik"
+    assert rencana.tindakan == "tunggu_checkpoint"
+    assert rencana.tersedia_pada == date(2026, 10, 6)
+
+
+@pytest.mark.parametrize("paham", ["ragu", "menghafal"])
+def test_evaluasi_benar_tetapi_pemahaman_gagal_tidak_lulus(paham):
+    evaluasi = _evaluasi(1, "2026-09-08", True, paham=paham)
+    pendekatan = ((_fokus_deret(), ("visual-1", "visual-2")),)
+    events = (
+        _event(1, "intervensi_selesai", "2026-09-03", fokus=_fokus_deret(), pendekatan_id="visual-1"),
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(
+            evaluasi,
+            putaran=_putaran_fokus_deret(),
+            kejadian=events,
+            pendekatan=pendekatan,
+        ),
+        1,
+        date(2026, 9, 9),
+    )
+
+    assert rencana.tindakan == "intervensi"
+    assert rencana.putaran.fokus[0].status == "perlu_diperkuat"
+    assert rencana.putaran.fokus[0].pendekatan_berikutnya == "visual-2"
+
+
+def test_evaluasi_gagal_pertama_tanpa_alternatif_langsung_eskalasi():
+    evaluasi = _evaluasi(1, "2026-09-08", False)
+    events = (
+        _event(1, "intervensi_selesai", "2026-09-03", fokus=_fokus_deret(), pendekatan_id="satu-satunya"),
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(evaluasi, putaran=_putaran_fokus_deret(), kejadian=events),
+        1,
+        date(2026, 9, 9),
+    )
+
+    assert rencana.tindakan == "eskalasi"
+
+
+def test_evaluasi_gagal_kedua_berturut_turut_memicu_eskalasi():
+    sesi = (_evaluasi(1, "2026-09-08", False), _evaluasi(2, "2026-09-15", False))
+    pendekatan = ((_fokus_deret(), ("visual-1", "visual-2", "visual-3")),)
+
+    rencana = rencana_berikutnya(
+        _bukti(*sesi, putaran=_putaran_fokus_deret(), pendekatan=pendekatan),
+        1,
+        date(2026, 9, 16),
+    )
+
+    assert rencana.tindakan == "eskalasi"
+
+
+def test_checkpoint_jatuh_tempo_28_hari_per_fokus_dan_membawa_minimum_probe():
+    evaluasi = _evaluasi(1, "2026-09-08", True)
+
+    rencana = rencana_berikutnya(
+        _bukti(evaluasi, putaran=_putaran_fokus_deret()), 1, date(2026, 10, 6)
+    )
+
+    assert rencana.tindakan == "checkpoint"
+    assert rencana.bagian_checkpoint == 1
+    assert rencana.jumlah_probe_minimum == 3
+
+
+def test_checkpoint_belum_mengubah_status_sebelum_dua_bagian_terkonfirmasi():
+    evaluasi = _evaluasi(1, "2026-09-08", True)
+    bagian_1 = _sesi_domain(
+        2, "2026-10-06", tujuan="checkpoint", bagian=1,
+        outcomes=tuple(_outcome("deret", benar=True, paham="bisa_menjelaskan") for _ in range(3)),
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(evaluasi, bagian_1, putaran=_putaran_fokus_deret()),
+        1,
+        date(2026, 10, 6),
+    )
+
+    assert rencana.tindakan == "checkpoint"
+    assert rencana.bagian_checkpoint == 2
+    assert rencana.putaran.fokus[0].status == "mulai_membaik"
+
+
+def test_checkpoint_sukses_menjadi_bertahan_dan_berulang_28_hari():
+    evaluasi = _evaluasi(1, "2026-09-08", True)
+    checkpoint = tuple(
+        _sesi_domain(
+            i + 2, f"2026-10-{6 + i:02d}", tujuan="checkpoint", bagian=i + 1,
+            outcomes=tuple(_outcome("deret", benar=True, paham="bisa_menjelaskan") for _ in range(2)),
+        )
+        for i in range(2)
+    )
+
+    sebelum = rencana_berikutnya(
+        _bukti(evaluasi, *checkpoint, putaran=_putaran_fokus_deret()),
+        1,
+        date(2026, 11, 3),
+    )
+    ulang = rencana_berikutnya(
+        _bukti(evaluasi, *checkpoint, putaran=_putaran_fokus_deret()),
+        1,
+        date(2026, 11, 4),
+    )
+
+    assert sebelum.putaran.fokus[0].status == "bertahan"
+    assert sebelum.tindakan == "tunggu_checkpoint"
+    assert ulang.tindakan == "checkpoint"
+
+
+def test_k_baru_pada_fokus_bertahan_membuka_putaran_baru_tanpa_menghapus_histori():
+    evaluasi = _evaluasi(1, "2026-09-08", True)
+    checkpoint = tuple(
+        _sesi_domain(
+            i + 2, "2026-10-06", tujuan="checkpoint", bagian=i + 1,
+            outcomes=tuple(_outcome("deret", benar=True, paham="bisa_menjelaskan") for _ in range(2)),
+        )
+        for i in range(2)
+    )
+    kambuh = _sesi_domain(
+        4, "2026-10-10", tujuan="pemetaan", outcomes=(_outcome("deret", "K", "m"),)
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(evaluasi, *checkpoint, kambuh, putaran=_putaran_fokus_deret()),
+        1,
+        date(2026, 10, 11),
+    )
+
+    assert rencana.tindakan == "putaran_baru"
+    assert rencana.putaran.id is None
+    assert rencana.putaran.fokus[0].kunci == _fokus_deret()
+
+
+def test_pengenalan_t_diikuti_probe_sampai_hasil_terkonfirmasi():
+    sesi = (
+        _sesi_domain(1, "2026-09-01", outcomes=(_outcome("pecahan", "T"),)),
+        _sesi_domain(2, "2026-09-02"),
+        _sesi_domain(3, "2026-09-03"),
+    )
+    selesai = _event(1, "pengenalan_selesai", "2026-09-03", template_id="pecahan")
+
+    rencana = rencana_berikutnya(
+        _bukti(*sesi, kejadian=(selesai,)), 1, date(2026, 9, 4)
+    )
+
+    assert rencana.tindakan == "probe_setelah_pengenalan"
+    assert rencana.kandidat == (("pecahan", "T", None),)
+
+
+def test_pemetaan_didahulukan_dari_probe_setelah_pengenalan():
+    pemetaan_t = _sesi_domain(1, "2026-09-01", outcomes=(_outcome("pecahan", "T"),))
+    selesai = _event(1, "pengenalan_selesai", "2026-09-01", template_id="pecahan")
+
+    rencana = rencana_berikutnya(
+        _bukti(pemetaan_t, kejadian=(selesai,)), 1, date(2026, 9, 2)
+    )
+
+    assert rencana.tindakan == "pemetaan"
+
+
+def test_t_tanpa_pengenalan_merekomendasikan_pengenalan_bukan_maintenance():
+    sesi = (
+        _sesi_domain(1, "2026-09-01"),
+        _sesi_domain(2, "2026-09-02"),
+        _sesi_domain(3, "2026-09-03", outcomes=(_outcome("pecahan", "T"),)),
+    )
+
+    rencana = rencana_berikutnya(_bukti(*sesi), 1, date(2026, 9, 4))
+
+    assert rencana.tindakan == "pengenalan"
+    assert rencana.kandidat == (("pecahan", "T", None),)
+
+
+def test_override_sebelum_intervensi_mengganti_fokus():
+    lama = _fokus_deret()
+    baru = ("uang", "H", None)
+    override = _event(1, "fokus_diubah", "2026-09-02", fokus=(baru,))
+
+    rencana = rencana_berikutnya(
+        _bukti(putaran=_putaran_fokus_deret(), kejadian=(override,)),
+        1,
+        date(2026, 9, 3),
+    )
+
+    assert rencana.putaran.fokus[0].kunci == baru
+    assert rencana.putaran.fokus[0].kunci != lama
+
+
+def test_override_terlambat_mengikuti_putaran_baru_dan_sesi_lama_nonblocking():
+    lama = PutaranSiklus(1, 1, "P3", date(2026, 9, 1), (_fokus_deret(),))
+    baru = PutaranSiklus(2, 1, "P3", date(2026, 9, 5), (("uang", "H", None),))
+    sesi_lama = _sesi_domain(1, "2026-09-03", putaran=1, selesai=None, dikonfirmasi=None)
+    events = (
+        _event(1, "intervensi_selesai", "2026-09-02", putaran=1, fokus=_fokus_deret(), pendekatan_id="v1"),
+        _event(2, "override_ditutup", "2026-09-05", putaran=1),
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(sesi_lama, putaran=(lama, baru), kejadian=events), 1, date(2026, 9, 6)
+    )
+
+    assert rencana.sesi_id is None
+    assert rencana.putaran.id == 2
+    assert rencana.putaran.fokus[0].kunci == ("uang", "H", None)
+
+
+def test_intervensi_selesai_dilanjutkan_latihan_terbimbing_lalu_penguatan():
+    selesai = _event(
+        1, "intervensi_selesai", "2026-09-02", fokus=_fokus_deret(), pendekatan_id="v1"
+    )
+    tanpa_latihan = rencana_berikutnya(
+        _bukti(putaran=_putaran_fokus_deret(), kejadian=(selesai,)),
+        1,
+        date(2026, 9, 3),
+    )
+    terbimbing = _sesi_domain(
+        1, "2026-09-03", tujuan="latihan_terbimbing", outcomes=(_outcome("deret", benar=True),)
+    )
+
+    sesudah_latihan = rencana_berikutnya(
+        _bukti(terbimbing, putaran=_putaran_fokus_deret(), kejadian=(selesai,)),
+        1,
+        date(2026, 9, 4),
+    )
+
+    assert tanpa_latihan.tindakan == "latihan_terbimbing"
+    assert sesudah_latihan.tindakan == "penguatan"
+
+
+def test_dua_sesi_gagal_baru_setelah_bertahan_membuka_putaran_baru():
+    evaluasi = _evaluasi(1, "2026-09-08", True)
+    checkpoint = tuple(
+        _sesi_domain(
+            i + 2,
+            "2026-10-06",
+            tujuan="checkpoint",
+            bagian=i + 1,
+            outcomes=tuple(
+                _outcome("deret", benar=True, paham="bisa_menjelaskan") for _ in range(2)
+            ),
+        )
+        for i in range(2)
+    )
+    gagal_1 = _sesi_domain(
+        4, "2026-10-10", outcomes=(_outcome("deret", "H", benar=False),)
+    )
+    gagal_2 = _sesi_domain(
+        5, "2026-10-11", outcomes=(_outcome("deret", "H", benar=False),)
+    )
+
+    rencana = rencana_berikutnya(
+        _bukti(
+            evaluasi,
+            *checkpoint,
+            gagal_1,
+            gagal_2,
+            putaran=_putaran_fokus_deret(),
+        ),
+        1,
+        date(2026, 10, 12),
+    )
+
+    assert rencana.tindakan == "putaran_baru"
+
+
+def test_loader_database_menghasilkan_input_immutable_dari_snapshot_aktif(db):
+    with database.buka(db) as kon:
+        siswa_id, sesi_id, butir = _sesi_satu_butir(
+            kon, nama="Loader", level="P3", tujuan="pemetaan"
+        )
+        putaran_id = database.buat_putaran_fokus(kon, siswa_id, "P3")
+        database.tautkan_sesi_putaran(kon, putaran_id, [sesi_id])
+        _isi_dan_selesaikan(kon, sesi_id, butir)
+        database.konfirmasi_hasil(kon, sesi_id, guru="guru")
+
+        bukti = database.muat_bukti_siklus(kon, siswa_id)
+
+    assert isinstance(bukti, BuktiSiklus)
+    assert bukti.putaran[0].id == putaran_id
+    assert bukti.sesi[0].outcomes[0].kode_final == "K"
+    with pytest.raises(Exception):
+        bukti.sesi[0].tujuan = "bebas"

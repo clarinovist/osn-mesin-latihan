@@ -12,8 +12,9 @@ import os
 import random
 import sqlite3
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Optional
 
 from generator import LEVEL_BAWAAN, buat_lembar
 from schema import MIGRASI, SKEMA, VIEW_USANG
@@ -1122,6 +1123,155 @@ def konfirmasi_hasil(
         (fingerprint, sesi_id),
     )
     return konfirmasi_id
+
+
+# ── Loader immutable siklus belajar ─────────────────────────────────────
+
+
+def _tanggal_domain(nilai: str) -> date:
+    """Ambil tanggal dari nilai SQLite date/datetime."""
+    return date.fromisoformat(nilai[:10])
+
+
+def _data_kejadian(nilai: str) -> tuple[tuple[str, object], ...]:
+    data = json.loads(nilai or "{}")
+    if not isinstance(data, dict):
+        return ()
+
+    def bekukan(objek):
+        if isinstance(objek, list):
+            return tuple(bekukan(item) for item in objek)
+        if isinstance(objek, dict):
+            return tuple(sorted((kunci, bekukan(isi)) for kunci, isi in objek.items()))
+        return objek
+
+    return tuple(sorted((kunci, bekukan(isi)) for kunci, isi in data.items()))
+
+
+def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
+    """Muat snapshot aktif dan histori append-only sebagai input reducer murni."""
+    from learning_cycle import (
+        BuktiSiklus,
+        KejadianSiklus,
+        OutcomeSiklus,
+        PutaranSiklus,
+        SesiSiklus,
+    )
+
+    siswa = kon.execute(
+        "SELECT id, tingkat FROM siswa WHERE id = ?", (siswa_id,)
+    ).fetchone()
+    if siswa is None:
+        raise ValueError("siswa tidak dikenal")
+
+    fokus_per_putaran: dict[int, list[tuple[str, str, Optional[str]]]] = {}
+    for baris in kon.execute(
+        """SELECT putaran_id, slot, template_id, kode_intervensi,
+                  malrule_id_kanonis
+           FROM anggota_fokus
+           WHERE putaran_id IN (SELECT id FROM putaran_fokus WHERE siswa_id = ?)
+           ORDER BY putaran_id, slot""",
+        (siswa_id,),
+    ).fetchall():
+        fokus_per_putaran.setdefault(int(baris["putaran_id"]), []).append(
+            (
+                baris["template_id"],
+                baris["kode_intervensi"],
+                baris["malrule_id_kanonis"] or None,
+            )
+        )
+
+    putaran = tuple(
+        PutaranSiklus(
+            int(baris["id"]),
+            siswa_id,
+            baris["level"],
+            _tanggal_domain(baris["dibuka"]),
+            tuple(fokus_per_putaran.get(int(baris["id"]), ())),
+        )
+        for baris in kon.execute(
+            """SELECT id, level, dibuka FROM putaran_fokus
+               WHERE siswa_id = ? ORDER BY id""",
+            (siswa_id,),
+        ).fetchall()
+    )
+
+    kejadian = tuple(
+        KejadianSiklus(
+            int(baris["id"]),
+            baris["jenis"],
+            _tanggal_domain(baris["dibuat"]),
+            baris["putaran_id"],
+            baris["sesi_id"],
+            baris["konfirmasi_id"],
+            _data_kejadian(baris["data"]),
+        )
+        for baris in kon.execute(
+            """SELECT id, jenis, dibuat, putaran_id, sesi_id, konfirmasi_id, data
+               FROM kejadian_belajar WHERE siswa_id = ? ORDER BY id""",
+            (siswa_id,),
+        ).fetchall()
+    )
+
+    sesi_hasil = []
+    sesi_baris = kon.execute(
+        """SELECT id, level, tujuan, tanggal, dibuat, selesai, direview,
+                  dikonfirmasi_guru, putaran_id, bagian_checkpoint, dibatalkan,
+                  fingerprint_konfirmasi
+           FROM sesi WHERE siswa_id = ? ORDER BY tanggal, id""",
+        (siswa_id,),
+    ).fetchall()
+    for baris in sesi_baris:
+        outcome = ()
+        if baris["dikonfirmasi_guru"] is not None:
+            aktif = kon.execute(
+                """SELECT id FROM konfirmasi_hasil
+                   WHERE sesi_id = ? AND fingerprint = ?
+                   ORDER BY nomor_urut DESC, id DESC LIMIT 1""",
+                (baris["id"], baris["fingerprint_konfirmasi"]),
+            ).fetchone()
+            if aktif is not None:
+                outcome = tuple(
+                    OutcomeSiklus(
+                        item["template_id"],
+                        None if item["benar"] is None else bool(item["benar"]),
+                        item["kode_final"],
+                        item["malrule_id"],
+                        bool(item["dilewati"]),
+                        item["cek_pemahaman"],
+                    )
+                    for item in kon.execute(
+                        """SELECT template_id, benar, kode_final, malrule_id,
+                                  dilewati, cek_pemahaman
+                           FROM snapshot_outcome WHERE konfirmasi_id = ?
+                           ORDER BY nomor""",
+                        (aktif["id"],),
+                    ).fetchall()
+                )
+        sesi_hasil.append(
+            SesiSiklus(
+                int(baris["id"]),
+                siswa_id,
+                baris["level"],
+                baris["tujuan"],
+                _tanggal_domain(baris["tanggal"]),
+                baris["dibuat"],
+                baris["selesai"],
+                baris["direview"],
+                baris["dikonfirmasi_guru"],
+                baris["putaran_id"],
+                baris["bagian_checkpoint"],
+                baris["dibatalkan"],
+                outcome,
+            )
+        )
+    return BuktiSiklus(
+        siswa_id,
+        siswa["tingkat"],
+        tuple(sesi_hasil),
+        putaran,
+        kejadian,
+    )
 
 
 def batalkan_sesi(

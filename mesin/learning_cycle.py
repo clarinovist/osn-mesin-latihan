@@ -1,0 +1,655 @@
+"""Reducer murni untuk siklus belajar terpandu.
+
+Modul ini tidak membaca atau menulis basis data. Lapisan penyimpanan mengubah
+snapshot dan kejadian append-only menjadi struktur immutable di bawah ini.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+from datetime import date, timedelta
+from typing import Dict, Iterable, List, Optional, Set, Tuple
+
+KunciFokus = Tuple[str, str, Optional[str]]
+
+
+@dataclass(frozen=True)
+class OutcomeSiklus:
+    template_id: str
+    benar: Optional[bool]
+    kode_final: Optional[str] = None
+    malrule_id: Optional[str] = None
+    dilewati: bool = False
+    cek_pemahaman: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class SesiSiklus:
+    id: int
+    siswa_id: int
+    level: str
+    tujuan: str
+    tanggal: date
+    dibuat: str = ""
+    selesai: Optional[str] = None
+    direview: Optional[str] = None
+    dikonfirmasi: Optional[str] = None
+    putaran_id: Optional[int] = None
+    bagian_checkpoint: Optional[int] = None
+    dibatalkan: Optional[str] = None
+    outcomes: Tuple[OutcomeSiklus, ...] = ()
+
+
+@dataclass(frozen=True)
+class KejadianSiklus:
+    id: int
+    jenis: str
+    tanggal: date
+    putaran_id: Optional[int] = None
+    sesi_id: Optional[int] = None
+    konfirmasi_id: Optional[int] = None
+    data: Tuple[Tuple[str, object], ...] = ()
+
+    def nilai(self, kunci: str, bawaan=None):
+        return dict(self.data).get(kunci, bawaan)
+
+
+@dataclass(frozen=True)
+class PutaranSiklus:
+    id: int
+    siswa_id: int
+    level: str
+    dibuka: date
+    fokus: Tuple[KunciFokus, ...] = ()
+
+
+@dataclass(frozen=True)
+class BuktiSiklus:
+    siswa_id: int
+    level_aktif: str
+    sesi: Tuple[SesiSiklus, ...] = ()
+    putaran: Tuple[PutaranSiklus, ...] = ()
+    kejadian: Tuple[KejadianSiklus, ...] = ()
+    pendekatan_tersedia: Tuple[Tuple[KunciFokus, Tuple[str, ...]], ...] = ()
+
+
+@dataclass(frozen=True)
+class Intervensi:
+    kode: str
+    tindakan: str
+    tahap_berikutnya: str
+
+
+@dataclass(frozen=True)
+class StatusFokus:
+    kunci: KunciFokus
+    status: str
+    jumlah_sesi: int = 0
+    terakhir: Optional[date] = None
+    pendekatan_berikutnya: Optional[str] = None
+    evaluasi_probe_minimum: int = 4
+    checkpoint_probe_minimum: int = 3
+
+
+@dataclass(frozen=True)
+class PutaranFokus:
+    id: Optional[int]
+    level: str
+    fokus: Tuple[StatusFokus, ...]
+    tanggal_pemetaan: Tuple[date, ...] = ()
+
+
+@dataclass(frozen=True)
+class RencanaBelajar:
+    tindakan: str
+    alasan: str
+    putaran: Optional[PutaranFokus] = None
+    sesi_id: Optional[int] = None
+    kandidat: Tuple[KunciFokus, ...] = ()
+    intervensi: Optional[Intervensi] = None
+    tersedia_pada: Optional[date] = None
+    jumlah_probe_minimum: int = 0
+    bagian_checkpoint: Optional[int] = None
+
+
+_INTERVENSI = {
+    "B": Intervensi("B", "Tandai informasi dan ucapkan ulang yang ditanya", "latihan_terbimbing"),
+    "K": Intervensi("K", "Gunakan konsep konkret atau visual dan contoh terbimbing", "latihan_terbimbing"),
+    "H": Intervensi("H", "Tulis langkah dan periksa ulang perhitungan", "latihan_terbimbing"),
+    "E": Intervensi("E", "Cocokkan hasil kerja dengan jawaban akhir", "latihan_terbimbing"),
+    "N": Intervensi("N", "Tanyakan: dapat dari mana?", "probe_pemahaman"),
+    "T": Intervensi("T", "Kenalkan materi dengan contoh sederhana", "pengenalan"),
+}
+
+
+def intervensi_untuk(kode: str) -> Intervensi:
+    """Kembalikan tindakan berbeda untuk setiap kode diagnosis."""
+    try:
+        return _INTERVENSI[kode]
+    except KeyError as exc:
+        raise ValueError("kode diagnosis tidak dikenal") from exc
+
+
+def _putaran_aktif(bukti: BuktiSiklus) -> Optional[PutaranSiklus]:
+    tertutup = {
+        e.putaran_id
+        for e in bukti.kejadian
+        if e.jenis in {"putaran_ditutup", "diganti_level", "override_ditutup"}
+    }
+    kandidat = [
+        p for p in bukti.putaran if p.level == bukti.level_aktif and p.id not in tertutup
+    ]
+    return max(kandidat, key=lambda p: (p.dibuka, p.id)) if kandidat else None
+
+
+def _sesi_pemblokir(
+    bukti: BuktiSiklus, putaran: Optional[PutaranSiklus]
+) -> List[SesiSiklus]:
+    if putaran is None:
+        return []
+    return sorted(
+        (
+            s
+            for s in bukti.sesi
+            if s.siswa_id == bukti.siswa_id
+            and s.putaran_id == putaran.id
+            and s.tujuan != "bebas"
+            and s.dibatalkan is None
+            and s.level == putaran.level == bukti.level_aktif
+        ),
+        key=lambda s: (s.dibuat, s.tanggal, s.id),
+    )
+
+
+def _sesi_bukti_pemetaan(
+    bukti: BuktiSiklus, putaran: Optional[PutaranSiklus]
+) -> Tuple[SesiSiklus, ...]:
+    opt_in = {
+        e.sesi_id for e in bukti.kejadian if e.jenis == "sertakan_pemetaan"
+    }
+    hasil = []
+    for sesi in bukti.sesi:
+        if sesi.siswa_id != bukti.siswa_id or sesi.level != bukti.level_aktif:
+            continue
+        if sesi.dibatalkan is not None or sesi.selesai is None or sesi.dikonfirmasi is None:
+            continue
+        if sesi.tujuan in {"pemetaan"} and (
+            putaran is None or sesi.putaran_id == putaran.id
+        ):
+            hasil.append(sesi)
+        elif sesi.tujuan == "bebas" and sesi.id in opt_in:
+            hasil.append(sesi)
+    return tuple(hasil)
+
+
+def _kunci_outcome(outcome: OutcomeSiklus) -> Optional[KunciFokus]:
+    if outcome.dilewati:
+        return None
+    if outcome.kode_final in {"K", "H"}:
+        return (outcome.template_id, outcome.kode_final, outcome.malrule_id)
+    if outcome.kode_final == "N" and outcome.cek_pemahaman in {"ragu", "menghafal"}:
+        return (outcome.template_id, "K", outcome.malrule_id)
+    return None
+
+
+def _ringkas_kandidat(
+    sesi: Iterable[SesiSiklus],
+) -> Tuple[Tuple[KunciFokus, int, date], ...]:
+    sesi_per_kunci: Dict[KunciFokus, Set[int]] = {}
+    terakhir: Dict[KunciFokus, date] = {}
+    for satu in sesi:
+        dalam_sesi = {
+            kunci for kunci in (_kunci_outcome(o) for o in satu.outcomes) if kunci
+        }
+        for kunci in dalam_sesi:
+            sesi_per_kunci.setdefault(kunci, set()).add(satu.id)
+            terakhir[kunci] = max(terakhir.get(kunci, satu.tanggal), satu.tanggal)
+    hasil = [
+        (kunci, len(sesi_ids), terakhir[kunci])
+        for kunci, sesi_ids in sesi_per_kunci.items()
+    ]
+    return tuple(
+        sorted(
+            hasil,
+            key=lambda item: (
+                -item[1],
+                0 if item[0][1] == "K" else 1,
+                -item[2].toordinal(),
+                item[0],
+            ),
+        )
+    )
+
+
+def _status_putaran(
+    putaran: Optional[PutaranSiklus],
+    level: str,
+    tanggal: Iterable[date],
+    ringkasan: Tuple[Tuple[KunciFokus, int, date], ...],
+) -> PutaranFokus:
+    kunci_tersimpan = putaran.fokus if putaran and putaran.fokus else tuple(
+        item[0] for item in ringkasan if item[1] >= 2
+    )[:2]
+    lookup = {kunci: (jumlah, terakhir) for kunci, jumlah, terakhir in ringkasan}
+    fokus = tuple(
+        StatusFokus(
+            kunci,
+            "perlu_dipelajari",
+            lookup.get(kunci, (0, None))[0],
+            lookup.get(kunci, (0, None))[1],
+        )
+        for kunci in kunci_tersimpan[:2]
+    )
+    return PutaranFokus(
+        None if putaran is None else putaran.id,
+        level,
+        fokus,
+        tuple(sorted(set(tanggal))),
+    )
+
+
+def _urut_anchor(
+    ringkasan: Tuple[Tuple[KunciFokus, int, date], ...]
+) -> Tuple[KunciFokus, ...]:
+    pantau = [item for item in ringkasan if item[1] == 1]
+    pantau.sort(
+        key=lambda item: (
+            0 if item[0][1] == "K" else 1,
+            -item[2].toordinal(),
+            item[0],
+        )
+    )
+    return tuple(item[0] for item in pantau)
+
+
+def _putaran_dengan_override(
+    putaran: Optional[PutaranSiklus], kejadian: Tuple[KejadianSiklus, ...]
+) -> Optional[PutaranSiklus]:
+    if putaran is None:
+        return None
+    sudah_intervensi = any(
+        e.putaran_id == putaran.id and e.jenis == "intervensi_selesai" for e in kejadian
+    )
+    override = [
+        e for e in kejadian if e.putaran_id == putaran.id and e.jenis == "fokus_diubah"
+    ]
+    if override and not sudah_intervensi:
+        fokus = tuple(override[-1].nilai("fokus", ()))[:2]
+        return replace(putaran, fokus=fokus)
+    return putaran
+
+
+def _hasil_fokus(sesi: SesiSiklus, kunci: KunciFokus) -> Tuple[OutcomeSiklus, ...]:
+    return tuple(o for o in sesi.outcomes if o.template_id == kunci[0] and not o.dilewati)
+
+
+def _lulus(outcomes: Tuple[OutcomeSiklus, ...], minimum: int, semua_benar: bool = False) -> bool:
+    if len(outcomes) < minimum:
+        return False
+    benar = sum(o.benar is True for o in outcomes)
+    rasio_ok = benar == len(outcomes) if semua_benar else benar / len(outcomes) >= 0.75
+    return (
+        rasio_ok
+        and all(o.kode_final != "K" for o in outcomes)
+        and all(o.cek_pemahaman == "bisa_menjelaskan" for o in outcomes)
+    )
+
+
+def _evaluasi_fokus(
+    bukti: BuktiSiklus, putaran: PutaranSiklus, kunci: KunciFokus
+) -> Tuple[Tuple[SesiSiklus, bool], ...]:
+    hasil = []
+    for sesi in sorted(bukti.sesi, key=lambda s: (s.tanggal, s.id)):
+        if (
+            sesi.putaran_id == putaran.id
+            and sesi.tujuan == "evaluasi"
+            and sesi.dibatalkan is None
+            and sesi.dikonfirmasi is not None
+        ):
+            outcomes = _hasil_fokus(sesi, kunci)
+            if len(outcomes) >= 4:
+                hasil.append((sesi, _lulus(outcomes, 4)))
+    return tuple(hasil)
+
+
+def _checkpoint_sukses(
+    bukti: BuktiSiklus, putaran: PutaranSiklus, kunci: KunciFokus
+) -> Tuple[Optional[date], Tuple[int, ...]]:
+    sesi_checkpoint = sorted(
+        (
+            sesi
+            for sesi in bukti.sesi
+            if sesi.putaran_id == putaran.id
+            and sesi.tujuan == "checkpoint"
+            and sesi.dibatalkan is None
+            and sesi.dikonfirmasi is not None
+            and sesi.bagian_checkpoint in {1, 2}
+        ),
+        key=lambda sesi: (sesi.tanggal, sesi.id),
+    )
+    sukses: List[date] = []
+    bagian_aktif: List[SesiSiklus] = []
+    for sesi in sesi_checkpoint:
+        if sesi.bagian_checkpoint == 1:
+            bagian_aktif = [sesi]
+            continue
+        if not bagian_aktif:
+            bagian_aktif = [sesi]
+            continue
+        bagian_aktif.append(sesi)
+        outcomes = tuple(
+            outcome
+            for bagian in bagian_aktif
+            for outcome in _hasil_fokus(bagian, kunci)
+        )
+        if _lulus(outcomes, 3, semua_benar=True):
+            sukses.append(max(bagian.tanggal for bagian in bagian_aktif))
+        bagian_aktif = []
+    bagian = tuple(
+        int(sesi.bagian_checkpoint)
+        for sesi in bagian_aktif
+        if sesi.bagian_checkpoint is not None
+    )
+    return (max(sukses) if sukses else None, bagian)
+
+
+def _pendekatan_berikutnya(
+    bukti: BuktiSiklus, putaran: PutaranSiklus, kunci: KunciFokus
+) -> Optional[str]:
+    tersedia = dict(bukti.pendekatan_tersedia).get(kunci, ())
+    dipakai = {
+        e.nilai("pendekatan_id")
+        for e in bukti.kejadian
+        if e.putaran_id == putaran.id
+        and e.jenis == "intervensi_selesai"
+        and tuple(e.nilai("fokus", ())) == kunci
+    }
+    return next((p for p in tersedia if p not in dipakai), None)
+
+
+def _rencana_fokus(
+    bukti: BuktiSiklus,
+    putaran: PutaranSiklus,
+    status_awal: PutaranFokus,
+    hari: date,
+) -> Optional[RencanaBelajar]:
+    statuses = []
+    evaluasi_per_fokus = {}
+    checkpoint_per_fokus = {}
+    for fokus in status_awal.fokus:
+        evaluasi = _evaluasi_fokus(bukti, putaran, fokus.kunci)
+        evaluasi_per_fokus[fokus.kunci] = evaluasi
+        checkpoint = _checkpoint_sukses(bukti, putaran, fokus.kunci)
+        checkpoint_per_fokus[fokus.kunci] = checkpoint
+        status = fokus.status
+        pendekatan = None
+        if evaluasi:
+            status = "mulai_membaik" if evaluasi[-1][1] else "perlu_diperkuat"
+        if checkpoint[0] is not None:
+            status = "bertahan"
+        if evaluasi and not evaluasi[-1][1]:
+            pendekatan = _pendekatan_berikutnya(bukti, putaran, fokus.kunci)
+        statuses.append(replace(fokus, status=status, pendekatan_berikutnya=pendekatan))
+    status_putaran = replace(status_awal, fokus=tuple(statuses))
+
+    # Kekambuhan punya prioritas sebelum pemetaan lanjutan.
+    for fokus in statuses:
+        if fokus.status != "bertahan":
+            continue
+        tanggal_checkpoint = checkpoint_per_fokus[fokus.kunci][0]
+        kambuh = [
+            s
+            for s in bukti.sesi
+            if tanggal_checkpoint is not None
+            and s.tanggal > tanggal_checkpoint
+            and s.dikonfirmasi is not None
+            and any(
+                o.template_id == fokus.kunci[0] and o.kode_final == "K"
+                for o in s.outcomes
+            )
+        ]
+        pola_gagal = {
+            s.id
+            for s in bukti.sesi
+            if tanggal_checkpoint is not None
+            and s.tanggal > tanggal_checkpoint
+            and s.dikonfirmasi is not None
+            and any(
+                o.template_id == fokus.kunci[0]
+                and o.benar is False
+                and o.kode_final in {"K", "H", "N"}
+                for o in s.outcomes
+            )
+        }
+        if kambuh or len(pola_gagal) >= 2:
+            baru = PutaranFokus(
+                None,
+                putaran.level,
+                (replace(fokus, status="perlu_dipelajari"),),
+            )
+            return RencanaBelajar(
+                "putaran_baru", "Fokus bertahan menunjukkan kekambuhan", putaran=baru
+            )
+
+    gagal_terbaru = []
+    for fokus in statuses:
+        evaluasi = evaluasi_per_fokus[fokus.kunci]
+        beruntun = 0
+        for _, lulus in reversed(evaluasi):
+            if lulus:
+                break
+            beruntun += 1
+        if beruntun:
+            gagal_terbaru.append((fokus, beruntun))
+    if any(jumlah >= 2 or fokus.pendekatan_berikutnya is None for fokus, jumlah in gagal_terbaru):
+        return RencanaBelajar(
+            "eskalasi", "Evaluasi gagal berulang atau pendekatan alternatif tidak tersedia", putaran=status_putaran
+        )
+
+    # Evaluasi jatuh tempo didahulukan dari intervensi yang belum mulai.
+    penguatan = [
+        s
+        for s in bukti.sesi
+        if s.putaran_id == putaran.id
+        and s.tujuan == "penguatan"
+        and s.dibatalkan is None
+        and s.selesai is not None
+        and s.dikonfirmasi is not None
+    ]
+    evaluasi_ids = {s.id for evaluasi in evaluasi_per_fokus.values() for s, _ in evaluasi}
+    if penguatan and not evaluasi_ids:
+        tanggal = max(s.tanggal for s in penguatan) + timedelta(days=3)
+        if hari < tanggal:
+            return RencanaBelajar(
+                "tunggu_evaluasi", "Evaluasi tersedia tiga hari setelah penguatan", putaran=status_putaran, tersedia_pada=tanggal
+            )
+        return RencanaBelajar(
+            "evaluasi", "Evaluasi berjeda sudah jatuh tempo", putaran=status_putaran, jumlah_probe_minimum=4
+        )
+
+    if gagal_terbaru:
+        fokus = gagal_terbaru[0][0]
+        return RencanaBelajar(
+            "intervensi",
+            "Evaluasi perlu diperkuat dengan pendekatan berbeda",
+            putaran=status_putaran,
+            intervensi=intervensi_untuk(fokus.kunci[1]),
+        )
+
+    # Checkpoint per fokus dihitung dari evaluasi/checkpoint sukses terakhir.
+    for fokus in statuses:
+        if fokus.status not in {"mulai_membaik", "bertahan"}:
+            continue
+        evaluasi = evaluasi_per_fokus[fokus.kunci]
+        checkpoint_terakhir, bagian = checkpoint_per_fokus[fokus.kunci]
+        dasar = checkpoint_terakhir or max(s.tanggal for s, lulus in evaluasi if lulus)
+        jatuh_tempo = dasar + timedelta(days=28)
+        bagian_aktif = set(bagian)
+        if bagian_aktif == {1}:
+            return RencanaBelajar(
+                "checkpoint", "Lengkapi bagian kedua checkpoint", putaran=status_putaran,
+                jumlah_probe_minimum=3, bagian_checkpoint=2
+            )
+        if hari < jatuh_tempo:
+            return RencanaBelajar(
+                "tunggu_checkpoint", "Checkpoint belum jatuh tempo", putaran=status_putaran, tersedia_pada=jatuh_tempo
+            )
+        return RencanaBelajar(
+            "checkpoint", "Checkpoint fokus sudah jatuh tempo", putaran=status_putaran,
+            jumlah_probe_minimum=3, bagian_checkpoint=1
+        )
+
+    sudah_intervensi = any(
+        e.putaran_id == putaran.id and e.jenis == "intervensi_selesai"
+        for e in bukti.kejadian
+    )
+    if statuses and not sudah_intervensi:
+        return RencanaBelajar(
+            "intervensi", "Fokus memerlukan tindakan sebelum latihan", putaran=status_putaran,
+            intervensi=intervensi_untuk(statuses[0].kunci[1])
+        )
+    if statuses and sudah_intervensi:
+        terbimbing = any(
+            s.putaran_id == putaran.id
+            and s.tujuan == "latihan_terbimbing"
+            and s.dibatalkan is None
+            and s.dikonfirmasi is not None
+            for s in bukti.sesi
+        )
+        if not terbimbing:
+            return RencanaBelajar(
+                "latihan_terbimbing", "Intervensi dilanjutkan contoh terbimbing", putaran=status_putaran
+            )
+        penguatan_ada = any(
+            s.putaran_id == putaran.id
+            and s.tujuan == "penguatan"
+            and s.dibatalkan is None
+            and s.dikonfirmasi is not None
+            for s in bukti.sesi
+        )
+        if not penguatan_ada:
+            return RencanaBelajar(
+                "penguatan", "Latihan terbimbing dilanjutkan penguatan mandiri", putaran=status_putaran
+            )
+    return None
+
+
+def _materi_t(
+    bukti: BuktiSiklus, sesi_pemetaan: Tuple[SesiSiklus, ...]
+) -> Tuple[KunciFokus, ...]:
+    hasil = []
+    for sesi in sorted(sesi_pemetaan, key=lambda s: (s.tanggal, s.id)):
+        for outcome in sesi.outcomes:
+            if outcome.kode_final == "T":
+                kunci = (outcome.template_id, "T", None)
+                if kunci not in hasil:
+                    hasil.append(kunci)
+    return tuple(hasil)
+
+
+def rencana_berikutnya(
+    bukti: BuktiSiklus, siswa_id: int, hari_ini: Optional[date] = None
+) -> RencanaBelajar:
+    """Turunkan satu rekomendasi deterministik tanpa side effect."""
+    if siswa_id != bukti.siswa_id:
+        raise ValueError("bukti bukan milik siswa")
+    hari = hari_ini or date.today()
+    putaran = _putaran_dengan_override(_putaran_aktif(bukti), bukti.kejadian)
+
+    pemblokir = _sesi_pemblokir(bukti, putaran)
+    belum_selesai = [s for s in pemblokir if s.selesai is None]
+    if belum_selesai:
+        sesi = belum_selesai[0]
+        return RencanaBelajar(
+            "lanjutkan_sesi", "Sesi terpandu aktif belum selesai", sesi_id=sesi.id
+        )
+    belum_sah = [
+        s for s in pemblokir if s.selesai is not None and s.dikonfirmasi is None
+    ]
+    if belum_sah:
+        sesi = belum_sah[0]
+        return RencanaBelajar(
+            "konfirmasi_hasil", "Hasil sesi belum dikonfirmasi guru", sesi_id=sesi.id
+        )
+
+    sesi_pemetaan = _sesi_bukti_pemetaan(bukti, putaran)
+    tanggal = tuple(s.tanggal for s in sesi_pemetaan if s.tujuan == "pemetaan")
+    ringkasan = _ringkas_kandidat(sesi_pemetaan)
+    status = _status_putaran(putaran, bukti.level_aktif, tanggal, ringkasan)
+    anchor = _urut_anchor(ringkasan)
+
+    # Fokus yang sudah dipersistenkan menandai pemetaan putaran telah ditutup.
+    # Kandidat otomatis tetap harus menunggu tiga tanggal pemetaan lengkap.
+    if putaran is not None and putaran.fokus and status.fokus:
+        rencana_fokus = _rencana_fokus(bukti, putaran, status, hari)
+        if rencana_fokus is not None:
+            return rencana_fokus
+
+    materi_t = _materi_t(bukti, sesi_pemetaan)
+    pengenalan_selesai = {
+        e.nilai("template_id")
+        for e in bukti.kejadian
+        if e.jenis == "pengenalan_selesai"
+    }
+    probe_terkonfirmasi = {
+        o.template_id
+        for s in bukti.sesi
+        if s.dikonfirmasi is not None and s.tujuan == "pemetaan"
+        for o in s.outcomes
+        if s.tanggal > min(
+            (e.tanggal for e in bukti.kejadian if e.jenis == "pengenalan_selesai" and e.nilai("template_id") == o.template_id),
+            default=date.max,
+        )
+    }
+    menunggu_probe = tuple(
+        k for k in materi_t if k[0] in pengenalan_selesai and k[0] not in probe_terkonfirmasi
+    )
+
+    if len(set(tanggal)) < 3:
+        if tanggal and max(tanggal) >= hari:
+            return RencanaBelajar(
+                "tunggu_pemetaan",
+                "Pemetaan harus dilakukan pada tanggal berbeda",
+                putaran=status,
+                kandidat=anchor[:5],
+                tersedia_pada=max(tanggal) + timedelta(days=1),
+            )
+        return RencanaBelajar(
+            "pemetaan",
+            "Lanjutkan pemetaan level aktif",
+            putaran=status,
+            kandidat=anchor[:5],
+        )
+
+    if status.fokus:
+        fokus = status.fokus[0]
+        return RencanaBelajar(
+            "intervensi",
+            "Fokus berulang pada minimal dua sesi",
+            putaran=status,
+            intervensi=intervensi_untuk(fokus.kunci[1]),
+        )
+    if anchor:
+        return RencanaBelajar(
+            "probe_diagnostik",
+            "Kandidat pantauan masih memerlukan bukti sesi kedua",
+            putaran=status,
+            kandidat=anchor[:5],
+        )
+    if menunggu_probe:
+        return RencanaBelajar(
+            "probe_setelah_pengenalan",
+            "Materi yang dikenalkan harus diprobe sampai hasil terkonfirmasi",
+            putaran=status,
+            kandidat=menunggu_probe[:5],
+        )
+    belum_dikenalkan = tuple(k for k in materi_t if k[0] not in pengenalan_selesai)
+    if belum_dikenalkan:
+        return RencanaBelajar(
+            "pengenalan",
+            "Materi baru perlu dikenalkan sebelum probe",
+            putaran=status,
+            kandidat=belum_dikenalkan[:1],
+            intervensi=intervensi_untuk("T"),
+        )
+    return RencanaBelajar("mixed_maintenance", "Tidak ada fokus aktif", putaran=status)
