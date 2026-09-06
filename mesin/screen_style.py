@@ -17,8 +17,10 @@ permukaan.
 """
 
 import design_tokens as T
+from presentation_style import GAYA_PENYAJIAN
 
 GAYA_LAYAR = f"""
+{GAYA_PENYAJIAN}
 * {{ box-sizing: border-box; }}
 html {{ -webkit-text-size-adjust: 100%; }}
 body {{

@@ -11,7 +11,9 @@ from __future__ import annotations
 import json
 
 import brand
+import visual_renderer
 import design_tokens as T
+from presentation_style import GAYA_PENYAJIAN
 from templates import label_kelas
 from learning_stage_labels import penanda_tahap
 from topics import Topik, dari_sesi
@@ -61,6 +63,7 @@ def _badan_teks(teks: str) -> str:
     )
 
 CSS_MURID = f"""
+{GAYA_PENYAJIAN}
 * {{ box-sizing: border-box; }}
 html {{ -webkit-text-size-adjust: 100%; }}
 body {{
@@ -387,7 +390,7 @@ def halaman_kerja(
 <div class="soal soal-murid">
   <span class="nomor">{s['nomor']}</span>
   {'<span class="bintang">★</span>' if s['tantangan'] else ''}
-  {_badan_teks(s['teks'])}
+  {visual_renderer.render_pertanyaan(s['penyajian'], gaya='murid', namespace=str(s['nomor']))}
   <div class="baris-jawab">
     <span>Jawabanku:</span>
     <input type="text" name="jwb_{ssid}"
@@ -433,7 +436,7 @@ def halaman_kerja(
 <div class="soal soal-murid">
   <span class="nomor">{s['nomor']}</span>
   {'<span class="bintang">★</span>' if s['tantangan'] else ''}
-  {_badan_teks(s['teks'])}
+  {visual_renderer.render_pertanyaan(s['penyajian'], gaya='murid', namespace=str(s['nomor']))}
   {restate}
   <label class="label">Caraku — pilih dulu yang paling mirip:</label>
   <div class="pilih-cara-grup">{tombol}</div>
@@ -904,7 +907,9 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
         belum = " checked" if t.get("belum_pernah") else ""
         bintang = '<span class="kerja-bintang-st">★</span>' if s["tantangan"] else ""
         nomor = f'<span class="kerja-nomor-st">{s["nomor"]}</span>'
-        teks = _badan_teks_st(s["teks"])
+        teks = visual_renderer.render_pertanyaan(
+            s["penyajian"], gaya="stitch", namespace=str(s["nomor"])
+        )
 
         if drill:
             catatan_soal = ""
@@ -1393,7 +1398,7 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
             f'<div class="{kelas}">'
             f'<div class="hasil-kepala-st">'
             f'<span class="hasil-nomor-st">{b["nomor"]}</span>{status}</div>'
-            f'<p class="hasil-teks-st">{_badan_teks_st(b["teks"])}</p>'
+            f'<div class="hasil-teks-st">{visual_renderer.render_pertanyaan(b["penyajian"], gaya="stitch", namespace=str(b["nomor"]))}</div>'
             f"{jawabku}{langkah}</div>"
         )
 

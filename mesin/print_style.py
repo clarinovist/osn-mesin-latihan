@@ -21,8 +21,10 @@ Nilai visual dipusatkan di design_tokens.py. Satuan di sini tetap mm/pt
 """
 
 import design_tokens as T
+from presentation_style import GAYA_PENYAJIAN
 
 GAYA_CETAK = f"""
+{GAYA_PENYAJIAN}
 @page {{ size: A4; margin: 13mm 12mm 11mm 12mm; }}
 * {{ box-sizing: border-box; }}
 body {{

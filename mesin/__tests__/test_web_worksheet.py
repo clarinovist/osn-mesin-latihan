@@ -9,6 +9,7 @@ tetap tampil normal, jadi tidak ada yang menyadari sampai terlambat.
 from __future__ import annotations
 
 import re
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -17,6 +18,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import database  # noqa: E402
+import presentation_lock  # noqa: E402
+import question_views  # noqa: E402
 import web  # noqa: E402
 import teacher_pages  # noqa: E402
 
@@ -52,6 +55,103 @@ def test_lembar_soal_bisa_dibangkitkan_dari_sesi(db):
     assert h.startswith("<!DOCTYPE html>")
     assert h.count('class="soal"') == 12
     assert "Cetak" in h
+
+
+def test_lembar_membekukan_penyajian_tanpa_menandai_pengerjaan(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Freeze cetak")
+        sesi_id = database.buat_sesi(kon, sid, seed=4321)
+
+        assert teacher_pages.halaman_lembar(kon, sesi_id) is not None
+        keadaan = kon.execute(
+            """SELECT penyajian_dibekukan, mulai, selesai
+               FROM sesi WHERE id = ?""",
+            (sesi_id,),
+        ).fetchone()
+
+    assert keadaan["penyajian_dibekukan"] is not None
+    assert keadaan["mulai"] is None
+    assert keadaan["selesai"] is None
+
+
+def test_setelah_print_service_dan_raw_sql_tidak_bisa_mengubah_snapshot(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Palang print")
+        sesi_id = database.buat_sesi(kon, sid, seed=9876, jumlah_soal=1)
+        awal = database.isi_sesi(kon, sesi_id)[0]
+        snapshot_baru = question_views.penyajian_dari_baris(awal)
+
+        assert teacher_pages.halaman_lembar(kon, sesi_id) is not None
+        assert presentation_lock.perbarui_snapshot(
+            kon,
+            awal["sesi_soal_id"],
+            awal["fingerprint_penyajian"],
+            snapshot_baru,
+        ) is False
+        with pytest.raises(sqlite3.IntegrityError, match="snapshot penyajian terkunci"):
+            kon.execute(
+                "UPDATE sesi_soal SET teks_soal = teks_soal || ' berubah' WHERE id = ?",
+                (awal["sesi_soal_id"],),
+            )
+
+        akhir = database.isi_sesi(kon, sesi_id)[0]
+    assert akhir["fingerprint_penyajian"] == awal["fingerprint_penyajian"]
+    assert akhir["teks_soal"] == awal["teks_soal"]
+
+
+def test_lembar_membekukan_sebelum_renderer_dipanggil(db, monkeypatch):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Urutan freeze")
+        sesi_id = database.buat_sesi(kon, sid, seed=6789)
+
+        def periksa_beku(*_args, **_kwargs):
+            keadaan = kon.execute(
+                "SELECT penyajian_dibekukan FROM sesi WHERE id = ?", (sesi_id,)
+            ).fetchone()
+            assert keadaan["penyajian_dibekukan"] is not None
+            return "<html>beku</html>"
+
+        monkeypatch.setattr(teacher_pages.worksheets, "lembar_soal", periksa_beku)
+        assert teacher_pages.halaman_lembar(kon, sesi_id) == b"<html>beku</html>"
+
+
+def test_lembar_tidak_commit_transaksi_pemanggil(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Transaksi freeze")
+        sesi_id = database.buat_sesi(kon, sid, seed=2468)
+        kon.commit()
+        kon.execute("SAVEPOINT transaksi_pemanggil")
+
+        assert teacher_pages.halaman_lembar(kon, sesi_id) is not None
+        kon.execute("ROLLBACK TO SAVEPOINT transaksi_pemanggil")
+        kon.execute("RELEASE SAVEPOINT transaksi_pemanggil")
+        keadaan = kon.execute(
+            "SELECT penyajian_dibekukan FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()
+
+    assert keadaan["penyajian_dibekukan"] is None
+
+
+def test_kegagalan_render_menggulung_pembekuan(db, monkeypatch):
+    with pytest.raises(RuntimeError, match="render sengaja gagal"):
+        with database.buka(db) as kon:
+            sid = database.tambah_siswa(kon, "Render gagal")
+            sesi_id = database.buat_sesi(kon, sid, seed=1357)
+            kon.commit()
+            monkeypatch.setattr(
+                teacher_pages.worksheets,
+                "lembar_soal",
+                lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                    RuntimeError("render sengaja gagal")
+                ),
+            )
+            teacher_pages.halaman_lembar(kon, sesi_id)
+
+    with database.buka(db) as kon:
+        keadaan = kon.execute(
+            "SELECT penyajian_dibekukan FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()
+    assert keadaan["penyajian_dibekukan"] is None
 
 
 def test_lembar_anak_tidak_memuat_kunci_di_posisi_jawaban(db):

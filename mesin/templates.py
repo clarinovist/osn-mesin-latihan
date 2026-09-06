@@ -22,7 +22,10 @@ Kode diagnosis (taksonomi B/K/H/E/T/N, Rencana Produk - Peta Jalan §02):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    from visual_contract import PenyajianPertanyaan
 
 HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
@@ -67,6 +70,7 @@ class Soal:
     tantangan: bool = False
     level: str = "P3"
     pembahasan: str = ""
+    penyajian: "PenyajianPertanyaan | None" = field(default=None, repr=False, compare=False)
 
     @property
     def tanda_tangan(self) -> str:

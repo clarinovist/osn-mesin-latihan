@@ -96,6 +96,7 @@ def test_soal_dari_baris_tanpa_cabang_per_template():
     sumber = inspect.getsource(teacher_pages._soal_dari_baris)
     assert "split(" not in sumber, "ada pembongkaran string per template"
     assert 'template_id"] ==' not in sumber, "ada cabang per template"
+    assert "question_views.soal_dari_baris" in sumber
 
 
 # ── Migrasi baris lama ──────────────────────────────────────────────────

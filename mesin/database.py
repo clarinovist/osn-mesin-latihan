@@ -17,9 +17,11 @@ from pathlib import Path
 from typing import Any, Iterator, Optional
 
 from generator import LEVEL_BAWAAN, buat_lembar
+import question_views
 from schema import MIGRASI, SKEMA, VIEW_USANG
 from templates import Soal
 from topics import TOPIK_BAWAAN
+from visual_contract import serialisasi_penyajian
 
 # Lokasi basis data bisa disetel lewat lingkungan, seperti berkas sandi.
 #
@@ -57,6 +59,35 @@ def buka(path: Path | str | None = None) -> Iterator[sqlite3.Connection]:
         kon.close()
 
 
+def _segarkan_trigger_snapshot(kon: sqlite3.Connection) -> None:
+    """Ganti hanya trigger Fase 1 lama; startup ulang tetap idempoten."""
+    nama = "sesi_soal_snapshot_tolak_update_terkunci"
+    baris = kon.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = ?",
+        (nama,),
+    ).fetchone()
+    if baris is None:
+        return
+    sql = " ".join(baris[0].split())
+    palang = ("sesi_id, soal_id, nomor", "se.dibatalkan IS NOT NULL", "lain.sesi_id IN", "kh.sesi_id IN", "bf.sesi_id IN")
+    if not all(marker in sql for marker in palang):
+        kon.execute(f"DROP TRIGGER {nama}")
+
+
+def _jalankan_skema(kon: sqlite3.Connection, skrip: str) -> None:
+    """Jalankan SQL utuh tanpa implicit COMMIT dari executescript."""
+    bagian = ""
+    for baris in skrip.splitlines(keepends=True):
+        bagian += baris
+        if sqlite3.complete_statement(bagian):
+            kon.execute(bagian)
+            bagian = ""
+    if bagian.strip() and not all(
+        b.strip().startswith("--") or not b.strip() for b in bagian.splitlines()
+    ):
+        raise sqlite3.OperationalError("skrip skema tidak lengkap")
+
+
 def siapkan(path: Path | str = BAWAAN) -> None:
     """Buat/segarkan skema. Aman dijalankan berulang.
 
@@ -67,17 +98,22 @@ def siapkan(path: Path | str = BAWAAN) -> None:
     yang muncul di halaman laporan, jauh dari penyebabnya.
     """
     with buka(path) as kon:
+        kon.execute("PRAGMA foreign_keys = OFF")
+        kon.execute("BEGIN IMMEDIATE")
         for nama in VIEW_USANG:
             kon.execute(f"DROP VIEW IF EXISTS {nama}")
         migrasi(kon)
         rebuild_siswa_unik(kon)
-        kon.executescript(SKEMA)
+        _segarkan_trigger_snapshot(kon)
+        _jalankan_skema(kon, SKEMA)
         # Migrasi bentuk parameter (A4): pola string per-template → list
         # JSON murni. Idempoten dan terverifikasi per baris (kunci lama
         # wajib cocok) — jalannya di setiap siapkan() aman dan murah.
         import migrate_params
 
         migrate_params.jalankan(kon)
+        if kon.execute("PRAGMA foreign_key_check").fetchone() is not None:
+            raise sqlite3.IntegrityError("migrasi meninggalkan foreign key tidak valid")
 
 
 def migrasi(kon: sqlite3.Connection) -> list[str]:
@@ -137,12 +173,15 @@ def rebuild_siswa_unik(kon: sqlite3.Connection) -> bool:
     if not unik_nama_saja:
         return False
 
-    kon.commit()
-    kon.execute("PRAGMA foreign_keys = OFF")
+    mandiri = not kon.in_transaction
+    if mandiri:
+        kon.execute("PRAGMA foreign_keys = OFF")
+        kon.execute("BEGIN IMMEDIATE")
+    elif kon.execute("PRAGMA foreign_keys").fetchone()[0]:
+        raise sqlite3.IntegrityError("rebuild membutuhkan transaksi migrasi dengan FK nonaktif")
     try:
-        kon.executescript(
+        _jalankan_skema(kon,
             """
-            BEGIN IMMEDIATE;
             CREATE TABLE siswa_baru (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 nama        TEXT    NOT NULL,
@@ -155,19 +194,19 @@ def rebuild_siswa_unik(kon: sqlite3.Connection) -> bool:
                 SELECT id, nama, tingkat, pemilik, dibuat FROM siswa;
             DROP TABLE siswa;
             ALTER TABLE siswa_baru RENAME TO siswa;
-            COMMIT;
             """
         )
-        sisa = kon.execute("PRAGMA foreign_key_check").fetchall()
-        if sisa:
-            raise sqlite3.IntegrityError(
-                f"rebuild siswa meninggalkan FK rusak: {sisa!r}"
-            )
+        if kon.execute("PRAGMA foreign_key_check").fetchone() is not None:
+            raise sqlite3.IntegrityError("rebuild siswa meninggalkan FK rusak")
+        if mandiri:
+            kon.commit()
+    except Exception:
+        if mandiri:
+            kon.rollback()
+        raise
     finally:
-        # Rollback no-op kalau COMMIT sudah jalan; menyelamatkan dari skrip
-        # yang gagal di tengah (transaksi masih terbuka).
-        kon.rollback()
-        kon.execute("PRAGMA foreign_keys = ON")
+        if mandiri:
+            kon.execute("PRAGMA foreign_keys = ON")
     return True
 
 
@@ -275,6 +314,41 @@ def statistik_bank(kon: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+def _simpan_butir_sesi(
+    kon: sqlite3.Connection, sesi_id: int, nomor: int, soal: Soal
+) -> int:
+    """Simpan relasi soal beserta 12 kolom snapshot penyajiannya."""
+    penyajian = question_views.penyajian_dari_soal(soal)
+    soal_id = simpan_soal(kon, soal)
+    cur = kon.execute(
+        """INSERT INTO sesi_soal (
+               sesi_id, soal_id, nomor,
+               teks_soal, bagian_soal, tantangan_soal, minta_restatement,
+               penyajian_json, penyajian_versi, renderer_versi, asal_teks,
+               status_visual, mode_representasi, fingerprint_matematis,
+               fingerprint_penyajian
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            sesi_id,
+            soal_id,
+            nomor,
+            penyajian.teks_soal,
+            penyajian.bagian_soal,
+            int(penyajian.tantangan_soal),
+            int(penyajian.minta_restatement),
+            serialisasi_penyajian(penyajian),
+            penyajian.penyajian_versi,
+            penyajian.renderer_versi,
+            penyajian.asal_teks,
+            penyajian.status_visual,
+            penyajian.mode_representasi,
+            penyajian.fingerprint_matematis,
+            penyajian.fingerprint_penyajian,
+        ),
+    )
+    return int(cur.lastrowid)
+
+
 # ── Sesi ────────────────────────────────────────────────────────────────
 
 
@@ -314,31 +388,34 @@ def buat_sesi(
     # Level yang sah tidak tersentuh: untuk itu lembar.level == level.
     level = lembar.level
 
-    if tanggal:
-        cur = kon.execute(
-            """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
-                                 timer_mode, durasi_menit, timer_auto, tanggal)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (siswa_id, seed, topik, level, mode,
-             timer_mode, durasi_menit, timer_auto, tanggal),
-        )
-    else:
-        cur = kon.execute(
-            """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
-                                 timer_mode, durasi_menit, timer_auto)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (siswa_id, seed, topik, level, mode,
-             timer_mode, durasi_menit, timer_auto),
-        )
-    sesi_id = int(cur.lastrowid)
+    kon.execute("SAVEPOINT buat_sesi_snapshot")
+    try:
+        if tanggal:
+            cur = kon.execute(
+                """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                                     timer_mode, durasi_menit, timer_auto, tanggal)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (siswa_id, seed, topik, level, mode,
+                 timer_mode, durasi_menit, timer_auto, tanggal),
+            )
+        else:
+            cur = kon.execute(
+                """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                                     timer_mode, durasi_menit, timer_auto)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (siswa_id, seed, topik, level, mode,
+                 timer_mode, durasi_menit, timer_auto),
+            )
+        sesi_id = int(cur.lastrowid)
 
-    for nomor, soal in enumerate(lembar.soal, start=1):
-        soal_id = simpan_soal(kon, soal)
-        kon.execute(
-            "INSERT INTO sesi_soal (sesi_id, soal_id, nomor) VALUES (?, ?, ?)",
-            (sesi_id, soal_id, nomor),
-        )
-    return sesi_id
+        for nomor, soal in enumerate(lembar.soal, start=1):
+            _simpan_butir_sesi(kon, sesi_id, nomor, soal)
+        kon.execute("RELEASE SAVEPOINT buat_sesi_snapshot")
+        return sesi_id
+    except Exception:
+        kon.execute("ROLLBACK TO SAVEPOINT buat_sesi_snapshot")
+        kon.execute("RELEASE SAVEPOINT buat_sesi_snapshot")
+        raise
 
 
 def buat_sesi_dari_urutan(
@@ -380,21 +457,24 @@ def buat_sesi_dari_urutan(
             raise ValueError("soal terpilih tidak cocok dengan komposisi atau level")
         lembar = Lembar(seed, soal_terpilih, level)
     topik_id = getattr(topik, "id", topik)
-    cur = kon.execute(
-        """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
-                             timer_mode, durasi_menit, timer_auto,
-                             jenis, sumber_sesi_id)
-           VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0, ?, ?)""",
-        (siswa_id, seed, topik_id, lembar.level, mode, jenis, sumber_sesi_id),
-    )
-    sesi_id = int(cur.lastrowid)
-    for nomor, soal in enumerate(lembar.soal, start=1):
-        soal_id = simpan_soal(kon, soal)
-        kon.execute(
-            "INSERT INTO sesi_soal (sesi_id, soal_id, nomor) VALUES (?, ?, ?)",
-            (sesi_id, soal_id, nomor),
+    kon.execute("SAVEPOINT buat_sesi_urutan_snapshot")
+    try:
+        cur = kon.execute(
+            """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                                 timer_mode, durasi_menit, timer_auto,
+                                 jenis, sumber_sesi_id)
+               VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0, ?, ?)""",
+            (siswa_id, seed, topik_id, lembar.level, mode, jenis, sumber_sesi_id),
         )
-    return sesi_id
+        sesi_id = int(cur.lastrowid)
+        for nomor, soal in enumerate(lembar.soal, start=1):
+            _simpan_butir_sesi(kon, sesi_id, nomor, soal)
+        kon.execute("RELEASE SAVEPOINT buat_sesi_urutan_snapshot")
+        return sesi_id
+    except Exception:
+        kon.execute("ROLLBACK TO SAVEPOINT buat_sesi_urutan_snapshot")
+        kon.execute("RELEASE SAVEPOINT buat_sesi_urutan_snapshot")
+        raise
 
 
 def buat_sesi_gabungan(
@@ -426,20 +506,23 @@ def buat_sesi_gabungan(
     lembar = buat_lembar(
         seed, level=level, topik=paket, jumlah_soal=jumlah_soal
     )
-    cur = kon.execute(
-        """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
-                             timer_mode, durasi_menit, timer_auto)
-           VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0)""",
-        (siswa_id, seed, paket.id, lembar.level, mode),
-    )
-    sesi_id = int(cur.lastrowid)
-    for nomor, soal in enumerate(lembar.soal, start=1):
-        soal_id = simpan_soal(kon, soal)
-        kon.execute(
-            "INSERT INTO sesi_soal (sesi_id, soal_id, nomor) VALUES (?, ?, ?)",
-            (sesi_id, soal_id, nomor),
+    kon.execute("SAVEPOINT buat_sesi_gabungan_snapshot")
+    try:
+        cur = kon.execute(
+            """INSERT INTO sesi (siswa_id, seed, topik, level, mode,
+                                 timer_mode, durasi_menit, timer_auto)
+               VALUES (?, ?, ?, ?, ?, 'tanpa', 15, 0)""",
+            (siswa_id, seed, paket.id, lembar.level, mode),
         )
-    return sesi_id
+        sesi_id = int(cur.lastrowid)
+        for nomor, soal in enumerate(lembar.soal, start=1):
+            _simpan_butir_sesi(kon, sesi_id, nomor, soal)
+        kon.execute("RELEASE SAVEPOINT buat_sesi_gabungan_snapshot")
+        return sesi_id
+    except Exception:
+        kon.execute("ROLLBACK TO SAVEPOINT buat_sesi_gabungan_snapshot")
+        kon.execute("RELEASE SAVEPOINT buat_sesi_gabungan_snapshot")
+        raise
 
 
 def _baris_sasaran_remedial(
@@ -743,6 +826,11 @@ def isi_sesi(kon: sqlite3.Connection, sesi_id: int) -> list[sqlite3.Row]:
     """Soal satu sesi beserta jawaban & diagnosisnya, urut nomor."""
     return kon.execute(
         """SELECT ss.id AS sesi_soal_id, ss.nomor,
+                  ss.teks_soal, ss.bagian_soal, ss.tantangan_soal,
+                  ss.minta_restatement, ss.penyajian_json,
+                  ss.penyajian_versi, ss.renderer_versi, ss.asal_teks,
+                  ss.status_visual, ss.mode_representasi,
+                  ss.fingerprint_matematis, ss.fingerprint_penyajian,
                   s.id AS soal_id, s.template_id, s.parameter, s.kunci,
                   s.bagian, s.tantangan, s.level, s.cerita,
                   j.id AS jawaban_id, j.restatement, j.cara, j.jawaban,

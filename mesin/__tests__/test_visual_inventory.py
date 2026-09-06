@@ -160,7 +160,7 @@ def test_api_inventaris_beku_sampai_struktur_bersarang():
 def test_inventaris_tidak_memakai_artefak_json_raksasa():
     akar = Path(__file__).resolve().parent.parent
     assert not (akar / "visual_inventory.json").exists()
-    assert sum(1 for _ in (akar / "visual_inventory.py").open(encoding="utf-8")) < 800
+    assert len((akar / "visual_inventory.py").read_text(encoding="utf-8").splitlines()) < 800
 
 
 def test_renderer_svg_existing_tidak_aktif_tanpa_invariant_matematika():
