@@ -983,6 +983,8 @@ def tambah_anggota_fokus(
     kode_intervensi: str,
     malrule_id: str | None,
     sumber_sesi_ids: list[int],
+    *,
+    izinkan_provenance_historis: bool = False,
 ) -> int:
     """Tambahkan satu dari maksimal dua kunci fokus beserta provenance sesi."""
     jumlah = kon.execute(
@@ -999,18 +1001,25 @@ def tambah_anggota_fokus(
     if jumlah >= 2:
         raise ValueError("satu putaran maksimal dua fokus")
     putaran = kon.execute(
-        "SELECT siswa_id FROM putaran_fokus WHERE id = ?", (putaran_id,)
+        "SELECT siswa_id, level FROM putaran_fokus WHERE id = ?", (putaran_id,)
     ).fetchone()
     if putaran is None:
         raise ValueError("putaran tidak dikenal")
     if not sumber_sesi_ids:
         raise ValueError("fokus harus memiliki provenance sesi")
     for sesi_id in sumber_sesi_ids:
-        milik = kon.execute(
-            """SELECT 1 FROM sesi
-               WHERE id = ? AND siswa_id = ? AND putaran_id = ?""",
-            (sesi_id, putaran["siswa_id"], putaran_id),
-        ).fetchone()
+        if izinkan_provenance_historis:
+            milik = kon.execute(
+                """SELECT 1 FROM sesi
+                   WHERE id = ? AND siswa_id = ? AND level = ?""",
+                (sesi_id, putaran["siswa_id"], putaran["level"]),
+            ).fetchone()
+        else:
+            milik = kon.execute(
+                """SELECT 1 FROM sesi
+                   WHERE id = ? AND siswa_id = ? AND putaran_id = ?""",
+                (sesi_id, putaran["siswa_id"], putaran_id),
+            ).fetchone()
         if milik is None:
             raise ValueError("sesi provenance bukan milik siswa dan putaran")
 
@@ -1367,7 +1376,11 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
             )
         )
     import interventions
+    from learning_cycle import _putaran_dengan_override
 
+    putaran_efektif = tuple(
+        _putaran_dengan_override(item, kejadian) for item in putaran
+    )
     pendekatan_tersedia = tuple(
         (
             kunci,
@@ -1377,7 +1390,8 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
                 if materi.tersedia
             ),
         )
-        for satu_putaran in putaran
+        for satu_putaran in putaran_efektif
+        if satu_putaran is not None
         for kunci in satu_putaran.fokus
     )
     return BuktiSiklus(

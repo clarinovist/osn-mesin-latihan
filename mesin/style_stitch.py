@@ -1639,6 +1639,7 @@ CSS_SESI = f"""
 
 /* Simpan & diagnosis — tombol coral penuh. */
 .koreksi-simpan-st {{
+  display: grid; gap: {T.SP_2};
   position: sticky; bottom: 0; padding: {T.SP_3} 0 {T.SP_2};
   background: linear-gradient(to top, {T.LATAR_SEKUNDER_LEMBUT} 70%, transparent);
 }}
@@ -1652,6 +1653,10 @@ CSS_SESI = f"""
   box-shadow: 0 4px 12px rgba(255,107,91,.25);
 }}
 .koreksi-simpan-st button:hover {{ filter: brightness(1.06); }}
+.koreksi-simpan-st:has(button[formaction]) button:not([formaction]) {{
+  background: {T.LATAR_KARTU}; color: {T.TEKS_UTAMA};
+  border: 1px solid {T.BORDER_HALUS}; box-shadow: none;
+}}
 
 /* Danger zone hapus sesi. */
 .danger-zone-st {{

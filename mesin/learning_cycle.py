@@ -281,13 +281,17 @@ def _putaran_dengan_override(
 ) -> Optional[PutaranSiklus]:
     if putaran is None:
         return None
-    sudah_intervensi = any(
-        e.putaran_id == putaran.id and e.jenis == "intervensi_selesai" for e in kejadian
+    pertama_intervensi = min(
+        (e.id for e in kejadian
+         if e.putaran_id == putaran.id and e.jenis == "intervensi_selesai"),
+        default=float("inf"),
     )
     override = [
-        e for e in kejadian if e.putaran_id == putaran.id and e.jenis == "fokus_diubah"
+        e for e in kejadian
+        if e.putaran_id == putaran.id and e.jenis == "fokus_diubah"
+        and e.id < pertama_intervensi
     ]
-    if override and not sudah_intervensi:
+    if override:
         fokus = tuple(override[-1].nilai("fokus", ()))[:2]
         return replace(putaran, fokus=fokus)
     return putaran

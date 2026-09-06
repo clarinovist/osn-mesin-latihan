@@ -1325,7 +1325,9 @@ def halaman_sesi_stitch(
     info = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
                   s.jenis, s.sumber_sesi_id,
-                  s.mulai, s.selesai, s.direview,
+                  s.mulai, s.selesai, s.direview, s.dikonfirmasi_guru,
+                  s.fingerprint_konfirmasi,
+                  s.tujuan, s.putaran_id, s.dibatalkan,
                   (SELECT COUNT(*) FROM sesi_soal ss
                    WHERE ss.sesi_id = s.id) AS jumlah_soal,
                   (SELECT COUNT(*) FROM sesi_soal ss
@@ -1340,6 +1342,33 @@ def halaman_sesi_stitch(
 
     sudah_dikirim = bool(info["selesai"])
     drill = info["mode"] == "drill"
+    snapshot_terakhir = {}
+    opt_in_pemetaan_aktif = False
+    konfirmasi_terakhir = kon.execute(
+        """SELECT id, fingerprint FROM konfirmasi_hasil
+           WHERE sesi_id = ? ORDER BY nomor_urut DESC, id DESC LIMIT 1""",
+        (sesi_id,),
+    ).fetchone()
+    pernah_dikonfirmasi = konfirmasi_terakhir is not None
+    if konfirmasi_terakhir is not None:
+        snapshot_terakhir = {
+            int(baris["sesi_soal_id"]): baris
+            for baris in kon.execute(
+                """SELECT sesi_soal_id, dilewati, cek_pemahaman
+                   FROM snapshot_outcome WHERE konfirmasi_id = ?""",
+                (konfirmasi_terakhir["id"],),
+            ).fetchall()
+        }
+        konfirmasi_masih_aktif = (
+            info["dikonfirmasi_guru"] is not None
+            and info["fingerprint_konfirmasi"] == konfirmasi_terakhir["fingerprint"]
+        )
+        opt_in_pemetaan_aktif = konfirmasi_masih_aktif and kon.execute(
+            """SELECT 1 FROM kejadian_belajar
+               WHERE sesi_id = ? AND konfirmasi_id = ?
+                 AND jenis = 'sertakan_pemetaan' LIMIT 1""",
+            (sesi_id, konfirmasi_terakhir["id"]),
+        ).fetchone() is not None
     kartu = []
     for b in database.isi_sesi(kon, sesi_id):
         soal = _soal_dari_baris(b)
@@ -1437,6 +1466,24 @@ def halaman_sesi_stitch(
                 f'{html.escape(b["cara"] or "")}</textarea>'
             )
 
+        snapshot_butir = snapshot_terakhir.get(int(b["sesi_soal_id"]))
+        pemahaman_terpilih = (
+            snapshot_butir["cek_pemahaman"] if snapshot_butir is not None else None
+        )
+        dilewati_terpilih = bool(
+            snapshot_butir is not None and snapshot_butir["dilewati"]
+        )
+        pilihan_pemahaman = "".join(
+            f'<option value="{nilai}"'
+            f'{" selected" if nilai == (pemahaman_terpilih or "") else ""}>'
+            f'{label}</option>'
+            for nilai, label in (
+                ("", "Belum dicatat"),
+                ("bisa_menjelaskan", "Bisa menjelaskan"),
+                ("ragu", "Masih ragu"),
+                ("menghafal", "Cenderung menghafal"),
+            )
+        )
         kartu.append(f"""
 <div class="koreksi-kartu-st">
   <div class="koreksi-isi-st {kelas_isi}">
@@ -1457,6 +1504,15 @@ def halaman_sesi_stitch(
       </div>
     </div>
     {cara_html}
+    <label class="koreksi-label-st" for="paham-{b["sesi_soal_id"]}">Pemahaman anak</label>
+    <select class="koreksi-select-st" id="paham-{b["sesi_soal_id"]}"
+            name="cek_pemahaman_{b["sesi_soal_id"]}">{pilihan_pemahaman}</select>
+    <div class="koreksi-centang-st">
+      <input type="checkbox" id="lewati-{b["sesi_soal_id"]}"
+             name="dilewati_{b["sesi_soal_id"]}" value="1"
+             {"checked" if dilewati_terpilih else ""}>
+      <label for="lewati-{b["sesi_soal_id"]}">Lewati butir ini dari hasil</label>
+    </div>
     <div class="koreksi-centang-st info-anak-st">
       <input type="checkbox" id="bp{b["sesi_soal_id"]}"
              name="belum_{b["sesi_soal_id"]}"
@@ -1494,18 +1550,65 @@ def halaman_sesi_stitch(
         )
 
     if sudah_dikirim:
+        sudah_dikonfirmasi = bool(info["dikonfirmasi_guru"])
+        sesi_dibatalkan = info["dibatalkan"] is not None
         status_sesi = (
             '<div class="status-sesi-st selesai">'
-            '<span class="material-symbols-outlined">task_alt</span>'
-            '<div><b>Sudah dikirim — siap dikoreksi</b>'
-            '<p>Diagnosis awal dibuat otomatis. Simpan hanya jika kamu mengubah koreksi.</p>'
+            '<span class="material-symbols-outlined">cancel</span>'
+            '<div><b>Sesi dibatalkan</b>'
+            '<p>Riwayat sesi tetap tersimpan, tetapi hasilnya tidak aktif dalam siklus belajar.</p>'
             '</div></div>'
+            if sesi_dibatalkan
+            else (
+                '<div class="status-sesi-st selesai">'
+                '<span class="material-symbols-outlined">task_alt</span>'
+                '<div><b>Hasil sudah dikonfirmasi</b>'
+                '<p>Snapshot hasil ini sudah menjadi bukti perjalanan belajar.</p>'
+                '</div></div>'
+                if sudah_dikonfirmasi
+                else (
+                    '<div class="status-sesi-st selesai">'
+                    '<span class="material-symbols-outlined">task_alt</span>'
+                    '<div><b>Sudah dikirim — siap dikoreksi</b>'
+                    '<p>Diagnosis awal dibuat otomatis. Simpan hanya jika kamu '
+                    'mengubah koreksi. Periksa juga pemahaman, lalu konfirmasi hasil.</p>'
+                    '</div></div>'
+                )
+            )
         )
+        opsi_pemetaan = ""
+        if (
+            not sesi_dibatalkan
+            and info["mode"] == "diagnostik"
+            and info["tujuan"] == "bebas"
+        ):
+            centang_pemetaan = " checked" if opt_in_pemetaan_aktif else ""
+            status_pemetaan = (
+                '<span class="sub">Aktif — hasil terkonfirmasi ini ikut pemetaan.</span>'
+                if opt_in_pemetaan_aktif
+                else '<span class="sub">Opsional — hanya berlaku untuk konfirmasi ini.</span>'
+            )
+            opsi_pemetaan = (
+                '<label class="koreksi-centang-st">'
+                f'<input type="checkbox" name="sertakan_pemetaan" value="1"{centang_pemetaan}> '
+                'Sertakan dalam pemetaan</label>'
+                f'{status_pemetaan}'
+            )
+        aksi_konfirmasi = ""
+        if not sesi_dibatalkan:
+            label_konfirmasi = "Konfirmasi ulang" if pernah_dikonfirmasi else "Konfirmasi hasil"
+            aksi_konfirmasi = (
+                f'<button type="submit" formaction="/sesi/{sesi_id}/konfirmasi">'
+                f'{label_konfirmasi}</button>'
+            )
         blok_isi = (
             f'<form method="post" action="/sesi/{sesi_id}">'
             f'{"".join(kartu)}'
+            f'{opsi_pemetaan}'
             f'<div class="koreksi-simpan-st"><button type="submit">'
-            "Simpan koreksi</button></div></form>"
+            f'Simpan koreksi</button>{aksi_konfirmasi}</div></form>'
+            if not sesi_dibatalkan
+            else "".join(kartu)
         )
     else:
         label_status = "Sedang dikerjakan" if info["terisi"] else "Menunggu anak"
@@ -1520,12 +1623,38 @@ def halaman_sesi_stitch(
         )
         blok_isi = "".join(kartu)
 
-    tombol_hapus = (
-        f'<form method="get" action="/sesi/{sesi_id}/hapus" '
-        f'style="margin:.4rem 0">'
-        f'<button type="submit" class="tombol-kecil-st">'
-        f"Hapus sesi</button></form>"
+    sesi_dibatalkan = info["dibatalkan"] is not None
+    sesi_terpandu_aktif = (
+        info["putaran_id"] is not None
+        and info["tujuan"] != "bebas"
+        and not sesi_dibatalkan
     )
+    sesi_manual_berbukti = pernah_dikonfirmasi and not sesi_dibatalkan
+    if sesi_dibatalkan:
+        tombol_hapus = ""
+        keterangan_bahaya = (
+            "Sesi ini sudah dibatalkan. Histori dan bukti tetap tersimpan."
+        )
+    elif sesi_terpandu_aktif or sesi_manual_berbukti:
+        tombol_hapus = (
+            f'<form method="post" action="/sesi/{sesi_id}/batalkan" '
+            'style="margin:.4rem 0" '
+            'onsubmit="return confirm(\'Batalkan sesi ini? Sesi dan bukti tetap '
+            'tersimpan dalam histori, tetapi tidak lagi aktif dalam siklus belajar.\')">'
+            '<input type="text" name="alasan" maxlength="300" '
+            'placeholder="Alasan pembatalan (opsional)">'
+            '<button type="submit" class="tombol-kecil-st">'
+            'Batalkan sesi</button></form>'
+        )
+        keterangan_bahaya = "Pembatalan menjaga histori dan bukti sesi."
+    else:
+        tombol_hapus = (
+            f'<form method="get" action="/sesi/{sesi_id}/hapus" '
+            f'style="margin:.4rem 0">'
+            f'<button type="submit" class="tombol-kecil-st">'
+            f"Hapus sesi</button></form>"
+        )
+        keterangan_bahaya = "Zona bahaya — hapus tidak bisa dibatalkan."
 
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
     isi = (
@@ -1543,7 +1672,7 @@ def halaman_sesi_stitch(
         f"{blok_isi}"
         f"{blok_remedial}"
         f'<div class="danger-zone-st">'
-        f'<p class="sub">Zona bahaya — hapus tidak bisa dibatalkan.</p>'
+        f'<p class="sub">{keterangan_bahaya}</p>'
         f"{tombol_hapus}</div>"
         f"</div>"
     )
@@ -1591,6 +1720,12 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
 
         if not (jwb or cara or restate or belum or pilihan):
             continue
+        kode_lama = "benar" if b["benar"] else b["kode_final"] or ""
+        if (b["jawaban_id"] is not None and b["benar"] is not None
+                and jwb == (b["jawaban"] or "")
+                and cara == (b["cara"] or "")
+                and belum == bool(b["belum_pernah"]) and pilihan == kode_lama):
+            continue
 
         jid = database.simpan_jawaban(kon, sid, jwb, cara, restate, belum)
 
@@ -1610,7 +1745,8 @@ def simpan_sesi(kon, sesi_id: int, data: dict) -> str:
             benar, final, manual = u.benar, u.kode, False
 
         database.simpan_diagnosis(
-            kon, jid, benar, u.kode, final, u.malrule_id, u.alasan, manual
+            kon, jid, benar, u.kode, final,
+            None if benar else u.malrule_id, u.alasan, manual
         )
         diubah += 1
 

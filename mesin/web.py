@@ -1202,6 +1202,15 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                 )
 
+        if (
+            jalur.startswith("/siklus/")
+            or (jalur.startswith("/sesi/")
+                and jalur.endswith(("/konfirmasi", "/batalkan")))
+        ):
+            import learning_cycle_http
+
+            return learning_cycle_http.tangani(self, jalur, _halaman)
+
         if jalur == "/admin":
             if self._peran_saya() != "admin":
                 return self._kirim(
@@ -1652,6 +1661,18 @@ class Penangan(BaseHTTPRequestHandler):
                 baris_sesi = kon.execute(
                     "SELECT siswa_id FROM sesi WHERE id = ?", (sesi_id,)
                 ).fetchone()
+                dilindungi = kon.execute(
+                    """SELECT 1 FROM konfirmasi_hasil WHERE sesi_id = ?
+                       UNION ALL SELECT 1 FROM bukti_fokus WHERE sesi_id = ?
+                       UNION ALL SELECT 1 FROM kejadian_belajar WHERE sesi_id = ?""",
+                    (sesi_id, sesi_id, sesi_id),
+                ).fetchone()
+                if dilindungi:
+                    return self._kirim(_halaman(
+                        "Histori sesi dilindungi",
+                        "<h1>Histori sesi dilindungi</h1>"
+                        "<p>Gunakan Batalkan sesi agar bukti belajar tetap tersimpan.</p>",
+                    ), 409)
                 dihapus = database.hapus_sesi(kon, sesi_id)
             if not dihapus:
                 return self._kirim(
@@ -1702,6 +1723,7 @@ class Penangan(BaseHTTPRequestHandler):
                     409,
                 )
             pesan = simpan_sesi(kon, sesi_id, data)
+            kon.commit()  # Respons sukses harus melihat invalidasi yang sudah tersimpan.
             ident = self._identitas()
             self._kirim(
                 halaman_sesi_stitch(
