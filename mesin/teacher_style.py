@@ -425,6 +425,7 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   border-bottom: 1px solid {T.BORDER_HALUS}; font-size: .92rem;
 }}
 .diagnosis-lis li:last-child {{ border-bottom: none; }}
+#perjalanan-belajar .diagnosis-lis li {{ display: block; }}
 .dot {{
   flex: none; width: .85rem; height: .85rem; border-radius: {T.RADIUS_BULAT};
   margin-top: .3rem;

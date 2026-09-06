@@ -207,13 +207,11 @@ def test_laporan_memisahkan_prioritas_dari_materi_baru(db):
         h = reports.halaman_laporan(kon, sid).decode()
 
     utama = h.split("Detail per sesi", 1)[0]
-    assert "Prioritas latihan" in utama
-    assert "Materi berikutnya untuk dikenalkan" in utama
-    assert utama.index("Prioritas latihan") < utama.index(
-        "Materi berikutnya untuk dikenalkan"
-    )
-    assert "Yang bisa dilakukan" in utama
-    assert "bukan kesalahan" in utama.lower()
+    assert "Perjalanan fokus belajar" in utama
+    assert "Prioritas latihan" not in utama
+    assert "Materi berikutnya untuk dikenalkan" not in utama
+    assert "belum cukup bukti" in utama.lower()
+    assert "Semua latihan" in utama
     assert tipe_k not in utama
     assert tipe_t not in utama
     assert "_" not in reports._nama_tipe_soal(tipe_k)
@@ -234,10 +232,9 @@ def test_prioritas_belum_menganggap_satu_sesi_sebagai_pola_berulang(db):
         )
         h = reports.halaman_laporan(kon, sid).decode()
 
-    utama = h.split("Materi berikutnya untuk dikenalkan", 1)[0]
+    utama = h.split("Detail per sesi", 1)[0]
     assert reports._nama_tipe_soal(tipe) not in utama
-    assert "polanya belum berulang" in utama
-    assert "belum cukup data" in utama.lower()
+    assert "belum cukup bukti" in utama.lower()
     assert "Mulai dari topik" not in utama
 
 
@@ -277,9 +274,10 @@ def test_ringkasan_memasangkan_tipe_dengan_topik_fokus(db):
     awal = h.index('<div class="kartu ringkasan-laporan">')
     akhir = h.index("</div>", awal) + 6
     ringkasan = h[awal:akhir]
-    assert "Geometri Datar" in ringkasan
     assert pola_geo
-    assert any(nama in ringkasan for nama in pola_geo)
+    assert not any(nama in ringkasan for nama in pola_geo)
+    assert "semua latihan" in ringkasan.lower()
+    assert "bukan penetapan fokus" in ringkasan.lower()
     assert "Pengandaian benar atau salah" not in ringkasan
 
 
@@ -293,7 +291,7 @@ def test_hierarki_utama_mengutamakan_konsep_bukan_persentase(db):
     assert "sesi dinilai" in utama
     assert "sesi diikuti" not in utama
     assert "kekeliruan konsep" in utama
-    assert "fokus latihan" in utama
+    assert "fokus aktif" in utama
     assert "% jawaban tepat" in utama
     assert '<details class="kartu cara-baca-laporan">' in utama
     assert "<summary><h2" in utama
@@ -321,7 +319,7 @@ def test_urutan_mobile_metrik_lalu_ringkasan_lalu_tindakan(db):
 
     isi = h.split("</style>", 1)[1]
     assert isi.index('class="kartu-stat"') < isi.index("Ringkasan untuk orang tua")
-    assert isi.index("Ringkasan untuk orang tua") < isi.index("Prioritas latihan")
+    assert isi.index("Perjalanan fokus belajar") < isi.index("Ringkasan untuk orang tua")
     assert 'class="ringkasan-dashboard-laporan"' in isi
 
 
