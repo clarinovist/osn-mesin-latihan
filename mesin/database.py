@@ -1133,6 +1133,12 @@ def _tanggal_domain(nilai: str) -> date:
     return date.fromisoformat(nilai[:10])
 
 
+def _tanggal_domain_opsional(nilai: Optional[str]) -> Optional[date]:
+    if nilai is None:
+        return None
+    return _tanggal_domain(nilai)
+
+
 def _data_kejadian(nilai: str) -> tuple[tuple[str, object], ...]:
     data = json.loads(nilai or "{}")
     if not isinstance(data, dict):
@@ -1212,6 +1218,11 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
             (siswa_id,),
         ).fetchall()
     )
+    metadata_sesi = {
+        event.sesi_id: event
+        for event in kejadian
+        if event.jenis == "sesi_dibuat" and event.sesi_id is not None
+    }
 
     sesi_hasil = []
     sesi_baris = kon.execute(
@@ -1223,6 +1234,17 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
     ).fetchall()
     for baris in sesi_baris:
         outcome = ()
+        aktif = None
+        metadata = metadata_sesi.get(int(baris["id"]))
+        target_fokus = ()
+        occurrence = None
+        if metadata is not None:
+            fokus_mentah = metadata.nilai("fokus", ())
+            if isinstance(fokus_mentah, tuple):
+                target_fokus = tuple(tuple(kunci) for kunci in fokus_mentah)
+            occurrence_mentah = metadata.nilai("occurrence")
+            if isinstance(occurrence_mentah, int):
+                occurrence = occurrence_mentah
         if baris["dikonfirmasi_guru"] is not None:
             aktif = kon.execute(
                 """SELECT id FROM konfirmasi_hasil
@@ -1263,6 +1285,11 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
                 baris["bagian_checkpoint"],
                 baris["dibatalkan"],
                 outcome,
+                target_fokus,
+                occurrence,
+                None if aktif is None else int(aktif["id"]),
+                _tanggal_domain_opsional(baris["selesai"]),
+                _tanggal_domain_opsional(baris["dikonfirmasi_guru"]),
             )
         )
     return BuktiSiklus(
