@@ -12,6 +12,7 @@ from datetime import date, datetime
 from typing import List, Optional, Tuple
 
 import learning_cycle as lc
+from learning_history import catatan_histori_beda_level
 
 
 @dataclass(frozen=True)
@@ -523,5 +524,13 @@ def perjalanan_belajar(
         _histori_putaran(bukti),
         None if putaran is None else putaran.id,
         status.tanggal_pemetaan,
-        _catatan_bukti(bukti, putaran),
+        _catatan_bukti(bukti, putaran)
+        + catatan_histori_beda_level(
+            bukti,
+            mulai_dari_awal=(
+                rekomendasi.tindakan == "pemetaan"
+                and bool(rekomendasi.putaran)
+                and not rekomendasi.putaran.tanggal_pemetaan
+            ),
+        ),
     )

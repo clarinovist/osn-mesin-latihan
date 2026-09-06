@@ -177,6 +177,21 @@ Perubahan level menutup putaran lama dengan kejadian `diganti_level`, membuat
 sesi level lama tidak memblokir, dan memulai pemetaan level baru tanpa
 menghapus histori.
 
+### Data warisan
+
+Sesi lama tetap latihan bebas; tidak ada konfirmasi, fokus, atau putaran yang
+dibuat otomatis dari `direview` maupun diagnosis lama. Sesi yang sudah dilihat
+tetapi belum selesai tetap dianggap belum lengkap, bukan diperbaiki otomatis.
+
+Level sesi lama tidak mengikuti perubahan level profil. Profil dan laporan
+menjelaskan histori beda level sebagai catatan yang tetap tersimpan, bukan
+bukti pemetaan level aktif. Pemetaan level aktif dimulai dari bukti yang sah.
+
+Sebelum migrasi, buat cadangan konsisten dan uji pada salinan terlebih dahulu.
+Pastikan isi histori dan jumlah baris tetap utuh, migrasi idempoten, serta
+`integrity_check` dan `foreign_key_check` bersih. Jangan melakukan backfill
+keputusan pedagogis atau koreksi data anak saat verifikasi deploy.
+
 ## 10. Permukaan pengguna
 
 Profil anak menampilkan satu kartu **Rencana belajar hari ini** sebelum

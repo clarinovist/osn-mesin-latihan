@@ -10,6 +10,7 @@ import database
 import interventions
 import topics
 from learning_cycle import BuktiSiklus, RencanaBelajar, StatusFokus, rencana_berikutnya
+from learning_history import catatan_histori_beda_level
 
 KunciFokus = Tuple[str, str, Optional[str]]
 
@@ -366,13 +367,24 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
         '<div class="tindakan-rencana-st"><b>Yang bisa dilakukan orang tua</b>'
         f'<p>{html.escape(instruksi)}</p></div>' if instruksi else ""
     )
+    catatan_histori = "".join(
+        f'<p class="sub catatan-histori-level-st">{html.escape(teks)}</p>'
+        for teks in catatan_histori_beda_level(
+            bukti,
+            mulai_dari_awal=(
+                rencana.tindakan == "pemetaan"
+                and bool(rencana.putaran)
+                and not rencana.putaran.tanggal_pemetaan
+            ),
+        )
+    )
     return (
         '<section class="kartu-rencana-st" aria-labelledby="judul-rencana-belajar">'
         '<p class="label-rencana-st">Rencana belajar hari ini</p>'
         f'<h2 class="st" id="judul-rencana-belajar">{html.escape(_judul(rencana, fokus, bukti))}</h2>'
         f'<p class="alasan-rencana-st">{html.escape(_alasan(rencana, fokus))}</p>'
         f'<p class="progres-rencana-st">{html.escape(_progres(rencana, bukti))}</p>'
-        f'{_strip_tahap(rencana, bukti)}{tindakan}{contoh}{catatan_materi}{tanggal}'
+        f'{catatan_histori}{_strip_tahap(rencana, bukti)}{tindakan}{contoh}{catatan_materi}{tanggal}'
         f'{_cta(rencana, bukti, siswa_id, fokus, materi)}{_override(rencana, siswa_id)}'
         "</section>"
     )
