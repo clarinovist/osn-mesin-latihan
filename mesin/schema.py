@@ -135,6 +135,31 @@ CREATE TABLE IF NOT EXISTS sesi (
 
 CREATE INDEX IF NOT EXISTS idx_sesi_siswa ON sesi(siswa_id, tanggal);
 
+-- CHECK pada CREATE TABLE tidak ditambahkan ke tabel warisan oleh ALTER COLUMN.
+-- Trigger ini memberi aturan identik untuk pemasangan baru dan hasil migrasi.
+CREATE TRIGGER IF NOT EXISTS sesi_validasi_insert
+BEFORE INSERT ON sesi
+WHEN NEW.tujuan NOT IN (
+        'bebas', 'pemetaan', 'latihan_terbimbing', 'penguatan',
+        'evaluasi', 'checkpoint', 'pengenalan'
+     )
+  OR NEW.bagian_checkpoint IS NOT NULL
+     AND NEW.bagian_checkpoint NOT IN (1, 2)
+BEGIN
+    SELECT RAISE(ABORT, 'metadata sesi tidak valid');
+END;
+CREATE TRIGGER IF NOT EXISTS sesi_validasi_update
+BEFORE UPDATE OF tujuan, bagian_checkpoint ON sesi
+WHEN NEW.tujuan NOT IN (
+        'bebas', 'pemetaan', 'latihan_terbimbing', 'penguatan',
+        'evaluasi', 'checkpoint', 'pengenalan'
+     )
+  OR NEW.bagian_checkpoint IS NOT NULL
+     AND NEW.bagian_checkpoint NOT IN (1, 2)
+BEGIN
+    SELECT RAISE(ABORT, 'metadata sesi tidak valid');
+END;
+
 -- Tautan bearer untuk satu sesi. Token mentah tidak disimpan: hanya hash
 -- SHA-256, supaya salinan basis data tidak langsung menjadi kunci masuk.
 -- Satu sesi hanya punya satu tautan; buat ulang mengganti tautan sebelumnya.
@@ -255,9 +280,37 @@ CREATE TABLE IF NOT EXISTS snapshot_outcome (
         cek_pemahaman IS NULL OR
         cek_pemahaman IN ('bisa_menjelaskan', 'ragu', 'menghafal')
     ),
+    CHECK (
+        (dilewati = 1 AND benar IS NULL AND kode_final IS NULL AND malrule_id IS NULL)
+        OR
+        (dilewati = 0 AND (
+            (benar = 0 AND kode_final IS NOT NULL)
+            OR
+            (benar = 1 AND kode_final IS NULL AND malrule_id IS NULL)
+        ))
+    ),
     UNIQUE (konfirmasi_id, sesi_soal_id),
     UNIQUE (konfirmasi_id, nomor)
 );
+
+-- CHECK tabel melindungi pemasangan baru; trigger yang sama juga ditempelkan
+-- pada tabel snapshot warisan yang sudah telanjur dibuat tanpa CHECK ini.
+CREATE TRIGGER IF NOT EXISTS snapshot_outcome_validasi_insert
+BEFORE INSERT ON snapshot_outcome
+WHEN (NEW.dilewati = 1 AND (
+          NEW.benar IS NOT NULL OR NEW.kode_final IS NOT NULL
+          OR NEW.malrule_id IS NOT NULL
+      ))
+  OR (NEW.dilewati = 0 AND (
+          NEW.benar IS NULL OR NEW.benar NOT IN (0, 1)
+          OR (NEW.benar = 0 AND NEW.kode_final IS NULL)
+          OR (NEW.benar = 1 AND (
+              NEW.kode_final IS NOT NULL OR NEW.malrule_id IS NOT NULL
+          ))
+      ))
+BEGIN
+    SELECT RAISE(ABORT, 'outcome snapshot tidak valid');
+END;
 
 -- Kejadian domain append-only. `data` adalah JSON kanonis untuk payload yang
 -- berbeda per jenis; FK opsional menjaga provenance sesi/putaran/konfirmasi.

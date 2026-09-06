@@ -853,8 +853,14 @@ def _invalidasi_konfirmasi_dari_jawaban(
            JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
            JOIN sesi se ON se.id = ss.sesi_id
            LEFT JOIN konfirmasi_hasil kh
-             ON kh.sesi_id = se.id
-            AND kh.fingerprint = se.fingerprint_konfirmasi
+             ON kh.id = (
+                 SELECT aktif.id
+                 FROM konfirmasi_hasil aktif
+                 WHERE aktif.sesi_id = se.id
+                   AND aktif.fingerprint = se.fingerprint_konfirmasi
+                 ORDER BY aktif.nomor_urut DESC, aktif.id DESC
+                 LIMIT 1
+             )
            WHERE j.id = ?""",
         (jawaban_id,),
     ).fetchone()
@@ -880,38 +886,12 @@ def _invalidasi_konfirmasi_dari_jawaban(
     )
 
 
-def buat_putaran_fokus(
-    kon: sqlite3.Connection,
-    siswa_id: int,
-    level: str,
-    sesi_ids: list[int] | None = None,
-) -> int:
-    sesi_ids = sesi_ids or []
-    for sesi_id in sesi_ids:
-        milik = kon.execute(
-            "SELECT 1 FROM sesi WHERE id = ? AND siswa_id = ?",
-            (sesi_id, siswa_id),
-        ).fetchone()
-        if milik is None:
-            raise ValueError("sesi bukan milik siswa putaran")
-    cur = kon.execute(
-        "INSERT INTO putaran_fokus (siswa_id, level) VALUES (?, ?)",
-        (siswa_id, level),
-    )
-    putaran_id = int(cur.lastrowid)
-    tautkan_sesi_putaran(kon, putaran_id, sesi_ids)
-    return putaran_id
-
-
-def tautkan_sesi_putaran(
-    kon: sqlite3.Connection, putaran_id: int, sesi_ids: list[int]
-) -> None:
-    putaran = kon.execute(
-        "SELECT siswa_id, level FROM putaran_fokus WHERE id = ?", (putaran_id,)
-    ).fetchone()
-    if putaran is None:
-        raise ValueError("putaran tidak dikenal")
-    for sesi_id in dict.fromkeys(sesi_ids):
+def _validasi_sesi_putaran(
+    kon: sqlite3.Connection, putaran: Any, sesi_ids: list[int]
+) -> list[int]:
+    """Deduplikasi dan validasi seluruh sesi sebelum satu pun ditautkan."""
+    unik = list(dict.fromkeys(sesi_ids))
+    for sesi_id in unik:
         sesi = kon.execute(
             "SELECT siswa_id, level, putaran_id FROM sesi WHERE id = ?", (sesi_id,)
         ).fetchone()
@@ -919,11 +899,46 @@ def tautkan_sesi_putaran(
             raise ValueError("sesi bukan milik siswa putaran")
         if sesi["level"] != putaran["level"]:
             raise ValueError("level sesi berbeda dari putaran")
-        if sesi["putaran_id"] not in (None, putaran_id):
+        if sesi["putaran_id"] not in (None, putaran["id"]):
             raise ValueError("sesi sudah terikat ke putaran lain")
-        kon.execute(
-            "UPDATE sesi SET putaran_id = ? WHERE id = ?", (putaran_id, sesi_id)
+    return unik
+
+
+def buat_putaran_fokus(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    level: str,
+    sesi_ids: list[int] | None = None,
+) -> int:
+    sesi_ids = list(dict.fromkeys(sesi_ids or []))
+    calon = {"id": None, "siswa_id": siswa_id, "level": level}
+    _validasi_sesi_putaran(kon, calon, sesi_ids)
+    cur = kon.execute(
+        "INSERT INTO putaran_fokus (siswa_id, level) VALUES (?, ?)",
+        (siswa_id, level),
+    )
+    putaran_id = int(cur.lastrowid)
+    if sesi_ids:
+        kon.executemany(
+            "UPDATE sesi SET putaran_id = ? WHERE id = ?",
+            [(putaran_id, sesi_id) for sesi_id in sesi_ids],
         )
+    return putaran_id
+
+
+def tautkan_sesi_putaran(
+    kon: sqlite3.Connection, putaran_id: int, sesi_ids: list[int]
+) -> None:
+    putaran = kon.execute(
+        "SELECT id, siswa_id, level FROM putaran_fokus WHERE id = ?", (putaran_id,)
+    ).fetchone()
+    if putaran is None:
+        raise ValueError("putaran tidak dikenal")
+    unik = _validasi_sesi_putaran(kon, putaran, sesi_ids)
+    kon.executemany(
+        "UPDATE sesi SET putaran_id = ? WHERE id = ?",
+        [(putaran_id, sesi_id) for sesi_id in unik],
+    )
 
 
 def tambah_anggota_fokus(
@@ -1008,18 +1023,17 @@ def konfirmasi_hasil(
         raise ValueError("cek pemahaman tidak dikenal")
     for butir in outcome:
         butir_id = int(butir["sesi_soal_id"])
-        if butir_id not in dilewati and (
-            butir["jawaban_id"] is None or butir["benar"] is None
+        if butir_id in dilewati:
+            continue
+        if butir["jawaban_id"] is None or butir["benar"] is None:
+            raise ValueError("outcome belum lengkap")
+        if not bool(butir["benar"]) and butir["kode_final"] is None:
+            raise ValueError("outcome belum lengkap")
+        if bool(butir["benar"]) and (
+            butir["kode_final"] is not None or butir["malrule_id"] is not None
         ):
             raise ValueError("outcome belum lengkap")
 
-    nomor_urut = int(
-        kon.execute(
-            """SELECT COALESCE(MAX(nomor_urut), 0) + 1
-               FROM konfirmasi_hasil WHERE sesi_id = ?""",
-            (sesi_id,),
-        ).fetchone()[0]
-    )
     kanonis = []
     for butir in outcome:
         butir_id = int(butir["sesi_soal_id"])
@@ -1039,6 +1053,27 @@ def konfirmasi_hasil(
         )
     serial = json.dumps(kanonis, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     fingerprint = hashlib.sha256(serial.encode("utf-8")).hexdigest()
+    aktif = kon.execute(
+        """SELECT kh.id
+           FROM konfirmasi_hasil kh
+           JOIN sesi se ON se.id = kh.sesi_id
+           WHERE kh.sesi_id = ?
+             AND kh.fingerprint = ?
+             AND se.dikonfirmasi_guru IS NOT NULL
+             AND se.fingerprint_konfirmasi = kh.fingerprint
+           ORDER BY kh.nomor_urut DESC, kh.id DESC
+           LIMIT 1""",
+        (sesi_id, fingerprint),
+    ).fetchone()
+    if aktif is not None:
+        return int(aktif["id"])
+    nomor_urut = int(
+        kon.execute(
+            """SELECT COALESCE(MAX(nomor_urut), 0) + 1
+               FROM konfirmasi_hasil WHERE sesi_id = ?""",
+            (sesi_id,),
+        ).fetchone()[0]
+    )
     cur = kon.execute(
         """INSERT INTO konfirmasi_hasil
                (sesi_id, nomor_urut, guru, fingerprint)

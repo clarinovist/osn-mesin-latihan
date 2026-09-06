@@ -468,9 +468,7 @@ def proses_akun(
             and not database.siswa_milik(kon, siswa_id, pengguna_kini)
         ):
             return "", "Siswa tidak dikenal."
-        kon.execute(
-            "UPDATE siswa SET tingkat = ? WHERE id = ?", (tingkat, siswa_id)
-        )
+        database.ganti_level(kon, siswa_id, tingkat)
         return (
             f"{baris['nama']} sekarang {label_kelas(tingkat)}. Sesi lama tetap pada "
             f"kelasnya masing-masing; yang berubah hanya sesi berikutnya.",

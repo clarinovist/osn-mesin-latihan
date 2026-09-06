@@ -155,6 +155,35 @@ def test_tingkat_kosong_memakai_bawaan(siap):
     assert s["tingkat"] == "P3"
 
 
+def test_ganti_tingkat_lewat_proses_akun_mencatat_event_domain(siap):
+    with database.buka(siap) as kon:
+        siswa_id = database.tambah_siswa(
+            kon, "Naik kelas", tingkat="P3", pemilik="guru"
+        )
+        putaran_id = database.buat_putaran_fokus(kon, siswa_id, "P3")
+
+        pesan, galat = account_pages.proses_akun(
+            kon,
+            {"aksi": "tingkat", "siswa_id": str(siswa_id), "tingkat": "P4"},
+            "guru",
+        )
+        tingkat = kon.execute(
+            "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
+        ).fetchone()[0]
+        event = kon.execute(
+            """SELECT putaran_id, jenis, data FROM kejadian_belajar
+               WHERE siswa_id = ? AND jenis = 'diganti_level'""",
+            (siswa_id,),
+        ).fetchone()
+
+    assert not galat
+    assert "Kelas 4" in pesan
+    assert tingkat == "P4"
+    assert event["putaran_id"] == putaran_id
+    assert '"level_lama": "P3"' in event["data"]
+    assert '"level_baru": "P4"' in event["data"]
+
+
 def test_aksi_tidak_dikenal_tidak_mengubah_apa_pun(siap):
     with database.buka(siap) as kon:
         _, galat = account_pages.proses_akun(kon, {"aksi": "hapus-semua"}, "guru")

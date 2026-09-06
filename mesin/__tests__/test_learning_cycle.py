@@ -35,7 +35,9 @@ def _sesi_satu_butir(kon, *, nama="Anak", level="P3", tujuan="bebas"):
     return siswa_id, sesi_id, butir
 
 
-def _isi_dan_selesaikan(kon, sesi_id, butir, *, kode="K", malrule_id="m-1"):
+def _isi_dan_selesaikan(
+    kon, sesi_id, butir, *, kode="K", malrule_id: str | None = "m-1"
+):
     jawaban_id = database.simpan_jawaban(
         kon, butir["sesi_soal_id"], jawaban="0", cara="menghitung"
     )
@@ -71,6 +73,43 @@ def test_sesi_manual_baru_tetap_bebas_tanpa_metadata_siklus_rekaan(db):
         "bagian_checkpoint": None,
         "dibatalkan": None,
     }
+
+
+def test_buat_putaran_dan_tautkan_sesi_tidak_menyisakan_mutasi_parsial(db):
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(kon, "Atomis", tingkat="P3")
+        valid_1 = database.buat_sesi(kon, siswa_id, 1, level="P3", jumlah_soal=1)
+        valid_2 = database.buat_sesi(kon, siswa_id, 2, level="P3", jumlah_soal=1)
+        beda_level = database.buat_sesi(
+            kon, siswa_id, 3, level="P4", jumlah_soal=1
+        )
+
+        with pytest.raises(ValueError, match="level sesi berbeda"):
+            database.buat_putaran_fokus(
+                kon, siswa_id, "P3", sesi_ids=[valid_1, beda_level]
+            )
+        assert kon.execute("SELECT COUNT(*) FROM putaran_fokus").fetchone()[0] == 0
+        assert kon.execute(
+            "SELECT COUNT(*) FROM sesi WHERE putaran_id IS NOT NULL"
+        ).fetchone()[0] == 0
+
+        putaran_id = database.buat_putaran_fokus(kon, siswa_id, "P3")
+        with pytest.raises(ValueError, match="level sesi berbeda"):
+            database.tautkan_sesi_putaran(
+                kon, putaran_id, [valid_1, valid_1, beda_level]
+            )
+        assert kon.execute(
+            "SELECT putaran_id FROM sesi WHERE id = ?", (valid_1,)
+        ).fetchone()[0] is None
+
+        database.tautkan_sesi_putaran(
+            kon, putaran_id, [valid_1, valid_1, valid_2]
+        )
+        tertaut = kon.execute(
+            "SELECT id FROM sesi WHERE putaran_id = ? ORDER BY id", (putaran_id,)
+        ).fetchall()
+
+    assert [baris["id"] for baris in tertaut] == [valid_1, valid_2]
 
 
 def test_putaran_maksimal_dua_fokus_kanonis_dengan_provenance_multi_sesi(db):
@@ -276,6 +315,182 @@ def test_hanya_hasil_selesai_lengkap_dan_eksplisit_yang_bisa_dikonfirmasi(db):
 
     assert snapshot["dilewati"] == 1
     assert snapshot["kode_final"] is None
+
+
+@pytest.mark.parametrize(
+    ("benar", "kode_final", "malrule_id"),
+    [
+        (False, None, None),
+        (True, "K", None),
+        (True, None, "m-1"),
+    ],
+)
+def test_konfirmasi_menolak_outcome_non_dilewati_yang_kontradiktif(
+    db, benar, kode_final, malrule_id
+):
+    with database.buka(db) as kon:
+        _, sesi_id, butir = _sesi_satu_butir(kon, tujuan="pemetaan")
+        jawaban_id = database.simpan_jawaban(
+            kon, butir["sesi_soal_id"], jawaban="0"
+        )
+        database.simpan_diagnosis(
+            kon,
+            jawaban_id,
+            benar=benar,
+            kode_usulan="K",
+            kode_final=kode_final,
+            malrule_id=malrule_id,
+        )
+        database.tandai_selesai(kon, sesi_id)
+
+        with pytest.raises(ValueError, match="outcome belum lengkap"):
+            database.konfirmasi_hasil(kon, sesi_id, guru="guru")
+
+        assert kon.execute("SELECT COUNT(*) FROM konfirmasi_hasil").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("kode_final", ["N", "T"])
+def test_konfirmasi_dan_snapshot_raw_sql_menerima_n_t_sebagai_salah_berkode(
+    db, kode_final
+):
+    with database.buka(db) as kon:
+        _, sesi_id, butir = _sesi_satu_butir(kon, tujuan="pemetaan")
+        _isi_dan_selesaikan(
+            kon, sesi_id, butir, kode=kode_final, malrule_id=None
+        )
+        konfirmasi_service = database.konfirmasi_hasil(
+            kon, sesi_id, guru="guru"
+        )
+        snapshot_service = kon.execute(
+            """SELECT benar, kode_final FROM snapshot_outcome
+               WHERE konfirmasi_id = ?""",
+            (konfirmasi_service,),
+        ).fetchone()
+
+        sesi_raw = database.buat_sesi(
+            kon,
+            kon.execute("SELECT siswa_id FROM sesi WHERE id = ?", (sesi_id,)).fetchone()[0],
+            seed=17,
+            jumlah_soal=1,
+        )
+        butir_raw = database.isi_sesi(kon, sesi_raw)[0]
+        konfirmasi_id = kon.execute(
+            """INSERT INTO konfirmasi_hasil
+                   (sesi_id, nomor_urut, guru, fingerprint)
+               VALUES (?, 1, 'guru', ?)""",
+            (sesi_raw, kode_final),
+        ).lastrowid
+        kon.execute(
+            """INSERT INTO snapshot_outcome
+                   (konfirmasi_id, sesi_soal_id, nomor, template_id, jawaban,
+                    benar, kode_final, dilewati, level_efektif)
+               VALUES (?, ?, 1, ?, '', 0, ?, 0, 'P3')""",
+            (
+                konfirmasi_id,
+                butir_raw["sesi_soal_id"],
+                butir_raw["template_id"],
+                kode_final,
+            ),
+        )
+
+    assert dict(snapshot_service) == {"benar": 0, "kode_final": kode_final}
+    assert konfirmasi_id is not None
+
+
+def test_snapshot_raw_sql_menolak_outcome_kontradiktif(db):
+    with database.buka(db) as kon:
+        _, sesi_id, butir = _sesi_satu_butir(kon, tujuan="pemetaan")
+        konfirmasi_id = kon.execute(
+            """INSERT INTO konfirmasi_hasil
+                   (sesi_id, nomor_urut, guru, fingerprint)
+               VALUES (?, 1, 'guru', 'raw')""",
+            (sesi_id,),
+        ).lastrowid
+        sql = """INSERT INTO snapshot_outcome
+                    (konfirmasi_id, sesi_soal_id, nomor, template_id, jawaban,
+                     benar, kode_final, malrule_id, dilewati, level_efektif)
+                 VALUES (?, ?, ?, ?, '', ?, ?, ?, 0, 'P3')"""
+        kasus = [
+            (1, 0, None, None),
+            (2, 1, "K", None),
+            (3, 1, None, "m-1"),
+        ]
+        for nomor, benar, kode_final, malrule_id in kasus:
+            with pytest.raises(sqlite3.IntegrityError):
+                kon.execute(
+                    sql,
+                    (
+                        konfirmasi_id,
+                        butir["sesi_soal_id"] + nomor,
+                        nomor,
+                        butir["template_id"],
+                        benar,
+                        kode_final,
+                        malrule_id,
+                    ),
+                )
+
+
+def test_konfirmasi_identik_aktif_idempoten_tanpa_bukti_duplikat(db):
+    with database.buka(db) as kon:
+        _, sesi_id, butir = _sesi_satu_butir(kon, tujuan="pemetaan")
+        _isi_dan_selesaikan(kon, sesi_id, butir)
+
+        pertama = database.konfirmasi_hasil(kon, sesi_id, guru="guru")
+        kedua = database.konfirmasi_hasil(kon, sesi_id, guru="guru-lain")
+        jumlah = {
+            "konfirmasi": kon.execute(
+                "SELECT COUNT(*) FROM konfirmasi_hasil WHERE sesi_id = ?", (sesi_id,)
+            ).fetchone()[0],
+            "snapshot": kon.execute(
+                """SELECT COUNT(*) FROM snapshot_outcome so
+                   JOIN konfirmasi_hasil kh ON kh.id = so.konfirmasi_id
+                   WHERE kh.sesi_id = ?""",
+                (sesi_id,),
+            ).fetchone()[0],
+            "event": kon.execute(
+                """SELECT COUNT(*) FROM kejadian_belajar
+                   WHERE sesi_id = ? AND jenis = 'hasil_dikonfirmasi'""",
+                (sesi_id,),
+            ).fetchone()[0],
+        }
+
+    assert kedua == pertama
+    assert jumlah == {"konfirmasi": 1, "snapshot": 1, "event": 1}
+
+
+def test_invalidasi_memilih_konfirmasi_aktif_terbaru_dan_urutan_tetap_monoton(db):
+    with database.buka(db) as kon:
+        _, sesi_id, butir = _sesi_satu_butir(kon, tujuan="pemetaan")
+        jawaban_id = _isi_dan_selesaikan(kon, sesi_id, butir)
+        pertama = database.konfirmasi_hasil(kon, sesi_id, guru="guru")
+        fingerprint = kon.execute(
+            "SELECT fingerprint_konfirmasi FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()[0]
+        terbaru = kon.execute(
+            """INSERT INTO konfirmasi_hasil
+                   (sesi_id, nomor_urut, guru, fingerprint)
+               VALUES (?, 2, 'guru', ?)""",
+            (sesi_id, fingerprint),
+        ).lastrowid
+
+        database.simpan_diagnosis(
+            kon, jawaban_id, True, "K", None, None, "hasil koreksi", True
+        )
+        invalidasi = kon.execute(
+            """SELECT konfirmasi_id FROM kejadian_belajar
+               WHERE sesi_id = ? AND jenis = 'konfirmasi_dibatalkan'
+               ORDER BY id DESC LIMIT 1""",
+            (sesi_id,),
+        ).fetchone()[0]
+        ketiga = database.konfirmasi_hasil(kon, sesi_id, guru="guru")
+        nomor_ketiga = kon.execute(
+            "SELECT nomor_urut FROM konfirmasi_hasil WHERE id = ?", (ketiga,)
+        ).fetchone()[0]
+
+    assert terbaru != pertama
+    assert invalidasi == terbaru
+    assert nomor_ketiga == 3
 
 
 def test_sesi_dibatalkan_tidak_bisa_dikonfirmasi_dan_snapshot_lama_bertahan(db):
