@@ -5,7 +5,9 @@ dan test di `../mesin/` tetap menjadi sumber kebenaran.
 
 ## `plan/`
 
-Rencana bertanggal — ditulis sebelum implementasi, diarsipkan setelah selesai.
+Rencana bertanggal — ditulis sebelum implementasi. Rencana aktif dan alat preview
+tercantum di `plan/README.md`; rencana selesai atau digantikan disimpan di
+`plan/archive/` agar folder utama tetap ringkas.
 Spesifikasi permanen siklus aktif ada di
 [`../produk/Siklus Belajar Terpandu.md`](../produk/Siklus%20Belajar%20Terpandu.md).
 Rincian implementasinya disimpan lokal sebagai

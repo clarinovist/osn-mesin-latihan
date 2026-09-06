@@ -76,7 +76,8 @@ acuan olimpiade internasional **IMSO 2019** (tidak hanya KD kurikulum).
 
 > Catatan: produk saat ini memakai 4 jalur (bilangan, geometri,
 > kombinatorik-logika, aritmatika-statistika-pengukuran). Ini ≈ 5 topik OSN
-> dengan Aritmatika+Statistika digabung. Lihat `docs/plan/2026-08-30-seed-topik-osn-sasmo.md`.
+> dengan Aritmatika+Statistika digabung. Rencana historisnya ada di
+> `docs/plan/archive/2026-08-30-seed-topik-osn-sasmo.md`.
 > ⚠️ **DIKOREKSI 2 Sep 2026** oleh riset 1.237 soal asli 2016–2026
 > (`riset-soal-osn-10-tahun.md`): dugaan lama "bobot Geometri paling besar"
 > TIDAK terbukti. Distribusi nyata: Aritmatika 24,2% · Geometri 23,2% ·
@@ -125,7 +126,7 @@ Implementasi proyek mengikuti band ini di level P3: geometri-datar,
 statistika, dan logika versi sederhana tersedia untuk P3 sejak 31 Agu 2026
 (sebelumnya P3 hanya pola-bilangan). SASMO tidak membagi silabus per kelas —
 band P1–4 yang berlaku untuk P3 sudah memuat ketiga topik versi sederhana.
-Detail keputusan: `docs/plan/2026-08-31-perluasan-p3-geometri-statistika-logika.md`.
+Detail keputusan historis: `docs/plan/archive/2026-08-31-perluasan-p3-geometri-statistika-logika.md`.
 
 **Perbedaan kunci vs OSN SD:** SASMO menekankan **Section A (MCQ) + Section B
 (non-routine terbuka)** sekaligus; soal menengah selalu non-routine/terbuka.
