@@ -11,12 +11,14 @@ masih bertugas.
 """
 
 import design_tokens as T
+from presentation_style import GAYA_PENYAJIAN
 
 GAYA_STITCH = f"""
 /* ── Font CDN (diizinkan 2026-09-01) — satu baris utuh; @import multi-baris
    memutus URL dan membuat font gagal dimuat tanpa jejak di konsol. ── */
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+{GAYA_PENYAJIAN}
 * {{ box-sizing: border-box; }}
 html {{ -webkit-text-size-adjust: 100%; }}
 body.st {{

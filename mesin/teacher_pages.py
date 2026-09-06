@@ -10,20 +10,21 @@ file (impor terlambat di dalam fungsi, lihat pemakaian aslinya).
 from __future__ import annotations
 
 import html
-import json
 import random
-from dataclasses import replace
 from datetime import datetime
 
 import database
 import brand
 import design_tokens as T
 import learning_cycle_ui
+import question_views
+import visual_renderer
+import presentation_lock
 import share_links
 import worksheets
 from diagnosis import diagnosa
 from generator import LEVEL_BAWAAN
-from templates import LEVEL, REGISTRI, Soal, label_kelas
+from templates import LEVEL, Soal, label_kelas
 from topics import TOPIK_BAWAAN, ambil, daftar_topik, dari_sesi
 from teacher_style import GAYA_GURU as GAYA, SKRIP_MATA_SANDI, SKRIP_CEGAH_KIRIM_GANDA
 from style_stitch import GAYA_STITCH
@@ -144,32 +145,8 @@ def _halaman(
 <body><div class="bungkus">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
 def _soal_dari_baris(baris) -> Soal:
-    """Bangun ulang objek Soal dari parameter yang tersimpan.
-
-    Teks soal sengaja tidak disimpan di basis data — hanya parameter — supaya
-    perbaikan kalimat soal langsung berlaku untuk sesi lama juga.
-
-    Level diambil dari baris, bukan dari tingkat siswa saat ini: anak yang
-    sudah naik ke P5 tetap harus melihat sesi P3-nya tercetak sebagai P3.
-
-    Sejak A4 parameter tersimpan JSON murni (list tetap list) dan template
-    menerima bentuk itu langsung — restorasi TIDAK punya cabang per template.
-    Cabang semacam itu adalah jebakan: template baru dengan parameter
-    berstruktur harus menambah cabang di sini untuk bisa direstorasi, dan
-    yang lupa tidak gagal saat test tapi saat halaman guru menampilkan soal
-    yang salah.
-    """
-    param = json.loads(baris["parameter"])
-    soal = REGISTRI[baris["template_id"]](**param)
-    soal = replace(soal, level=_ambil(baris, "level", LEVEL_BAWAAN))
-
-    # Versi cerita dari LLM (B2), kalau ada. Yang diganti HANYA kalimatnya;
-    # kunci, malrule, dan parameter tetap hasil hitungan Python — itulah
-    # yang membuat diagnosis tetap hidup meski kalimatnya dikarang model.
-    cerita = (_ambil(baris, "cerita", "") or "").strip()
-    if cerita:
-        soal = replace(soal, teks=cerita)
-    return soal
+    """Wrapper kompatibilitas menuju adapter pembaca penyajian sesi."""
+    return question_views.soal_dari_baris(baris)
 
 def _ambil(baris, kolom: str, bawaan):
     """Baca kolom yang mungkin belum ada di baris.
@@ -968,15 +945,9 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
     if not llm.aktif():
         return ""
 
-    sudah = kon.execute(
-        """SELECT COUNT(*) AS n FROM soal s
-           JOIN sesi_soal ss ON ss.soal_id = s.id
-           WHERE ss.sesi_id = ? AND TRIM(COALESCE(s.cerita, '')) <> ''""",
-        (sesi_id,),
-    ).fetchone()["n"]
-    total = kon.execute(
-        "SELECT COUNT(*) AS n FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
-    ).fetchone()["n"]
+    penyajian = question_views.penyajian_sesi_aman(kon, sesi_id)
+    sudah = sum(p.asal_teks == "cerita" for p in penyajian)
+    total = len(penyajian)
 
     if sudah >= total and total:
         catatan = f"Semua {total} soal sudah punya versi cerita."
@@ -992,6 +963,10 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
             f'<button type="submit" class="tombol-amber" '
             f'style="margin-top:0">Variasi cerita &nbsp;✨</button></form>'
         )
+
+    if llm._sesi_terkunci(kon, sesi_id):
+        catatan += " Penyajian sesi sudah dikunci; buat sesi baru untuk variasi lain."
+        tombol = ""
 
     return (
         f'<div class="kartu kartu-variasi"><h2>Variasi cerita ✨</h2>'
@@ -1238,7 +1213,7 @@ def halaman_sesi(
     <span class="nomor">{b["nomor"]}</span>{lencana}
     <span class="tipe">{b["template_id"]}</span>
   </div>
-  <div class="teks-soal">{html.escape(soal.teks)}</div>
+  <div class="teks-soal">{visual_renderer.render_pertanyaan(question_views.penyajian_dari_baris(b), gaya="guru", namespace=str(b["nomor"]))}</div>
   <div>Kunci: <span class="kunci">{html.escape(b["kunci"])}</span></div>
   {pembahasan_html}
   {restate}
@@ -1458,7 +1433,7 @@ def halaman_sesi_stitch(
 <div class="koreksi-kartu-st pratinjau">
   <div class="koreksi-isi-st">
     <div class="koreksi-kepala-st">{nomor}{tipe}</div>
-    <div class="teks-soal-st">{html.escape(soal.teks)}</div>
+    <div class="teks-soal-st">{visual_renderer.render_pertanyaan(question_views.penyajian_dari_baris(b), gaya="guru", namespace=str(b["nomor"]))}</div>
     <div class="kunci-baris-st">Kunci: <span class="kunci-val">{html.escape(b["kunci"])}</span></div>
   </div>
 </div>""")
@@ -1495,7 +1470,7 @@ def halaman_sesi_stitch(
 <div class="koreksi-kartu-st">
   <div class="koreksi-isi-st {kelas_isi}">
     <div class="koreksi-kepala-st">{nomor}{tipe}{status}</div>
-    <div class="teks-soal-st">{html.escape(soal.teks)}</div>
+    <div class="teks-soal-st">{visual_renderer.render_pertanyaan(question_views.penyajian_dari_baris(b), gaya="guru", namespace=str(b["nomor"]))}</div>
     <div class="kunci-baris-st">Kunci: <span class="kunci-val">{html.escape(b["kunci"])}</span></div>
     {pembahasan_html}
     {restate}
@@ -1813,6 +1788,12 @@ def halaman_lembar(kon, sesi_id: int, untuk_guru: bool = False) -> bytes | None:
     if not info:
         return None
 
+    # Ambil kunci tulis sebelum snapshot dibaca: writer yang lebih dulu selesai
+    # ikut tercetak, sedangkan writer sesudah freeze ditolak service/trigger.
+    # Commit/rollback tetap milik pemanggil (handler database.buka), sehingga
+    # kegagalan render menggulung pembekuan bersama transaksi ini.
+    if not presentation_lock.bekukan_penyajian(kon, sesi_id):
+        return None
     soal = [_soal_dari_baris(b) for b in database.isi_sesi(kon, sesi_id)]
     # Judul dari paket topik sesi ini — bukan selalu paket bawaan. Sesi lama
     # dengan nilai kolom aneh jatuh ke bawaan lewat dari_sesi(), sesuai

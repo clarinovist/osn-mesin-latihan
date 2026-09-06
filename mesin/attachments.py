@@ -30,6 +30,8 @@ import shutil
 from pathlib import Path
 
 import database
+import question_views
+import visual_renderer
 import brand
 import design_tokens as T
 
@@ -293,9 +295,10 @@ def _teks_konteks(kon, sesi_id: int) -> list[str]:
     (palang di test_murid.py meledak kalau tersentuh). AI memang hanya
     butuh kalimat soalnya untuk memetakan jawaban ke nomor yang benar.
     """
-    from teacher_pages import _soal_dari_baris  # late import: hindari siklus
-
-    return [_soal_dari_baris(b).teks for b in database.isi_sesi(kon, sesi_id)]
+    return [
+        visual_renderer.ringkasan_pertanyaan(p)
+        for p in question_views.penyajian_sesi_aman(kon, sesi_id)
+    ]
 
 
 def _soal_konteks(kon, sesi_id: int) -> list[dict]:
@@ -310,6 +313,7 @@ def _soal_konteks(kon, sesi_id: int) -> list[dict]:
                 "nomor": b["nomor"],
                 "sesi_soal_id": b["sesi_soal_id"],
                 "teks": soal.teks,
+                "penyajian": soal.penyajian,
                 "kunci": b["kunci"],
                 "jawaban_lama": b["jawaban"] or "",
                 "cara_lama": b["cara"] or "",
@@ -416,8 +420,9 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
         kartu.append(f"""
 <div class="kartu soal-lampiran">
   <div class="kartu-kepala"><span class="nomor">{s['nomor']}</span>
-    <span class="tipe">{html.escape(s['teks'][:80])}</span>
+    <span class="tipe">Soal {s['nomor']}</span>
     <span class="kunci">kunci: {html.escape(s['kunci'])}</span>{tanda}</div>
+  {visual_renderer.render_pertanyaan(s['penyajian'], gaya='guru', namespace=str(s['nomor']))}
   {_blok_jawaban_lama(s)}
   <div class="baris">
     <div><label>Jawaban (bacaan AI)</label>

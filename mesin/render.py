@@ -30,6 +30,7 @@ import html
 import json
 
 import brand
+import visual_renderer
 import design_tokens as T
 from print_style import GAYA_CETAK
 from screen_style import GAYA_LAYAR
@@ -37,10 +38,15 @@ from templates import Soal
 from topics import Topik, paket_bawaan
 
 
-def _badan_soal(soal: Soal, topik_paket: Topik | None = None) -> str:
+def _badan_soal(soal: Soal, topik_paket: Topik | None = None,
+                 namespace: str = "soal") -> str:
     """Teks soal + diagram. Paket topik boleh mengambil alih bentuk
     khusus (deret ditebalkan, diagram SVG); sisanya renderer teks bawaan:
     baris pertama jadi badan, sisanya jadi pertanyaan."""
+    if soal.penyajian is not None:
+        return visual_renderer.render_pertanyaan(
+            soal.penyajian, gaya="cetak", namespace=namespace
+        )
     if topik_paket is None:
         topik_paket = paket_bawaan()
     khusus = topik_paket.render_badan
@@ -91,7 +97,7 @@ def _kartu_soal(nomor: int, soal: Soal, topik_paket: Topik | None = None) -> str
     return (
         f'<div class="soal">'
         f'<span class="nomor">{nomor}</span>{bintang}'
-        f"{_badan_soal(soal, topik_paket)}"
+        f"{_badan_soal(soal, topik_paket, str(nomor))}"
         f"{restate}"
         f'<div class="label">Caraku:</div>'
         f'<div class="cara {tinggi}"></div>'

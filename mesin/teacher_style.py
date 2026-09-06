@@ -18,8 +18,10 @@ _halaman_masuk, _kartu_akun_murid, _tombol_cerita, _halaman.
 """
 
 import design_tokens as T
+from presentation_style import GAYA_PENYAJIAN
 
 GAYA_GURU = f"""
+{GAYA_PENYAJIAN}
 * {{ box-sizing: border-box; }}
 html {{ -webkit-text-size-adjust: 100%; }}
 body {{

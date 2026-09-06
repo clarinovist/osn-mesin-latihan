@@ -129,6 +129,9 @@ CREATE TABLE IF NOT EXISTS sesi (
     putaran_id INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT,
     bagian_checkpoint INTEGER
         CHECK (bagian_checkpoint IS NULL OR bagian_checkpoint IN (1, 2)),
+    -- Begitu lembar cetak dirender, snapshot penyajian menjadi sejarah.
+    -- Timestamp terpisah agar cetak tidak berpura-pura sebagai mulai/selesai anak.
+    penyajian_dibekukan TEXT,
     -- Kunci occurrence aktif; NULL untuk sesi manual/warisan. Indeks parsial
     -- di bawah membedakan double-submit dari retry setelah pembatalan.
     kunci_idempotensi TEXT,
@@ -181,12 +184,209 @@ CREATE INDEX IF NOT EXISTS idx_tautan_sesi_hash ON tautan_sesi(token_hash);
 
 -- Urutan soal dalam satu sesi.
 CREATE TABLE IF NOT EXISTS sesi_soal (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    sesi_id  INTEGER NOT NULL REFERENCES sesi(id) ON DELETE CASCADE,
-    soal_id  INTEGER NOT NULL REFERENCES soal(id),
-    nomor    INTEGER NOT NULL,
-    UNIQUE (sesi_id, nomor)
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    sesi_id                  INTEGER NOT NULL REFERENCES sesi(id) ON DELETE CASCADE,
+    soal_id                  INTEGER NOT NULL REFERENCES soal(id),
+    nomor                    INTEGER NOT NULL,
+    teks_soal                TEXT,
+    bagian_soal              TEXT,
+    tantangan_soal           INTEGER,
+    minta_restatement        INTEGER,
+    penyajian_json           TEXT,
+    penyajian_versi          INTEGER,
+    renderer_versi           INTEGER,
+    asal_teks                TEXT,
+    status_visual            TEXT,
+    mode_representasi        TEXT,
+    fingerprint_matematis    TEXT,
+    fingerprint_penyajian    TEXT,
+    UNIQUE (sesi_id, nomor),
+    CHECK (
+        (
+            teks_soal IS NULL AND bagian_soal IS NULL
+            AND tantangan_soal IS NULL AND minta_restatement IS NULL
+            AND penyajian_json IS NULL AND penyajian_versi IS NULL
+            AND renderer_versi IS NULL AND asal_teks IS NULL
+            AND status_visual IS NULL AND mode_representasi IS NULL
+            AND fingerprint_matematis IS NULL
+            AND fingerprint_penyajian IS NULL
+        )
+        OR
+        (
+            teks_soal IS NOT NULL AND bagian_soal IS NOT NULL
+            AND tantangan_soal IS NOT NULL
+            AND minta_restatement IS NOT NULL
+            AND penyajian_json IS NOT NULL
+            AND penyajian_versi IS NOT NULL
+            AND renderer_versi IS NOT NULL
+            AND asal_teks IS NOT NULL AND status_visual IS NOT NULL
+            AND mode_representasi IS NOT NULL
+            AND fingerprint_matematis IS NOT NULL
+            AND fingerprint_penyajian IS NOT NULL
+            AND typeof(teks_soal) = 'text'
+            AND typeof(bagian_soal) = 'text'
+            AND typeof(tantangan_soal) = 'integer'
+            AND typeof(minta_restatement) = 'integer'
+            AND typeof(penyajian_json) = 'text'
+            AND typeof(penyajian_versi) = 'integer'
+            AND typeof(renderer_versi) = 'integer'
+            AND typeof(asal_teks) = 'text'
+            AND typeof(status_visual) = 'text'
+            AND typeof(mode_representasi) = 'text'
+            AND typeof(fingerprint_matematis) = 'text'
+            AND typeof(fingerprint_penyajian) = 'text'
+            AND tantangan_soal IN (0, 1)
+            AND minta_restatement IN (0, 1)
+            AND penyajian_versi > 0 AND renderer_versi > 0
+            AND asal_teks IN ('warisan', 'bawaan', 'cerita')
+            AND status_visual IN (
+                'tanpa_visual', 'siap', 'warisan', 'tidak_valid'
+            )
+            AND LENGTH(TRIM(mode_representasi)) > 0
+            AND LENGTH(TRIM(fingerprint_matematis)) > 0
+            AND LENGTH(TRIM(fingerprint_penyajian)) > 0
+        )
+    )
 );
+
+-- ALTER TABLE hanya menambah kolom pada database warisan, bukan CHECK tabel.
+-- Trigger menjaga kontrak all-or-none yang sama untuk pemasangan lama dan baru.
+CREATE TRIGGER IF NOT EXISTS sesi_soal_snapshot_validasi_insert
+BEFORE INSERT ON sesi_soal
+WHEN NOT (
+    (
+        NEW.teks_soal IS NULL AND NEW.bagian_soal IS NULL
+        AND NEW.tantangan_soal IS NULL AND NEW.minta_restatement IS NULL
+        AND NEW.penyajian_json IS NULL AND NEW.penyajian_versi IS NULL
+        AND NEW.renderer_versi IS NULL AND NEW.asal_teks IS NULL
+        AND NEW.status_visual IS NULL AND NEW.mode_representasi IS NULL
+        AND NEW.fingerprint_matematis IS NULL
+        AND NEW.fingerprint_penyajian IS NULL
+    )
+    OR
+    (
+        NEW.teks_soal IS NOT NULL AND NEW.bagian_soal IS NOT NULL
+        AND NEW.tantangan_soal IS NOT NULL
+        AND NEW.minta_restatement IS NOT NULL
+        AND NEW.penyajian_json IS NOT NULL
+        AND NEW.penyajian_versi IS NOT NULL
+        AND NEW.renderer_versi IS NOT NULL
+        AND NEW.asal_teks IS NOT NULL AND NEW.status_visual IS NOT NULL
+        AND NEW.mode_representasi IS NOT NULL
+        AND NEW.fingerprint_matematis IS NOT NULL
+        AND NEW.fingerprint_penyajian IS NOT NULL
+        AND typeof(NEW.teks_soal) = 'text'
+        AND typeof(NEW.bagian_soal) = 'text'
+        AND typeof(NEW.tantangan_soal) = 'integer'
+        AND typeof(NEW.minta_restatement) = 'integer'
+        AND typeof(NEW.penyajian_json) = 'text'
+        AND typeof(NEW.penyajian_versi) = 'integer'
+        AND typeof(NEW.renderer_versi) = 'integer'
+        AND typeof(NEW.asal_teks) = 'text'
+        AND typeof(NEW.status_visual) = 'text'
+        AND typeof(NEW.mode_representasi) = 'text'
+        AND typeof(NEW.fingerprint_matematis) = 'text'
+        AND typeof(NEW.fingerprint_penyajian) = 'text'
+        AND NEW.tantangan_soal IN (0, 1)
+        AND NEW.minta_restatement IN (0, 1)
+        AND NEW.penyajian_versi > 0 AND NEW.renderer_versi > 0
+        AND NEW.asal_teks IN ('warisan', 'bawaan', 'cerita')
+        AND NEW.status_visual IN (
+            'tanpa_visual', 'siap', 'warisan', 'tidak_valid'
+        )
+        AND LENGTH(TRIM(NEW.mode_representasi)) > 0
+        AND LENGTH(TRIM(NEW.fingerprint_matematis)) > 0
+        AND LENGTH(TRIM(NEW.fingerprint_penyajian)) > 0
+    )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'snapshot penyajian sesi_soal tidak valid');
+END;
+
+CREATE TRIGGER IF NOT EXISTS sesi_soal_snapshot_validasi_update
+BEFORE UPDATE ON sesi_soal
+WHEN NOT (
+    (
+        NEW.teks_soal IS NULL AND NEW.bagian_soal IS NULL
+        AND NEW.tantangan_soal IS NULL AND NEW.minta_restatement IS NULL
+        AND NEW.penyajian_json IS NULL AND NEW.penyajian_versi IS NULL
+        AND NEW.renderer_versi IS NULL AND NEW.asal_teks IS NULL
+        AND NEW.status_visual IS NULL AND NEW.mode_representasi IS NULL
+        AND NEW.fingerprint_matematis IS NULL
+        AND NEW.fingerprint_penyajian IS NULL
+    )
+    OR
+    (
+        NEW.teks_soal IS NOT NULL AND NEW.bagian_soal IS NOT NULL
+        AND NEW.tantangan_soal IS NOT NULL
+        AND NEW.minta_restatement IS NOT NULL
+        AND NEW.penyajian_json IS NOT NULL
+        AND NEW.penyajian_versi IS NOT NULL
+        AND NEW.renderer_versi IS NOT NULL
+        AND NEW.asal_teks IS NOT NULL AND NEW.status_visual IS NOT NULL
+        AND NEW.mode_representasi IS NOT NULL
+        AND NEW.fingerprint_matematis IS NOT NULL
+        AND NEW.fingerprint_penyajian IS NOT NULL
+        AND typeof(NEW.teks_soal) = 'text'
+        AND typeof(NEW.bagian_soal) = 'text'
+        AND typeof(NEW.tantangan_soal) = 'integer'
+        AND typeof(NEW.minta_restatement) = 'integer'
+        AND typeof(NEW.penyajian_json) = 'text'
+        AND typeof(NEW.penyajian_versi) = 'integer'
+        AND typeof(NEW.renderer_versi) = 'integer'
+        AND typeof(NEW.asal_teks) = 'text'
+        AND typeof(NEW.status_visual) = 'text'
+        AND typeof(NEW.mode_representasi) = 'text'
+        AND typeof(NEW.fingerprint_matematis) = 'text'
+        AND typeof(NEW.fingerprint_penyajian) = 'text'
+        AND NEW.tantangan_soal IN (0, 1)
+        AND NEW.minta_restatement IN (0, 1)
+        AND NEW.penyajian_versi > 0 AND NEW.renderer_versi > 0
+        AND NEW.asal_teks IN ('warisan', 'bawaan', 'cerita')
+        AND NEW.status_visual IN (
+            'tanpa_visual', 'siap', 'warisan', 'tidak_valid'
+        )
+        AND LENGTH(TRIM(NEW.mode_representasi)) > 0
+        AND LENGTH(TRIM(NEW.fingerprint_matematis)) > 0
+        AND LENGTH(TRIM(NEW.fingerprint_penyajian)) > 0
+    )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'snapshot penyajian sesi_soal tidak valid');
+END;
+
+-- Pertahanan berlapis untuk UPDATE raw SQL: snapshot pengalaman anak hanya
+-- boleh berubah sebelum sesi dikerjakan atau dipakai sebagai bukti. Pembatasan
+-- `UPDATE OF` membuat perubahan kolom sesi_soal lain tidak ikut tertolak.
+CREATE TRIGGER IF NOT EXISTS sesi_soal_snapshot_tolak_update_terkunci
+BEFORE UPDATE OF
+    sesi_id, soal_id, nomor, teks_soal, bagian_soal, tantangan_soal, minta_restatement,
+    penyajian_json, penyajian_versi, renderer_versi, asal_teks,
+    status_visual, mode_representasi, fingerprint_matematis,
+    fingerprint_penyajian
+ON sesi_soal
+WHEN EXISTS (
+        SELECT 1 FROM sesi se
+        WHERE se.id IN (OLD.sesi_id, NEW.sesi_id)
+          AND (
+              se.mulai IS NOT NULL OR se.selesai IS NOT NULL
+              OR se.penyajian_dibekukan IS NOT NULL OR se.dibatalkan IS NOT NULL
+          )
+     )
+  OR EXISTS (
+        SELECT 1 FROM jawaban j
+        JOIN sesi_soal lain ON lain.id = j.sesi_soal_id
+        WHERE lain.sesi_id IN (OLD.sesi_id, NEW.sesi_id)
+     )
+  OR EXISTS (
+        SELECT 1 FROM konfirmasi_hasil kh WHERE kh.sesi_id IN (OLD.sesi_id, NEW.sesi_id)
+     )
+  OR EXISTS (
+        SELECT 1 FROM bukti_fokus bf WHERE bf.sesi_id IN (OLD.sesi_id, NEW.sesi_id)
+     )
+BEGIN
+    SELECT RAISE(ABORT, 'snapshot penyajian terkunci');
+END;
 
 -- Jawaban anak. Empat kotak dari format lembar diagnostik:
 --   restatement    -> "soal ini mintanya apa?"  (memisahkan B)
@@ -471,11 +671,27 @@ MIGRASI: list[tuple[str, str, str]] = [
     ("sesi", "fingerprint_konfirmasi", "ALTER TABLE sesi ADD COLUMN fingerprint_konfirmasi TEXT"),
     ("sesi", "putaran_id", "ALTER TABLE sesi ADD COLUMN putaran_id INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT"),
     ("sesi", "bagian_checkpoint", "ALTER TABLE sesi ADD COLUMN bagian_checkpoint INTEGER"),
+    # Pembekuan eksplisit saat lembar dicetak; nullable untuk semua sesi warisan.
+    ("sesi", "penyajian_dibekukan", "ALTER TABLE sesi ADD COLUMN penyajian_dibekukan TEXT"),
     ("sesi", "kunci_idempotensi", "ALTER TABLE sesi ADD COLUMN kunci_idempotensi TEXT"),
     ("sesi", "dibatalkan", "ALTER TABLE sesi ADD COLUMN dibatalkan TEXT"),
     ("snapshot_outcome", "target_template_id", "ALTER TABLE snapshot_outcome ADD COLUMN target_template_id TEXT"),
     ("snapshot_outcome", "target_kode_intervensi", "ALTER TABLE snapshot_outcome ADD COLUMN target_kode_intervensi TEXT"),
     ("snapshot_outcome", "target_malrule_id", "ALTER TABLE snapshot_outcome ADD COLUMN target_malrule_id TEXT"),
+    # Snapshot penyajian per butir (Fase 1 Slice 2). Nullable menjaga baris
+    # warisan; trigger SKEMA menegakkan all-or-none setelah migrasi.
+    ("sesi_soal", "teks_soal", "ALTER TABLE sesi_soal ADD COLUMN teks_soal TEXT"),
+    ("sesi_soal", "bagian_soal", "ALTER TABLE sesi_soal ADD COLUMN bagian_soal TEXT"),
+    ("sesi_soal", "tantangan_soal", "ALTER TABLE sesi_soal ADD COLUMN tantangan_soal INTEGER"),
+    ("sesi_soal", "minta_restatement", "ALTER TABLE sesi_soal ADD COLUMN minta_restatement INTEGER"),
+    ("sesi_soal", "penyajian_json", "ALTER TABLE sesi_soal ADD COLUMN penyajian_json TEXT"),
+    ("sesi_soal", "penyajian_versi", "ALTER TABLE sesi_soal ADD COLUMN penyajian_versi INTEGER"),
+    ("sesi_soal", "renderer_versi", "ALTER TABLE sesi_soal ADD COLUMN renderer_versi INTEGER"),
+    ("sesi_soal", "asal_teks", "ALTER TABLE sesi_soal ADD COLUMN asal_teks TEXT"),
+    ("sesi_soal", "status_visual", "ALTER TABLE sesi_soal ADD COLUMN status_visual TEXT"),
+    ("sesi_soal", "mode_representasi", "ALTER TABLE sesi_soal ADD COLUMN mode_representasi TEXT"),
+    ("sesi_soal", "fingerprint_matematis", "ALTER TABLE sesi_soal ADD COLUMN fingerprint_matematis TEXT"),
+    ("sesi_soal", "fingerprint_penyajian", "ALTER TABLE sesi_soal ADD COLUMN fingerprint_penyajian TEXT"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.

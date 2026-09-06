@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 
 import auth
+import question_views
 from database import isi_sesi
 from templates import Soal
 from topics import dari_sesi
@@ -59,12 +60,15 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
     tidak dimasukkan ke HTML; capability bearer tidak boleh membaca data yang
     tidak dibutuhkan.
     """
-    from web import _soal_dari_baris  # impor terlambat: hindari siklus impor
-
     if not sesi_murid(kon, siswa_id, sesi_id):
         return []
     baris_baris = kon.execute(
         """SELECT ss.id AS sesi_soal_id, ss.nomor,
+                  ss.teks_soal, ss.bagian_soal, ss.tantangan_soal,
+                  ss.minta_restatement, ss.penyajian_json,
+                  ss.penyajian_versi, ss.renderer_versi, ss.asal_teks,
+                  ss.status_visual, ss.mode_representasi,
+                  ss.fingerprint_matematis, ss.fingerprint_penyajian,
                   s.id AS soal_id, s.template_id, s.parameter,
                   s.bagian, s.tantangan, s.level, s.cerita
            FROM sesi_soal ss
@@ -75,7 +79,7 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
     ).fetchall()
     keluar: list[dict] = []
     for b in baris_baris:
-        soal: Soal = _soal_dari_baris(b)
+        penyajian = question_views.penyajian_dari_baris(b)
         jawab = kon.execute(
             """SELECT restatement, cara, jawaban, belum_pernah
                FROM jawaban j JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
@@ -87,10 +91,11 @@ def soal_murid(kon, sesi_id: int, siswa_id: int) -> list[dict]:
                 "nomor": b["nomor"],
                 "sesi_soal_id": b["sesi_soal_id"],
                 "template_id": b["template_id"],
-                "teks": soal.teks,
-                "bagian": soal.bagian,
-                "tantangan": soal.tantangan,
-                "minta_restatement": soal.minta_restatement,
+                "teks": penyajian.teks_soal,
+                "penyajian": penyajian,
+                "bagian": penyajian.bagian_soal,
+                "tantangan": penyajian.tantangan_soal,
+                "minta_restatement": penyajian.minta_restatement,
                 "terjawab": dict(jawab) if jawab else None,
             }
         )
@@ -140,6 +145,7 @@ def hasil_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
             {
                 "nomor": b["nomor"],
                 "teks": soal.teks,
+                "penyajian": soal.penyajian,
                 "jawabanku": (b["jawaban"] or ""),
                 "benar": ini_benar,
                 "dijawab": b["jawaban_id"] is not None,

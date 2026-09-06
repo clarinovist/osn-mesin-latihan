@@ -32,6 +32,9 @@ import urllib.request
 from typing import Any
 
 from templates import Soal
+import presentation_lock
+import question_views
+from visual_contract import buat_penyajian
 
 # ── Konfigurasi lingkungan ──────────────────────────────────────────────
 
@@ -724,9 +727,6 @@ def bungkus(
            VALUES (?, ?, ?)""",
         (hash_kunci, kalimat, konfigurasi()["model"]),
     )
-    # Commit sendiri: kalimat yang sudah dibayar tidak boleh hilang hanya
-    # karena transaksi pemanggil (mis. penyimpanan sesi) di-rollback.
-    kon.commit()
     return kalimat
 
 
@@ -737,6 +737,57 @@ def bungkus(
 # Mencoba latar kedua jauh lebih murah daripada membiarkan soal kembali
 # ke kalimat bawaan, dan tetap berbatas supaya biaya tidak lepas kendali.
 PERCOBAAN_LATAR = 2
+
+
+def _sesi_terkunci(kon: sqlite3.Connection, sesi_id: int) -> bool:
+    """True bila snapshot sesi tidak boleh lagi berubah."""
+    return kon.execute(
+        """SELECT EXISTS (
+               SELECT 1 FROM sesi se
+               WHERE se.id = ?
+                 AND (
+                     se.penyajian_dibekukan IS NOT NULL
+                     OR se.mulai IS NOT NULL OR se.selesai IS NOT NULL
+                     OR se.dibatalkan IS NOT NULL
+                     OR EXISTS (
+                         SELECT 1 FROM sesi_soal ss
+                         JOIN jawaban j ON j.sesi_soal_id = ss.id
+                         WHERE ss.sesi_id = se.id
+                     )
+                     OR EXISTS (
+                         SELECT 1 FROM konfirmasi_hasil kh
+                         WHERE kh.sesi_id = se.id
+                     )
+                     OR EXISTS (
+                         SELECT 1 FROM bukti_fokus bf
+                         WHERE bf.sesi_id = se.id
+                     )
+                 )
+           )""",
+        (sesi_id,),
+    ).fetchone()[0] == 1
+
+
+def _snapshot_cerita(baris, kalimat: str):
+    """Bangun cerita pada snapshot target, termasuk baris warisan all-NULL."""
+    lama = question_views.penyajian_dari_baris(baris)
+    parameter = json.loads(baris["parameter"])
+    warisan = baris["fingerprint_penyajian"] is None
+    return buat_penyajian(
+        template_id=baris["template_id"],
+        level=baris["level"],
+        parameter=parameter,
+        teks_soal=kalimat,
+        bagian_soal=lama.bagian_soal,
+        tantangan_soal=lama.tantangan_soal,
+        minta_restatement=lama.minta_restatement,
+        asal_teks="cerita",
+        status_visual="warisan" if warisan else lama.status_visual,
+        mode_representasi="teks-v1" if warisan else lama.mode_representasi,
+        descriptor=None if warisan else lama.descriptor,
+        penyajian_versi=lama.penyajian_versi,
+        renderer_versi=lama.renderer_versi,
+    )
 
 
 def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
@@ -754,19 +805,33 @@ def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
     """
     if not aktif():
         return 0, 0, "Fitur cerita tidak aktif (kunci DeepSeek belum dipasang)."
+    if _sesi_terkunci(kon, sesi_id):
+        return 0, 0, "Variasi cerita ditolak karena sesi sudah terkunci."
     if not cek_saldo():
         return 0, 0, "Saldo DeepSeek di bawah ambang — permintaan ditahan."
 
     ensure_table(kon)
-    berhasil = dicoba = 0
-    for b in kon.execute(
-        """SELECT s.id, s.template_id, s.parameter, s.kunci, s.level,
+    target = kon.execute(
+        """SELECT ss.id AS sesi_soal_id, ss.nomor,
+                  ss.teks_soal, ss.bagian_soal, ss.tantangan_soal,
+                  ss.minta_restatement, ss.penyajian_json,
+                  ss.penyajian_versi, ss.renderer_versi, ss.asal_teks,
+                  ss.status_visual, ss.mode_representasi,
+                  ss.fingerprint_matematis, ss.fingerprint_penyajian,
+                  s.id, s.template_id, s.parameter, s.kunci, s.level,
                   s.bagian, s.tantangan, s.cerita
            FROM soal s JOIN sesi_soal ss ON ss.soal_id = s.id
            WHERE ss.sesi_id = ? ORDER BY ss.nomor""",
         (sesi_id,),
-    ).fetchall():
-        if (b["cerita"] or "").strip():
+    ).fetchall()
+    hasil = []
+    dicoba = 0
+    for b in target:
+        snapshot_selesai = (
+            b["fingerprint_penyajian"] is not None
+            and b["asal_teks"] == "cerita"
+        )
+        if snapshot_selesai:
             continue
         dicoba += 1
         soal_ini = ambil_soal(b)
@@ -776,17 +841,32 @@ def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
             if kalimat:
                 break
         if kalimat:
-            kon.execute(
-                "UPDATE soal SET cerita = ? WHERE id = ?", (kalimat, b["id"])
-            )
-            berhasil += 1
-    kon.commit()
+            hasil.append((b, _snapshot_cerita(b, kalimat)))
 
-    if dicoba == 0:
-        return 0, 0, "Semua soal sudah punya versi cerita."
-    if berhasil == 0:
+    if not hasil:
+        if dicoba == 0:
+            return 0, 0, "Semua soal sudah punya versi cerita."
         return 0, dicoba, (
             f"{dicoba} soal dicoba, tidak ada yang lolos verifikasi angka — "
             "kalimat bawaan tetap dipakai."
         )
+
+    # Penulisan snapshot atomik per sesi, tetapi transaksi tetap milik pemanggil.
+    kon.execute("SAVEPOINT bridge_cerita_sesi")
+    try:
+        for b, snapshot_baru in hasil:
+            if not presentation_lock.perbarui_snapshot(
+                kon,
+                b["sesi_soal_id"],
+                b["fingerprint_penyajian"],
+                snapshot_baru,
+            ):
+                raise RuntimeError("snapshot berubah saat variasi cerita disimpan")
+        kon.execute("RELEASE SAVEPOINT bridge_cerita_sesi")
+    except (RuntimeError, sqlite3.IntegrityError):
+        kon.execute("ROLLBACK TO SAVEPOINT bridge_cerita_sesi")
+        kon.execute("RELEASE SAVEPOINT bridge_cerita_sesi")
+        return 0, dicoba, "Variasi cerita gagal disimpan karena snapshot berubah."
+
+    berhasil = len(hasil)
     return berhasil, dicoba, f"{berhasil} dari {dicoba} soal dapat versi cerita."

@@ -30,6 +30,10 @@ screen_style.py (browser) + print_style.py (kertas A4); murid di students.py.
 # Palet INTI (permukaan guru: dashboard, sesi, laporan, akun, cetak)
 # ─────────────────────────────────────────────────────────────────────
 
+# Ukuran diagram pertanyaan yang dibagikan seluruh permukaan.
+LEBAR_VISUAL_SOAL = "24rem"
+JARAK_VISUAL_SOAL = "0.75rem"
+
 # Latar
 LATAR_INTI = "#f0f1f4"          # abu muda, badan halaman
 LATAR_KARTU = "#fff"            # putih, kartu/soal
