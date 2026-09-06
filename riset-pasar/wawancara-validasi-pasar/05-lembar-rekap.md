@@ -1,72 +1,92 @@
-# Lembar Rekap Responden — Wawancara Validasi Pasar
+# Lembar Rekap — Discovery GTM Tutor-First
 
-**Status:** instrumen riset pasar. Keputusan go/no-go di bawah hanya menentukan
-validasi pasar dan positioning; ia tidak otomatis memulai fase teknis tertentu.
-Roadmap aktif harus dipilih terpisah dari `../../CLAUDE.md`, kode/test
-`../../mesin/`, dan hierarki di `../../produk/README.md`.
+Rekap tutor dan orang tua **wajib dipisahkan**. Keputusan GTM tutor hanya memakai tabel tutor. Status harga dibuktikan dengan tawaran/deposit/pembayaran, bukan survei.
 
-Diisi setelah semua wawancara · 1 baris per responden · untuk sintesis & keputusan go/no-go
+## A. Rekap cohort tutor
 
----
+| No | ID | Tipe | Murid | Tugas rutin | Pengambil keputusan | S1 | S2 | S3 | S4 | S5 | S6 | Waktu/minggu | Biaya kini | Catatan |
+|---:|---|---|---:|---|---|---:|---:|---:|---:|---:|---|---:|---:|---|
+| 1 | T01 | | | | | | | | | | | | | |
+| 2 | T02 | | | | | | | | | | | | | |
+| 3 | T03 | | | | | | | | | | | | | |
+| 4 | T04 | | | | | | | | | | | | | |
+| 5 | T05 | | | | | | | | | | | | | |
+| 6 | T06 | | | | | | | | | | | | | |
+| 7 | T07 | | | | | | | | | | | | | |
+| 8 | T08 | | | | | | | | | | | | | |
+| 9 | T09 | | | | | | | | | | | | | |
+| 10 | T10 | | | | | | | | | | | | | |
+| 11 | T11 | | | | | | | | | | | | | |
+| 12 | T12 | | | | | | | | | | | | | |
+| 13 | T13 | | | | | | | | | | | | | |
+| 14 | T14 | | | | | | | | | | | | | |
+| 15 | T15 | | | | | | | | | | | | | |
+| 16 | T16 | | | | | | | | | | | | | |
+| 17 | T17 | | | | | | | | | | | | | |
+| 18 | T18 | | | | | | | | | | | | | |
+| 19 | T19 | | | | | | | | | | | | | |
+| 20 | T20 | | | | | | | | | | | | | |
 
-## Tabel rekap
+## B. Rekap cohort orang tua pembanding
 
-| No | ID | Kelas | Les? | Kota | S1 | S2 | S3 | S4 | S5 (Rp rb/bln) | S6 | S7 | Catatan singkat |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | W01 | | | | | | | | | | | |
-| 2 | W02 | | | | | | | | | | | |
-| 3 | W03 | | | | | | | | | | | |
-| 4 | W04 | | | | | | | | | | | |
-| 5 | W05 | | | | | | | | | | | |
-| 6 | W06 | | | | | | | | | | | |
-| 7 | W07 | | | | | | | | | | | |
-| 8 | W08 | | | | | | | | | | | |
-| 9 | W09 | | | | | | | | | | | |
-| 10 | W10 | | | | | | | | | | | |
-| 11 | W11 | | | | | | | | | | | |
-| 12 | W12 | | | | | | | | | | | |
-| 13 | W13 | | | | | | | | | | | |
-| 14 | W14 | | | | | | | | | | | |
-| 15 | W15 | | | | | | | | | | | |
-| 16 | W16 | | | | | | | | | | | |
-| 17 | W17 | | | | | | | | | | | |
-| 18 | W18 | | | | | | | | | | | |
-| 19 | W19 | | | | | | | | | | | |
-| 20 | W20 | | | | | | | | | | | |
-| 21 | W21 | | | | | | | | | | | |
-| 22 | W22 | | | | | | | | | | | |
-| 23 | W23 | | | | | | | | | | | |
-| 24 | W24 | | | | | | | | | | | |
-| 25 | W25 | | | | | | | | | | | |
-| 26 | W26 | | | | | | | | | | | |
-| 27 | W27 | | | | | | | | | | | |
-| 28 | W28 | | | | | | | | | | | |
-| 29 | W29 | | | | | | | | | | | |
-| 30 | W30 | | | | | | | | | | | |
+| No | ID | Kelas | Frekuensi mendampingi | Status les | S1 | S2 | S3 | S4 | S5 | S6 | Catatan |
+|---:|---|---:|---|---|---:|---:|---:|---:|---:|---|---|
+| 1 | K01 | | | | | | | | | | |
+| 2 | K02 | | | | | | | | | | |
+| 3 | K03 | | | | | | | | | | |
+| 4 | K04 | | | | | | | | | | |
+| 5 | K05 | | | | | | | | | | |
+| 6 | K06 | | | | | | | | | | |
+| 7 | K07 | | | | | | | | | | |
+| 8 | K08 | | | | | | | | | | |
+| 9 | K09 | | | | | | | | | | |
+| 10 | K10 | | | | | | | | | | |
 
----
+## C. Log tawaran dan transaksi
 
-## Ringkasan (isi setelah ≥20 responden)
+| ID | Cohort | Paket konkret | Tanggal ditawari | Respons | Jadwal onboarding | Deposit tanggal/nominal | Lunas tanggal/nominal | Bukti pembayaran | Catatan |
+|---|---|---|---|---|---|---|---|---|---|
+| | | | | | | | | | |
 
-| Metrik | Rumus | Nilai | Lulus? |
-|---|---|---|---|
-| H1 — atribusi gagal | % responden S1 = 2 | ___% | ≥70% |
-| H2 — upaya & frustrasi | % responden S2 = 2 | ___% | ≥50% |
-| H3 — pemahaman pitch | % responden S3 ≥ 1 | ___% | ≥70% |
-| H3 — minat | % responden S4 ≥ 1 | ___% | ≥70% |
-| H4 — WTP | median S5 | Rp ___rb | ≥150 |
-| Privasi sebagai nilai | % responden S6 = 2 | ___% | (informasi) |
-| Hambatan dominan | kode S7 paling sering | ___ | (informasi) |
+Status respons: **menolak / follow-up / menerima / deposit / lunas**. Jangan mengisi deposit atau lunas tanpa uang dan bukti transaksi.
 
----
+## D. Ringkasan keputusan tutor
 
-## Keputusan (diisi bersama analisis)
+| Indikator | Rumus | Nilai | Ambang awal |
+|---|---|---:|---:|
+| Tutor ideal dalam sampel | jumlah tutor 8–30 murid + tugas rutin + workflow + keputusan | ___/___ | mayoritas |
+| Masalah workflow kuat | % tutor S1 ≥ 2 | ___% | ≥60% |
+| Kebutuhan tindak lanjut kuat | % tutor S2 ≥ 2 | ___% | ≥60% |
+| Pitch dipahami | % tutor S3 = 2 | ___% | ≥70% |
+| Komitmen operasional | % tutor relevan S4 ≥ 2 | ___% | ≥50% |
+| Tawaran relevan | jumlah tutor yang benar-benar ditawari | ___ | target 20 sebelum keputusan berhenti |
+| Deposit/pembayaran | jumlah unik tutor S5 ≥ 4 | ___ | minimal 3 dari 20 tawaran |
+| Pembayaran lunas | jumlah unik tutor S5 = 5 | ___ | informasi |
+| Risiko dominan | kode S6 paling sering | ___ | informasi |
 
-- ☐ **Go** — semua hipotesis inti lulus → validasi pasar mendukung eksplorasi B2C sempit; keputusan fase teknis dibuat terpisah dari roadmap aktif
-- ☐ **Go bersyarat** — H1/H3 lulus, H2/H4 di bawah ambang → sesuaikan pitch/harga, tambah 5–10 responden
-- ☐ **No-go / tinjau ulang** — H1 atau H3 gagal → tesis pasar tidak terbukti, kembali ke riset sebelum ekspansi produk
+## E. Ringkasan orang tua pembanding
 
-**Catatan keputusan:**
+Laporkan terpisah. Jangan memasukkan angka ini ke denominator tutor.
 
-```
-```
+| Indikator | Nilai |
+|---|---:|
+| Masalah workflow S1 ≥ 2 | ___% |
+| Kebutuhan tindak lanjut S2 ≥ 2 | ___% |
+| Pitch dipahami S3 = 2 | ___% |
+| Deposit/pembayaran keluarga S5 ≥ 4 | ___/___ |
+| Perbedaan utama vs tutor | ___ |
+
+## F. Keputusan
+
+- ☐ **Lanjut pilot tutor:** masalah dan workflow relevan; ada komitmen operasional; minimal 3 deposit/pembayaran dari 20 tawaran relevan.
+- ☐ **Revisi offer/workflow:** masalah ada tetapi produk menambah kerja, trust diagnosis rendah, atau remedial belum cukup bernilai.
+- ☐ **Lanjut discovery:** sampel ideal/tawaran relevan belum cukup; jangan menyimpulkan harga.
+- ☐ **Berhenti/tinjau positioning:** masalah lemah atau kurang dari 3 deposit/pembayaran setelah 20 tawaran relevan.
+
+**Alasan berbasis perilaku/transaksi:** ___
+
+**Yang tidak boleh diklaim dari data ini:** minat verbal sebagai WTP; jawaban orang tua sebagai bukti GTM tutor; dampak belajar; renewal sebelum invoice berikutnya benar-benar dibayar.
+
+## G. Metrik tahap pilot berikutnya
+
+Jika lanjut, buat rekap terpisah untuk: murid aktif, minggu pemakaian, waktu persiapan/koreksi, usulan diagnosis diterima/diubah, remedial dijalankan, laporan dibahas dengan orang tua, support, dan pembayaran berikutnya.

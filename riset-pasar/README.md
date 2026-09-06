@@ -10,8 +10,19 @@ Berisi:
 
 - Analisis kebutuhan dan potensi pasar (data PISA/AKM, 18 item kompetitor,
   pemetaan harga & risiko).
-- Protokol wawancara validasi pasar.
+- Riset peluang komersial dan GTM aktif di
+  [`2026-09-06-peluang-komersial/`](2026-09-06-peluang-komersial/).
+- Protokol discovery serta instrumen pilot tutor-first di
+  [`wawancara-validasi-pasar/`](wawancara-validasi-pasar/).
 - Catatan wawancara lapangan.
+
+Sumber keputusan komersial aktif:
+
+1. `2026-09-06-peluang-komersial/keputusan-positioning-harga-validasi.md`;
+2. `2026-09-06-peluang-komersial/GTM-tutor-first.md`.
+
+Dokumen riset lama tetap menyimpan bukti historis, tetapi rekomendasi B2C
+Rp150–300 ribu dan klaim penyimpanan lokal sudah superseded.
 
 Acuan untuk keputusan produk — bukan kode. Kalau mencari implementasi,
 lihat [`../produk/`](../produk/) atau [`../mesin/`](../mesin/).

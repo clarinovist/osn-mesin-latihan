@@ -1,105 +1,103 @@
-# Naskah Wawancara — Orang Tua Anak SD (verbatim)
+# Naskah Wawancara Discovery — GTM Tutor-First
 
-Wawancara semi-terstruktur · 30–40 menit · 1 pewawancara
-Teks di bawah ini **dibacakan langsung**. Bagian `[PROBE]` dipakai hanya kalau jawaban pendek — pilih probe yang paling netral. Bagian `[CATAT]` adalah pengingat untuk pewawancara, tidak dibacakan.
+Semi-terstruktur · 35–45 menit · 1 pewawancara
 
----
+Teks kutip dibacakan. `[PROBE]` hanya bila perlu; `[CATAT]` tidak dibacakan. Gunakan sapaan yang sesuai.
 
-## PEMBUKAAN (1 menit)
+## PEMBUKAAN (2 menit)
 
-> "Terima kasih sudah meluangkan waktu, Bu/Pak. Saya sedang riset tentang pengalaman orang tua mendampingi anak belajar matematika di rumah. Bukan riset jualan — saya hanya ingin mendengar pengalaman Bapak/Ibu. Tidak ada jawaban benar atau salah. Semua yang Ibu/Bapak ceritakan akan saya rahasiakan, dan namanya tidak akan dicatat. Boleh saya rekam suaranya untuk membantu saya mencatat? Rekamannya saya hapus setelah analisis selesai. Ibu/Bapak boleh berhenti kapan saja."
+> “Terima kasih sudah meluangkan waktu. Saya sedang mempelajari cara tutor menyiapkan latihan, meninjau pekerjaan murid, dan menentukan tindak lanjut matematika kelas 3–6. Ini bukan tes kemampuan dan belum masuk ke penawaran. Saya ingin mendengar pengalaman yang benar-benar terjadi. Boleh saya rekam untuk membantu pencatatan? Rekaman akan dihapus setelah transkripsi dan analisis. Anda boleh melewati pertanyaan atau berhenti kapan saja.”
 
-> "Sebelum mulai, saya bacakan lembar persetujuannya sebentar. [BACA `03-lembar-persetujuan.md` — minta tanda tangan/izin]"
+`[BACA dan konfirmasi 03-lembar-persetujuan.md]`
 
-> "Baik, kita mulai dari hal-hal ringan dulu."
+## BLOK A — KONTEKS PRAKTIK (5 menit)
 
----
+- **A1.** “Saat ini Anda mengajar berapa murid aktif kelas 3–6?”
+- **A2.** “Mengajar independen atau mengelola les? Apa peran Anda dalam mengajar dan mengambil keputusan alat?”
+- **A3.** “Materinya matematika umum, enrichment, OSN, atau campuran?”
+- **A4.** “Seberapa sering memberi tugas atau latihan di luar pertemuan?”
+- **A5.** “Siapa yang menyiapkan, membagikan, mengoreksi, dan menyampaikan hasil ke orang tua?”
 
-## BLOK A — KONTEKS (3 menit)
+## BLOK B — WORKFLOW TERBARU (12 menit)
 
-> "Saya ingin kenal dulu sedikit tentang anak Ibu/Bapak."
+> “Ceritakan tugas atau latihan terbaru yang Anda berikan, dari mulai menyiapkan sampai menentukan latihan berikutnya.”
 
-- **A1.** "Anak kelas berapa sekarang? Anak ke berapa di keluarga?"
-- **A2.** "Bagaimana nilai matematika anak yang terakhir di sekolah? Kalau pakai rapor Kurikulum Merdeka, apa yang tertulis di bagian matematika?"
-- **A3.** "Kalau boleh, deskripsinya ditulis apa — bisa diceritakan kata-katanya?" `[CATAT: deskripsi verbatim — ini data penting]`
-- **A4.** "Anak pernah ikut les atau bimbel matematika? Yang mana, sudah berapa lama, dan berapa biayanya per bulan?"
-- **A5.** "Pernah pakai aplikasi belajar matematika? Misalnya Ruangguru, CoLearn, QANDA, Photomath, atau yang lain?"
+- **B1.** “Bagaimana Anda memilih atau membuat soalnya? Berapa lama?”
+- **B2.** “Bagaimana tugas dibagikan dan jawaban dikumpulkan?”
+- **B3.** “Bagaimana Anda mengoreksi? Berapa lama untuk berapa murid?”
+- **B4.** “Saat jawaban salah, bagaimana Anda mengetahui letak masalahnya?” `[PROBE]` “Apa yang Anda lakukan bila jawabannya saja tidak cukup?”
+- **B5.** “Kapan Anda meminta murid menjelaskan caranya? Apa yang biasanya bisa dan tidak bisa Anda simpulkan?”
+- **B6.** “Bagaimana Anda memilih latihan atau tindak lanjut berikutnya?”
+- **B7.** “Bagaimana Anda mengetahui kesalahan yang sama muncul lagi pada sesi berikut?”
+- **B8.** “Apa yang dilaporkan ke orang tua, melalui apa, dan seberapa sering?”
+- **B9.** “Bagian mana yang paling menyita waktu atau sering terlewat saat sibuk?”
 
----
+`[PROBE netral: “Bisa ceritakan kejadian terakhirnya?” · “Boleh lihat contoh format kosong/tanpa data anak?” · “Apa akibatnya?”]`
 
-## BLOK B — PENGALAMAN ATRIBUSI (8 menit) — INTI
+## BLOK C — ALTERNATIF DAN BIAYA SAAT INI (5 menit)
 
-> "Sekarang saya mau bicara tentang pengalaman Ibu/Bapak saat anak mengalami kesulitan matematika."
+- **C1.** “Alat apa yang sekarang dipakai—buku, bank soal, spreadsheet, WhatsApp, aplikasi, atau bantuan staf?”
+- **C2.** “Apa yang tetap Anda kerjakan manual meski sudah memakai alat itu?”
+- **C3.** “Berapa biaya alat tersebut per bulan atau per murid, jika Anda tahu?”
+- **C4.** “Selain uang, kira-kira berapa waktu Anda atau staf habiskan per minggu?”
+- **C5.** “Pernah mencoba alat lain lalu berhenti? Mengapa?”
 
-- **B1.** "Pikirkan terakhir kali anak dapat nilai jelek di matematika. Menurut Ibu/Bapak, apa penyebabnya?" `[DIAMKAN — biarkan menjawab bebas, jangan koreksi]` `[CATAT: jawaban verbatim]`
-- **B2.** "Kalau anak salah mengerjakan soal, bisakah Ibu/Bapak tahu letak salahnya? Bagaimana caranya?"
-- **B3.** "Pernahkah Ibu/Bapak mencoba membahas PR atau soal dengan anak, lalu merasa tidak bisa menjelaskan kenapa salahnya? Ceritakan kejadiannya."
-- **B4.** "Dari sekolah atau bimbel, penjelasan apa yang Ibu/Bapak terima soal kesalahan anak? Apakah dapat skor saja, nama topik, atau penjelasan caranya?"
-- **B5.** "Kalau anak menjawab benar, pernahkah Ibu/Bapak ragu apakah dia benar-benar paham?" `[PROBE]` "Apa yang membuat ragu?"
-- **B6.** *(hanya kalau les/bimbel)* "Ibu/Bapak bayar [sebut nominal] per bulan. Apa yang Ibu/Bapak dapatkan yang tidak bisa didapatkan gratis?"
+`[CATAT: biaya dan waktu adalah konteks saat ini, bukan bukti willingness-to-pay.]`
 
-`[PROBE netral bila jawaban pendek:]` "Bisa diceritakan lebih lanjut?" · "Contohnya apa?" · "Ada lagi?"
+## TRANSISI DAN PITCH (2 menit)
 
----
+> “Sekarang saya akan menunjukkan konsep yang sedang diuji. Saya ingin respons jujur, termasuk jika ini tidak berguna atau justru menambah pekerjaan.”
 
-## BLOK C — PERILAKU AKTUAL (5 menit)
+`[BACA/TUNJUKKAN 06-kartu-pitch.md. Pastikan empat elemen tersampaikan: latihan bervariasi; usulan jenis kesalahan yang direview manusia; remedial dipilih tutor; dan laporan pola. Jangan menambahkan kemampuan di luar kartu.]`
 
-- **C1.** "Minggu lalu, saat anak kesulitan matematika, apa yang Ibu/Bapak lakukan? Coba diurutkan: dibantu sendiri, disuruh les, pakai aplikasi, disuruh hafalan, atau dibiarkan?"
-- **C2.** "Siapa yang paling sering membantu anak belajar matematika di rumah? Kira-kira berapa lama per minggu?"
-- **C3.** "Pernah pakai aplikasi untuk mengecek jawaban, seperti Photomath atau QANDA? Siapa yang memakainya — Ibu/Bapak atau anak?"
+## BLOK D — REAKSI KONSEP (8 menit)
 
----
+- **D1.** “Dengan kata Anda sendiri, Jagomat membantu melakukan apa?” `[JANGAN BANTU]`
+- **D2.** “Bagian mana yang paling berguna? Bagian mana yang tidak berguna?”
+- **D3.** “Pada titik mana tutor harus tetap meninjau atau mengambil keputusan?”
+- **D4.** “Apa yang tidak Anda percaya atau perlu dibuktikan?”
+- **D5.** “Apakah workflow ini mengurangi pekerjaan, memindahkan pekerjaan, atau menambah pekerjaan? Mengapa?”
+- **D6.** “Jika diuji, murid seperti apa yang cocok? Berapa murid yang realistis?”
+- **D7.** “Apa yang harus tersedia agar Anda benar-benar memakai ini selama tiga minggu berbeda?”
 
-## TRANSISI KE PITCH (10 detik)
+## BLOK E — DATA DAN CONSENT (3 menit)
 
-> "Terima kasih, ini sangat membantu. Sekarang saya mau memperlihatkan satu hal, dan saya ingin tahu pendapat Ibu/Bapak."
+> “Data penggunaan dikelola pada server pengelola. Untuk pilot ini, fitur upload foto/AI vision dinonaktifkan. Murid mengerjakan langsung atau tutor/orang tua memasukkan hasil secara manual. Pilot anak nyata tetap memerlukan persetujuan orang tua/wali terpisah.”
 
-## BLOK D — REAKSI KONSEP (7 menit)
+- **E1.** “Apa kekhawatiran atau syarat Anda terkait data murid?”
+- **E2.** “Siapa yang harus memberi persetujuan sebelum murid nyata ikut?”
+- **E3.** “Apakah penonaktifan foto/AI selama pilot cukup jelas? Informasi apa lagi yang perlu dijelaskan?”
 
-> "Bayangkan ada aplikasi seperti ini: anak mengerjakan soal matematika di HP, menulis langkah-langkahnya seperti di buku. Lalu aplikasi — bersama orang tua — mengelompokkan kesalahannya jadi tiga jenis. **B** artinya salah baca soal, **K** artinya salah konsep — caranya keliru dan anak yakin benar — dan **H** artinya salah hitung, caranya sudah benar tapi angkanya meleset. Setelah itu, aplikasi memberi resep untuk orang tua: apa yang dilakukan malam ini, berapa lama, dan kapan dicek ulang. Semua data anak tersimpan di rumah sendiri — tidak ada yang dikirim ke internet. Ini contoh laporannya."
+## BLOK F — KOMITMEN DAN PAKET KONKRET (5 menit)
 
-`[TUNJUKKAN 06-kartu-pitch.md — contoh laporan. Beri waktu 1–2 menit membaca.]`
+`[Hanya setelah semua feedback konsep selesai. Jangan memakai tangga harga atau meminta angka WTP.]`
 
-- **D1.** "Dengan kata Ibu/Bapak sendiri, aplikasi ini melakukan apa?" `[CATAT: jawaban verbatim — ukur pemahaman, jangan bantu dulu]`
-- **D2.** "Kalau anak Ibu/Bapak dapat diagnosis seperti contoh ini, apa yang akan Ibu/Bapak lakukan dengan informasi itu?"
-- **D3.** "Dari contoh tadi, bagian mana yang paling berguna? Bagian mana yang paling tidak berguna?"
-- **D4.** "Apakah ada bagian yang Ibu/Bapak tidak percaya atau meragukan?"
-- **D5.** "Menurut Ibu/Bapak, ini lebih berguna dari les, pelengkap les, atau malah tidak sebanding?"
+- **F1.** “Apakah Anda bersedia memilih sampai tiga murid dan menjadwalkan onboarding untuk uji coba?”
+- **F2.** “Paket pilot tutor yang sedang diuji adalah **Rp225.000 untuk 3 bulan, maksimal 10 anak**. Dengan cakupan yang baru dijelaskan, apa keputusan Anda: tidak cocok, perlu tindak lanjut, atau siap mengambil paket?”
+- **F3.** “Apa alasan utama keputusan itu?”
+- **F4.** Jika siap: “Apakah Anda siap membayar deposit/pembayaran sesuai prosedur pilot setelah syarat dan consent dikonfirmasi?”
 
----
-
-## BLOK E — WILLINGNESS TO PAY (5 menit)
-
-- **E1.** "Kalau aplikasi seperti ini gratis, apa yang Ibu/Bapak harapkan bisa dilakukan?"
-- **E2.** "Saya tanya empat harga, jawab yang jujur saja.
-  - "Pada harga berapa per bulan Ibu/Bapak merasa **terlalu mahal** — pasti tidak beli?"
-  - "Pada harga berapa per bulan terasa **mahal tapi masih dipertimbangkan**?"
-  - "Pada harga berapa per bulan terasa **murah — tidak perlu dipikir panjang**?"
-  - "Pada harga berapa per bulan terasa **sangat murah sampai mencurigakan**?""
-  `[CATAT: 4 angka dalam ribuan rupiah. Gunakan tangga: 50rb / 100rb / 150rb / 200rb / 300rb / 500rb]`
-- **E3.** "Les offline seperti Kumon atau Sparks Math sekitar Rp500 ribu per bulan. Kalau aplikasi ini Rp [angka dari E2] per bulan memberi diagnosis dan resep, mana yang lebih masuk akal dibeli?"
-
----
-
-## BLOK F — HAMBATAN & PRIVASI (4 menit)
-
-- **F1.** "Anak pakai HP Ibu/Bapak sendiri — HP pinjaman, begitu kan? Apakah itu masalah kalau mau belajar pakai aplikasi?"
-- **F2.** "Bagaimana perasaan Ibu/Bapak kalau tidak ada data anak yang keluar dari rumah — semua tersimpan di HP dan komputer keluarga saja?"
-- **F3.** "Berapa waktu yang bisa Ibu/Bapak luangkan per minggu untuk mendampingi anak belajar?"
-- **F4.** "Terakhir: apa keberatan terbesar Ibu/Bapak terhadap aplikasi seperti ini?" `[CATAT: verbatim]`
-
----
+`[CATAT status faktual: tidak ditawari / ditawari / menolak / follow-up / onboarding / deposit / lunas. Reaksi positif tanpa uang bukan bukti pembayaran.]`
 
 ## PENUTUP (2 menit)
 
-- **G1.** "Ada hal lain yang ingin Ibu/Bapak ceritakan tentang pengalaman belajar matematika anak?"
-- **G2.** "Kami sedang menyiapkan uji coba awal untuk beberapa keluarga. Boleh saya hubungi lagi kalau nanti ada kesempatan? Kontaknya bisa lewat mana?"
-- **G3.** "Terima kasih banyak atas waktunya. Jawaban Ibu/Bapak sangat membantu."
+- **G1.** “Apa yang belum saya tanyakan tentang pekerjaan tutor dalam memberi latihan dan tindak lanjut?”
+- **G2.** “Boleh kami menghubungi lagi? Kontak disimpan terpisah dari catatan anonim.”
+- **G3.** “Terima kasih. Demo tadi memakai data sintetis. Pilot dengan murid nyata memerlukan persetujuan orang tua/wali terpisah.”
 
----
+## ADAPTASI COHORT ORANG TUA PEMBANDING
 
-## SETELAH WAWANCARA (5 menit, tanpa responden)
+Gunakan ID **Kxx**, jangan gabungkan dengan tutor. Ganti konteks menjadi pengalaman mendampingi anak kelas 3–6, tetapi pertahankan urutan kejadian nyata → pitch → reaksi → paket.
 
-1. Isi `04-lembar-skor.md` (skor S1–S7 + kutipan kunci).
-2. Catat durasi wawancara.
-3. Simpan rekaman dengan nama file: `W{nomor}-{kelas}-{les_ya_tidak}` (contoh: `W03-4-les`).
+- Tanyakan sesi pendampingan terbaru, cara memilih latihan, mengoreksi, menentukan penyebab, memilih tindak lanjut, dan waktu per minggu.
+- Jangan menanyakan operasi les atau komunikasi tutor ke orang tua.
+- Pitch menyebut “orang tua pendamping” sebagai manusia yang meninjau usulan dan memilih latihan.
+- Paket konkret pembanding: **Rp30.000 untuk 3 bulan, 1 anak**.
+- Hasil orang tua dilaporkan terpisah dan tidak membuktikan GTM tutor.
+
+## SETELAH WAWANCARA
+
+1. Isi `04-lembar-skor.md`.
+2. Catat durasi, segmen, waktu/biaya aktual, kutipan, komitmen, serta status tawaran.
+3. Simpan rekaman anonim: `T03-12murid` atau `P03-kelas4`; jangan gunakan nama.
+4. Simpan kontak tindak lanjut terpisah dari lembar skor.

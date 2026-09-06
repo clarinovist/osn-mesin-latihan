@@ -1,67 +1,81 @@
-# Kartu Pitch + Contoh Laporan (untuk Blok D)
+# Kartu Pitch — Jagomat untuk Tutor
 
-Cetak 1 halaman (atau tampilkan di HP) — **tunjukkan ke orang tua di Blok D**, setelah Blok A–C selesai. Jangan dibagikan sebelum wawancara.
+Tunjukkan hanya setelah discovery perilaku selesai. Baca apa adanya; jangan menambahkan kemampuan yang belum tersedia.
 
----
+## Sisi 1 — Pitch ±60 detik
 
-## Sisi 1 — Naskah pitch (dibacakan pewawancara, ±60 detik)
+> **Jagomat adalah alat kerja tutor matematika SD, bukan pengganti tutor.**
+>
+> Jagomat membantu tutor menyiapkan **latihan bervariasi** untuk murid kelas 3–6. Setelah jawaban masuk, sistem memberi **usulan jenis kesalahan**. Usulan itu bukan vonis: tutor tetap meninjau, mengoreksi bila perlu, dan memutuskan fokus.
+>
+> Tutor kemudian **memilih latihan remedial** yang sesuai dari pilihan yang tersedia. Laporan merangkum pola per murid agar tindak lanjut dan komunikasi dengan orang tua lebih mudah.
+>
+> Data penggunaan dikelola pada **server pengelola**. Fitur upload foto/AI vision
+> dinonaktifkan selama pilot ini; murid mengerjakan langsung atau tutor/orang
+> tua memasukkan hasil secara manual.
 
-> "Bayangkan ada aplikasi seperti ini: anak mengerjakan soal matematika di HP, menulis langkah-langkahnya seperti di buku. Lalu aplikasi — bersama orang tua — mengelompokkan kesalahannya jadi tiga jenis:
+## Sisi 2 — Contoh workflow
 
-> **B** — salah baca soal. Anak sebenarnya bisa, tapi tidak membaca soal sampai selesai.
+```text
+1. TUTOR MENYIAPKAN
+   Pilih kelas/topik → buat latihan bervariasi → bagikan ke murid.
 
-> **K** — salah konsep. Anak konsisten memakai cara yang keliru dan yakin caranya benar. Ini yang paling serius.
+2. MURID MENGERJAKAN
+   Jawaban dikumpulkan sesuai alur yang digunakan tutor.
 
-> **H** — salah hitung. Caranya sudah benar, tapi angkanya meleset. Anak terburu-buru.
+3. SISTEM MENGUSULKAN
+   Sistem mencocokkan jawaban dengan pola kesalahan yang tersedia.
+   Ini usulan, bukan keputusan final.
 
-> Setelah itu aplikasi memberi **resep untuk orang tua**: apa yang dilakukan malam ini, berapa lama, dan kapan dicek ulang dengan angka yang berbeda.
+4. TUTOR MEREVIEW
+   Terima atau koreksi usulan berdasarkan konteks murid.
 
-> Semua data anak tersimpan di rumah sendiri — tidak ada yang dikirim ke internet.
+5. TUTOR MEMILIH REMEDIAL
+   Tutor menentukan fokus dan latihan ulang dari pilihan yang tersedia.
 
-> Ini contoh laporannya."
-
----
-
-## Sisi 2 — Contoh laporan (tunjukkan, beri waktu baca 1–2 menit)
-
-```
-RAPOR DIAGNOSIS — Matematika · [Nama] · Kelas 4
-Periode: 2 minggu terakhir
-
-KESIMPULAN
-
-1. Pecahan (penjumlahan penyebut beda) — SALAH KONSEP (3x dalam 2 minggu)
-   Anak konsisten menjumlahkan pembilang dan penyebut sendiri-sendiri
-   (2/3 + 3/4 = 5/7) dan yakin caranya benar.
-   → Resep: 4–6 minggu pakai benda nyata (kue, gelas air) sebelum
-     kembali ke angka. Cek ulang 3 hari sekali, angka berbeda.
-
-2. Soal cerita kecepatan — SALAH BACA SOAL (2x)
-   Angka yang ditanyakan tidak ditandai; anak menghitung hal yang salah.
-   → Bukan lubang matematika. Latihan pegang pensil, tandai yang
-     ditanya, ucapkan ulang soal. Biasanya hilang 2–3 minggu.
-
-3. Perkalian bersusun — SALAH HITUNG (4x)
-   Caranya benar, angkanya meleset di langkah penjumlahan.
-   → Bukan materi baru. Wajib tulis langkah + periksa ulang.
-     Gejala terburu-buru, bukan tidak paham.
-
-BUKTI
-[foto/gambar coretan anak untuk tiap kesimpulan — contoh:
-  2/3 + 3/4 = 5/7 (soal 1) · coretan tanda tanya di soal (soal 2) ·
-  penjumlahan turun yang salah (soal 3)]
-
-CATATAN UNTUK ORANG TUA
-• Kesimpulan ini untuk Anda, bukan untuk diceramahkan ke anak hari ini.
-• Anak dengan banyak H lebih siap daripada anak dengan sedikit K —
-  skor tidak membedakan keduanya, jenis kesalahan yang membedakan.
+6. LAPORAN POLA
+   Lihat pola per murid dan gunakan untuk tindak lanjut atau komunikasi
+   dengan orang tua.
 ```
 
----
+### Contoh ringkasan sintetis
 
-## Pertanyaan probe setelah pitch (pewawancara)
+```text
+MURID A · KELAS 4 · 2 MINGGU
 
-1. "Dengan kata Ibu/Bapak sendiri, aplikasi ini melakukan apa?" *(ukur pemahaman — jangan bantu dulu)*
-2. "Bagian mana yang pernah Ibu/Bapak dapatkan dari rapor atau les selama ini?"
-3. "Bagian mana yang belum pernah didapatkan?"
-4. "Kalau anak Ibu/Bapak dapat laporan seperti ini, apa yang akan dilakukan?"
+Pecahan
+- Usulan sistem: pola kesalahan konsep muncul pada 3 jawaban.
+- Status: menunggu review tutor.
+- Setelah review: tutor memilih fokus pecahan dan latihan ulang.
+
+Soal cerita
+- Usulan sistem: informasi yang ditanya terlewat pada 2 jawaban.
+- Status: dikoreksi tutor setelah melihat konteks pekerjaan murid.
+
+Catatan laporan
+- Ringkasan menunjukkan pola yang tercatat; bukan jaminan penyebab,
+  penguasaan permanen, atau peningkatan nilai.
+```
+
+## Yang belum dijanjikan
+
+- Tidak memahami seluruh tulisan atau langkah anak secara semantik.
+- Tidak otomatis menentukan resep atau langkah terbaik.
+- Remedial saat ini adalah pilihan latihan tutor; intervensi lengkap per jenis kesalahan belum tersedia.
+- Tidak menggantikan tutor dan tidak menjamin nilai/juara.
+- Data tidak diklaim hanya berada di rumah; data dikelola pada server pengelola.
+
+## Probe setelah pitch
+
+1. “Dengan kata Anda sendiri, Jagomat membantu melakukan apa?”
+2. “Di titik mana tutor tetap harus meninjau dan memutuskan?”
+3. “Bagian mana paling berguna, tidak berguna, atau tidak dipercaya?”
+4. “Apakah workflow ini mengurangi, memindahkan, atau menambah pekerjaan?”
+5. “Murid mana yang realistis untuk uji coba, dan apa syaratnya?”
+
+## Paket konkret — hanya setelah feedback selesai
+
+- **Tutor:** Rp225.000 untuk 3 bulan, maksimal 10 anak.
+- **Orang tua pembanding:** Rp30.000 untuk 3 bulan, 1 anak.
+
+Reaksi harga dicatat sebagai masukan. Bukti permintaan berbayar hanya deposit/pembayaran; bukti lebih kuat adalah penggunaan berulang dan pembayaran berikutnya.

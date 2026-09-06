@@ -1,37 +1,48 @@
-# Lembar Persetujuan Wawancara (Informed Consent)
+# Lembar Persetujuan Wawancara Discovery
 
-Riset produk pendidikan · anonim · ±30–40 menit
-
----
+Riset alat kerja tutor matematika SD · ±35–45 menit
 
 ## Yang akan terjadi
 
-1. Saya akan mewawancarai Bapak/Ibu selama kurang lebih 30–40 menit tentang pengalaman mendampingi anak belajar matematika di rumah.
-2. Dengan izin Bapak/Ibu, percakapan akan **direkam suaranya** hanya untuk membantu pencatatan. Rekaman **dihapus setelah analisis selesai**.
-3. Di bagian tengah wawancara, saya akan memperlihatkan satu contoh konsep aplikasi dan meminta pendapat Bapak/Ibu.
+1. Saya akan ditanya tentang pengalaman nyata menyiapkan latihan, meninjau jawaban, menentukan tindak lanjut, atau mendampingi matematika kelas 3–6.
+2. Di bagian akhir, saya akan melihat konsep Jagomat dan diminta memberi pendapat. Saya mungkin menerima tawaran pilot konkret, tetapi tidak wajib membeli.
+3. Dengan izin saya, percakapan direkam untuk transkripsi dan analisis. Saya tetap boleh ikut tanpa direkam.
+4. Wawancara ini tidak meminta nama, jawaban, foto, atau karya anak. Demo menggunakan data sintetis.
 
-## Hak Bapak/Ibu
+## Penggunaan data wawancara
 
-- Partisipasi **sukarela** — boleh menolak atau berhenti kapan saja tanpa konsekuensi.
-- Semua jawaban **anonim**: nama tidak dicatat dalam laporan; jawaban tidak bisa ditelusuri ke Bapak/Ibu.
-- Boleh menolak menjawab pertanyaan tertentu.
-- Data hanya dipakai untuk riset ini, tidak dijual, tidak dibagikan ke pihak ketiga.
+- Catatan analisis menggunakan ID responden, bukan nama.
+- Kutipan dapat dipakai secara anonim dalam laporan riset.
+- Rekaman disimpan dengan akses terbatas dan dihapus setelah transkripsi/analisis selesai.
+- Kontak untuk tindak lanjut disimpan terpisah dari catatan anonim.
+- Data wawancara tidak dijual dan tidak digunakan untuk tujuan lain tanpa persetujuan baru.
 
-## Pernyataan persetujuan
+## Penjelasan konsep produk
 
-Dengan menandatangani/menyetujui di bawah ini, saya menyatakan:
+Jagomat adalah alat bantu; tutor/orang tua pendamping tetap meninjau usulan diagnosis dan memilih latihan remedial. Data penggunaan produk dikelola pada server pengelola. **Fitur upload foto/AI vision tidak digunakan selama pilot ini.** Jika saya mengikuti pilot dengan murid nyata, penjelasan data dan **persetujuan orang tua/wali yang terpisah** harus diberikan sebelum data anak diproses.
 
-- [ ] Saya sudah memahami penjelasan di atas.
-- [ ] Saya setuju diwawancarai dan jawaban saya dicatat.
-- [ ] Saya setuju percakapan direkam untuk keperluan pencatatan (opsional — kalau tidak, cukup coret).
+Persetujuan wawancara ini **bukan** persetujuan memasukkan data anak ke pilot dan **bukan** persetujuan otomatis untuk membeli.
 
-| | |
+## Hak saya
+
+- Partisipasi sukarela; saya boleh melewati pertanyaan atau berhenti kapan saja.
+- Saya boleh meminta rekaman dihentikan.
+- Saya boleh menolak tawaran pilot tanpa konsekuensi.
+- Saya dapat bertanya tentang riset, penyimpanan data, dan tindak lanjut.
+
+## Persetujuan
+
+- [ ] Saya memahami penjelasan di atas dan setuju diwawancarai.
+- [ ] Saya setuju jawaban dicatat dan kutipan anonim dapat dipakai dalam analisis.
+- [ ] Saya setuju percakapan direkam. **Opsional**; kosongkan bila tidak setuju.
+- [ ] Saya bersedia dihubungi untuk tindak lanjut. **Opsional**; kontak disimpan terpisah.
+
+| Field | Isi |
 |---|---|
-| Nama (boleh inisial) | |
-| Tanda tangan | |
+| ID responden | ☐ T___ ☐ K___ |
+| Nama/inisial persetujuan | |
+| Tanda tangan/persetujuan lisan tercatat | |
 | Tanggal | |
-| Nomor responden | W___ |
+| Nama pewawancara | |
 
----
-
-*Catatan DPIA ringkas (untuk arsip founder, tidak dibacakan): data wawancara adalah data orang dewasa; disimpan lokal di Mac keluarga; tanpa identitas dalam laporan; dihapus rekaman setelah transkripsi; sesuai PP 17/2025 (persetujuan eksplisit, minimalisasi data).*
+*Catatan internal: tetapkan dan catat jadwal penghapusan rekaman sebelum pelaksanaan. Consent pilot/data anak memerlukan dokumen terpisah; lembar ini tidak menggantikannya.*

@@ -1,10 +1,14 @@
 # Analisis Kebutuhan & Potensi Pasar — Diagnosis Jenis Kesalahan (B/K/H) Matematika SD Indonesia
 
 **Status dokumen:** snapshot riset pasar 16 Agustus 2026. Temuan kompetitor,
-kebutuhan, dan batas bukti tetap berguna; roadmap, bentuk teknis, serta instruksi
-“lanjutkan spike/Fase 2” di dalam dokumen ini bukan arahan kerja aktif.
+kebutuhan, dan batas bukti tetap berguna; roadmap, bentuk teknis, strategi B2C
+Rp150–300 ribu, serta instruksi “lanjutkan spike/Fase 2” di dalam dokumen ini
+bukan arahan kerja aktif. Keputusan komersial terbaru memakai GTM tutor-first
+dengan harga penetrasi per anak; lihat
+`2026-09-06-peluang-komersial/keputusan-positioning-harga-validasi.md` dan
+`2026-09-06-peluang-komersial/GTM-tutor-first.md`.
 Aplikasi sekarang adalah Jagomat web SQLite di `../mesin/`; acuan pekerjaan
-berikutnya ada di `../CLAUDE.md` dan plan siklus belajar terpandu terbaru.
+teknis berikutnya ada di `../CLAUDE.md` dan plan siklus belajar terpandu terbaru.
 
 Dokumen kerja · disusun 16 Agustus 2026
 Sumber utama: `gap-pasar-edtech-matematika-sd/report.md` (18 item riset, 1131 baris) · `PRD.md` · `Rencana Produk - Peta Jalan`
@@ -87,29 +91,49 @@ Kurikulum Merdeka **secara eksplisit mewajibkan asesmen diagnostik** di awal pem
 | **SAM** — online private tutoring | USD 1,3 M (2025) | [Ken Research](https://www.kenresearch.com/indonesia-online-private-tutoring-market) |
 | **Denominator demografis** | ±23,93 juta siswa SD; **±4 juta per angkatan kelas** | [Databoks/Kemendikdasmen](https://databoks.katadata.co.id/pendidikan/statistik/66fe4973ec087) — resmi |
 
-**Sanity check bottom-up** (perhitungan sendiri, bukan angka publikasi): 1% dari satu angkatan kelas 4 = ±40.000 anak × Rp 120.000/bulan (tier harga CoLearn) × 12 bulan ≈ **Rp 57,6 M/tahun (±USD 3,5 juta)**. Dengan harga tier offline (Rp 300–500rb/bulan), angkanya 2,5–4x lipat — tapi penetrasinya jauh lebih kecil. Pesannya: **potensi itu nyata untuk baji yang sempit, bukan untuk pemain luas.**
+**Sanity check bottom-up lama (historis, bukan target):** versi awal memakai 1%
+dari satu angkatan kelas 4 × Rp120.000/bulan untuk menggambarkan skala. Setelah
+keputusan tutor-first dan harga penetrasi, hitungan itu tidak relevan untuk
+operasi. Model aktif harus dihitung dari anak aktif per tutor, biaya support,
+CAC, dan renewal. Contoh: 1.000 anak pada harga rata-rata Rp6.000 menghasilkan
+omzet Rp6 juta/bulan sebelum payment, infrastruktur, support, pajak, dan churn.
+Angka ini hanya aritmetika skenario—bukan perkiraan pelanggan atau pendapatan.
 
-### 2.2 Di mana uangnya berada — dan bagaimana memposisikan harga
+### 2.2 Harga pasar sebagai pembanding, bukan strategi aktif
 
-- Gradien harga teramati: **offline Rp 425–750rb/bulan** (Kumon, Sakamoto, Sparks Math) vs **online Rp 90–280rb/bulan** (CoLearn, Ruangguru Math Champs). Premium offline 3–6x.
-- Zenius — 20 tahun beroperasi, tutup Januari 2024 setelah dilaporkan membakar ±USD 40 juta, kembali Juli 2024 sebagai web-only — membuktikan **konsumen Indonesia tidak mau membayar harga app untuk konten yang tidak terdiferensiasi**.
-- Kesimpulan strategis riset: **harga dan posisi produk sebaiknya mengacu pada band Kumon/Sparks Math (kredibilitas diagnostik), bukan band Ruangguru/CoLearn (volume konten)**. Yang dibayar orang tua bukan konten, tapi **presisi penempatan + narasi progres manusiawi** — dan produk ini menawarkan presisi yang satu tingkat lebih dalam dari apa pun yang ada di pasar (jenis kesalahan, bukan level).
+- Gradien harga teramati: **offline Rp425–750 ribu/bulan** (Kumon,
+  Sakamoto, Sparks Math) vs **online Rp90–280 ribu/bulan** (CoLearn,
+  Ruangguru Math Champs). Angka ini menunjukkan alternatif yang sudah dibeli,
+  bukan harga yang wajib ditiru Jagomat.
+- Zenius—20 tahun beroperasi, tutup Januari 2024 setelah dilaporkan membakar
+  sekitar USD40 juta, lalu kembali sebagai web-only—menjadi peringatan bahwa
+  konten digital yang tidak terdiferensiasi sulit dimonetisasi.
+- **Keputusan aktif berbeda dari rekomendasi awal:** Jagomat memakai harga
+  penetrasi per anak dan distribusi tutor-first. Nilai yang dijual adalah alat
+  kerja tutor—latihan, review diagnosis, remedial, dan laporan—bukan layanan
+  pengajaran premium setara Kumon.
 
-### 2.3 Jalur pasar yang realistis (berjenjang)
+### 2.3 Jalur pasar aktif
 
-1. **Fase sekarang — satu keluarga (v1)**: bukan pasar, tapi **pabrik bukti**. Nilai utamanya: (a) membuktikan tesis teknis, (b) menurunkan taksonomi B/K/H dari kerja anak Indonesia (mengatasi masalah transfer Payne & Squibb), (c) mengumpulkan bukti pre/post bahwa remediasi berbasis B/K/H menaikkan hasil — bukti yang **tidak dimiliki satu pun kompetitor**.
-2. **Fase 2 — perluasan B2C sempit**: orang tua kelas 4–6 di kota besar (Jabodetabek/Java urban), harga Rp 150–300rb/bulan, positioning "rapor yang bisa dibaca + resep malam ini", meniru model penempatan Sparks Math.
-3. **Fase 3 — B2B (guru/sekolah) — potensi terbesar**: model Eedi (UK) membuktikan guru membeli diagnosis miskonsepsi (160.000+ guru, 19.000 sekolah) dan model ASSISTments membuktikan guru memakai data kesalahan untuk menargetkan review. Kurikulum Merdeka sudah mewajibkan asesmen diagnostik **tanpa instrumen yang siap pakai** — celah distribusi yang sudah dibuka pemerintah. Jalur ini juga yang paling tahan terhadap risiko "orang tua tidak mau bayar".
+1. **Beachhead—tutor/les mikro:** tutor matematika SD dengan 8–30 murid,
+   memberi tugas rutin, dan masih mengelola persiapan/koreksi secara manual.
+2. **Segmen kedua—orang tua pendamping aktif:** orang tua yang benar-benar
+   mengajar anak sendiri; bukan keluarga yang mencari aplikasi mandiri.
+3. **Ekspansi tertunda—sekolah:** baru setelah organisasi/role, consent-retensi,
+   provenance, entitlement, dan bukti penggunaan tutor siap.
+4. **Harga uji:** retail Rp10.000/anak/bulan; grosir 10 anak Rp75.000,
+   25 anak Rp150.000, dan 50 anak Rp250.000 per bulan. WTP hanya terbukti lewat
+   pembayaran dan pembaruan, bukan jawaban wawancara.
 
 ### 2.4 Keunggulan kompetitif yang bisa dipertahankan (moat)
 
 | Aset | Kenapa sulit ditiru |
 |---|---|
-| **Taksonomi B/K/H lokal** | Harus diturunkan dari data anak Indonesia (Payne & Squibb); kompetitor global tidak punya data lokal, kompetitor lokal tidak punya mesin diagnosis |
-| **Data goresan + sidik jari jawaban salah** | Data proses anak (bukan cuma jawaban akhir) adalah substrat yang tidak dikumpulkan siapa pun — Kumon mengumpulkan lalu membuangnya |
-| **Tabel sidik jari tumbuh dari pemakaian** | Setiap koreksi orang tua memperkaya tabel; efek jaringan data satu arah |
-| **Posisi bukti** | Tidak ada kompetitor dengan studi pre/post remediasi B/K/H; entrant pertama yang menerbitkannya memegang posisi yang tak bisa disaingi |
-| **Privasi-by-default** | Menjadi fitur jual di pasar yang mulai sadar PP 17/2025 |
+| **Taksonomi B/K/H lokal** | Aturan diagnosis yang diuji pada konteks Indonesia dan dikoreksi tutor dapat menjadi aset; keunggulan ini masih harus dibuktikan lewat data pilot aman. |
+| **Pola jawaban salah berparameter** | Malrule deterministik berlaku pada variasi angka baru dan tidak bergantung pada AI menebak bebas. |
+| **Umpan balik koreksi tutor** | Koreksi manusia dapat menunjukkan malrule mana yang membantu atau menyesatkan, tetapi baru menjadi moat setelah volume dan kualitas datanya memadai. |
+| **Posisi bukti** | Belum ada bukti dampak Jagomat; kesempatan diferensiasi muncul bila pilot dan studi berikutnya mengukur workflow serta outcome dengan jujur. |
+| **Privasi yang transparan** | Dapat menjadi kepercayaan bila consent, minimisasi, retensi, akses admin, dan penggunaan pihak ketiga benar-benar dijalankan—bukan sekadar klaim. |
 
 ---
 
@@ -133,24 +157,27 @@ Bagian ini sama pentingnya dengan dua bagian pertama — potensi pasar hanya nya
 ### Kebutuhan pasar: **TERBUKTI**
 Skala masalah terukur secara nasional (AKM sensus + PISA), gap kompetitif struktural (dibuktikan bahkan oleh ALEKS dan copy pemasaran Sparks Math), landasan teoretis 50 tahun, dan tailwind kebijakan (mandat asesmen diagnostik tanpa instrumen). Tidak ada pertanyaan "apakah ada kebutuhan" — pertanyaannya hanya "apakah produknya bekerja dan bisa dijual".
 
-### Potensi pasar: **NYATA, dengan syarat**
-- Sebagai **baji sempit**: jelas ada (order Rp miliaran/tahun bahkan dari 1% satu angkatan; band harga offline sudah membuktikan WTP).
-- **Syarat 1 — loop utuh terbukti**: diagnosis terkonfirmasi harus berlanjut ke intervensi, latihan terbimbing, evaluasi, dan checkpoint; keberhasilan kanal tinta bukan lagi gerbang produk.
-- **Syarat 2 — nilai di tindakan, bukan diagnosis**: intervensi pra-tulis/review manusia, evaluasi tiga hari setelah penguatan dikonfirmasi, checkpoint 28 hari, dan eskalasi—bukan sekadar laporan atau drill tambahan.
-- **Syarat 3 — bukti lokal**: kumpulkan data B/K/H anak Indonesia sejak v1; taksonomi impor tidak valid.
-- **Syarat 4 — harga & posisi di band offline-diagnostik**, bukan band konten-online.
+### Potensi pasar: **LAYAK DIUJI, dengan syarat**
+- Sinyal kebutuhan cukup untuk pilot niche, tetapi belum ada transaksi Jagomat;
+  jangan annualisasi denominator siswa atau harga pesaing menjadi pendapatan.
+- **Syarat 1 — loop utuh terbukti**: diagnosis terkonfirmasi harus berlanjut ke
+  intervensi, latihan terbimbing, evaluasi, dan checkpoint.
+- **Syarat 2 — nilai operasional tutor terbukti**: waktu persiapan/koreksi turun,
+  diagnosis direview, remedial digunakan, dan laporan dibahas.
+- **Syarat 3 — bukti lokal aman**: kumpulkan bukti agregat/pseudonim dari pemakaian
+  anak Indonesia; jangan memindahkan jawaban atau identitas anak ke repo riset.
+- **Syarat 4 — harga penetrasi tetap ekonomis**: biaya AI, support, CAC, serta
+  churn harus diukur per anak aktif dan per akun tutor.
 
 ### Syarat produk bila riset ini dipakai sekarang
 
-1. **Tesis produk diuji dari loop utuh, bukan kanal goresan saja:** diagnosis
-   terkonfirmasi → intervensi → latihan terbimbing → penguatan → evaluasi →
-   checkpoint.
-2. **Nilai berada di tindakan, bukan label:** intervensi pra-tulis dan direview
-   manusia; jangan menghasilkan tindakan langsung ke anak lewat AI.
-3. **Bukti lokal:** gunakan snapshot outcome pseudonim dari aplikasi, bukan data
-   anak mentah di repo.
-4. **Validasi pasar terpisah:** wawancara 20–30 orang tua tetap diperlukan
-   sebelum keputusan ekspansi atau harga.
+1. **Tesis produk diuji dari loop utuh**, bukan volume soal atau kanal goresan.
+2. **Nilai berada di tindakan**, bukan label; intervensi pra-tulis dan direview
+   manusia, bukan tindakan AI langsung ke anak.
+3. **Bukti lokal:** snapshot outcome pseudonim/agregat, bukan data anak mentah.
+4. **Validasi pasar utama:** discovery dan pilot berbayar terhadap 5 tutor yang
+   mengelola beberapa murid; cohort orang tua pendamping menjadi pembanding.
+5. **Bukti komersial:** pembayaran awal dan invoice kedua, bukan skor WTP.
 
 Instruksi urutan spike/B2C dan arsitektur YAML/Mac pada versi awal dokumen ini
 sudah superseded; lihat banner status.

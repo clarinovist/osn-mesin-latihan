@@ -1,174 +1,136 @@
-# Protokol Wawancara Validasi Pasar — Orang Tua Anak SD
+# Protokol Discovery dan Wawancara Validasi Pasar — GTM Tutor-First
 
-Dokumen kerja · disusun 16 Agustus 2026
-Menutup titik terlemah riset `gap-pasar-edtech-matematika-sd/report.md`: bukti keluhan orang tua masih berbasis vignette media, bukan wawancara langsung (proksi terdekat n=30 dan n=10).
-Tujuan: mengonfirmasi **masalah atribusi kausal** ("rapor jelek tapi tidak tahu akar masalah") dan **willingness to pay** sebelum menambah fitur apa pun di v1.
+Dokumen kerja · diperbarui 6 September 2026
 
----
+Sumber keputusan:
 
-## 1. Tujuan & hipotesis yang diuji
+- `2026-09-06-peluang-komersial/keputusan-positioning-harga-validasi.md`
+- `2026-09-06-peluang-komersial/GTM-tutor-first.md`
 
-Empat hipotesis, diprioritaskan dari klaim yang paling "mahal" kalau ternyata salah:
+## 1. Tujuan dan batas pembuktian
 
-| # | Hipotesis | Konsekuensi kalau TIDAK terbukti |
+Discovery utama menguji Jagomat sebagai **alat kerja tutor matematika SD**, bukan pengganti tutor. Responden utama adalah tutor independen atau pemilik les mikro yang masih mengajar. Orang tua pendamping diwawancarai sebagai **cohort pembanding terpisah**, bukan digabung ke hasil tutor.
+
+Hipotesis utama:
+
+| # | Hipotesis tutor | Bukti yang dicari |
 |---|---|---|
-| H1 | Orang tua tidak bisa menjelaskan **jenis** kesalahan anaknya dari rapor/bimbel yang ada (hanya tahu "matematikanya jelek" atau "lemah di topik X") | Tesis inti produk gugur — tidak ada masalah yang dipecahkan |
-| H2 | Orang tua sudah **mencoba** sesuatu saat anak gagal (les, bimbel, app, PR dibantu sendiri) dan tetap tidak puas dengan penjelasan yang diterima | Produk harus bersaing dengan kebiasaan yang ada, bukan mengisi ruang kosong |
-| H3 | Setelah mendengar konsep B/K/H (dengan contoh laporan), orang tua **memahami dan tertarik** dalam ≤2 menit tanpa edukasi panjang | "Tidak butuh edukasi pasar" (klaim dari riset Sparks Math) keliru |
-| H4 | Ada harga bulanan yang bersedia dibayar di **band Rp 150–300rb/bulan** (di atas CoLearn, di bawah Kumon) untuk produk diagnosis+remediasi | Strategi harga "band offline-diagnostik" perlu direvisi |
+| H1 | Menyiapkan latihan bervariasi, mengoreksi, mencari pola kesalahan, dan menentukan tindak lanjut masih memakan waktu atau tidak konsisten | Kejadian terbaru, artefak/alur kerja, waktu, dan solusi yang dipakai sekarang |
+| H2 | Tutor membutuhkan informasi yang membantu memilih tindak lanjut per murid, bukan sekadar skor atau topik | Keputusan nyata setelah murid salah dan informasi yang saat ini hilang |
+| H3 | Konsep latihan bervariasi → usulan diagnosis direview manusia → remedial dipilih tutor → laporan pola dipahami dan dianggap relevan | Responden dapat menjelaskan ulang, menyebut kegunaan/risiko, dan memilih murid untuk uji coba |
+| H4 | Tutor bersedia mencoba dalam pekerjaan nyata | Komitmen operasional: memilih murid, menyetujui langkah berikut, menjadwalkan onboarding |
+| H5 | Ada permintaan berbayar pada paket konkret | Tawaran tercatat, deposit/pembayaran, penggunaan, dan pembayaran berikutnya |
 
-Hipotesis sekunder: privasi (data tidak keluar dari rumah) meningkatkan minat; HP pinjaman & waktu orang tua adalah hambatan yang disebut spontan.
+Cohort orang tua hanya membandingkan: pekerjaan pendampingan aktual, kebutuhan informasi, reaksi terhadap workflow yang sama, dan respons terhadap paket keluarga. Temuannya tidak boleh dipakai untuk menyimpulkan GTM tutor.
 
----
+**Batas bukti harga:** jawaban tentang harga atau minat bukan bukti willingness-to-pay. Boleh menanyakan biaya alat saat ini dan reaksi terhadap paket konkret. Bukti komersial hanya berasal dari tawaran nyata yang menghasilkan deposit/pembayaran; bukti lebih kuat adalah penggunaan berulang dan pembayaran berikutnya.
 
-## 2. Desain & kriteria responden
+## 2. Desain dan sampel
 
-- **Metode**: wawancara semi-terstruktur, 30–40 menit, tatap muka atau video call. Rekaman suara (dengan izin) untuk transkripsi; jawaban juga dicatat ringkas di lembar skor (Bagian 7).
-- **Jumlah**: 20–30 orang tua. 20 sudah cukup untuk konfirmasi arah (semua hipotesis kualitatif); 30 kalau mau memecah subsegmen.
-- **Subsegmen wajib** (minimal 5 per sel):
-  - Kelas anak: **kelas 4–5** (target utama) — 15 responden; kelas 3 & 6 — 5–10 responden (cek perluasan).
-  - Status les: pernah/sedang ikut les matematika (10–15) vs tidak pernah (10–15) — membedakan "sudah bayar, tetap bingung" dari "belum pernah mencoba".
-  - Kota: Jabodetabek + minimal 1 kota Java urban (Surabaya/Medan/Bandung).
-- **Rekrutmen**: jejaring sekolah, komunitas orang tua WhatsApp, referral berantai (snowball). Tawarkan insentif kecil (voucher pulsa Rp50rb atau setara) — standar untuk riset UX/pasar.
-- **Eksklusi**: orang tua guru matematika profesional (bias konfirmasi), orang tua dengan anak yang sudah lolos OSN (bukan segmen target).
+- **Metode:** wawancara semi-terstruktur 35–45 menit; pitch baru ditampilkan setelah discovery perilaku.
+- **Cohort utama:** 15–20 tutor independen/pemilik les mikro.
+- **Kriteria ideal tutor:** mengajar matematika kelas 3–6; menangani **8–30 murid**; memberi tugas/latihan rutin; menyiapkan atau mengoreksi secara manual; berkomunikasi dengan orang tua; dan dapat memutuskan pembelian alat sendiri.
+- **Variasi tutor:** 8–15 vs 16–30 murid; independen vs les mikro; fokus umum/enrichment/OSN; kota/kanal akuisisi.
+- **Cohort pembanding:** 6–10 orang tua yang rutin mendampingi anak kelas 3–6. ID, rekap, analisis, dan keputusan cohort ini dipisahkan dari tutor.
+- **Eksklusi tutor:** hanya mengajar kelas di luar 3–6; tidak memberi tugas rutin; tidak terlibat menyiapkan/mengoreksi; bukan pengambil keputusan dan tidak dapat membawa keputusan ke pemilik.
+- **Rekrutmen:** komunitas tutor, referral, jejaring les mikro, dan orang tua aktif. Insentif wawancara tidak boleh disamakan dengan diskon/deposit pilot.
 
----
+## 3. Urutan wawancara
 
-## 3. Alur wawancara (urutan ini penting — jangan dibalik)
+1. **Skrining dan persetujuan** — 3 menit.
+2. **Konteks praktik** — 5 menit.
+3. **Kejadian dan workflow terbaru** — 12 menit.
+4. **Biaya dan alternatif saat ini** — 5 menit.
+5. **Pitch netral** — 2 menit.
+6. **Reaksi konsep dan risiko** — 8 menit.
+7. **Komitmen/paket konkret** — 5 menit.
+8. **Data, consent, dan penutup** — 5 menit.
 
-1. **Skrining & persetujuan** (2 menit): cek kriteria, jelaskan tujuan riset, minta persetujuan rekaman & anonimitas (sesuai PP 17/2025 — catatan DPIA ringkas).
-2. **Blok A — Konteks** (3 menit): profil keluarga & anak, nilai matematika terakhir, rapor, riwayat les/bimbel/app.
-3. **Blok B — Pengalaman atribusi** (8 menit): pikirkan saat anak gagal; apa yang mereka lihat, apa yang mereka pahami, apa yang mereka lakukan. **Ini inti H1/H2.**
-4. **Blok C — Perilaku aktual** (5 menit): apa yang dilakukan minggu lalu saat anak kesulitan; app/les yang dipakai; siapa yang membantu.
-5. **Blok D — Reaksi konsep** (7 menit): **baru di sini** perlihatkan pitch produk + contoh laporan B/K/H (Bagian 6). Ukur pemahaman, minat, dan apa yang kurang.
-6. **Blok E — Willingness to pay** (5 menit): tangga harga (Bagian 7, item E1–E3).
-7. **Blok F — Hambatan & privasi** (4 menit): keberatan, privasi (data tidak keluar rumah), HP pinjaman, waktu.
-8. **Penutup** (2 menit): pertanyaan terbuka terakhir, tawaran ikut pilot, terima kasih.
+> Jangan menyebut Jagomat, diagnosis, AI, atau harga sebelum blok pitch. Jangan menjual saat menggali masalah. Tanyakan kejadian terakhir dan artefak nyata, bukan pendapat umum.
 
-> ⚠️ Aturan ketat: **jangan menyebut konsep produk sebelum Blok D**. Semua jawaban Blok B–C harus murni dari pengalaman orang tua, bukan reaksi terhadap pitch.
+## 4. Topik discovery utama
 
----
+### A. Konteks tutor
 
-## 4. Panduan pertanyaan (naskah, semi-terstruktur)
+Jumlah murid aktif kelas 3–6, pola pertemuan, jenis materi, frekuensi tugas, siapa yang menyiapkan/mengoreksi, komunikasi ke orang tua, dan kewenangan membeli alat.
 
-### Blok A — Konteks
-- A1. Anak kelas berapa? (khusus: anak ke-berapa di keluarga?)
-- A2. Nilai/rapor matematika terakhir? (angka atau deskripsi rapor Merdeka)
-- A3. Apa yang tertulis di rapor bagian matematika? (minta deskripsi kata-katanya)
-- A4. Anak pernah ikut les/bimbel matematika? Yang mana, berapa lama, berapa biaya per bulan?
-- A5. App/bimbel online yang pernah dipakai anak (Ruangguru, CoLearn, QANDA, Photomath, dll)?
+### B. Workflow aktual
 
-### Blok B — Pengalaman atribusi (inti)
-- B1. "Pikirkan terakhir kali anak dapat nilai jelek di matematika. **Menurut Anda, apa penyebabnya?**" (biarkan menjawab bebas — jangan koreksi)
-- B2. "Kalau anak salah mengerjakan soal, **bisakah Anda tahu letak salahnya?** Bagaimana caranya?"
-- B3. "Pernahkah Anda mencoba membahas PR/soal dengan anak, lalu **tidak bisa menjelaskan kenapa salahnya**? Ceritakan."
-- B4. "Dari bimbel/les yang diikuti, **penjelasan apa yang Anda terima** soal kesalahan anak? (skor? topik? penjelasan cara?)"
-- B5. "Kalau anak menjawab benar, **pernahkah Anda ragu** apakah dia benar-benar paham?" (uji Correct Answer Trap di sisi orang tua)
-- B6. (Khusus les) "Anda bayar Rp…/bulan. **Apa yang Anda dapatkan** yang tidak bisa Anda dapatkan gratis?"
+Minta responden menceritakan **tugas terbaru** dari awal sampai tindak lanjut:
 
-### Blok C — Perilaku aktual
-- C1. "Minggu lalu, saat anak kesulitan matematika, **apa yang Anda lakukan**? (urutkan: dibantu sendiri / les / app / disuruh hafalan / diabaikan)"
-- C2. "Siapa yang paling sering membantu anak belajar matematika di rumah? Berapa lama per minggu?"
-- C3. "Pernah pakai app untuk cek jawaban (Photomath/QANDA)? Siapa yang pakai — Anda atau anak?"
+- bagaimana memilih/membuat soal;
+- waktu persiapan dan koreksi;
+- bagaimana mengetahui mengapa murid salah;
+- kapan meminta murid menjelaskan cara;
+- bagaimana memilih latihan berikutnya;
+- bagaimana melacak pola lintas sesi;
+- apa yang dilaporkan ke orang tua;
+- bagian yang terlewat ketika sibuk.
 
-### Blok D — Reaksi konsep (setelah pitch, Bagian 6)
-- D1. "Dengan kata Anda sendiri, **aplikasi ini melakukan apa?**" (ukur pemahaman — jangan bantu dulu)
-- D2. "Kalau anak Anda dapat diagnosis seperti contoh, **apa yang akan Anda lakukan** dengan informasi itu?"
-- D3. "Apa yang **paling berguna** dari contoh itu? Apa yang **paling tidak berguna**?"
-- D4. "Apakah ada bagian yang **tidak Anda percaya** atau meragukan?"
-- D5. "Apakah ini lebih berguna dari les, atau pelengkap les?" (posisi produk)
+Tidak boleh mengasumsikan produk mampu memahami seluruh tulisan/langkah anak secara semantik.
 
-### Blok E — Willingness to pay
-- E1. "Kalau aplikasi ini **gratis**, apa yang Anda harapkan bisa dilakukan?" (kontrol)
-- E2. Tangga harga: "Berapa per bulan yang menurut Anda **terlalu mahal**? **Mahal tapi masih dipertimbangkan**? **Murah — tidak perlu dipikir**? **Sangat murah — terasa ada yang salah**?" (metode van Westendorp, 4 titik per responden)
-- E3. Perbandingan: "Les offline Rp500rb/bulan memberi Anda X. Aplikasi ini Rp…/bulan memberi diagnosis+resep. **Mana yang lebih masuk akal dibeli**?" (posisi vs band offline)
+### C. Alternatif dan biaya saat ini
 
-### Blok F — Hambatan & privasi
-- F1. "Anak pakai HP Anda sendiri (pinjaman)? Apakah itu masalah untuk belajar dengan app?"
-- F2. "Bagaimana perasaan Anda kalau **tidak ada data anak yang keluar dari rumah** (semua tersimpan di HP/Mac keluarga)?" (uji privasi sebagai fitur jual)
-- F3. "Berapa waktu yang bisa Anda luangkan per minggu untuk mendampingi?" (cek konsistensi 3×30–40 menit)
-- F4. "Apa keberatan terbesar Anda terhadap aplikasi seperti ini?" (terbuka)
+Catat buku, bank soal, spreadsheet, WhatsApp, aplikasi, tenaga admin, dan waktu tutor yang dipakai. Tanyakan biaya aktual bila responden tahu. Ini adalah konteks anggaran, bukan bukti harga Jagomat.
 
-### Penutup
-- G1. "Ada hal lain yang ingin Anda ceritakan tentang belajar matematika anak?"
-- G2. "Boleh kami hubungi lagi untuk ikut uji coba awal?" (kumpulkan kontak pilot)
+### D. Pitch yang boleh diuji
 
----
+> Jagomat membantu tutor menyiapkan latihan bervariasi untuk murid kelas 3–6. Setelah jawaban masuk, sistem memberi **usulan jenis kesalahan** untuk ditinjau dan dikoreksi tutor. Tutor tetap memilih fokus serta latihan remedial. Laporan merangkum pola per murid agar tindak lanjut dan komunikasi ke orang tua lebih mudah. Data dikelola pada server pengelola. Fitur upload foto/AI vision dinonaktifkan selama pilot.
 
-## 5. Skema skoring cepat (untuk sintesis)
+Pitch tidak boleh menyatakan:
 
-Tiap responden diisi lembar skor setelah wawancara (5 menit):
+- memahami seluruh langkah atau tulisan tangan anak;
+- otomatis menentukan resep/langkah terbaik;
+- remedial/intervensi lengkap sudah tersedia;
+- data hanya berada di rumah;
+- meningkatkan nilai atau menjamin prestasi;
+- menggantikan tutor.
 
-| Item | Skor | Definisi |
-|---|---|---|
-| S1. Atribusi gagal (H1) | 0–2 | 0 = bisa menjelaskan jenis kesalahan; 1 = hanya "tidak paham/topik X"; 2 = sama sekali tidak tahu penyebab |
-| S2. Upaya & frustrasi (H2) | 0–2 | 0 = belum pernah mencoba apa pun; 1 = mencoba tapi puas; 2 = mencoba dan tidak puas dengan penjelasan |
-| S3. Pemahaman pitch (H3) | 0–2 | 0 = tidak paham; 1 = paham sebagian; 2 = paham & bisa mengulang dengan kata sendiri |
-| S4. Minat (H3) | 0–2 | 0 = tidak tertarik; 1 = tertarik tapi ragu; 2 = antusias, minta didaftarkan |
-| S5. WTP bulanan (H4) | angka | Harga maksimal dari tangga E2 (dalam ribuan rupiah) |
-| S6. Privasi sebagai nilai | 0–2 | 0 = tidak peduli; 1 = bagus tapi bukan penentu; 2 = menjadi alasan utama memilih |
-| S7. Hambatan dominan | kode | W = waktu; H = HP pinjaman; P = privasi; K = kepercayaan pada teknologi; L = biaya; O = lain |
+### E. Reaksi dan komitmen
 
-**Ambang keputusan (tentatif, direvisi setelah 10 responden pertama):**
-- **H1 lulus** jika ≥70% responden skor S1 = 2 (tidak tahu penyebab).
-- **H2 lulus** jika ≥50% responden skor S2 = 2 (sudah mencoba, tidak puas).
-- **H3 lulus** jika ≥70% responden skor S3 ≥ 1 DAN S4 ≥ 1 (paham & tertarik tanpa edukasi panjang).
-- **H4 lulus** jika median WTP ≥ Rp150rb/bulan.
+Uji pemahaman dengan meminta responden menjelaskan ulang. Tanyakan bagian paling berguna, tidak berguna, tidak dipercaya, tambahan pekerjaan, murid yang cocok, dan syarat uji coba. Minat verbal dicatat, tetapi komitmen lebih kuat adalah pemilihan murid dan jadwal onboarding.
 
----
+### F. Tawaran nyata
 
-## 6. Pitch produk & contoh laporan (bagian D — ditunjukkan SETELAH Blok C)
+Setelah feedback konsep selesai, tutor yang relevan boleh menerima penawaran yang sama:
 
-**Naskah pitch (≤60 detik):**
-> "Anak mengerjakan soal di HP, menulis langkahnya seperti di buku. Aplikasi (bersama orang tua) mengelompokkan kesalahannya jadi tiga jenis: **B** — salah baca soal; **K** — salah konsep (caranya keliru dan yakin benar); **H** — salah hitung (caranya benar, angkanya meleset). Lalu aplikasi memberi **resep untuk Anda**, orang tua: apa yang dilakukan malam ini, berapa lama, dan kapan dicek ulang. Semua data anak tersimpan di rumah Anda sendiri — tidak ada yang dikirim ke internet."
+- **Tutor:** Rp225.000 untuk 3 bulan, maksimal 10 anak.
+- **Keluarga pembanding:** Rp30.000 untuk 3 bulan, 1 anak.
 
-**Contoh laporan (ditunjukkan cetak/HP, 1 halaman):**
+Catat status secara terpisah: belum ditawari, ditawari, menolak, perlu tindak lanjut, setuju onboarding, deposit, lunas. Jangan mencatat jawaban hipotetis sebagai pembayaran. Paket 25/50 anak belum diuji kecuali kebutuhan nyata melampaui 10 kursi.
 
-```
-RAPOR DIAGNOSIS — Matematika, [Nama], Kelas 4
-Periode: 2 minggu terakhir
+## 5. Data, privasi, dan consent
 
-KESIMPULAN
-• Pecahan (penjumlahan penyebut beda): SALAH KONSEP — 3x dalam 2 minggu.
-  Anak konsisten menjumlahkan pembilang dan penyebut sendiri-sendiri
-  (2/3 + 3/4 = 5/7) dan yakin caranya benar.
-  → Resep: 4–6 minggu pakai benda nyata (kue/gelas air) sebelum
-    kembali ke angka. Cek ulang 3 hari sekali dengan angka berbeda.
+- Wawancara membahas praktik orang dewasa; jangan mengumpulkan nama, jawaban, foto, atau karya anak.
+- Demo memakai data sintetis.
+- Rekaman wawancara bersifat opsional, akses terbatas, dan dihapus setelah transkripsi/analisis sesuai lembar persetujuan.
+- Kontak tindak lanjut disimpan terpisah dari catatan anonim.
+- Untuk pilot dengan murid nyata, persetujuan orang tua/wali harus diperoleh terpisah sebelum data anak diproses.
+- Jelaskan dengan jujur bahwa data produk dikelola pada server pengelola dan
+  bahwa fitur upload foto/AI vision dinonaktifkan selama pilot.
 
-• Soal cerita kecepatan: SALAH BACA SOAL — 2x.
-  Angka yang ditanya tidak ditandai; anak menghitung hal yang salah.
-  → Bukan lubang matematika. Latihan pegang pensil, tandai yang
-    ditanya, ucapkan ulang soal. Biasanya hilang 2–3 minggu.
+## 6. Skoring dan sintesis
 
-• Perkalian bersusun: SALAH HITUNG — 4x (caranya benar, angkanya
-  meleset di langkah penjumlahan). → Bukan materi baru. Wajib tulis
-  langkah + periksa ulang. Gejala terburu-buru, bukan tidak paham.
+Gunakan `04-lembar-skor.md` dan `05-lembar-rekap.md`. Jangan menjumlahkan cohort tutor dan orang tua.
 
-BUKTI
-[2–3 foto/gambar coretan anak yang mendukung tiap kesimpulan]
-```
+Ambang discovery awal untuk cohort tutor:
 
-**Pertanyaan probe setelah pitch:** "Bagian mana yang pernah Anda dapatkan dari rapor/les selama ini? Bagian mana yang belum pernah?"
+| Indikator | Ambang awal |
+|---|---:|
+| Masalah workflow berulang dan berdampak (S1 ≥ 2) | ≥60% tutor |
+| Kebutuhan tindak lanjut/pola (S2 ≥ 2) | ≥60% tutor |
+| Pitch dipahami dengan kontrol tutor (S3 = 2) | ≥70% tutor |
+| Komitmen operasional kuat (S4 ≥ 2) | ≥50% tutor relevan |
+| Deposit/pembayaran | minimal 3 dari 20 tawaran relevan |
 
----
+Ambang tersebut adalah aturan keputusan awal, bukan statistik populasi. Setelah transaksi, metrik pilot yang lebih penting adalah aktivasi murid, pemakaian pada minggu berbeda, waktu tutor, override usulan diagnosis, remedial yang dijalankan, laporan yang dipakai, support, dan pembayaran berikutnya.
 
-## 7. Lampiran
+## 7. Output
 
-### 7.1 Lembar persetujuan (ringkas, dibacakan)
-> "Wawancara ini untuk riset produk pendidikan. Jawaban Anda anonim — nama tidak dicatat. Boleh direkam untuk transkripsi, rekaman dihapus setelah analisis. Anda boleh berhenti kapan saja. Data hanya dipakai untuk riset ini." *(Catatan DPIA ringkas: data wawancara = data orang dewasa, bukan anak; disimpan lokal; dihapus setelah laporan selesai.)*
+- sintesis tutor-first per hipotesis dengan kutipan dan artefak workflow;
+- sintesis orang tua pembanding dalam bagian terpisah;
+- log tawaran dan pembayaran tanpa mencampur minat verbal;
+- daftar keberatan/risiko produk;
+- keputusan lanjut, revisi, atau berhenti berdasarkan perilaku dan transaksi.
 
-### 7.2 Formulir skrining
-Kelas anak (3/4/5/6) · Pernah les matematika? (ya/tidak) · Kota · Profesi (opsional) · Kontak (opsional)
-
-### 7.3 Jadwal pelaksanaan (saran)
-- Minggu 1: rekrutmen 10 responden pertama + uji protokol (revisi pertanyaan yang ambigu)
-- Minggu 2–3: 20 responden berikutnya
-- Minggu 3–4: transkripsi + skoring + sintesis → laporan 2–3 halaman → keputusan go/no-go untuk fitur & harga
-
-### 7.4 Output yang dihasilkan
-- `laporan-validasi-pasar.md` (sintesis: tiap hipotesis lulus/gagal + kutipan verbatim + rekomendasi harga)
-- Daftar kontak pilot (dengan izin) untuk uji coba v1 berikutnya
-
----
-
-*Dokumen ini dirancang agar bisa dijalankan oleh founder sendiri (satu pewawancara). Untuk kredibilitas hasil, catat durasi tiap wawancara dan jangan mengarahkan jawaban — pertanyaan probe yang netral ("bisa ceritakan lebih lanjut?") lebih baik daripada menyetujui.*
+Kriteria revisi/berhenti: kurang dari tiga deposit/pembayaran setelah 20 tawaran relevan; masalah tidak cukup sering; produk menambah pekerjaan; tutor hanya menginginkan generator; atau kebutuhan utama bergantung pada kemampuan yang belum tersedia.

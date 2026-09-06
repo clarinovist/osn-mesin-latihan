@@ -81,5 +81,17 @@ produk/Rencana Spike - Coretan ke Diagnosis.html
 
 # Instrumen wawancara: PDF hasil ekspor dari .md sumber, bisa dibangkitkan ulang.
 riset-pasar/wawancara-validasi-pasar/*.pdf
-# Instrumen pilot 10 keluarga: lokal saja, jangan di-commit.
+# Instrumen pilot aktif adalah template kosong yang dilacak; salinan lain tetap lokal.
 riset-pasar/wawancara-validasi-pasar/*-pilot.md
+!riset-pasar/wawancara-validasi-pasar/07-naskah-exit-interview-pilot.md
+!riset-pasar/wawancara-validasi-pasar/07b-cek-mingguan-pilot.md
+!riset-pasar/wawancara-validasi-pasar/08-lembar-skor-pilot.md
+!riset-pasar/wawancara-validasi-pasar/09-lembar-rekap-pilot.md
+# Artefak ekstraksi riset mentah tetap lokal; laporan kurasi dan ledger dilacak.
+riset-pasar/**/alc-package-list-raw.txt
+riset-pasar/**/ekstraksi-*.json
+riset-pasar/**/pencarian-*.json
+riset-pasar/**/hitung-ekonomi.json
+riset-pasar/**/sumber-lokal.json
+riset-pasar/**/sumber-permintaan.json
+riset-pasar/**/citation-ledger.json
