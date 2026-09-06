@@ -1,5 +1,11 @@
 # Analisis Kebutuhan & Potensi Pasar — Diagnosis Jenis Kesalahan (B/K/H) Matematika SD Indonesia
 
+**Status dokumen:** snapshot riset pasar 16 Agustus 2026. Temuan kompetitor,
+kebutuhan, dan batas bukti tetap berguna; roadmap, bentuk teknis, serta instruksi
+“lanjutkan spike/Fase 2” di dalam dokumen ini bukan arahan kerja aktif.
+Aplikasi sekarang adalah Jagomat web SQLite di `../mesin/`; acuan pekerjaan
+berikutnya ada di `../CLAUDE.md` dan plan siklus belajar terpandu terbaru.
+
 Dokumen kerja · disusun 16 Agustus 2026
 Sumber utama: `gap-pasar-edtech-matematika-sd/report.md` (18 item riset, 1131 baris) · `PRD.md` · `Rencana Produk - Peta Jalan`
 Pertanyaan yang dijawab: *apakah ada kebutuhan pasar nyata untuk produk ini, dan seberapa besar potensinya kalau dikembangkan?*
@@ -116,8 +122,8 @@ Bagian ini sama pentingnya dengan dua bagian pertama — potensi pasar hanya nya
 3. **Sejarah monetisasi edtech online Indonesia buruk**: Zenius tutup, Ruangguru PHK massal 2022, CoLearn bergeser dari foto-soal ke bimbel live berlangganan. Pasar menghukum konten tak terdiferensiasi.
 4. **Bukti keluhan orang tua masih lemah** (vignette media, bukan survei besar; n=30 dan n=10 pada proksi terdekat). Sebelum investasi besar: perlu riset validasi kecil (mis. 20–30 wawancara orang tua) untuk mengonfirmasi masalah atribusi dan WTP.
 5. **Angka market size vendor saling konflik** (IMARC 11,79% vs 24,5% CAGR) — perlakukan sebagai order-of-magnitude.
-6. **Keterbatasan teknis yang membatasi skala**: HP pinjaman, tanpa internet (privacy-by-default), satu anak per device — bagus untuk tesis, tetapi memperlambat akusisi massal; mode foto kertas (Fase 2 roadmap) adalah jalan keluar yang sudah direncanakan.
-7. **K aktif sebagai metrik utama** belum tervalidasi untuk usia SD kelas 4 (distribusi B/K/H yang diketahui dari NEA adalah anak SMP+). Keputusan ini ditangguhkan sampai data v1 riil terkumpul (sudah dicatat sebagai risiko di peta jalan).
+6. **Keterbatasan teknis historis**: rancangan awal memakai HP pinjaman, tanpa internet, dan satu anak per device. Aplikasi sekarang sudah web multi-keluarga dan jalur foto sudah ada; risiko skala harus dinilai ulang dari runtime aktif, bukan roadmap Fase 2 lama.
+7. **Kunci fokus K sebagai metrik utama** belum tervalidasi untuk usia SD kelas 4; pantau bersama status evaluasi/checkpoint, bukan hitungan K topik secara tunggal.
 8. **PP 17/2025**: kepatuhan sekarang preventif, belum teruji hukum untuk operator individu skala kecil.
 
 ---
@@ -129,16 +135,25 @@ Skala masalah terukur secara nasional (AKM sensus + PISA), gap kompetitif strukt
 
 ### Potensi pasar: **NYATA, dengan syarat**
 - Sebagai **baji sempit**: jelas ada (order Rp miliaran/tahun bahkan dari 1% satu angkatan; band harga offline sudah membuktikan WTP).
-- **Syarat 1 — tesis teknis terbukti**: seluruh potensi bergantung pada spike (tinta → B/K/H, ≥7/10 kecocokan, nol false-K). Kalau gagal, produk turun jadi app latihan biasa tanpa diferensiasi.
-- **Syarat 2 — nilai di remediasi, bukan diagnosis**: sesuai PRD §1 (resep pra-tulis + AI-generate, loop verifikasi 3 hari, eskalasi), bukan sekadar laporan.
+- **Syarat 1 — loop utuh terbukti**: diagnosis terkonfirmasi harus berlanjut ke intervensi, latihan terbimbing, evaluasi, dan checkpoint; keberhasilan kanal tinta bukan lagi gerbang produk.
+- **Syarat 2 — nilai di tindakan, bukan diagnosis**: intervensi pra-tulis/review manusia, evaluasi tiga hari setelah penguatan dikonfirmasi, checkpoint 28 hari, dan eskalasi—bukan sekadar laporan atau drill tambahan.
 - **Syarat 3 — bukti lokal**: kumpulkan data B/K/H anak Indonesia sejak v1; taksonomi impor tidak valid.
 - **Syarat 4 — harga & posisi di band offline-diagnostik**, bukan band konten-online.
 
-### Rekomendasi konkret
-1. **Tetap jalankan spike 5–7 hari dulu** (tidak ada perubahan rencana) — ini gerbang kebutuhan-teknis yang menentukan segalanya.
-2. **Paralel, tanpa menunggu spike selesai**: rancang studi bukti v1 (pre/post sederhana, satu anak, 3x/minggu) supaya begitu v1 stabil, sudah ada data yang bisa diterbitkan sebagai klaim diferensiasi.
-3. **Sesudah spike lulus**: lakukan validasi pasar ringan (20–30 wawancara orang tua di Jabodetabek/Java urban) untuk mengonfirmasi masalah atribusi kausal + WTP sebelum menambah fitur apa pun — ini menutup titik terlemah riset (bukti keluhan orang tua).
-4. **Arsitektur sejak awal mendukung jalur B2B**: skema data dan format laporan v1 (YAML/CSV, Mac) dirancang agar bisa diturunkan jadi laporan guru/sekolah — jalur yang paling mungkin membuka potensi penuh dan paling tahan terhadap risiko monetisasi B2C.
+### Syarat produk bila riset ini dipakai sekarang
+
+1. **Tesis produk diuji dari loop utuh, bukan kanal goresan saja:** diagnosis
+   terkonfirmasi → intervensi → latihan terbimbing → penguatan → evaluasi →
+   checkpoint.
+2. **Nilai berada di tindakan, bukan label:** intervensi pra-tulis dan direview
+   manusia; jangan menghasilkan tindakan langsung ke anak lewat AI.
+3. **Bukti lokal:** gunakan snapshot outcome pseudonim dari aplikasi, bukan data
+   anak mentah di repo.
+4. **Validasi pasar terpisah:** wawancara 20–30 orang tua tetap diperlukan
+   sebelum keputusan ekspansi atau harga.
+
+Instruksi urutan spike/B2C dan arsitektur YAML/Mac pada versi awal dokumen ini
+sudah superseded; lihat banner status.
 
 ---
 

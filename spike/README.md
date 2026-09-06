@@ -1,6 +1,11 @@
 # Spike — Perekam Goresan Jari (Fase 0)
 
-Eksperimen untuk membuktikan asumsi alat sebelum produk dibangun:
+**Status:** eksperimen ortogonal yang sedang dijeda, bukan fondasi atau roadmap
+aplikasi aktif. Lanjutkan hanya bila pengguna memang meminta eksperimen kanal
+goresan; pekerjaan produk sekarang mengikuti `../mesin/`, `../CLAUDE.md`, dan
+plan siklus belajar terpandu terbaru.
+
+Eksperimen untuk membuktikan asumsi alat:
 **bukan** turunan dari [`../mesin/`](../mesin/), bukan *mock* produk, bukan
 fondasi aplikasi.
 

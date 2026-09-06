@@ -1,9 +1,19 @@
 # Rencana Spike — Coretan ke Diagnosis
 
-**Status dokumen:** sumber kebenaran untuk eksekusi spike.
-`Rencana Spike - Coretan ke Diagnosis.html` adalah render versi 14 Agustus
-yang **sudah tertinggal** dari dokumen ini — biarkan sebagai artefak
-historis, jangan dipakai sebagai panduan kerja.
+**Status dokumen:** arsip/panduan eksperimen `../spike/`, bukan roadmap
+aplikasi aktif. Spike ini menguji kanal goresan secara terpisah dan tetap boleh
+dilanjutkan menurut `../spike/LANJUTAN.md`, tetapi bagian “setelah spike lulus”
+tidak lagi menentukan arsitektur produk. Aplikasi web SQLite di `../mesin/`
+sudah lebih maju dan tidak berasal dari pipeline file/Android/`osn sync` ini.
+
+Untuk pekerjaan produk sekarang gunakan `../CLAUDE.md`, kode/test `../mesin/`,
+`Siklus Belajar Terpandu.md`, dan rincian implementasi di
+`../docs/plan/2026-09-06-siklus-belajar-terpandu.md`. Prinsip yang masih
+berlaku dari dokumen ini: malrule deterministik, tinjauan manusia, privasi data
+anak, dan nilai eksperimen goresan sebagai kanal diagnosis tambahan.
+
+`Rencana Spike - Coretan ke Diagnosis.html` adalah render versi historis dan
+tidak dipakai sebagai panduan produk aktif.
 
 Rencana teknis · spike · v1 · disusun 14 Agustus 2026 · direvisi 17 Agustus 2026 ·
 direvisi 18 Agustus 2026
@@ -302,14 +312,13 @@ Jalur ke Mac tinggal pilih salah satu, tergantung device yang dipinjam:
 
 - Sambung kabel USB, salin manual lewat file transfer standar OS (MTP untuk
   Android, Finder untuk iOS/iPadOS lewat kabel)
-- AirDrop, kalau device-nya Apple
-- Kirim ke diri sendiri lewat aplikasi apa pun yang sudah ada di device itu
-  (mis. catatan, email pribadi) — selama tidak dipakai buat catatan lain,
-  ini masih tanpa server pihak ketiga yang menyimpan data
+- AirDrop lokal langsung antar-device Apple, bila tersedia dan penerimanya
+  sudah diverifikasi
 
-Tetap tanpa jaringan keluar dari sistem yang kita bangun — mekanisme
-transfer ini pakai fitur bawaan OS device, bukan endpoint yang kita
-operasikan. Kalau nanti port ke app native (v1, pasca-spike), pertanyaan
+Jangan memakai email, aplikasi catatan tersinkron, cloud drive, atau aplikasi
+pesan sebagai jalur transfer: semuanya dapat mengirim data tulisan anak ke
+server pihak ketiga. Pengecualian membutuhkan keputusan privasi baru yang
+tertulis dan persetujuan eksplisit. Kalau nanti port ke app native (v1, pasca-spike), pertanyaan
 `adb exec-out run-as` di atas kembali relevan dan perlu diuji ulang saat itu.
 
 ---
@@ -581,29 +590,22 @@ ada untuk menjawab pertanyaan spike ini.
 
 ---
 
-## Setelah — kalau spike-nya lulus
+## Setelah — keputusan historis, sudah superseded
 
-Yang pertama dibangun sesudahnya bukan fitur, melainkan **fondasi
-penyimpanan v1** (PRD §8.4): konten immutable, kejadian append-only, status
-sebagai turunan. Ini didahulukan karena begitu data anak mulai terkumpul
-rutin, mengubah bentuk penyimpanan jadi jauh lebih mahal — dan janji "prompt
-bisa diiterasi di atas data yang sama" hanya berlaku kalau riwayatnya tidak
-pernah ditimpa.
+Bagian ini merekam arah yang direncanakan pada 18 Agustus. Jangan menjalankan
+urutannya sebagai roadmap sekarang: aplikasi web SQLite di `../mesin/` sudah
+memiliki penyimpanan, akun, mode anak, diagnosis, remedial, foto, dan laporan.
+Pekerjaan produk aktif berikutnya adalah menutup siklus belajar sesuai
+`../docs/plan/2026-09-06-siklus-belajar-terpandu.md`.
 
-Sesudah itu: graf topik, antrean pengulangan, orkestrator `osn sync`, lalu
-Mode Anak.
+Eksperimen ini tetap bernilai sebagai validasi kanal goresan tambahan. Jika
+spike dilanjutkan dan berhasil, hasilnya masuk sebagai sinyal diagnosis yang
+harus melalui konfirmasi guru serta snapshot bukti—bukan sebagai alasan
+mengganti arsitektur web yang berjalan.
 
-Catatan yang berubah dari versi 14 Agustus: dokumen lama menyebut langkah
-pertama setelah spike adalah "memindahkan panggilan API dari Mac ke belakang
-layanan sederhana, karena kunci Anthropic tidak boleh berakhir di dalam APK."
-Itu **tidak lagi berlaku** — PRD §7.1/§8.6 menetapkan diagnosis tetap di Mac
-untuk seluruh v1, tanpa layanan perantara apa pun. Kalau `tinta_heuristik`
-lolos gerbang, bahkan tidak ada panggilan API yang perlu dipindahkan.
-
-Kalau gagal, yang gugur cuma satu kanal masukan, bukan produknya. Foto kertas
-buram, penilaian dari jawaban akhir saja, dan wawancara terpandu yang
-naskahnya disusun AI semuanya masih di meja — semuanya lebih lemah, tapi
-tidak satu pun nol.
+Catatan versi 14 Agustus tentang memindahkan API ke layanan perantara juga tetap
+tidak berlaku. Data tulisan anak tidak boleh dikirim ke pihak ketiga tanpa
+keputusan privasi baru yang eksplisit.
 
 ---
 
@@ -976,9 +978,12 @@ lingkup LLM untuk v1 sudah diambil.
 
 Hal-hal yang harus siap sebelum mulai, supaya Hari 1 tidak habis untuk setup.
 
-**Lingkungan perekam goresan (web) — perubahan 18 Agustus**
-- Browser modern (Chrome disarankan — dukungan `getCoalescedEvents()`
-  paling matang lintas platform), tidak perlu instalasi apa pun
+**Lingkungan perekam goresan (web) — diperbarui dari hasil 19 Agustus**
+- Browser/device wajib diuji dengan `periksa_sesi.py`; lanjut hanya jika verdict
+  `sehat`. Chrome Android pada HP yang pernah diuji kehilangan
+  `getCoalescedEvents()`, jadi jangan direkomendasikan secara default; coba
+  Firefox atau Samsung Internet, lalu percaya hasil alat, bukan nama browser.
+- Tidak perlu instalasi apa pun pada browser.
 - Tidak butuh Android Studio, SDK, `adb devices`, atau USB Debugging untuk
   Hari 1–2 spike ini — itu baru relevan kalau nanti (pasca-spike) port ke
   app native

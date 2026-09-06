@@ -1,5 +1,10 @@
 # Lembar Rekap Responden — Wawancara Validasi Pasar
 
+**Status:** instrumen riset pasar. Keputusan go/no-go di bawah hanya menentukan
+validasi pasar dan positioning; ia tidak otomatis memulai fase teknis tertentu.
+Roadmap aktif harus dipilih terpisah dari `../../CLAUDE.md`, kode/test
+`../../mesin/`, dan hierarki di `../../produk/README.md`.
+
 Diisi setelah semua wawancara · 1 baris per responden · untuk sintesis & keputusan go/no-go
 
 ---
@@ -57,9 +62,9 @@ Diisi setelah semua wawancara · 1 baris per responden · untuk sintesis & keput
 
 ## Keputusan (diisi bersama analisis)
 
-- ☐ **Go** — semua hipotesis inti lulus → lanjut Fase 2 roadmap (B2C sempit), harga mengikuti data S5
+- ☐ **Go** — semua hipotesis inti lulus → validasi pasar mendukung eksplorasi B2C sempit; keputusan fase teknis dibuat terpisah dari roadmap aktif
 - ☐ **Go bersyarat** — H1/H3 lulus, H2/H4 di bawah ambang → sesuaikan pitch/harga, tambah 5–10 responden
-- ☐ **No-go / tinjau ulang** — H1 atau H3 gagal → tesis pasar tidak terbukti, kembali ke riset sebelum menambah fitur
+- ☐ **No-go / tinjau ulang** — H1 atau H3 gagal → tesis pasar tidak terbukti, kembali ke riset sebelum ekspansi produk
 
 **Catatan keputusan:**
 

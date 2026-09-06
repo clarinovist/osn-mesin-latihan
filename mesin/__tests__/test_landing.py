@@ -112,6 +112,21 @@ def test_kebijakan_sebut_laporan_pihak_ketiga():
     """Keterbukaan jujur: variasi cerita mengirim teks soal ke layanan AI."""
     h = _html(halaman_kebijakan)
     assert "layanan AI" in h
+    assert "Terakhir diperbarui 6 September 2026" in h
+    assert "sengaja mengunggah foto" in h
+    assert "Pastikan izin orang tua/wali sudah ada" in h
+    assert "belum memiliki gerbang persetujuan khusus" in h
+    assert "Hasil AI hanya berupa usulan" in h
+    assert "penyedia font tampilan" in h
+    assert "Selain akses pengelola untuk dukungan operasional" in h
+    assert "tidak terlihat oleh akun keluarga lain" in h
+    assert "mengelola data murid semua" in h
+    assert "termasuk sesi, jawaban, koreksi" in h
+    assert "lampiran, dan akun login murid" in h
+    assert "tidak dapat mengubah akun atau" in h
+    assert "sandi sesama pengelola" in h
+    assert "tidak bisa mengubah data anak" not in h
+    assert "Tidak ada pihak lain" not in h
 
 
 def test_kebijakan_penghapusan_menunjuk_kontak():

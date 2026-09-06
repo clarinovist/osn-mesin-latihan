@@ -1,5 +1,12 @@
 # Lembar Penilaian — Pola Bilangan P3 (20 Agustus 2026)
 
+**Status:** instrumen manual untuk satu sesi historis, bukan aturan reducer atau
+kenaikan level Jagomat. Gunakan alur diagnosis per butir di bawah untuk menilai
+lembar ini saja. Jangan mempromosikan satu lembar atau dua soal dalam satu sesi
+menjadi fokus otomatis; siklus aktif membutuhkan snapshot terkonfirmasi dan
+bukti kunci fokus yang sama pada minimal dua sesi berbeda. Acuan aktif:
+`../produk/Siklus Belajar Terpandu.md`.
+
 Pasangan dari `2026-08-20-p3-pola-bilangan-SOAL.md`.
 **Jangan diperlihatkan ke anak.**
 
@@ -17,8 +24,8 @@ Pasangan dari `2026-08-20-p3-pola-bilangan-SOAL.md`.
 
 ## Kode diagnosis
 
-Dari taksonomi B/K/H (`produk/Rencana Produk - Peta Jalan.md` §02), plus dua dari
-riset Newman.
+Dari taksonomi B/K/H/E/T/N aktif di `produk/PRD.md` §1.2. Peta jalan
+Agustus hanya menjadi sumber sejarahnya.
 
 | Kode | Nama | Artinya untuk kamu |
 |---|---|---|
@@ -29,8 +36,9 @@ riset Newman.
 | **T** | Tidak tahu | Belum pernah ketemu tipe ini. Bukan kegagalan |
 | **N** | Menebak | Bisa menyembunyikan K. Wajib ditanya lisan |
 
-**Metrik utama = jumlah K, bukan skor.**
-Anak dengan 9 H skor 3 lebih siap daripada anak dengan 3 K skor 9.
+**Metrik sesi ini:** catat seluruh B/K/H/E/T/N sebagai bukti per butir, bukan
+sekadar skor. Jumlah K pada lembar ini penting untuk tinjauan manual tetapi
+tidak sendirian menetapkan fokus longitudinal.
 
 ---
 
@@ -319,17 +327,22 @@ Daftar K yang muncul (tulis miskonsepsinya, bukan nomor soalnya):
 
 ---
 
-## Cara membaca hasilnya
+## Cara membaca hasil sesi manual ini
 
-**K = 0, H banyak** → konsep pola sudah terbentuk. Yang kurang aritmetika
-dasar. Jangan tambah soal pola; latih perkalian/penjumlahan cepat.
+Aturan berikut membantu orang tua memilih tindak lanjut langsung untuk lembar
+ini. Ia **bukan** aturan otomatis penetapan fokus atau kenaikan level Jagomat;
+keputusan longitudinal tetap membutuhkan bukti lintas sesi yang dikonfirmasi.
 
-**K = 1–2, terkonsentrasi di satu tipe** → sasaran jelas. Ajar ulang satu
-topik itu saja, lalu uji dengan **soal beda angka, skill sama**. Jangan
-mengulang soal yang sama persis — anak bisa hafal jawabannya.
+**K = 0, H banyak** → konsep pola tampak terbentuk pada sesi ini. Yang perlu
+dicoba berikutnya adalah strategi hitung: tulis langkah dan periksa ulang.
 
-**K ≥ 3 tersebar** → jangan naik ke P4. Turunkan dulu: kembali ke pola
-selisih tetap sampai otomatis, baru naik ke bertingkat.
+**K = 1–2, terkonsentrasi di satu tipe** → jadikan kandidat pantauan. Ajarkan
+ulang tipe itu dan uji dengan soal beda angka; baru menjadi fokus otomatis jika
+kunci yang sama muncul pada sesi lain yang dikonfirmasi.
+
+**K ≥ 3 tersebar** → jangan menaikkan kesulitan secara otomatis dari lembar ini.
+Gunakan sesi diagnostik berikutnya untuk membedakan satu lubang konsep dari
+efek lelah atau cakupan yang terlalu luas.
 
 **B banyak (≥3)** → bukan masalah matematika, dan tidak akan membaik dengan
 tambah soal. Latihannya: kotak "mintanya apa" itu sendiri. Minta anak

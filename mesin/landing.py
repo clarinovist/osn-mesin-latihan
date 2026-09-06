@@ -133,7 +133,7 @@ def halaman_kebijakan() -> bytes:
 <section class="publik-kartu-st lebar">
 <h1>Kebijakan Privasi</h1>
 <p class="publik-sub-st">Ringkas dan jujur, tanpa bahasa hukum.
-Terakhir diperbarui 30 Agustus 2026.</p>
+Terakhir diperbarui 6 September 2026.</p>
 
 <div class="publik-isi-st">
 <h2>Data yang dikumpulkan</h2>
@@ -147,8 +147,8 @@ lampiran.</li>
 </ul>
 
 <h2>Data anak</h2>
-<p>Akun anak hanya bisa dibuat oleh orang tua/guru dari dalam aplikasi —
-anak tidak pernah mendaftar sendiri. Anak hanya melihat sesi latihannya
+<p>Akun anak hanya bisa dibuat oleh orang tua/guru atau pengelola dari dalam
+aplikasi — anak tidak pernah mendaftar sendiri. Anak hanya melihat sesi latihannya
 sendiri di halaman murid; tidak ada obrolan atau kontak antar-anak.</p>
 
 <h2>Layanan AI pihak ketiga</h2>
@@ -156,15 +156,23 @@ sendiri di halaman murid; tidak ada obrolan atau kontak antar-anak.</p>
 tanpa kunci jawaban) ke layanan AI untuk ditulis ulang menjadi soal
 bercerita. Fitur <b>lampiran foto</b> mengirim foto lembar yang sudah
 diisi anak ke layanan AI agar jawabannya bisa dibaca otomatis — foto itu
-bisa memuat tulisan tangan anak. Selain dua fitur ini, tidak ada data
-yang keluar dari server.</p>
+bisa memuat tulisan tangan anak. Pengiriman terjadi saat guru atau anak
+sengaja mengunggah foto. Pastikan izin orang tua/wali sudah ada sebelum
+memakai fitur ini; aplikasi belum memiliki gerbang persetujuan khusus pada
+setiap upload. Hasil AI hanya berupa usulan dan harus diperiksa guru.</p>
+<p>Selain penyedia AI untuk dua fitur tersebut dan penyedia font tampilan,
+tidak ada pihak ketiga untuk iklan, pelacakan, atau analitik.</p>
 
 <h2>Siapa yang bisa melihat</h2>
 <ul>
-<li>Data satu keluarga hanya terlihat oleh akun keluarga itu sendiri.</li>
-<li>Akun pengelola server dapat membuka laporan untuk keperluan
-dukungan, tetapi tidak bisa mengubah data anak.</li>
-<li>Tidak ada pihak lain: tanpa iklan, tanpa pelacak, tanpa analitik.</li>
+<li>Selain akses pengelola untuk dukungan operasional di bawah, data satu
+keluarga tidak terlihat oleh akun keluarga lain.</li>
+<li>Akun pengelola server dapat melihat dan mengelola data murid semua
+keluarga untuk dukungan operasional, termasuk sesi, jawaban, koreksi,
+lampiran, dan akun login murid. Pengelola tidak dapat mengubah akun atau
+sandi sesama pengelola.</li>
+<li>Tidak ada pihak ketiga lain yang dapat melihat data anak untuk iklan,
+pelacakan, atau analitik.</li>
 </ul>
 
 <h2>Data yang tidak dikumpulkan</h2>

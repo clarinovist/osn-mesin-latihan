@@ -100,6 +100,8 @@ Alur data: `topics` (paket topik) → `generator` (parameter per level) →
 | `llm.py` | DeepSeek — HANYA memparafrase kalimat soal (opsi B2) |
 | `rumus.py` | Kartu rumus per konsep |
 | `attachments.py` | Foto lembar anak → AI vision → konfirmasi guru |
+| `learning_cycle.py` | **Direncanakan:** reducer murni siklus belajar dan rekomendasi tunggal |
+| `interventions.py` | **Direncanakan:** tindakan B/K/H/E/N/T dan contoh terbimbing |
 
 Deploy: push `main` → GitHub Actions (test → build GHCR → deploy by digest
 via forced-command SSH `/usr/local/bin/osn-deploy` di VPS) → swap container,
@@ -128,10 +130,36 @@ lewat `sqlite3.Row` yang di-monkeypatch supaya meledak saat kolom di
 
 **Kepemilikan.** Guru hanya boleh menyentuh datanya sendiri; id yang bukan
 miliknya dijawab **404** (bukan 403) dengan body identik, supaya keberadaan
-resource tidak bisa diprobe. Admin: baca-semua, tulis-tidak-ada.
+resource tidak bisa diprobe. Admin boleh membaca dan menulis data murid semua
+keluarga melalui permukaan pengelola—termasuk sesi, jawaban, koreksi, lampiran,
+dan akun login murid. Admin juga boleh membuat, menyetel ulang sandi, dan
+menghapus akun orang tua, tetapi tidak boleh mengubah akun/sandi sesama
+pengelola.
 
 **Fixture yang kena palang baru distempel eksplisit** (`pemilik="guru"`),
 bukan palangnya yang dikendurkan.
+
+**Siklus belajar terpandu.** Sumber kebenaran produk adalah
+`produk/Siklus Belajar Terpandu.md`; rincian implementasi ada di
+`docs/plan/2026-09-06-siklus-belajar-terpandu.md` (gitignored). Jangan
+menyederhanakannya menjadi diagnosis → lebih banyak soal. Kontrak wajib:
+
+- alur utama: pemetaan → fokus → intervensi/contoh terbimbing → penguatan
+  mandiri → evaluasi berjeda → checkpoint → maju atau eskalasi;
+- bukti pedagogis hanya dari snapshot outcome append-only yang dikonfirmasi
+  eksplisit; `direview` dan `kode_final` mutable bukan bukti sendiri;
+- reducer `learning_cycle.py` menjadi sumber tunggal status/rekomendasi profil
+  dan laporan, tetap murni tanpa penulisan DB;
+- kunci fokus kanonis `(template_id, kode_intervensi, malrule_id)`, maksimal
+  dua per putaran; latihan terbimbing/penguatan tidak menambah kelemahan;
+- B/K/H/E/N/T masing-masing berujung tindakan; materi T wajib melewati
+  pengenalan lalu probe, dan jawaban benar belum lulus tanpa “bisa menjelaskan”;
+- evaluasi minimal 4 probe per fokus; checkpoint per fokus berulang 28 hari
+  dan minimal 3 probe; gagal kedua atau ketiadaan pendekatan lain → eskalasi;
+- sesi manual/stale/beda level tidak boleh memblokir CTA utama; sesi berbukti
+  tidak boleh di-hard-delete—gunakan pembatalan/arsip dan pertahankan provenance;
+- permukaan anak hanya menampilkan tahap netral, tidak pernah kode diagnosis,
+  label kelemahan, kunci, malrule, atau alasan internal.
 
 ## 7. Menambah/mengubah soal — bug class yang selalu balik
 

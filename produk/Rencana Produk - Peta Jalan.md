@@ -1,9 +1,21 @@
 # Peta Jalan — Aplikasi Diagnosis Matematika Anak
 
-**Status dokumen:** sumber kebenaran untuk arah produk & roadmap.
-`Rencana Produk - Peta Jalan.html` / `.pdf` adalah render versi 14 Agustus
-yang **sudah tertinggal** dari dokumen ini — biarkan sebagai artefak
-historis, jangan dipakai sebagai acuan.
+**Status dokumen:** arsip keputusan dan roadmap konsep 14–18 Agustus 2026,
+**bukan urutan kerja aktif**. Aplikasi web SQLite di `../mesin/` kini sudah
+memiliki akun/multi-keluarga, sesi, diagnosis, remedial, laporan, dan foto—jadi
+klaim “belum ada kode”, “tanpa akun/server/DB”, urutan Fase 0–3, serta
+`osn sync` di bawah harus dibaca sebagai sejarah desain, bukan instruksi.
+
+Acuan aktif:
+
+1. kode dan test `../mesin/` untuk perilaku yang sudah ada;
+2. `../CLAUDE.md` untuk palang arsitektur dan pengembangan;
+3. `Siklus Belajar Terpandu.md` untuk kontrak produk siklus aktif;
+4. `../docs/plan/2026-09-06-siklus-belajar-terpandu.md` untuk rincian implementasi;
+5. `PRD.md` hanya untuk prinsip pedagogis yang belum digantikan.
+
+`Rencana Produk - Peta Jalan.html` / `.pdf` adalah render historis versi lama
+dan tidak dipakai sebagai acuan.
 
 Rencana produk · konsolidasi · 14 Agustus 2026 · direvisi 17 Agustus 2026 ·
 direvisi 18 Agustus 2026
@@ -12,12 +24,15 @@ Satu dokumen yang menggabungkan arah produk, taksonomi B/K/H, hasil riset
 dua-putaran, rencana spike, dan roadmap setelahnya — supaya tidak perlu buka
 lima percakapan berbeda untuk tahu di mana kita berdiri.
 
-**Status sekarang:** siap eksekusi Fase 0 — spike 5–7 hari, belum ada satu
-baris kode pun ditulis.
+**Status sekarang:** dokumen ini merekam posisi 18 Agustus ketika Fase 0 masih
+akan dieksekusi. Posisi proyek terkini harus dibaca dari kode/test `../mesin/`
+dan plan siklus terbaru; jangan menggunakan status historis di bagian bawah
+untuk menentukan pekerjaan berikutnya.
 
-**Hierarki dokumen** (dibuat eksplisit karena sekarang ada empat dokumen aktif):
+**Hierarki dokumen saat dokumen ini ditulis** tercatat di bawah sebagai
+konteks historis. Hierarki aktif sekarang ada di `README.md` folder ini.
 
-| Dokumen | Perannya |
+| Dokumen | Perannya saat itu |
 |---|---|
 | `PRD.md` | **Sumber kebenaran arsitektur & keputusan produk.** Kalau dokumen lain berbeda, PRD yang benar. |
 | `Rencana Spike - Coretan ke Diagnosis.md` | Panduan eksekusi 5–7 hari Fase 0 |
@@ -256,7 +271,10 @@ kalah.
 
 ---
 
-## 05 · Roadmap setelah spike
+## 05 · Roadmap historis setelah spike
+
+Bagian ini menjelaskan urutan yang direncanakan pada 18 Agustus dan tidak boleh
+dipakai sebagai backlog aktif. Lihat banner dokumen untuk acuan sekarang.
 
 Melebar hanya kalau lapisan sebelumnya terbukti jalan — bukan bangun semua
 fitur dulu baru diuji.
@@ -348,7 +366,10 @@ nyata (PRD §9.4).
 
 ---
 
-## 07 · Bentuk aplikasinya
+## 07 · Bentuk aplikasi yang direncanakan saat itu
+
+Bagian ini adalah snapshot arsitektur 18 Agustus, bukan gambaran aplikasi yang
+berjalan sekarang. Untuk arsitektur aktual lihat `../CLAUDE.md` dan `../mesin/`.
 
 Bukan aplikasi belajar yang bertambah fitur seiring waktu — alat diagnosis
 yang mulai sangat sempit dan baru melebar kalau tiap lapisan terbukti jalan.
@@ -403,5 +424,6 @@ Sumber: memori keputusan produk (14 Agustus 2026) · `PRD.md` (revisi 17
 Agustus 2026) · `Rencana Spike - Coretan ke Diagnosis.md` · laporan riset
 dua-putaran (47 sumber, 38 klaim terverifikasi).
 
-Dokumen kerja — perbarui setiap kali keputusan baru diambil, jangan biarkan
-basi.
+Dokumen ini dipertahankan sebagai arsip keputusan; jangan memperbaruinya menjadi
+roadmap aktif. Catat keputusan produk baru di plan aktif dan ringkas kontrak
+tahan-lamanya di `../CLAUDE.md`.

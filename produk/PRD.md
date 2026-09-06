@@ -1,12 +1,40 @@
 # PRD — Aplikasi Diagnosis & Remediasi Matematika SD
 
-Dokumen hidup, dibangun bertahap per sesi diskusi. Konteks produk & keputusan
-sebelumnya ada di memory (`osn-app-arah-produk`, `osn-taksonomi-bkh`) dan riset
-pasar di `gap-pasar-edtech-matematika-sd/report.md`. Bagian pertama yang
-dibahas: **Remediasi** — apa yang terjadi setelah sebuah kesalahan
-terdiagnosis B/K/H.
+**Status dokumen:** sumber prinsip pedagogis dan riwayat keputusan awal,
+**bukan spesifikasi arsitektur aplikasi yang berjalan**. Bagian yang menetapkan
+Android capture-only, transfer USB, file/YAML tanpa server/DB, satu anak tanpa
+akun, graf topik, dan orkestrator `osn sync` sudah digantikan oleh aplikasi web
+SQLite di `../mesin/`.
+
+Hierarki yang berlaku sejak 6 September 2026:
+
+1. kode dan test `../mesin/` membuktikan perilaku yang sudah tersedia;
+2. `../CLAUDE.md` memuat palang arsitektur, privasi, dan pengembangan;
+3. `Siklus Belajar Terpandu.md` adalah spesifikasi produk aktif untuk siklus;
+4. `../docs/plan/2026-09-06-siklus-belajar-terpandu.md` adalah rincian implementasi lokal/gitignored;
+5. dokumen ini tetap menjadi acuan untuk prinsip yang belum digantikan:
+   diagnosis harus menghasilkan tindakan, K perlu intervensi konsep, evaluasi
+   berjeda memakai soal baru, jawaban benar belum cukup tanpa penjelasan,
+   kegagalan berulang perlu eskalasi, dan status harus dapat diaudit.
+
+Jika bagian lama di bawah bertentangan dengan hierarki tersebut, bagian lama
+adalah konteks historis dan tidak boleh diterjemahkan menjadi pekerjaan baru.
+Khusus siklus terkini, istilah yang berlaku adalah putaran dengan maksimal dua
+kunci fokus kanonis, snapshot konfirmasi append-only, intervensi → latihan
+terbimbing → penguatan mandiri → evaluasi → checkpoint per fokus, serta jalur
+pengenalan untuk T.
+
+Dokumen ini dibangun bertahap per sesi diskusi. Konteks riset pasar ada di
+`../riset-pasar/gap-pasar-edtech-matematika-sd/report.md`.
 
 ## Revisi arsitektur (sesi ini)
+
+### Catatan supersesi 6 September 2026
+
+Daftar di bawah merekam keputusan 17–18 Agustus dan tetap berguna untuk
+memahami asal konsepnya. Ia **tidak** membatalkan banner status di atas:
+keputusan arsitektur teknis lama telah digantikan oleh `mesin/`, sedangkan
+prinsip pedagogisnya diserap ke plan siklus terpandu terbaru.
 
 Empat keputusan diubah/ditambahkan setelah menelusuri konsistensi antar
 bagian. Tiga yang pertama adalah koreksi tabrakan internal, bukan preferensi
@@ -25,9 +53,10 @@ diingat; golden test `MotionEvent.toSamples()` sebagai satu-satunya test wajib
 hari pertama (§8.8); dan §9.4 memisahkan klaim yang **belum diverifikasi** dari
 keputusan yang sengaja ditunda.
 
-Yang **tidak** berubah: file-based tanpa server/DB, tanpa izin INTERNET,
-tanpa OCR, tanpa UI review, satu operator, batch bukan real-time. Ukuran
-arsitektur §8.6 tetap dinilai tepat untuk skala satu keluarga.
+Catatan historis 17 Agustus: rancangan saat itu masih file-based tanpa
+server/DB, tanpa izin INTERNET, tanpa OCR, tanpa UI review, satu operator, dan
+batch. Keputusan teknis tersebut sudah superseded sebagaimana banner di atas;
+prinsip privasi dan tinjauan manusia tetap berlaku.
 
 ### Catatan 18 Agustus — perekam goresan spike jadi web, platform native ditunda
 
@@ -64,139 +93,98 @@ kode B/K/H dan per pola jawaban salah. v1 pada dasarnya **mendigitalkan dan
 menskalakan pola yang sudah terbukti di dua dokumen itu**, bukan merancang
 dari nol.
 
-### 1.2 Tiga arketipe remediasi
+### 1.2 Enam jalur tindakan
 
-| Kode | Sifat masalah | Tindakan | Target durasi | Berat konten |
-|---|---|---|---|---|
-| **B** — salah baca | Bukan lubang matematika | Pegang pensil, tandai angka & yang ditanya, ucapkan ulang soal dengan kalimat sendiri sebelum menghitung | 2–3 minggu, biasanya hilang sendiri | Ringan — cukup generik lintas topik |
-| **K** — salah konsep | Paling serius: anak konsisten pakai cara keliru dan yakin benar | Diulang dari konsep pakai **benda nyata** (concrete) sebelum kembali ke simbol/angka. Tidak cukup membetulkan jawabannya | 4–6 minggu per lubang topik | Berat — harus spesifik per topik |
-| **H** — salah hitung | Caranya benar, angkanya meleset | Bukan materi baru — pembiasaan "tulis langkah, periksa ulang". Kalau H menumpuk di banyak soal → gejala terburu-buru, bukan gejala paham | Tidak perlu jeda kurikulum, cukup ubah kebiasaan sesi | Ringan — hampir template |
+Diagnosis bukan enam versi dari drill yang sama. Setiap kode memiliki tindakan
+berbeda:
 
-Kasus khusus yang wajib ditangani: **jawaban benar tapi tidak bisa jelaskan
-"dapat dari mana"** = K terselubung. Ini bukan hipotetis — riset frontier
-2025-2026 ("Correct Answer Trap") menunjukkan bahkan LLM canggih gagal
-menangkap ini, dan dua PDF di atas sudah mengantisipasinya lewat wawancara
-lisan. Skor benar **tidak boleh** otomatis menutup sebuah topik di graf.
+| Kode | Sifat masalah | Tindakan utama |
+|---|---|---|
+| **B** — salah baca | Informasi/pertanyaan tidak dipahami tepat | Tandai informasi, ucapkan ulang yang ditanya; tempelkan strategi ke sesi berikutnya |
+| **K** — salah konsep | Cara berpikir konseptual keliru | Konkret/visual → contoh terbimbing → penguatan mandiri |
+| **H** — salah hitung | Strategi benar, operasi meleset | Tulis langkah dan periksa ulang; bukan lubang konsep |
+| **E** — salah tulis akhir | Kerja benar, jawaban akhir salah salin | Cocokkan hasil kerja dengan kotak jawaban sebelum mengirim |
+| **N** — menebak/tidak dapat menjelaskan | Jawaban belum menjadi bukti pemahaman | Probe “dapat dari mana?”; kegagalan berulang menjadi kandidat K terselubung tanpa mengubah kode historis |
+| **T** — materi baru | Belum pernah dipelajari | Pengenalan materi → contoh awal → probe diagnostik; bukan kelemahan/remedial |
 
-### 1.3 Sumber konten resep: pustaka pra-tulis dulu, AI generate sebagai fallback
+Kasus khusus yang wajib ditangani: **jawaban benar tapi tidak bisa menjelaskan
+“dapat dari mana”** belum menutup fokus. Orang tua mencatat
+`bisa_menjelaskan | ragu | menghafal`; hanya yang pertama dapat mendukung status
+“mulai membaik” atau “bertahan”.
 
-Keputusan: untuk setiap `(topik, kode)`, sistem cari dulu di **pustaka
-pra-tulis** (ditulis manusia, gaya & kehati-hatian sama seperti dua PDF di
-atas). Kalau belum ada entri untuk kombinasi itu, **AI generate on the fly**
-lewat pipeline diagnosis yang sudah ada (skrip Python di Mac, offline).
+### 1.3 Sumber konten intervensi: pra-tulis dan ditinjau manusia
 
-Alasan urutannya begini (bukan sebaliknya):
-- **K butuh pustaka pra-tulis lebih dulu.** Ini paling berisiko kalau
-  kontennya asal — analogi benda nyata yang keliru bisa menanamkan
-  miskonsepsi baru, bukan membetulkan. Prioritas authoring manual: mulai
-  dari topik-topik yang sudah muncul di Tes Kalibrasi Minggu 0 (urutan
-  operasi, pecahan, desimal, persen, FPB/KPK, keterbagian, luas, volume,
-  satuan, kecepatan, rata-rata, pola bilangan, pencacahan) — 14 topik ini
-  sudah punya *seed* dari pola jawaban salah yang ada di PDF — yang jadi
-  bahan malrule pertama (§2.3.1).
-- **B dan H boleh AI-generate sejak awal** tanpa banyak pra-authoring — dua
-  arketipe ini secara alami generik lintas topik (strategi baca soal,
-  kebiasaan periksa ulang tidak banyak berubah per topik).
-- **Human-in-the-loop otomatis ada di v1** karena orang tua = founder =
-  operator skrip Python. Resep AI-generated dibaca founder sendiri sebelum
-  dipakai ke anak — tidak perlu mekanisme approval terpisah dulu. Kalau nanti
-  keluar dari lingkup satu keluarga, baru perlu gerbang review eksplisit.
-- Field `sumber: pra-tulis | ai-generated` disimpan di tiap resep yang
-  terpakai — bukan untuk ditampilkan ke orang tua, tapi jadi jejak audit buat
-  menilai nanti resep AI mana yang layak "naik kelas" jadi pra-tulis.
+Untuk MVP siklus terpandu, tindakan dicari dari pustaka pra-tulis yang dipetakan
+ke kunci fokus dan kode intervensi. K membutuhkan konten spesifik yang aman:
+contoh konkret/visual, contoh terbimbing, dan pendekatan alternatif dengan
+`pendekatan_id` berbeda.
 
-### 1.4 Bentuk data satu "resep"
+- Jika konten K spesifik belum tersedia, sistem harus **fail visible** kepada
+  orang tua dan mempertahankan fokus terbuka; jangan diam-diam menggantinya
+  dengan drill generik.
+- B/H/E/N boleh memakai strategi generik yang ditulis dan direview manusia.
+- T memakai materi pengenalan yang ditulis manusia, lalu probe diagnostik.
+- AI tidak menulis intervensi yang langsung dipakai anak. Usulan AI baru boleh
+  dipertimbangkan kelak melalui review manusia dan keputusan produk terpisah.
+- Sumber serta versi konten intervensi dicatat sebagai `pendekatan_id` agar
+  kegagalan pertama benar-benar dapat diikuti pendekatan berbeda.
 
-Setiap resep, pra-tulis maupun AI-generated, wajib punya bentuk yang sama
-(meniru struktur yang sudah terbukti di PDF):
+### 1.4 Bentuk data satu intervensi
 
-```
-topik_id
-kode: B | K | H
-sifat_masalah      # 1-2 kalimat, bahasa orang tua awam, bukan register pedagogis
-tindakan           # langkah konkret, bukan teori — parent bisa langsung eksekusi
-durasi_target       # kapan wajar mulai membaik
-verifikasi          # kapan & bagaimana re-test (default: 3 hari, soal beda angka sama skill)
-sumber: pra-tulis | ai-generated
+```text
+kunci_fokus: (template_id, kode_intervensi, malrule_id|null)
+pendekatan_id
+sifat_masalah      # bahasa orang tua, bukan label untuk anak
+tindakan_orang_tua # langkah konkret
+contoh_terbimbing  # yang dibahas bersama
+strategi_anak      # instruksi netral yang aman tampil ke anak
+sumber             # pra-tulis/review manusia
 ```
 
-Guardrail yang dibawa dari PDF, berlaku ke semua resep tanpa kecuali:
-- **Tidak pernah ditampilkan ke anak.** Kesimpulan B/K/H adalah data orang
-  tua, bukan bahan ceramah ke anak di hari yang sama.
-- **Tidak ada resep tanpa tindakan konkret.** Label kode saja (mis. "K di
-  topik pecahan") tidak pernah dikirim sendirian — selalu menempel dengan
-  `tindakan`.
+Guardrail:
 
-### 1.5 Loop verifikasi (uji ulang berjeda)
+- Diagnosis dan label kelemahan tidak pernah ditampilkan ke anak.
+- Tidak ada intervensi tanpa tindakan konkret.
+- Satu `pendekatan_id` tidak boleh dipakai lagi setelah gagal bila alternatif
+  tersedia; tanpa alternatif, eskalasi lebih jujur daripada mengulang identik.
 
-Pola dari PDF: soal yang salah dipindah ke "buku kesalahan", dikerjakan ulang
-dari nol setelah jeda (default 3 hari), bukan langsung di sesi yang sama —
-supaya yang terukur adalah retensi, bukan hafalan jangka pendek.
+### 1.5 Siklus belajar aktif
 
-Status topik di graf prasyarat (menambah state yang sudah disepakati
-sebelumnya — non-kalender, berbasis kondisi anak):
+Urutan aktif adalah:
 
-```
-belum_dicoba → dicoba → ditandai(B|K|H) → resep_diberikan
-             → menunggu_verifikasi (dijadwalkan, bukan tanggal kalender —
-               dipicu sesi berikutnya yang menyentuh topik sama)
-             → selesai (retensi terbukti) | masih_bermasalah (loop balik,
-               eskalasi — lihat 1.6)
-```
+`pemetaan → fokus → intervensi/contoh terbimbing → penguatan mandiri → evaluasi berjeda → checkpoint → maju atau eskalasi`
 
-`menunggu_verifikasi` tidak boleh otomatis dianggap "selesai" hanya karena
-jawaban berikutnya benar — kalau ada indikasi menghafal (lihat kasus khusus
-1.2), tetap butuh cek "dapat dari mana" versi digital.
+- Evaluasi tersedia tiga hari setelah penguatan selesai dan hasilnya
+  dikonfirmasi, memakai parameter baru dan minimal empat probe per fokus.
+- Lulus evaluasi menghasilkan status **mulai membaik**, bukan selesai.
+- Checkpoint pertama jatuh tempo 28 hari setelah evaluasi sukses dan memakai
+  minimal tiga probe per fokus. Keberhasilan memberi status **bertahan**;
+  checkpoint berikutnya tetap menguji retensi dan mendeteksi kekambuhan.
+- Gagal pertama memakai pendekatan intervensi berbeda. Gagal kedua, atau tidak
+  tersedianya pendekatan alternatif, memicu cek prasyarat statis/uji ulang lisan.
+- Semua status diturunkan dari snapshot konfirmasi dan kejadian append-only,
+  bukan field status yang ditimpa.
 
-Catatan implementasi (§8.4): state ini **tidak disimpan sebagai field yang
-ditimpa** di node graf. Ia dihitung dari riwayat kejadian —
-`status(topik) = derive(kejadian)`. Konsekuensi yang relevan untuk bagian ini:
-sebuah topik tidak pernah "kehilangan" jejak bahwa ia dulu pernah `K`, karena
-yang tersimpan adalah kemunculannya, bukan status terakhirnya. Ini yang
-membuat ambang §1.6 ("≥2 kemunculan K", "gagal verifikasi 2x") bisa dihitung
-sama persis kapan pun, termasuk berbulan-bulan setelah kejadiannya.
+### 1.6 Ambang fokus, eskalasi, dan verifikasi pemahaman
 
-### 1.6 Keputusan: eskalasi, verifikasi lisan, dan threshold
+Kunci fokus kanonis adalah `(template_id, kode_intervensi, malrule_id)`.
+K atau H baru menjadi fokus otomatis setelah kunci yang sama muncul pada
+minimal dua sesi berbeda. Satu kemunculan hanya menjadi kandidat pantauan dan
+mendapat probe diagnostik lanjutan.
 
-Tiga hal ini diputuskan bersama karena saling mengunci — satu prinsip
-konfirmasi (2x) dipakai konsisten di ketiganya, bukan angka ambang yang
-beda-beda di tempat berbeda.
+Maksimal dua kunci fokus aktif dalam satu putaran. Kegagalan evaluasi kedua
+berturut-turut memicu eskalasi, bukan drill ketiga yang identik. Jawaban benar
+hanya mendukung kelulusan bila orang tua mencatat **bisa menjelaskan**;
+`ragu`/`menghafal` mempertahankan fokus terbuka dan dapat menjadi kandidat K
+terselubung tanpa menulis ulang diagnosis historis.
 
-**Threshold "K aktif": ≥2 kemunculan kode K di topik yang sama** (tidak harus
-berturut-turut dalam satu sesi). Klasifikasi B/K/H dari tinta digital adalah
-heuristik, bukan kepastian (spike sendiri menoleransi ~30% meleset — target
-lulus "≥7 dari 10 kode cocok"). Satu kemunculan terlalu rawan alarm palsu
-yang memblokir anak salah sasaran. Efeknya **soft gate**, bukan kunci mati:
-topik-topik lanjutan yang mensyaratkan topik berstatus "K aktif" turun
-prioritas di rekomendasi, tapi tidak dikunci total — konsisten dengan prinsip
-non-kalender yang sudah disepakati (bolong tidak menimbulkan utang sesi, jadi
-gating pun tidak boleh kaku).
+## 2. Diagnosis — prinsip aktif, kanal goresan historis
 
-**Eskalasi kalau K yang sama gagal verifikasi 2x berturut-turut** (bukan
-sekadar perpanjang durasi — itu logika H, bukan K):
-1. Cek topik prasyarat langsung di graf. Kalau prasyaratnya sendiri belum
-   pernah terverifikasi kokoh → mundur ke sana dulu. Ini logika yang sama
-   dengan "Bagian 1 banyak salah → tunda kurikulum, benahi fondasi dulu" di
-   Tes Kalibrasi — remediasi di topik lanjutan percuma kalau fondasinya
-   goyah.
-2. Kalau prasyaratnya sudah kokoh (bukan soal fondasi), eskalasi ke **Uji
-   Ulang Lisan** — instrumen wawancara yang sudah ada, dipakai sebagai
-   diagnosis lapis kedua, bukan mengulang remediasi tertulis yang sama untuk
-   ketiga kalinya.
-
-**Versi digital "dapat dari mana?": masuk v1, versi ringan.** Ini inti klaim
-diferensiasi produk (Correct Answer Trap — jawaban benar tidak berarti
-paham), jadi tidak bisa ditunda ke v2 tanpa melubangi klaim diagnosis itu
-sendiri. Tapi tidak perlu sesi 12-soal terpisah untuk tiap topik — cukup nudge
-kontekstual di dua titik: (a) saat topik akan ditandai "selesai", (b) jawaban
-benar pertama setelah topik lepas dari status "K aktif". Orang tua diminta
-tanya lisan sebentar, lalu catat lewat 3 pilihan singkat: **bisa jelaskan /
-ragu-ragu / menghafal**. "Menghafal" atau "ragu-ragu" mencegah topik ditutup
-meski jawaban tertulisnya benar. Sesi Uji Ulang Lisan penuh (12 soal
-terstruktur) tetap jadi instrumen terpisah untuk kasus eskalasi (poin 2 di
-atas), bukan dijalankan rutin per topik.
-
-## 2. Diagnosis
+Prinsip aktif: mesin memberi usulan B/K/H/E/T/N, guru meninjau dan
+mengonfirmasi hasil, lalu snapshot konfirmasi menjadi satu-satunya bukti yang
+dihitung reducer. Subbagian tentang kanvas, `kode_awal`, tinta heuristik/LLM,
+dan file Mac adalah desain eksperimen lama; gunakan hanya jika kanal goresan
+dilanjutkan secara eksplisit.
 
 Bagaimana goresan tangan di layar HP dipetakan jadi kode B/K/H secara
 otomatis. Ini jantung teknis produk — tapi ternyata lebih sempit lingkupnya
@@ -212,11 +200,10 @@ dari yang terlihat, begitu dipecah sesuai bukti yang sudah ada.
   digoreskan. Ini menyederhanakan v1 drastis: tidak ada model ML terpisah
   untuk mengenali tulisan, cocok dengan keputusan "tanpa izin INTERNET" di
   spike (tidak ada API OCR eksternal yang dibutuhkan).
-- **Orang tua tetap wasit akhir, bukan sistem.** Skrip Python menghasilkan
-  kode *draf* (`kode_awal`); tidak ada kode yang menghitung ke status topik
-  atau ke ambang "K aktif" (§1.6) sebelum orang tua meninjau dan
-  mengonfirmasi/mengoreksinya jadi `kode_final`. Ini pola yang sama dengan
-  §1.3 (resep AI-generated dibaca founder dulu) — sengaja konsisten.
+- **Orang tua/guru tetap wasit akhir, bukan sistem.** Mesin menghasilkan
+  `kode_usulan`; tidak ada hasil yang dihitung ke siklus sebelum guru
+  mengoreksi bila perlu lalu menekan **Konfirmasi hasil**, yang membuat snapshot
+  kanonis ber-`konfirmasi_id`. `kode_final` mutable saja belum cukup.
 - **Asimetri biaya kesalahan: false-K lebih mahal dari false-H.** K memicu
   remediasi berat (4-6 minggu, benda nyata) dan soft-gate progres; H cuma
   butuh pembiasaan periksa ulang. Ini sudah jadi gerbang lulus spike sendiri:
@@ -253,9 +240,10 @@ Tahap B — Pola tinta (dipakai kalau tidak ada malrule yang cocok)
   sinyal campur atau lemah               → "tidak pasti" (bukan dipaksa K)
   Dua implementasi paralel — lihat §2.3.2
 
-Tahap C — Tinjauan orang tua (wajib, bukan opsional)
-  kode_awal ditampilkan + alasan singkat → orang tua konfirmasi/koreksi
-  → kode_final (satu-satunya yang dihitung ke §1.5/§1.6)
+Tahap C — Tinjauan guru (wajib, bukan opsional)
+  kode_usulan ditampilkan + alasan singkat → guru konfirmasi/koreksi
+  → kode_final disalin ke snapshot outcome lewat aksi Konfirmasi hasil
+  → hanya snapshot ber-`konfirmasi_id` yang dihitung ke siklus
 ```
 
 ### 2.3.1 Malrule sebagai fungsi, bukan tabel pasangan literal
@@ -376,9 +364,9 @@ seluruh riwayat dan bandingkan. Malrule yang terlalu longgar (menangkap
 jawaban yang dulu dinilai H jadi K) tertangkap di sini, sebelum dipakai ke
 anak.
 
-Pola ini sama dengan §1.3 (resep AI-generated yang layak naik kelas jadi
-pra-tulis) — dua bagian PRD ini memakai mekanisme pertumbuhan konten yang
-sama secara sengaja, supaya tidak ada dua cara berbeda untuk hal yang sama.
+Promosi malrule tetap wajib ditinjau manusia dan diuji lewat replay terhadap
+snapshot keputusan yang sudah disahkan. Ini paralel dengan §1.3 hanya pada
+prinsip review manusia—bukan izin menghasilkan intervensi langsung lewat AI.
 
 ### 2.5 Bentuk data satu hasil diagnosis
 
@@ -394,7 +382,8 @@ alasan_singkat              # kenapa sistem menebak begitu — ditampilkan ke or
 aturan_versi                # versi pustaka malrule + heuristik yang dipakai
 prompt_versi                # null kalau tahap_asal bukan tinta_llm
 model                       # null kalau tahap_asal bukan tinta_llm
-kode_final: B | K | H       # diisi orang tua, wajib sebelum dihitung ke manapun
+kode_final: B | K | H | E | T | N  # mutable sampai aksi Konfirmasi hasil
+konfirmasi_id                       # snapshot kanonis; wajib sebelum dihitung ke siklus
 ```
 
 Tiga field jejak (`aturan_versi`, `prompt_versi`, `model`) bukan hiasan:
@@ -449,7 +438,12 @@ Aturan keputusan atas dua angka itu:
 - Kalau keduanya gagal → yang gugur adalah kanal tinta, bukan produknya
   (Tahap A malrule + tinjauan orang tua masih berdiri sendiri).
 
-## 3. Graf Topik & Prasyarat
+## 3. Graf Topik & Prasyarat — konsep historis, belum diimplementasikan
+
+Bagian ini tidak menggambarkan registry `topics.py` yang berjalan dan tidak
+menjadi prasyarat implementasi siklus MVP. Eskalasi MVP memakai pemetaan
+prasyarat statis yang ditulis manusia hanya bila tersedia; jangan membangun
+graf adaptif penuh dari bagian ini tanpa keputusan produk baru.
 
 Bagaimana peta 20 minggu di `KurikulumFondasiMatematikaOSNSD2027.pdf`
 di-decompile jadi graf, sesuai keputusan lama: bukan kurikulum berkalender,
@@ -549,7 +543,11 @@ harus ditulis baru sebelum root graf yang sekarang (M1 tiap jalur) bisa jadi
 titik mulai yang aman untuk anak kelas 4. (Lihat §5.4 untuk keputusan cara
 v1 menangani anak yang jatuh ke kondisi ini sebelum konten itu ditulis.)
 
-## 4. Alur Sesi & Rekomendasi
+## 4. Alur Sesi & Rekomendasi — digantikan plan siklus terpandu
+
+Prioritas dan state pada bagian ini adalah rancangan lama. Urutan CTA aktif,
+putaran fokus, intervensi, evaluasi, checkpoint, pengenalan T, serta aturan
+sesi stale ditentukan oleh plan 6 September dan ringkasannya di `CLAUDE.md`.
 
 Bagian yang sengaja ditunda dari §3.4: begitu graf dan status tiap topik ada,
 apa yang sebenarnya disodorkan ke orang tua saat mereka membuka aplikasi?
@@ -623,7 +621,11 @@ dengan data tak-tertinjau — pilihan yang aman adalah sesi netral (tryout
 campuran atau latihan bebas topik yang sudah lama `selesai`) yang tidak
 bergantung pada status K/verifikasi terbaru, sampai tinjauan selesai.
 
-## 5. Onboarding & Kalibrasi Awal
+## 5. Onboarding & Kalibrasi Awal — historis
+
+Aplikasi aktif tidak memakai tes kertas 20 soal sebagai gerbang wajib sebelum
+sesi digital. Pemetaan aktif memakai tiga tanggal sesi pendek plus probe
+lanjutan; bagian ini hanya sumber ide kalibrasi dan wawancara.
 
 ### 5.1 Prinsip: kalibrasi dulu, graf belakangan
 
@@ -681,33 +683,22 @@ di luar 20 soal itu) tetap `belum_dicoba` normal.
 
 ### 5.4 Keputusan: gap pra-fondasi (skor <9 atau Bagian 1 Uji Ulang Lisan "banyak salah")
 
-§3.7 sudah mengonfirmasi: belum ada satu pun node graf tertulis untuk
-lapisan di bawah M1. Keputusan v1: **tidak blocking, tidak juga dipaksa
-masuk M1 — dibuka mode pra-fondasi non-graf yang AI-generate sejak hari
-pertama**, dengan gate keluar berbasis kondisi bukan tanggal. Alasannya,
-dipetakan ke prinsip yang sudah ada:
+Bagian ini historis dan tidak menjadi izin implementasi. Untuk siklus aktif,
+konten pra-fondasi/materi baru harus ditulis atau direview manusia, mengikuti
+jalur pengenalan T lalu probe diagnostik; AI tidak boleh menghasilkan
+intervensi yang langsung dipakai anak.
 
-- **Kenapa bukan blocking penuh ("app belum siap dipakai")**: app ini
-  satu-keluarga, orang tua = founder = operator. Menutup app total selama
-  4-8 minggu berarti tidak ada yang menopang 3 sesi/minggu yang tetap harus
-  jalan di dunia nyata — bertentangan dengan alasan app ini dibuat.
-  Blocking juga tidak konsisten dengan pola yang sudah dipakai di §1.3:
-  AI-generate-on-the-fly sudah diizinkan untuk konten yang sifatnya
-  prosedural (B, H), dan drilling operasi dasar (perkalian/pembagian
-  bersusun) jauh lebih dekat ke H (kelancaran prosedural) daripada K (butuh
-  benda nyata + pemahaman konsep) — jadi tidak perlu menunggu pustaka
-  pra-tulis seperti K.
+Paragraf berikut adalah alasan historis rancangan lama dan tidak lagi memberi
+izin AI-generate. Keputusan aktif di atas mewajibkan konten pra-tulis/review
+manusia dan jalur pengenalan T.
 - **Kenapa bukan langsung dipaksa M1**: PDF eksplisit — "melanjutkan tanpa
   ini hanya membuat anak frustrasi". Memaksa M1 tanpa fondasi melanggar
   guardrail "tidak boleh membuat anak frustrasi" yang sudah jadi salah satu
   dari tiga uji keputusan teknis di PRD ini.
-- **Bentuk konkret v1**: sesi pra-fondasi dibangkitkan AI on-the-fly,
-  berbasis bentuk soal Bagian 1 Uji Ulang Lisan (perkalian/pembagian dasar,
-  tanpa timer, boleh bersusun/pakai jari) — bukan node topik permanen di
-  graf (tidak punya `topik_id`, tidak dicatat B/K/H per §3.2/§1.4), cukup
-  dicatat sebagai sesi dengan skor drill ringan (benar/salah per soal, tanpa
-  klasifikasi B/K/H karena bukan kesalahan konsep yang perlu didiagnosis,
-  murni kelancaran fakta dasar).
+- **Bentuk konkret rancangan lama**: sesi pra-fondasi pernah direncanakan
+  dibangkitkan AI on-the-fly. Pilihan ini dibatalkan untuk siklus aktif;
+  gunakan konten yang ditulis/review manusia, tujuan `pengenalan`, lalu probe
+  diagnostik sebelum materi keluar dari antrean.
 - **Gate keluar — kondisi, bukan kalender**: bukan "tunggu 6 minggu lalu
   otomatis buka M1". Orang tua yang memutuskan kapan mengulang cek ringan
   (subset item operasi dasar, atau ulang Bagian 1 Uji Ulang Lisan) — kalau
@@ -767,7 +758,8 @@ kalibrasi_awal:
     { soal_id, topik_id, jawaban_anak, benar: boolean,
       kode_awal: B|K|H|null,          # null kalau benar dan tidak diwawancara
       sumber_kode: wawancara-10-menit | uji-ulang-lisan | null,
-      kode_final: B|K|H|null }        # wajib diisi orang tua sebelum dihitung ke §1.5/§1.6
+      kode_final: B|K|H|E|T|N|null,
+      konfirmasi_id: integer|null } # snapshot wajib sebelum dihitung ke siklus
   ]
 ```
 
@@ -789,7 +781,10 @@ itu, bukan operasi tulis terpisah. Konsekuensi praktisnya: kalau pemetaan
 soal→node ternyata perlu dikoreksi kelak, kalibrasi bisa dihitung ulang tanpa
 mengulang tes ke anak.
 
-## 6. Input Tulisan Tangan & Kanvas
+## 6. Input Tulisan Tangan & Kanvas — eksperimen historis
+
+Kanvas goresan bukan fondasi `mesin/`. Rujuk `../spike/` bila eksperimen kanal
+ini sengaja dilanjutkan; jangan menjadikannya syarat siklus belajar aktif.
 
 ### 6.1 Pembukaan kanvas baru: tombol manual, bukan deteksi otomatis
 
@@ -907,28 +902,49 @@ tahu dan menunjukkan dengan jelas apakah sesi sedang berjalan atau tidak,
 karena batas ini yang menentukan rentang waktu file JSON yang nanti dibaca
 skrip diagnosis di Mac.
 
-## 7. Data, Penyimpanan & Privasi
+## 7. Data, Penyimpanan & Privasi — prinsip aktif, mekanisme historis
 
-### 7.1 Prinsip privacy-by-default
+Prinsip yang tetap berlaku: minimalkan data anak, jangan kirim diagnosis/kunci
+ke permukaan anak, jangan mengirim data ke pihak ketiga tanpa keputusan
+eksplisit, dan pertahankan provenance bukti. Mekanisme HP→Mac, file permanen,
+dan tanpa jaringan di bawah adalah rancangan lama; penyimpanan aktual mengikuti
+SQLite serta palang privasi di `../CLAUDE.md`.
 
-Ini KEBIJAKAN produk, bukan cuma detail implementasi: **tidak ada cloud,
-tidak ada API pihak ketiga, tidak ada data anak yang pernah meninggalkan
-device+Mac keluarga itu sendiri**, di v1 maupun rencana selanjutnya kecuali
-diputuskan ulang secara eksplisit. Keputusan "APK tanpa izin INTERNET"
-(lihat §2.6 dan spike arsitektur) awalnya diambil supaya tidak ada API key
-yang bisa diekstrak dari APK — di sini ditambahkan alasan kedua yang berdiri
-sendiri: anak kelas 4 tidak punya cara memberi persetujuan berarti atas ke
-mana data tulisan tangannya pergi, jadi defaultnya adalah data itu **tidak
-pergi ke mana-mana**. Kedua alasan saling memperkuat keputusan yang sama,
-tidak saling menggantikan — produk ini tetap offline-only walau salah satu
-alasan hilang.
+### 7.1 Prinsip privacy-by-default yang berlaku sekarang
 
-Konsekuensi kebijakan ini: tidak ada telemetry, tidak ada crash reporting
-berbasis jaringan, tidak ada backup otomatis ke akun Google/cloud manapun
-untuk file data anak (goresan, JSON sesi, hasil diagnosis). Detail komponen
-yang menegakkan ini (permission manifest, penyimpanan lokal) ada di §8.
+Aplikasi aktif berjalan pada server dan memiliki dua integrasi AI opsional:
 
-### 7.2 Siklus hidup data goresan mentah: HP → Mac
+1. variasi cerita mengirim teks soal tanpa nama anak dan tanpa kunci jawaban;
+2. lampiran foto mengirim foto lembar yang sengaja diunggah beserta teks soal
+   kepada layanan vision yang dikonfigurasi. Foto dapat memuat tulisan tangan
+   anak, tetapi kunci, diagnosis, dan identitas akun tidak dikirim dalam prompt.
+
+Pengiriman foto ke layanan AI terjadi ketika fitur foto sengaja dipakai oleh
+guru atau akun anak. Persetujuan Kebijakan Privasi diminta saat pendaftaran
+mandiri; akun yang dibuat pengelola dan penambahan anak saat ini belum memiliki
+gerbang persetujuan wajib, sehingga pengelola/guru bertanggung jawab memastikan
+izin wali sebelum fitur foto digunakan. Kesenjangan ini harus ditutup dengan
+guard persetujuan eksplisit sebelum memperluas pemakaian fitur.
+
+Hasil AI hanya menjadi usulan; guru wajib mengoreksi dan menerapkannya sebelum
+masuk data latihan. Tanpa API key atau ketika layanan gagal, aplikasi menyimpan
+foto untuk pemeriksaan manual dan tetap berjalan tanpa hasil AI.
+
+Berkas foto dan hasil ekstraksi disimpan pada server pengelola sampai sesi
+dihapus atau kebijakan retensi baru diterapkan. Aplikasi tidak mengendalikan
+retensi di sisi penyedia AI; pemilihan provider dan perubahan kebijakannya
+harus ditinjau sebagai keputusan privasi. Tidak ada telemetry, iklan, cookie
+pelacak, email, atau nomor telepon yang dikumpulkan aplikasi.
+
+Kebijakan publik di `mesin/landing.py::halaman_kebijakan` harus selalu
+menggambarkan perilaku runtime ini. Perubahan alur data ke pihak ketiga wajib
+memperbarui kebijakan tersebut dan test-nya sebelum deploy.
+
+### 7.2 Siklus hidup data goresan mentah—rancangan spike historis
+
+Bagian §7.2–§7.5 di bawah hanya berlaku pada eksperimen `spike/`. Aplikasi
+aktif menyimpan lampiran pada server sesuai kebijakan §7.1 dan tidak memakai
+alur transfer HP→Mac sebagai mekanisme produksi.
 
 Data goresan+timestamp mentah (lihat skema di §2.6) tersimpan di HP **hanya
 selama masa transit**, bukan sebagai arsip permanen di HP. Alasan: HP itu
@@ -1010,7 +1026,11 @@ diagnosis apa pun.
 | Resep remediasi B/K/H | Mac saja — tidak pernah dikirim ke HP (§7.4) | Tidak | Tidak — sesuai guardrail §1 |
 | Paket sesi berikutnya (topik, soal, jenis kanvas — tanpa kunci jawaban) | HP, sementara per sesi (dikirim dari Mac, §7.4/§8.5) | Tidak | Ya — ini yang memang dikerjakan anak |
 
-## 8. Arsitektur Teknis v1
+## 8. Arsitektur Teknis v1 — superseded oleh `mesin/`
+
+Seluruh §8 merekam arsitektur file/Android/CLI lama. Ia dipertahankan untuk
+jejak keputusan, tetapi tidak boleh dipakai untuk mengubah aplikasi web SQLite
+atau menentukan pekerjaan berikutnya.
 
 ### 8.1 Komponen v1
 
@@ -1399,7 +1419,12 @@ Dua test lain yang sepadan ongkosnya, tapi tidak menahan hari pertama:
   Tahap B), bukan diam-diam dipilih salah satu. Ini yang menegakkan asimetri
   "jangan pernah menebak ke arah K" (§2.1) di tingkat kode.
 
-## 9. Ruang Lingkup v1 & Metrik Sukses
+## 9. Ruang Lingkup v1 & Metrik Sukses — historis
+
+Butir yang bergantung pada HP→Mac, `osn sync`, satu anak tanpa akun, atau
+arsitektur file tidak lagi menjadi acceptance criteria aplikasi. Keberhasilan
+siklus aktif dinilai dari Definition of Done plan 6 September dan test/runtime
+`mesin/`; prinsip privasi dan anti-overclaim tetap berlaku.
 
 Sintesis dari semua keputusan di atas — apa yang v1 secara eksplisit
 **bukan**, dan bagaimana "berhasil" diukur di luar gerbang teknis spike.
@@ -1426,9 +1451,9 @@ Sintesis dari semua keputusan di atas — apa yang v1 secara eksplisit
 - **Mata pelajaran IPA** — sumber PDF mencakup IPA juga, tapi seluruh PRD
   ini sengaja hanya membahas Matematika; IPA di luar cakupan sampai
   dinyatakan lain.
-- **Konten pra-fondasi tertulis permanen** — masih gap terbuka (§3.7),
-  ditutup sementara oleh mode AI-generate non-graf (§5.4), bukan solusi
-  akhir.
+- **Konten pra-fondasi permanen** — gap historis §3.7; dalam siklus aktif
+  ditangani lewat konten pra-tulis/review manusia pada jalur pengenalan T,
+  bukan AI-generate langsung.
 
 ### 9.2 Kriteria "berhasil" untuk v1 (di luar gerbang spike §2.7)
 

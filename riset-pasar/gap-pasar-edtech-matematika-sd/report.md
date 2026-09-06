@@ -1,5 +1,17 @@
 # Gap pasar edtech matematika SD Indonesia untuk diagnosis jenis kesalahan (B/K/H)
 
+**Status dokumen:** korpus riset dan bukti eksternal, bukan spesifikasi produk
+atau backlog implementasi. Pernyataan rekomendatif di dalam setiap item merekam
+implikasi saat riset dilakukan. Arsitektur dan alur aktif ditentukan oleh
+`../../produk/Siklus Belajar Terpandu.md`, `../../CLAUDE.md`, serta kode/test
+`../../mesin/`. Kanal goresan/OCR tetap arah eksperimen terpisah, bukan kewajiban
+MVP siklus.
+
+**Klarifikasi bukti:** diagnosis per-butir boleh ditampilkan kepada orang tua
+untuk ditinjau dan dikonfirmasi. Yang tidak boleh ditetapkan dari satu observasi
+adalah klaim longitudinal bahwa anak memiliki fokus/miskonsepsi aktif; itu
+memerlukan kunci fokus yang sama pada minimal dua sesi berbeda.
+
 **Pertanyaan Riset:** Apakah kebutuhan pasar yang lebih luas (bukan cuma kebutuhan personal founder) untuk diagnosis jenis kesalahan matematika (B=salah Baca, K=salah Konsep, H=salah Hitung) pada anak SD memang belum tercover oleh solusi yang ada, di Indonesia maupun global sebagai pembanding.
 
 **Total item:** 18 | **Selesai:** 18

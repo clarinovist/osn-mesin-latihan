@@ -1,6 +1,13 @@
-# Lanjutan — mulai dari sini besok
+# Lanjutan — eksperimen goresan yang sedang dijeda
 
-Catatan singkat supaya tidak perlu membaca ulang seluruh Rencana Spike.
+**Status dokumen:** catatan operasional spike per 19 Agustus 2026, bukan tugas
+produk berikutnya. Langkah browser di bawah hanya dijalankan jika eksperimen
+`spike/` sengaja dilanjutkan. Untuk aplikasi aktif gunakan `../mesin/`,
+`../CLAUDE.md`, dan plan siklus belajar terpandu di
+`../docs/plan/2026-09-06-siklus-belajar-terpandu.md`.
+
+Catatan singkat supaya eksperimen dapat dilanjutkan tanpa membaca ulang seluruh
+Rencana Spike.
 Diperbarui 19 Agustus 2026.
 
 ## Posisi sekarang

@@ -1,5 +1,21 @@
 # Desain Studi Bukti v1 — Apakah Remediasi Berbasis B/K/H Memperbaiki Hasil?
 
+**Status dokumen:** protokol studi yang belum dijalankan; prinsip pengukurannya
+masih relevan, tetapi alur data file/HP/Mac dan istilah `mastery/selesai` di
+bawah mendahului aplikasi web sekarang. Jalankan studi ini hanya setelah
+`Siklus Belajar Terpandu.md` terimplementasi; rincian kerja ada di plan lokal.
+
+Saat dipakai nanti:
+
+- sumber bukti adalah snapshot outcome yang dikonfirmasi dari `../mesin/`;
+- unit analisis adalah kunci fokus kanonis
+  `(template_id, kode_intervensi, malrule_id)`, bukan topik besar saja;
+- hasil evaluasi disebut **mulai membaik**, dan **bertahan** baru setelah
+  checkpoint per fokus; jangan memakai klaim “mastery/selesai”;
+- desain penelitian staggered boleh mengatur kapan intervensi studi dimulai,
+  tetapi tidak boleh mengubah CTA keselamatan aplikasi seperti review,
+  konfirmasi, atau eskalasi.
+
 Dokumen kerja · disusun 16 Agustus 2026
 Menjawab risiko terbesar dari `Analisis Kebutuhan dan Potensi Pasar.md`: **belum ada satu pun di dunia yang membuktikan bahwa remediasi berbasis jenis kesalahan menaikkan hasil belajar**. Entrant pertama yang menerbitkan bukti ini memegang posisi diferensiasi yang tak bisa disaingi — dan v1 (satu keluarga, satu anak) adalah pabrik bukti itu.
 
@@ -8,7 +24,11 @@ Menjawab risiko terbesar dari `Analisis Kebutuhan dan Potensi Pasar.md`: **belum
 ## 1. Klaim yang ingin dibuktikan (dan yang TIDAK)
 
 **Klaim yang dibangun (spesifik, jujur):**
-> Pada anak kelas 4 ini, topik dengan K aktif (salah konsep) yang diintervensi dengan resep B/K/H (benda nyata + loop verifikasi 3 hari) mencapai **mastery terverifikasi** — ditandai pergeseran komposisi kesalahan dari K → H → benar, dan lolos cek "dapat dari mana" — dalam rentang 4–6 minggu per topik, sementara topik yang belum diintervensi tidak berubah.
+> Pada anak ini, kunci fokus dengan K berulang yang menerima intervensi konkret,
+> latihan terbimbing, penguatan mandiri, evaluasi berjeda, dan checkpoint
+> menunjukkan perbaikan yang bertahan—ditandai penurunan K, jawaban tepat pada
+> probe baru, dan kemampuan menjelaskan cara—sementara kandidat yang masih dalam
+> baseline belum menunjukkan perubahan yang sama.
 
 **Yang TIDAK diklaim (anti-overclaim):**
 - Bukan "remediasi B/K/H menyebabkan perbaikan" secara umum (n=1).
@@ -34,29 +54,30 @@ Karena hanya ada satu anak (tanpa kelompok kontrol), kontrol datang dari **penun
                                    baseline  baseline ← intervensi C
  ─────────────────────────────────────────────────────────────
  ▓ = fase baseline (probe mingguan, tanpa intervensi khusus)
- █ = fase intervensi (resep K per PRD §1.2/§1.3 + verifikasi 3 hari)
+ █ = fase intervensi sesuai kontrak siklus aktif + evaluasi/checkpoint
 ```
 
 **Logika kontrol**: kalau perbaikan muncul **tepat saat intervensi topik itu dimulai** (bukan mengikuti waktu), maka itu bukan efek kedewasaan/kebetulan — pola staggered ini adalah standar SCED untuk menyingkirkan ancaman validitas (maturation, history, testing).
 
-### 2.1 Pemilihan topik (2–3 topik K aktif)
-- Sumber: Tes Kalibrasi Minggu 0 (PRD §5.1) + kode_final dari sesi-sesi v1 (PRD §2.3/§2.5).
-- Kriteria: topik dengan **K aktif (≥2 kemunculan K, PRD §1.6)** — misalnya dari 14 topik seed kalibrasi (urutan operasi, pecahan, desimal, persen, FPB/KPK, keterbagian, luas, volume, satuan, kecepatan, rata-rata, pola bilangan, pencacahan).
-- Pilih 3 topik yang **independen satu sama lain** (mis. pecahan, kecepatan, luas) — bukan berantai (agar perbaikan satu topik tidak otomatis memperbaiki yang lain).
-- Kalau K aktif hanya 1–2 topik: cukup 2 topik staggered (desain tetap jalan).
+### 2.1 Pemilihan target studi (2–3 kunci fokus K)
+- Sumber: snapshot outcome sesi pemetaan/diagnostik yang sudah dikonfirmasi.
+- Kriteria: kunci fokus kanonis `(template_id, K, malrule_id)` yang muncul pada minimal 2 sesi berbeda dan dipilih reducer.
+- Untuk desain staggered, pilih 2–3 target yang cukup independen agar perubahan satu target tidak otomatis menyelesaikan yang lain.
+- Batas aplikasi tetap maksimal **dua fokus aktif per putaran**. Target studi ketiga tetap baseline/pantauan dan baru masuk putaran setelah salah satu fokus sebelumnya ditutup; studi tidak boleh membuka tiga fokus aktif sekaligus.
+- Jika hanya satu fokus memenuhi syarat, studi multiple-baseline belum layak dijalankan; lanjutkan pengumpulan bukti tanpa mengarang kontrol.
 
-### 2.2 Instrumen probe (kunci pengukuran)
-- **Per topik**: 5 soal probe, **angka berbeda dari soal latihan, skill sama** (aturan sama dengan verifikasi PRD §1.5).
-- **Format**: campuran acak semua topik dalam satu sesi probe (anak tidak boleh tahu topik mana yang sedang diukur — mencegah fokus selektif dan efek "diajari untuk tes").
-- **Frekuensi**: 1 sesi probe per minggu (10–15 soal total untuk 2–3 topik), ditambahkan di akhir sesi reguler atau dijadwalkan sebagai sesi probe mandiri.
-- **Pencatatan per soal**: benar/salah · kode_final (B/K/H) · hasil cek "dapat dari mana?" (bisa jelaskan / ragu-ragu / menghafal — PRD §1.6) · catatan singkat.
-- **Bank soal probe**: susun 3 varian angka per topik (A/B/C), rotasi tiap minggu supaya anak tidak menghafal jawaban; varian ke-3 dipakai untuk verifikasi 3-hari.
+### 2.2 Instrumen probe
+- **Per fokus**: minimal 4 soal evaluasi untuk status “mulai membaik” dan minimal 3 soal checkpoint untuk “bertahan”; parameter berbeda, kunci fokus sama.
+- **Format studi**: fokus boleh dicampur dengan soal pembanding, tetapi komposisi tidak boleh mengurangi minimum probe aplikasi.
+- **Frekuensi**: baseline/probe studi mengikuti slot yang dibuat orkestrator dan tidak boleh mendahului review, konfirmasi, evaluasi jatuh tempo, atau eskalasi.
+- **Pencatatan per soal**: referensi snapshot/konfirmasi · kunci fokus · benar/salah · `kode_final` · cek cara (`bisa_menjelaskan | ragu | menghafal`) · fase studi.
+- **Variasi soal**: gunakan seed/parameter baru dan simpan identitas occurrence agar retest sah dapat dibedakan dari duplikasi.
 
-### 2.3 Intervensi (persis resep PRD — tidak boleh menyimpang)
-- Topik masuk fase intervensi → ikuti resep K dari pustaka pra-tulis/AI (`tindakan` + `durasi_target` + `verifikasi`, PRD §1.4).
-- **Benda nyata dulu, simbol belakangan** (PRD §1.2 K) — bukan sekadar latihan soal.
-- Verifikasi: soal beda angka, skill sama, **3 hari setelah resep** (PRD §1.5). Lulus = benar + bisa jelaskan "dapat dari mana".
-- Eskalasi kalau gagal 2x berturut-turut (PRD §1.6): cek prasyarat graf → Uji Ulang Lisan.
+### 2.3 Intervensi (mengikuti kontrak siklus aktif)
+- Fokus K menjalani tindakan konkret/visual dan contoh terbimbing sebelum penguatan mandiri—bukan sekadar latihan soal.
+- Evaluasi memakai angka baru untuk kunci fokus yang sama, tersedia **3 hari setelah penguatan selesai dan hasilnya dikonfirmasi**. Lulus awal = minimal 75% dari ≥4 probe fokus, nol K, dan bisa menjelaskan cara.
+- Status setelah evaluasi adalah **mulai membaik**, bukan selesai. Bukti retensi datang dari checkpoint pertama 28 hari setelah evaluasi sukses, minimal 3 probe fokus.
+- Gagal pertama memakai `pendekatan_id` berbeda; gagal kedua atau ketiadaan alternatif memicu cek prasyarat statis/uji ulang lisan.
 
 ---
 
@@ -64,11 +85,11 @@ Karena hanya ada satu anak (tanpa kelompok kontrol), kontrol datang dari **penun
 
 | Outcome | Alat ukur | Definisi "berhasil" per topik |
 |---|---|---|
-| **Primer: mastery terverifikasi** | Probe mingguan + verifikasi 3-hari | Benar pada probe **dan** cek lisan "dapat dari mana" = bisa jelaskan, **2x berturut-turut dengan jeda ≥3 hari** (menyamakan state `selesai` PRD §1.5) |
-| **Primer: pergeseran komposisi kesalahan** | kode_final per soal probe | Proporsi K turun (→ 0), lalu H → benar; bukan langsung benar tanpa fase K→H (menunjukkan mekanisme, bukan hafalan) |
-| **Sekunder: skor tryout** | Lembar Pantau (tryout Sabtu, 10 soal campuran) | Tren naik, tidak wajib signifikan (tryout campuran = noise tinggi) |
-| **Sekunder: retensi 1 bulan** | Probe varian D, 4 minggu setelah `selesai` | Tetap benar + bisa jelaskan (uji bahwa bukan hafalan jangka pendek) |
-| **Sekunder: K aktif turun** | Hitungan K aktif per topik (PRD §1.6) | Semua topik intervensi keluar dari status "K aktif" |
+| **Primer: mulai membaik** | Evaluasi berjeda | ≥75% dari minimal 4 probe fokus benar, nol K, dan cek cara = bisa menjelaskan |
+| **Primer: pergeseran komposisi kesalahan** | Snapshot `kode_final` per probe | Proporsi K turun; H boleh muncul sebagai kemajuan mekanisme, tetapi tidak diwajibkan sebagai urutan universal sebelum benar |
+| **Sekunder: skor mixed** | Sesi campuran | Tren naik, tidak wajib signifikan karena campuran memiliki noise tinggi |
+| **Primer retensi: bertahan** | Checkpoint per fokus, 28 hari setelah evaluasi sukses | Minimal 3 probe fokus benar, nol K, dan tetap bisa menjelaskan; diulang berkala untuk mendeteksi kekambuhan |
+| **Sekunder: fokus aktif turun** | Reducer siklus | Kunci fokus keluar dari putaran aktif tanpa menghapus histori lama |
 
 **Pola yang dicari (visual analysis SCED):** per topik, grafik probe mingguan — baseline datar/rendah → titik perbaikan **tepat di garis intervensi** → stabil. Ini dibaca secara visual dulu (standar SCED), bukan statistik.
 
@@ -87,68 +108,69 @@ Karena hanya ada satu anak (tanpa kelompok kontrol), kontrol datang dari **penun
 
 ---
 
-## 5. Alur data & pencatatan (konsisten arsitektur v1)
+## 5. Alur data & pencatatan (aplikasi web sekarang)
 
 ```
-Sesi probe anak (HP) → JSON goresan+jawaban (PRD §2.6)
-        ↓ (kabel USB)
-Skrip diagnosis Tahap A+B di Mac (PRD §8.1.3)
+Sesi probe/evaluasi/checkpoint di Jagomat
         ↓
-Tinjauan Bapak → kode_final per soal (PRD §2.5)
+Diagnosis otomatis → tinjauan dan koreksi guru
         ↓
-File graf topik update status (PRD §8.4)
+Konfirmasi eksplisit → snapshot outcome append-only
         ↓
-Lembar studi: tabel probe per minggu (template §7)
+Reducer siklus → status fokus dan rekomendasi berikutnya
+        ↓
+Ekspor data studi agregat/pseudonim bila analisis terpisah diperlukan
 ```
 
-Semua yang dicatat sudah merupakan bagian dari arsitektur v1 — **studi ini tidak menambah satu komponen pun**, hanya menambahkan (a) jadwal probe terstruktur, (b) pemilihan 3 topik target, (c) template pencatatan.
+Studi tidak membaca DB produksi dengan skrip ad-hoc dan tidak memakai file
+YAML sebagai sumber kebenaran. Semua outcome studi harus berasal dari snapshot
+konfirmasi; identitas anak tidak masuk artefak studi. Penjadwalan probe
+terstruktur adalah kebutuhan studi tambahan, bukan alasan membuat status
+pedagogis kedua di luar reducer aplikasi.
 
 ---
 
 ## 6. Timeline & ritme
 
-- **Durasi studi**: 12 minggu pemakaian v1 normal (3 sesi/minggu).
-- **Minggu 0**: Tes Kalibrasi ulang singkat atau review data kalibrasi awal → tetapkan 3 topik target + status baseline awal.
-- **Minggu 1–2**: baseline semua topik target (2 probe), tanpa intervensi.
-- **Minggu 3**: intervensi Topik A dimulai (baseline B & C berlanjut).
-- **Minggu 5**: intervensi Topik B dimulai.
-- **Minggu 7**: intervensi Topik C dimulai.
-- **Minggu 12**: akhir fase intervensi + probe retensi 1-bulan (minggu 16).
-- **Output**: grafik 3 panel (per topik), tabel ringkas, narasi 2–3 halaman (Bagian 8).
-
-Ritme ini menyesuaikan PRD §4.3 — sesi probe dan intervensi masuk sebagai prioritas slot biasa; tidak ada jadwal tambahan di luar 3 sesi/minggu.
+- **Durasi studi**: minimal 12 minggu pemakaian normal; dapat memanjang sampai checkpoint 28 hari terakhir selesai.
+- **Awal studi**: pilih fokus yang sudah memenuhi ambang bukti dan kumpulkan minimal dua probe baseline tanpa intervensi khusus.
+- **Intervensi staggered**: mulai fokus A, B, dan C pada waktu berbeda hanya setelah CTA keselamatan aplikasi selesai; tanggal aktual dicatat, bukan dipaksakan ke minggu kalender tertentu.
+- **Akhir analisis**: tidak boleh sebelum setiap fokus yang dinilai mempunyai evaluasi sah dan kesempatan checkpoint pertama.
+- **Output**: grafik per fokus, tabel ringkas snapshot, dan narasi 2–3 halaman.
 
 ---
 
 ## 7. Template pencatatan (satu baris per soal probe)
 
 ```csv
-tanggal,topik_id,varian,soal_id,benar,kode_final,dapat_dari_mana,fase,catatan
-2026-08-24,pecahan,A,P1-1,salah,K,menghafal,baseline,"2/3+3/4=5/7, yakin benar"
-2026-08-24,kecepatan,A,P3-1,benar,,-,baseline,"cepat, tanpa coretan"
-...
+tanggal,konfirmasi_id,template_id,kode_intervensi,malrule_id,occurrence,benar,kode_final,cek_pemahaman,fase_studi,catatan
+2026-09-10,42,pecahan_operasi,K,penyebut_tidak_disamakan,1,salah,K,menghafal,baseline,"yakin dengan cara lama"
+2026-10-15,87,pecahan_operasi,K,penyebut_tidak_disamakan,2,benar,,bisa_menjelaskan,checkpoint,"menjelaskan penyamaan penyebut"
 ```
 
-Kolom `dapat_dari_mana`: `bisa | ragu | menghafal` (PRD §1.6). Kolom `fase`: `baseline | intervensi | verifikasi | retensi`.
+Kolom `cek_pemahaman`: `bisa_menjelaskan | ragu | menghafal`. Kolom
+`fase_studi`: `baseline | intervensi | evaluasi | checkpoint`. Baris ekspor
+merujuk `konfirmasi_id`; jangan menyalin nama anak atau membaca diagnosis
+mutable langsung.
 
 ---
 
 ## 8. Laporan akhir (kerangka 2–3 halaman)
 
-1. **Konteks**: anak kelas 4, ritme 3x/minggu, periode studi, topik target & alasannya.
-2. **Grafik 3 panel** (probe % benar per minggu, garis intervensi ditandai) + komposisi B/K/H per topik.
-3. **Hasil per topik**: baseline vs pasca-intervensi; jumlah verifikasi sampai `selesai`; retensi 1 bulan; pergeseran K→H→benar teramati atau tidak.
+1. **Konteks**: profil anak dan level efektif, ritme pemakaian, periode studi, kunci fokus target, dan alasannya.
+2. **Grafik per fokus** (probe % benar, garis intervensi ditandai) + komposisi B/K/H/E/T/N.
+3. **Hasil per fokus**: baseline vs pascaintervensi; jumlah evaluasi sampai “mulai membaik”; checkpoint sampai “bertahan”; kekambuhan; perubahan jenis kesalahan yang benar-benar teramati.
 4. **Keterbatasan**: n=1, tanpa kontrol, penilai tunggal (dengan langkah mitigasi yang diambil).
 5. **Klaim yang boleh dikutip** (persis Bagian 1) + **yang tidak boleh**.
-6. **Jejak untuk studi berikutnya**: berapa soal probe yang dibutuhkan, varian mana yang bocor (anak hafal), topik mana yang paling responsif — input untuk studi n=10.
+6. **Jejak untuk studi berikutnya**: jumlah probe yang dibutuhkan, varian yang bocor, dan fokus yang paling responsif—input untuk studi n=10.
 
 ---
 
 ## 9. Keputusan yang ditentukan SEBELUM data (anti-rasionalisasi)
 
-- **Gerbang lulus studi**: ≥2 dari 3 topik target mencapai `selesai` (mastery terverifikasi 2x) dalam 12 minggu **dan** pola staggered terlihat (perbaikan mengikuti garis intervensi per topik).
-- **Gerbang gagal**: tidak ada topik yang selesai dalam 12 minggu, ATAU semua topik membaik bersamaan sejak minggu 1 (menunjukkan bukan efek intervensi), ATAU cek "dapat dari mana" selalu "menghafal" meski jawaban benar (Correct Answer Trap — PRD §1.2).
-- **Di antara keduanya** (1 topik selesai, pola tidak jelas): lanjut 4 minggu lagi sebelum mengambil kesimpulan.
+- **Gerbang lulus studi**: ≥2 dari 3 kunci fokus target mencapai “bertahan” dalam masa studi **dan** pola staggered terlihat—perbaikan mengikuti awal intervensi masing-masing fokus.
+- **Gerbang gagal**: tidak ada fokus yang mencapai “mulai membaik” dalam 12 minggu, ATAU semua fokus membaik bersamaan sejak minggu 1 (tidak mendukung efek intervensi), ATAU cek cara selalu “menghafal” meski jawaban benar.
+- **Di antara keduanya**: ada fokus “mulai membaik” tetapi checkpoint belum cukup atau pola tidak jelas; lanjutkan sampai checkpoint 28 hari yang sudah dijadwalkan, bukan menutup kesimpulan lebih awal.
 
 ---
 
@@ -156,10 +178,12 @@ Kolom `dapat_dari_mana`: `bisa | ragu | menghafal` (PRD §1.6). Kolom `fase`: `b
 
 | Hasil studi | Implikasi |
 |---|---|
-| Lulus (≥2 topik selesai, pola staggered) | Bukti mekanisme ada → lanjut Fase 2 roadmap; bahan untuk studi n=10 dan klaim pemasaran |
-| 1 topik selesai | Perbaiki resep K (PRD §1.3 — naik kelas resep yang bekerja jadi pra-tulis); lanjutkan |
-| Gagal total | Tesis remediasi tidak terbukti di kasus ini → tinjau ulang PRD §1 (mungkin loop verifikasi, mungkin konten resep, mungkin taksonomi) SEBELUM menambah fitur apa pun |
+| Lulus (≥2 fokus bertahan, pola staggered) | Bukti mekanisme pada kasus ini ada → susun protokol studi n=10; jangan otomatis memperluas arsitektur/fitur |
+| Ada fokus mulai membaik tetapi belum bertahan | Perbaiki intervensi atau tunggu checkpoint yang sah; jangan klaim retensi lebih awal |
+| Gagal total | Tesis remediasi tidak terbukti di kasus ini → tinjau konten intervensi, loop evaluasi, dan taksonomi sebelum menambah fitur |
 
 ---
 
-*Dokumen ini memakai mekanisme yang sudah ada di PRD (loop verifikasi §1.5, threshold K aktif §1.6, batch diagnosis §2.6, arsitektur file §8) — studi ini adalah formalisasi pengukuran, bukan komponen baru.*
+*Dokumen ini memformalkan pengukuran. Saat dijalankan, istilah status, sumber
+bukti, dan urutan tindakan wajib mengikuti reducer siklus belajar yang aktif,
+bukan state/file historis PRD.*
