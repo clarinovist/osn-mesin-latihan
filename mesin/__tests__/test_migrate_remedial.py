@@ -12,15 +12,29 @@ import database  # noqa: E402
 from schema import MIGRASI  # noqa: E402
 
 
-def test_database_baru_memiliki_metadata_remedial(tmp_path):
+def test_database_baru_memiliki_metadata_remedial_dan_siklus(tmp_path):
     path = tmp_path / "baru.db"
     database.siapkan(path)
 
     with database.buka(path) as kon:
         kolom = {r["name"] for r in kon.execute("PRAGMA table_info(sesi)")}
         foreign_keys = kon.execute("PRAGMA foreign_key_list(sesi)").fetchall()
+        tabel = {
+            r["name"]
+            for r in kon.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
 
-    assert {"jenis", "sumber_sesi_id"} <= kolom
+    assert {
+        "jenis", "sumber_sesi_id", "tujuan", "dikonfirmasi_guru",
+        "fingerprint_konfirmasi", "putaran_id", "bagian_checkpoint",
+        "dibatalkan",
+    } <= kolom
+    assert {
+        "putaran_fokus", "anggota_fokus", "bukti_fokus",
+        "kejadian_belajar", "konfirmasi_hasil", "snapshot_outcome",
+    } <= tabel
     assert any(
         fk["from"] == "sumber_sesi_id"
         and fk["table"] == "sesi"
@@ -64,7 +78,10 @@ def test_database_lama_dimigrasi_idempoten_dan_sesi_lama_biasa(tmp_path):
 
     with database.buka(path) as kon:
         lama = kon.execute(
-            "SELECT seed, jenis, sumber_sesi_id FROM sesi WHERE id = 1"
+            """SELECT seed, jenis, sumber_sesi_id, tujuan,
+                      dikonfirmasi_guru, fingerprint_konfirmasi,
+                      putaran_id, bagian_checkpoint, dibatalkan
+               FROM sesi WHERE id = 1"""
         ).fetchone()
         assert database.migrasi(kon) == []
 
@@ -72,10 +89,20 @@ def test_database_lama_dimigrasi_idempoten_dan_sesi_lama_biasa(tmp_path):
         "seed": 12345,
         "jenis": "biasa",
         "sumber_sesi_id": None,
+        "tujuan": "bebas",
+        "dikonfirmasi_guru": None,
+        "fingerprint_konfirmasi": None,
+        "putaran_id": None,
+        "bagian_checkpoint": None,
+        "dibatalkan": None,
     }
 
 
-def test_daftar_migrasi_metadata_remedial_tidak_duplikat():
+def test_daftar_migrasi_metadata_remedial_dan_siklus_tidak_duplikat():
     pasangan = [(tabel, kolom) for tabel, kolom, _ in MIGRASI]
-    assert pasangan.count(("sesi", "jenis")) == 1
-    assert pasangan.count(("sesi", "sumber_sesi_id")) == 1
+    for kolom in (
+        "jenis", "sumber_sesi_id", "tujuan", "dikonfirmasi_guru",
+        "fingerprint_konfirmasi", "putaran_id", "bagian_checkpoint",
+        "dibatalkan",
+    ):
+        assert pasangan.count(("sesi", kolom)) == 1

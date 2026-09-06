@@ -6,6 +6,7 @@ ketergantungan tambahan hanya menambah hal yang bisa rusak saat deploy.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import random
@@ -789,6 +790,9 @@ def simpan_jawaban(
     baris = kon.execute(
         "SELECT id FROM jawaban WHERE sesi_soal_id = ?", (sesi_soal_id,)
     ).fetchone()
+    # Simpan_jawaban juga dapat mengubah outcome setelah konfirmasi. Jalur ini
+    # memakai helper invalidasi yang sama dengan koreksi diagnosis.
+    _invalidasi_konfirmasi_dari_jawaban(kon, int(baris["id"]))
     return int(baris["id"])
 
 
@@ -826,10 +830,322 @@ def simpan_diagnosis(
             catatan,
         ),
     )
+    _invalidasi_konfirmasi_dari_jawaban(kon, jawaban_id)
     baris = kon.execute(
         "SELECT id FROM diagnosis WHERE jawaban_id = ?", (jawaban_id,)
     ).fetchone()
     return int(baris["id"])
+
+
+def _invalidasi_konfirmasi_dari_jawaban(
+    kon: sqlite3.Connection, jawaban_id: int
+) -> None:
+    """Batalkan cache bukti aktif setelah diagnosis ditulis ulang.
+
+    Snapshot lama tetap immutable. Event hanya lahir bila sesi sebelumnya
+    memang punya konfirmasi aktif, sehingga penulisan diagnosis awal tidak
+    menciptakan invalidasi palsu.
+    """
+    sesi = kon.execute(
+        """SELECT se.id, se.siswa_id, se.putaran_id, se.dikonfirmasi_guru,
+                  kh.id AS konfirmasi_id
+           FROM jawaban j
+           JOIN sesi_soal ss ON ss.id = j.sesi_soal_id
+           JOIN sesi se ON se.id = ss.sesi_id
+           LEFT JOIN konfirmasi_hasil kh
+             ON kh.sesi_id = se.id
+            AND kh.fingerprint = se.fingerprint_konfirmasi
+           WHERE j.id = ?""",
+        (jawaban_id,),
+    ).fetchone()
+    if sesi is None or sesi["dikonfirmasi_guru"] is None:
+        return
+    kon.execute(
+        """INSERT INTO kejadian_belajar
+               (siswa_id, putaran_id, sesi_id, konfirmasi_id, jenis, data)
+           VALUES (?, ?, ?, ?, 'konfirmasi_dibatalkan', ?)""",
+        (
+            sesi["siswa_id"],
+            sesi["putaran_id"],
+            sesi["id"],
+            sesi["konfirmasi_id"],
+            json.dumps({"alasan": "diagnosis_diubah"}, sort_keys=True),
+        ),
+    )
+    kon.execute(
+        """UPDATE sesi
+           SET dikonfirmasi_guru = NULL, fingerprint_konfirmasi = NULL
+           WHERE id = ?""",
+        (sesi["id"],),
+    )
+
+
+def buat_putaran_fokus(
+    kon: sqlite3.Connection,
+    siswa_id: int,
+    level: str,
+    sesi_ids: list[int] | None = None,
+) -> int:
+    sesi_ids = sesi_ids or []
+    for sesi_id in sesi_ids:
+        milik = kon.execute(
+            "SELECT 1 FROM sesi WHERE id = ? AND siswa_id = ?",
+            (sesi_id, siswa_id),
+        ).fetchone()
+        if milik is None:
+            raise ValueError("sesi bukan milik siswa putaran")
+    cur = kon.execute(
+        "INSERT INTO putaran_fokus (siswa_id, level) VALUES (?, ?)",
+        (siswa_id, level),
+    )
+    putaran_id = int(cur.lastrowid)
+    tautkan_sesi_putaran(kon, putaran_id, sesi_ids)
+    return putaran_id
+
+
+def tautkan_sesi_putaran(
+    kon: sqlite3.Connection, putaran_id: int, sesi_ids: list[int]
+) -> None:
+    putaran = kon.execute(
+        "SELECT siswa_id, level FROM putaran_fokus WHERE id = ?", (putaran_id,)
+    ).fetchone()
+    if putaran is None:
+        raise ValueError("putaran tidak dikenal")
+    for sesi_id in dict.fromkeys(sesi_ids):
+        sesi = kon.execute(
+            "SELECT siswa_id, level, putaran_id FROM sesi WHERE id = ?", (sesi_id,)
+        ).fetchone()
+        if sesi is None or sesi["siswa_id"] != putaran["siswa_id"]:
+            raise ValueError("sesi bukan milik siswa putaran")
+        if sesi["level"] != putaran["level"]:
+            raise ValueError("level sesi berbeda dari putaran")
+        if sesi["putaran_id"] not in (None, putaran_id):
+            raise ValueError("sesi sudah terikat ke putaran lain")
+        kon.execute(
+            "UPDATE sesi SET putaran_id = ? WHERE id = ?", (putaran_id, sesi_id)
+        )
+
+
+def tambah_anggota_fokus(
+    kon: sqlite3.Connection,
+    putaran_id: int,
+    template_id: str,
+    kode_intervensi: str,
+    malrule_id: str | None,
+    sumber_sesi_ids: list[int],
+) -> int:
+    """Tambahkan satu dari maksimal dua kunci fokus beserta provenance sesi."""
+    jumlah = kon.execute(
+        "SELECT COUNT(*) FROM anggota_fokus WHERE putaran_id = ?", (putaran_id,)
+    ).fetchone()[0]
+    duplikat = kon.execute(
+        """SELECT 1 FROM anggota_fokus
+           WHERE putaran_id = ? AND template_id = ? AND kode_intervensi = ?
+             AND malrule_id_kanonis = ?""",
+        (putaran_id, template_id, kode_intervensi, malrule_id or ""),
+    ).fetchone()
+    if duplikat is not None:
+        raise sqlite3.IntegrityError("kunci fokus kanonis sudah ada")
+    if jumlah >= 2:
+        raise ValueError("satu putaran maksimal dua fokus")
+    putaran = kon.execute(
+        "SELECT siswa_id FROM putaran_fokus WHERE id = ?", (putaran_id,)
+    ).fetchone()
+    if putaran is None:
+        raise ValueError("putaran tidak dikenal")
+    if not sumber_sesi_ids:
+        raise ValueError("fokus harus memiliki provenance sesi")
+    for sesi_id in sumber_sesi_ids:
+        milik = kon.execute(
+            """SELECT 1 FROM sesi
+               WHERE id = ? AND siswa_id = ? AND putaran_id = ?""",
+            (sesi_id, putaran["siswa_id"], putaran_id),
+        ).fetchone()
+        if milik is None:
+            raise ValueError("sesi provenance bukan milik siswa dan putaran")
+
+    cur = kon.execute(
+        """INSERT INTO anggota_fokus
+               (putaran_id, slot, template_id, kode_intervensi, malrule_id_kanonis)
+           VALUES (?, ?, ?, ?, ?)""",
+        (putaran_id, jumlah + 1, template_id, kode_intervensi, malrule_id or ""),
+    )
+    anggota_id = int(cur.lastrowid)
+    for sesi_id in dict.fromkeys(sumber_sesi_ids):
+        kon.execute(
+            "INSERT INTO bukti_fokus (anggota_fokus_id, sesi_id) VALUES (?, ?)",
+            (anggota_id, sesi_id),
+        )
+    return anggota_id
+
+
+def konfirmasi_hasil(
+    kon: sqlite3.Connection,
+    sesi_id: int,
+    guru: str,
+    dilewati: set[int] | None = None,
+    cek_pemahaman: dict[int, str] | None = None,
+) -> int:
+    """Sahkan outcome lengkap menjadi snapshot immutable dan event audit."""
+    dilewati = dilewati or set()
+    cek_pemahaman = cek_pemahaman or {}
+    sesi = kon.execute("SELECT * FROM sesi WHERE id = ?", (sesi_id,)).fetchone()
+    if sesi is None:
+        raise ValueError("sesi tidak dikenal")
+    if sesi["dibatalkan"] is not None:
+        raise ValueError("sesi dibatalkan")
+    if sesi["selesai"] is None:
+        raise ValueError("sesi belum selesai")
+
+    outcome = isi_sesi(kon, sesi_id)
+    if not outcome:
+        raise ValueError("sesi tidak memiliki butir")
+    id_butir = {int(b["sesi_soal_id"]) for b in outcome}
+    if not dilewati <= id_butir or not set(cek_pemahaman) <= id_butir:
+        raise ValueError("referensi butir tidak dikenal")
+    pemahaman_sah = {"bisa_menjelaskan", "ragu", "menghafal"}
+    if any(nilai not in pemahaman_sah for nilai in cek_pemahaman.values()):
+        raise ValueError("cek pemahaman tidak dikenal")
+    for butir in outcome:
+        butir_id = int(butir["sesi_soal_id"])
+        if butir_id not in dilewati and (
+            butir["jawaban_id"] is None or butir["benar"] is None
+        ):
+            raise ValueError("outcome belum lengkap")
+
+    nomor_urut = int(
+        kon.execute(
+            """SELECT COALESCE(MAX(nomor_urut), 0) + 1
+               FROM konfirmasi_hasil WHERE sesi_id = ?""",
+            (sesi_id,),
+        ).fetchone()[0]
+    )
+    kanonis = []
+    for butir in outcome:
+        butir_id = int(butir["sesi_soal_id"])
+        lewat = butir_id in dilewati
+        kanonis.append(
+            {
+                "nomor": int(butir["nomor"]),
+                "template_id": butir["template_id"],
+                "jawaban": "" if lewat else (butir["jawaban"] or ""),
+                "benar": None if lewat else int(butir["benar"]),
+                "kode_final": None if lewat else butir["kode_final"],
+                "malrule_id": None if lewat else butir["malrule_id"],
+                "dilewati": int(lewat),
+                "level_efektif": sesi["level"],
+                "cek_pemahaman": cek_pemahaman.get(butir_id),
+            }
+        )
+    serial = json.dumps(kanonis, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    fingerprint = hashlib.sha256(serial.encode("utf-8")).hexdigest()
+    cur = kon.execute(
+        """INSERT INTO konfirmasi_hasil
+               (sesi_id, nomor_urut, guru, fingerprint)
+           VALUES (?, ?, ?, ?)""",
+        (sesi_id, nomor_urut, guru, fingerprint),
+    )
+    konfirmasi_id = int(cur.lastrowid)
+    for butir, salinan in zip(outcome, kanonis):
+        kon.execute(
+            """INSERT INTO snapshot_outcome
+                   (konfirmasi_id, sesi_soal_id, nomor, template_id, jawaban,
+                    benar, kode_final, malrule_id, dilewati, level_efektif,
+                    cek_pemahaman)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                konfirmasi_id,
+                butir["sesi_soal_id"],
+                salinan["nomor"],
+                salinan["template_id"],
+                salinan["jawaban"],
+                salinan["benar"],
+                salinan["kode_final"],
+                salinan["malrule_id"],
+                salinan["dilewati"],
+                salinan["level_efektif"],
+                salinan["cek_pemahaman"],
+            ),
+        )
+    kon.execute(
+        """INSERT INTO kejadian_belajar
+               (siswa_id, putaran_id, sesi_id, konfirmasi_id, jenis, data)
+           VALUES (?, ?, ?, ?, 'hasil_dikonfirmasi', ?)""",
+        (
+            sesi["siswa_id"],
+            sesi["putaran_id"],
+            sesi_id,
+            konfirmasi_id,
+            json.dumps({"nomor_urut": nomor_urut}, sort_keys=True),
+        ),
+    )
+    kon.execute(
+        """UPDATE sesi
+           SET dikonfirmasi_guru = datetime('now', '+7 hours'),
+               fingerprint_konfirmasi = ?
+           WHERE id = ?""",
+        (fingerprint, sesi_id),
+    )
+    return konfirmasi_id
+
+
+def batalkan_sesi(
+    kon: sqlite3.Connection, sesi_id: int, alasan: str = ""
+) -> None:
+    sesi = kon.execute(
+        "SELECT siswa_id, putaran_id FROM sesi WHERE id = ?", (sesi_id,)
+    ).fetchone()
+    if sesi is None:
+        raise ValueError("sesi tidak dikenal")
+    kon.execute(
+        """UPDATE sesi SET dibatalkan = COALESCE(
+               dibatalkan, datetime('now', '+7 hours')) WHERE id = ?""",
+        (sesi_id,),
+    )
+    kon.execute(
+        """INSERT INTO kejadian_belajar
+               (siswa_id, putaran_id, sesi_id, jenis, data)
+           VALUES (?, ?, ?, 'sesi_dibatalkan', ?)""",
+        (
+            sesi["siswa_id"],
+            sesi["putaran_id"],
+            sesi_id,
+            json.dumps({"alasan": alasan}, ensure_ascii=False, sort_keys=True),
+        ),
+    )
+
+
+def ganti_level(
+    kon: sqlite3.Connection, siswa_id: int, level_baru: str
+) -> None:
+    siswa = kon.execute(
+        "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
+    ).fetchone()
+    if siswa is None:
+        raise ValueError("siswa tidak dikenal")
+    level_lama = siswa["tingkat"]
+    if level_lama == level_baru:
+        return
+    kon.execute("UPDATE siswa SET tingkat = ? WHERE id = ?", (level_baru, siswa_id))
+    putaran = kon.execute(
+        """SELECT id FROM putaran_fokus
+           WHERE siswa_id = ? AND level = ?
+           ORDER BY id DESC LIMIT 1""",
+        (siswa_id, level_lama),
+    ).fetchone()
+    kon.execute(
+        """INSERT INTO kejadian_belajar (siswa_id, putaran_id, jenis, data)
+           VALUES (?, ?, 'diganti_level', ?)""",
+        (
+            siswa_id,
+            None if putaran is None else putaran["id"],
+            json.dumps(
+                {"level_lama": level_lama, "level_baru": level_baru},
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        ),
+    )
 
 
 # ── Laporan ─────────────────────────────────────────────────────────────

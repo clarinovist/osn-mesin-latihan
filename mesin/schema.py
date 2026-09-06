@@ -68,6 +68,17 @@ CREATE TABLE IF NOT EXISTS soal (
 CREATE INDEX IF NOT EXISTS idx_soal_template ON soal(template_id);
 CREATE INDEX IF NOT EXISTS idx_soal_level ON soal(level);
 
+-- Putaran adalah identitas stabil. Penutupan/perubahan status tidak ditulis
+-- di sini, melainkan sebagai kejadian append-only.
+CREATE TABLE IF NOT EXISTS putaran_fokus (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    siswa_id    INTEGER NOT NULL REFERENCES siswa(id) ON DELETE RESTRICT,
+    level       TEXT    NOT NULL,
+    dibuka      TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
+);
+CREATE INDEX IF NOT EXISTS idx_putaran_siswa
+    ON putaran_fokus(siswa_id, dibuka);
+
 -- Malrule per soal: jawaban salah yang bisa diprediksi + kodenya.
 -- Disimpan (bukan dihitung saat baca) supaya diagnosis lama tetap terbaca
 -- apa adanya kalau definisi malrule di kode berubah kemudian.
@@ -107,6 +118,17 @@ CREATE TABLE IF NOT EXISTS sesi (
     -- Sesi hasil latihan ulang boleh menunjuk sesi yang menjadi sumbernya.
     -- Jika sumber dihapus, sesi remedial tetap dipertahankan sebagai riwayat.
     sumber_sesi_id INTEGER REFERENCES sesi(id) ON DELETE SET NULL,
+    -- Metadata orkestrator. Sesi lama/manual aman sebagai `bebas`; NULL berarti
+    -- tidak ada pengesahan, putaran, bagian checkpoint, atau pembatalan.
+    tujuan    TEXT NOT NULL DEFAULT 'bebas'
+        CHECK (tujuan IN ('bebas', 'pemetaan', 'latihan_terbimbing',
+                          'penguatan', 'evaluasi', 'checkpoint', 'pengenalan')),
+    dikonfirmasi_guru TEXT,
+    fingerprint_konfirmasi TEXT,
+    putaran_id INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT,
+    bagian_checkpoint INTEGER
+        CHECK (bagian_checkpoint IS NULL OR bagian_checkpoint IN (1, 2)),
+    dibatalkan TEXT,
     catatan   TEXT    NOT NULL DEFAULT '',
     dibuat    TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
 );
@@ -179,6 +201,130 @@ CREATE TABLE IF NOT EXISTS lampiran (
 );
 CREATE INDEX IF NOT EXISTS idx_lampiran_sesi ON lampiran(sesi_id);
 
+-- Maksimal dua anggota ditegakkan lewat slot 1/2 yang unik. Kunci kanonis
+-- memakai malrule kosong sebagai representasi SQL untuk nilai domain NULL,
+-- karena UNIQUE SQLite memperbolehkan banyak NULL.
+CREATE TABLE IF NOT EXISTS anggota_fokus (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    putaran_id         INTEGER NOT NULL REFERENCES putaran_fokus(id) ON DELETE RESTRICT,
+    slot               INTEGER NOT NULL CHECK (slot IN (1, 2)),
+    template_id        TEXT    NOT NULL,
+    kode_intervensi    TEXT    NOT NULL CHECK (kode_intervensi IN ('B','K','H','E','T','N')),
+    malrule_id_kanonis TEXT    NOT NULL DEFAULT '',
+    dibuat             TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours')),
+    UNIQUE (putaran_id, slot),
+    UNIQUE (putaran_id, template_id, kode_intervensi, malrule_id_kanonis)
+);
+
+CREATE TABLE IF NOT EXISTS bukti_fokus (
+    anggota_fokus_id INTEGER NOT NULL REFERENCES anggota_fokus(id) ON DELETE RESTRICT,
+    sesi_id          INTEGER NOT NULL REFERENCES sesi(id) ON DELETE RESTRICT,
+    PRIMARY KEY (anggota_fokus_id, sesi_id)
+);
+
+-- Satu pengesahan immutable per versi hasil. `nomor_urut` monoton per sesi;
+-- pasangan unik mencegah nomor yang sama dipakai ulang.
+CREATE TABLE IF NOT EXISTS konfirmasi_hasil (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    sesi_id     INTEGER NOT NULL REFERENCES sesi(id) ON DELETE RESTRICT,
+    nomor_urut  INTEGER NOT NULL CHECK (nomor_urut > 0),
+    guru        TEXT    NOT NULL,
+    fingerprint TEXT    NOT NULL,
+    dibuat      TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours')),
+    UNIQUE (sesi_id, nomor_urut)
+);
+
+-- Salinan outcome kanonis seluruh butir. Tidak ada FK ke diagnosis/jawaban agar
+-- koreksi data aktif tidak mengubah bukti historis.
+CREATE TABLE IF NOT EXISTS snapshot_outcome (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    konfirmasi_id    INTEGER NOT NULL REFERENCES konfirmasi_hasil(id) ON DELETE RESTRICT,
+    -- Snapshot menyimpan identitas/nomor outcome sebagai nilai immutable;
+    -- tidak merujuk sesi_soal agar sesi berbukti dapat dijaga oleh FK sesi
+    -- tanpa bergantung pada anak tabel yang punya cascade existing.
+    sesi_soal_id     INTEGER NOT NULL,
+    nomor            INTEGER NOT NULL,
+    template_id      TEXT    NOT NULL,
+    jawaban          TEXT    NOT NULL DEFAULT '',
+    benar            INTEGER,
+    kode_final       TEXT CHECK (kode_final IS NULL OR kode_final IN ('B','K','H','E','T','N')),
+    malrule_id       TEXT,
+    dilewati         INTEGER NOT NULL DEFAULT 0 CHECK (dilewati IN (0, 1)),
+    level_efektif    TEXT    NOT NULL,
+    cek_pemahaman    TEXT CHECK (
+        cek_pemahaman IS NULL OR
+        cek_pemahaman IN ('bisa_menjelaskan', 'ragu', 'menghafal')
+    ),
+    UNIQUE (konfirmasi_id, sesi_soal_id),
+    UNIQUE (konfirmasi_id, nomor)
+);
+
+-- Kejadian domain append-only. `data` adalah JSON kanonis untuk payload yang
+-- berbeda per jenis; FK opsional menjaga provenance sesi/putaran/konfirmasi.
+CREATE TABLE IF NOT EXISTS kejadian_belajar (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    siswa_id        INTEGER NOT NULL REFERENCES siswa(id) ON DELETE RESTRICT,
+    putaran_id      INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT,
+    sesi_id         INTEGER REFERENCES sesi(id) ON DELETE RESTRICT,
+    konfirmasi_id   INTEGER REFERENCES konfirmasi_hasil(id) ON DELETE RESTRICT,
+    jenis           TEXT    NOT NULL,
+    data            TEXT    NOT NULL DEFAULT '{}',
+    dibuat          TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
+);
+CREATE INDEX IF NOT EXISTS idx_kejadian_siswa
+    ON kejadian_belajar(siswa_id, id);
+
+-- Empat tabel riwayat tidak boleh diperbarui atau dihapus. Koreksi selalu
+-- menambah kejadian/snapshot versi baru.
+CREATE TRIGGER IF NOT EXISTS putaran_fokus_tolak_update
+BEFORE UPDATE ON putaran_fokus BEGIN
+    SELECT RAISE(ABORT, 'putaran_fokus append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS putaran_fokus_tolak_delete
+BEFORE DELETE ON putaran_fokus BEGIN
+    SELECT RAISE(ABORT, 'putaran_fokus append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS konfirmasi_hasil_tolak_update
+BEFORE UPDATE ON konfirmasi_hasil BEGIN
+    SELECT RAISE(ABORT, 'konfirmasi_hasil append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS konfirmasi_hasil_tolak_delete
+BEFORE DELETE ON konfirmasi_hasil BEGIN
+    SELECT RAISE(ABORT, 'konfirmasi_hasil append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_outcome_tolak_update
+BEFORE UPDATE ON snapshot_outcome BEGIN
+    SELECT RAISE(ABORT, 'snapshot_outcome append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_outcome_tolak_delete
+BEFORE DELETE ON snapshot_outcome BEGIN
+    SELECT RAISE(ABORT, 'snapshot_outcome append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS kejadian_belajar_tolak_update
+BEFORE UPDATE ON kejadian_belajar BEGIN
+    SELECT RAISE(ABORT, 'kejadian_belajar append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS kejadian_belajar_tolak_delete
+BEFORE DELETE ON kejadian_belajar BEGIN
+    SELECT RAISE(ABORT, 'kejadian_belajar append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS anggota_fokus_tolak_update
+BEFORE UPDATE ON anggota_fokus BEGIN
+    SELECT RAISE(ABORT, 'anggota_fokus append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS anggota_fokus_tolak_delete
+BEFORE DELETE ON anggota_fokus BEGIN
+    SELECT RAISE(ABORT, 'anggota_fokus append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS bukti_fokus_tolak_update
+BEFORE UPDATE ON bukti_fokus BEGIN
+    SELECT RAISE(ABORT, 'bukti_fokus append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS bukti_fokus_tolak_delete
+BEFORE DELETE ON bukti_fokus BEGIN
+    SELECT RAISE(ABORT, 'bukti_fokus append-only');
+END;
+
 -- Ringkasan per sesi supaya laporan tidak perlu menghitung ulang tiap buka.
 CREATE VIEW IF NOT EXISTS ringkasan_sesi AS
 SELECT
@@ -244,6 +390,14 @@ MIGRASI: list[tuple[str, str, str]] = [
     # selama nilai bawaan NULL; SET NULL menjaga sesi remedial saat sumber dihapus.
     ("sesi", "jenis", "ALTER TABLE sesi ADD COLUMN jenis TEXT NOT NULL DEFAULT 'biasa'"),
     ("sesi", "sumber_sesi_id", "ALTER TABLE sesi ADD COLUMN sumber_sesi_id INTEGER REFERENCES sesi(id) ON DELETE SET NULL"),
+    # Siklus belajar terpandu (6 Sep 2026). Semua sesi warisan tetap manual;
+    # tidak ada backfill keputusan pedagogis dari `direview`/`kode_final`.
+    ("sesi", "tujuan", "ALTER TABLE sesi ADD COLUMN tujuan TEXT NOT NULL DEFAULT 'bebas'"),
+    ("sesi", "dikonfirmasi_guru", "ALTER TABLE sesi ADD COLUMN dikonfirmasi_guru TEXT"),
+    ("sesi", "fingerprint_konfirmasi", "ALTER TABLE sesi ADD COLUMN fingerprint_konfirmasi TEXT"),
+    ("sesi", "putaran_id", "ALTER TABLE sesi ADD COLUMN putaran_id INTEGER REFERENCES putaran_fokus(id) ON DELETE RESTRICT"),
+    ("sesi", "bagian_checkpoint", "ALTER TABLE sesi ADD COLUMN bagian_checkpoint INTEGER"),
+    ("sesi", "dibatalkan", "ALTER TABLE sesi ADD COLUMN dibatalkan TEXT"),
 ]
 
 # View yang definisinya berubah dan karena itu harus dibangun ulang.
