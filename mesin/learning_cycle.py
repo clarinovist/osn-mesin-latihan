@@ -10,6 +10,8 @@ from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
+from cycle_recovery import intervensi_setelah_gagal, bukti_setelah_intervensi
+
 KunciFokus = Tuple[str, str, Optional[str]]
 
 
@@ -453,12 +455,19 @@ def _rencana_fokus(
     status_awal: PutaranFokus,
     hari: date,
 ) -> Optional[RencanaBelajar]:
+    from cycle_carry import bukti_lanjutan
+
+    bukti = bukti_lanjutan(bukti)
     statuses = []
     evaluasi_per_fokus = {}
     checkpoint_per_fokus = {}
+    pemulihan_per_fokus = {}
     for fokus in status_awal.fokus:
         evaluasi = _evaluasi_fokus(bukti, putaran, fokus.kunci)
         evaluasi_per_fokus[fokus.kunci] = evaluasi
+        pemulihan_per_fokus[fokus.kunci] = intervensi_setelah_gagal(
+            bukti, putaran, fokus.kunci, evaluasi
+        )
         checkpoint = _checkpoint_sukses(bukti, putaran, fokus.kunci)
         checkpoint_per_fokus[fokus.kunci] = checkpoint
         status = fokus.status
@@ -519,7 +528,8 @@ def _rencana_fokus(
         if beruntun:
             gagal_terbaru.append((fokus, beruntun))
     if any(
-        jumlah >= 2 or fokus.pendekatan_berikutnya is None
+        jumlah >= 2 or (fokus.pendekatan_berikutnya is None
+                        and pemulihan_per_fokus[fokus.kunci] is None)
         for fokus, jumlah in gagal_terbaru
     ):
         return RencanaBelajar(
@@ -535,7 +545,9 @@ def _rencana_fokus(
         evaluasi = evaluasi_per_fokus[kunci]
         checkpoint_terakhir, bagian = checkpoint_per_fokus[kunci]
 
-        if evaluasi and not evaluasi[-1][1]:
+        pemulihan = pemulihan_per_fokus[kunci]
+        bukti_latihan = bukti_setelah_intervensi(bukti, pemulihan)
+        if evaluasi and not evaluasi[-1][1] and pemulihan is None:
             kandidat_rencana.append(
                 (
                     6,
@@ -619,7 +631,7 @@ def _rencana_fokus(
             )
             continue
 
-        if not _sesi_tahap_fokus(bukti, putaran, "latihan_terbimbing", kunci):
+        if not _sesi_tahap_fokus(bukti_latihan, putaran, "latihan_terbimbing", kunci):
             kandidat_rencana.append(
                 (
                     7,
@@ -634,7 +646,7 @@ def _rencana_fokus(
             )
             continue
 
-        penguatan = _sesi_tahap_fokus(bukti, putaran, "penguatan", kunci)
+        penguatan = _sesi_tahap_fokus(bukti_latihan, putaran, "penguatan", kunci)
         if not penguatan:
             kandidat_rencana.append(
                 (

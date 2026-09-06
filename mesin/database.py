@@ -351,6 +351,8 @@ def buat_sesi_dari_urutan(
     mode: str = "diagnostik",
     jenis: str = "biasa",
     sumber_sesi_id: int | None = None,
+    *,
+    soal_terpilih: tuple[Soal, ...] | None = None,
 ) -> int:
     """Sesi dengan komposisi soal DITENTUKAN pemanggil, bukan dari paket.
 
@@ -367,7 +369,16 @@ def buat_sesi_dari_urutan(
         raise ValueError(f"jenis sesi tidak dikenal: {jenis!r}")
     if jenis == "biasa" and sumber_sesi_id is not None:
         raise ValueError("sesi biasa tidak boleh memiliki sumber remedial")
-    lembar = buat_lembar(seed, urutan=urutan, level=level, topik=topik)
+    if soal_terpilih is None:
+        lembar = buat_lembar(seed, urutan=urutan, level=level, topik=topik)
+    else:
+        from collections import Counter
+        from generator import Lembar
+
+        if (Counter(s.template_id for s in soal_terpilih) != Counter(urutan)
+                or any(s.level != level for s in soal_terpilih)):
+            raise ValueError("soal terpilih tidak cocok dengan komposisi atau level")
+        lembar = Lembar(seed, soal_terpilih, level)
     topik_id = getattr(topik, "id", topik)
     cur = kon.execute(
         """INSERT INTO sesi (siswa_id, seed, topik, level, mode,

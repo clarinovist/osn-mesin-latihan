@@ -148,6 +148,8 @@ def _alasan(rencana: RencanaBelajar, fokus: Optional[KunciFokus]) -> str:
 
 def _progres(rencana: RencanaBelajar, bukti: BuktiSiklus) -> str:
     tujuan = _tujuan_sesi_aktif(rencana, bukti)
+    if rencana.tindakan == "putaran_baru":
+        return "Fokus kambuh — mulai putaran baru"
     if tujuan:
         return {
             "pemetaan": "Tahap pemetaan",
@@ -298,6 +300,12 @@ def _cta(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int, fokus, mate
                 "</form>"
             )
         return _form_intervensi(rencana, siswa_id, fokus, materi)
+    if rencana.tindakan == "putaran_baru":
+        return (
+            f'<form method="post" action="/siklus/{siswa_id}/aksi" class="rencana-form-st">'
+            '<input type="hidden" name="aksi" value="mulai_putaran_baru">'
+            '<button type="submit" class="rencana-cta-utama-st">Mulai putaran baru</button></form>'
+        )
     if rencana.tindakan in _TINDAKAN_BUAT:
         return (
             f'<form method="post" action="/siklus/{siswa_id}/buat" class="rencana-form-st">'

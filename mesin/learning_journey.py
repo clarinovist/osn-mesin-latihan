@@ -506,8 +506,12 @@ def perjalanan_belajar(
     hari_ini: Optional[date] = None,
 ) -> PerjalananBelajar:
     """Proyeksikan rekomendasi, tahap tiap fokus, dan histori tanpa mutasi."""
+    from cycle_carry import bukti_lanjutan
+
+    asli = bukti
+    bukti = bukti_lanjutan(bukti)
     hari = hari_ini or date.today()
-    rekomendasi = lc.rencana_berikutnya(bukti, siswa_id, hari)
+    rekomendasi = lc.rencana_berikutnya(asli, siswa_id, hari)
     putaran = lc._putaran_dengan_override(lc._putaran_aktif(bukti), bukti.kejadian)
     sesi_pemetaan, _, status = _ringkasan_dasar(bukti, putaran)
     fokus = _fokus_aktif(
@@ -521,7 +525,7 @@ def perjalanan_belajar(
     return PerjalananBelajar(
         rekomendasi,
         fokus,
-        _histori_putaran(bukti),
+        _histori_putaran(asli),
         None if putaran is None else putaran.id,
         status.tanggal_pemetaan,
         _catatan_bukti(bukti, putaran)

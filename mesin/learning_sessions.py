@@ -290,7 +290,7 @@ def _tanda_tangan_lama(
     }
 
 
-def _seed_tanpa_soal_lama(
+def _soal_tanpa_soal_lama(
     kon: sqlite3.Connection,
     siswa_id: int,
     seed: int,
@@ -298,21 +298,31 @@ def _seed_tanpa_soal_lama(
     paket,
     level: str,
     fokus: Tuple[KunciFokus, ...],
-) -> int:
-    """Cari seed deterministik yang seluruh probe fokusnya benar-benar baru."""
+) -> tuple:
+    """Pilih butir fokus baru secara deterministik tanpa mengubah generator umum."""
     template_fokus = {kunci[0] for kunci in fokus}
     lama = _tanda_tangan_lama(kon, siswa_id, template_fokus)
-    jumlah_probe = sum(1 for template_id in urutan if template_id in template_fokus)
+    lembar = buat_lembar(seed, urutan=urutan, level=level, topik=paket)
+    hasil = ()
+    dipakai = frozenset(lama)
+    for nomor, soal in enumerate(lembar.soal):
+        if soal.template_id in template_fokus and soal.tanda_tangan in dipakai:
+            soal = _butir_baru(seed + nomor, soal.template_id, paket, level, dipakai)
+        hasil = (*hasil, soal)
+        if soal.template_id in template_fokus:
+            dipakai = dipakai | {soal.tanda_tangan}
+    return hasil
+
+
+def _butir_baru(seed, template_id, paket, level, dipakai):
+    """Ganti hanya butir bentrok; jangan membuang butir baru satu lembar penuh."""
     for calon in range(seed, seed + 500):
-        lembar = buat_lembar(calon, urutan=urutan, level=level, topik=paket)
-        probe = [
-            soal.tanda_tangan
-            for soal in lembar.soal
-            if soal.template_id in template_fokus
-        ]
-        if len(set(probe)) == jumlah_probe and set(probe).isdisjoint(lama):
-            return calon
-    raise RuntimeError("gagal menemukan soal fokus baru setelah 500 seed")
+        soal = buat_lembar(calon, urutan=(template_id,), level=level, topik=paket).soal[0]
+        if soal.tanda_tangan not in dipakai:
+            return soal
+    raise ValueError(
+        "Soal fokus baru belum cukup tersedia. Gunakan latihan manual atau tinjau fokus bersama."
+    )
 
 
 def buat_sesi_dari_rencana(
@@ -383,6 +393,7 @@ def buat_sesi_dari_rencana(
 
     urutan = _urutan_rencana(rencana, fokus, putaran["level"])
     paket = topics.paket_untuk_template(urutan)
+    soal_terpilih = None
     if rencana.tindakan in {
         "pemetaan",
         "latihan_terbimbing",
@@ -392,7 +403,7 @@ def buat_sesi_dari_rencana(
         "pengenalan",
         "probe_setelah_pengenalan",
     }:
-        seed = _seed_tanpa_soal_lama(
+        soal_terpilih = _soal_tanpa_soal_lama(
             kon,
             siswa_id,
             seed,
@@ -417,6 +428,7 @@ def buat_sesi_dari_rencana(
             mode="diagnostik",
             jenis=jenis,
             sumber_sesi_id=sumber if jenis == "remedial" else None,
+            soal_terpilih=soal_terpilih,
         )
         urutan_aktual = tuple(
             baris["template_id"] for baris in database.isi_sesi(kon, sesi_id)

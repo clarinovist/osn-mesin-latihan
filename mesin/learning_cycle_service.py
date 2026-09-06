@@ -229,6 +229,18 @@ def _occurrence_berikutnya(kon, putaran_id, rencana):
         if rencana.tindakan == "checkpoint" and baris["bagian_checkpoint"] != rencana.bagian_checkpoint:
             continue
         cocok.append(int(data.get("occurrence", 1)))
+    if rencana.tindakan == "checkpoint":
+        from cycle_carry import bukti_lanjutan
+
+        siswa = kon.execute("SELECT siswa_id FROM putaran_fokus WHERE id = ?",
+                            (putaran_id,)).fetchone()
+        if siswa is not None:
+            bukti = bukti_lanjutan(database.muat_bukti_siklus(kon, siswa["siswa_id"]))
+            cocok = [*cocok, *(s.occurrence for s in bukti.sesi
+                     if s.putaran_id == putaran_id and s.tujuan == "checkpoint"
+                     and s.dikonfirmasi is not None and s.dibatalkan is None
+                     and s.bagian_checkpoint == rencana.bagian_checkpoint
+                     and s.occurrence is not None and set(fokus) <= set(s.target_fokus))]
     return max(cocok, default=0) + 1
 
 
@@ -484,6 +496,13 @@ def proses_aksi(
 ) -> None:
     """Validasi payload aksi domain sebelum menulis event."""
     aksi = data.get("aksi", "")
+    if aksi == "mulai_putaran_baru":
+        if set(data) != {"aksi"}:
+            raise ValueError("putaran baru dihitung ulang oleh server")
+        from cycle_restart import mulai_putaran_baru
+
+        mulai_putaran_baru(kon, siswa_id)
+        return
     kunci_sah = {
         "aksi", "putaran_id", "template_id", "kode_intervensi",
         "malrule_id", "pendekatan_id",
