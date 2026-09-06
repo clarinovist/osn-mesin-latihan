@@ -37,7 +37,7 @@ def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     """
     baris = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik,
-                  s.mode, s.timer_mode, s.durasi_menit, s.timer_auto,
+                  s.mode, s.tujuan, s.timer_mode, s.durasi_menit, s.timer_auto,
                   s.mulai, s.selesai,
                   CASE WHEN s.mulai IS NULL THEN 0 ELSE MAX(0,
                     CAST(strftime('%s', datetime('now', '+7 hours')) AS INTEGER)

@@ -441,7 +441,97 @@ tr.sorot-baru, div.sorot-baru {{
   /* Strip pertama di kolom kanan sudah punya jarak dari grid gap. */
   .anak-kolom-kanan > .strip-sesi:first-child {{ margin-top: 0; }}
 }}
+/* Fase 4: marker kolom lama tetap di DOM untuk kompatibilitas, tetapi satu
+   alur vertikal mencegah kolom kosong dan menempatkan manual sebelum riwayat. */
+.anak-grid[data-rencana="vertikal"] {{
+  display: flex; flex-direction: column; gap: {T.SP_4};
+  align-items: stretch; width: 100%;
+}}
+.anak-grid[data-rencana="vertikal"] > .anak-kolom-kanan {{ order: 1; }}
+.anak-grid[data-rencana="vertikal"] > .anak-kolom-kiri {{ order: 2; }}
 
+
+/* ── Kartu rencana belajar guru (Fase 4) ── */
+.kartu-rencana-st {{
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-left: 4px solid {T.AKSEN_MURID_UTAMA};
+  border-radius: {T.RADIUS_KARTU}; padding: {T.SP_5};
+  margin: 0 0 {T.SP_5}; display: flex; flex-direction: column; gap: {T.SP_3};
+}}
+.kartu-rencana-st h2.st {{ margin: 0; }}
+.label-rencana-st {{
+  margin: 0; color: {T.AKSEN_TEAL_TUA}; font-family: {T.FONT_HEADLINE};
+  font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+}}
+.alasan-rencana-st, .progres-rencana-st, .tanggal-rencana-st {{ margin: 0; }}
+.alasan-rencana-st {{ color: {T.TEKS_VARIAN}; }}
+.progres-rencana-st {{
+  color: {T.TEKS_JUDUL}; font-family: {T.FONT_HEADLINE}; font-weight: 700;
+}}
+.strip-rencana-st {{
+  list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: {T.SP_1}; padding: 0; margin: {T.SP_1} 0;
+}}
+.tahap-rencana-st {{
+  min-width: 0; padding: {T.SP_2} {T.SP_1}; text-align: center;
+  border-radius: {T.RADIUS_KECIL}; background: {T.LATAR_SEKUNDER_NETRAL};
+  color: {T.TEKS_VARIAN}; font-family: {T.FONT_HEADLINE}; font-size: .72rem;
+  font-weight: 600; overflow-wrap: anywhere;
+}}
+.tahap-rencana-st.selesai {{ background: {T.LATAR_TERSIMPAN}; color: {T.TEKS_TERSIMPAN}; }}
+.tahap-rencana-st.aktif {{ background: {T.AKSEN_MURID_UTAMA}; color: {T.TEKS_PUTIH}; }}
+.tindakan-rencana-st {{
+  background: {T.LATAR_SEKUNDER_LEMBUT}; border-radius: {T.RADIUS_SEDANG};
+  padding: {T.SP_3} {T.SP_4};
+}}
+.tindakan-rencana-st b {{ font-family: {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; }}
+.tindakan-rencana-st p {{ margin: {T.SP_1} 0 0; }}
+.contoh-rencana-st {{
+  border-left: 3px solid {T.AKSEN_MURID_AMBER}; padding: {T.SP_2} {T.SP_3};
+  color: {T.TEKS_UTAMA};
+}}
+.contoh-rencana-st b {{ font-family: {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; }}
+.contoh-rencana-st p {{ margin: {T.SP_1} 0 0; }}
+.rencana-peringatan-st {{
+  margin: 0; padding: {T.SP_3}; background: {T.LATAR_CATATAN};
+  border: 1px solid {T.BORDER_CATATAN}; border-radius: {T.RADIUS_SEDANG};
+}}
+.rencana-form-st {{ margin: 0; }}
+.rencana-cta-utama-st {{
+  width: 100%; min-height: {T.TARGET_SENTUH}; display: inline-flex;
+  align-items: center; justify-content: center; padding: {T.SP_3} {T.SP_5};
+  border: 0; border-radius: {T.RADIUS_SEDANG};
+  background: {T.AKSEN_MURID_KORAL}; color: {T.TEKS_PUTIH};
+  font: inherit; font-family: {T.FONT_HEADLINE}; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+}}
+.rencana-cta-utama-st:hover {{ filter: brightness(1.06); }}
+.ubah-fokus-st, .atur-latihan-st {{
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; padding: 0 {T.SP_4};
+}}
+.ubah-fokus-st summary, .atur-latihan-st summary {{
+  min-height: {T.TARGET_SENTUH}; display: flex; align-items: center;
+  color: {T.AKSEN_TEAL_TUA}; font-family: {T.FONT_HEADLINE}; font-weight: 700;
+  cursor: pointer;
+}}
+.ubah-fokus-st p, .atur-latihan-st > p {{ color: {T.TEKS_VARIAN}; }}
+.ubah-fokus-st form {{ display: grid; gap: {T.SP_3}; padding-bottom: {T.SP_4}; }}
+.ubah-fokus-st label {{ display: grid; gap: {T.SP_1}; font-weight: 600; }}
+.ubah-fokus-st input, .ubah-fokus-st select {{
+  min-height: {T.TARGET_SENTUH}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_SEDANG}; padding: 0 {T.SP_3}; font: inherit;
+}}
+.ubah-fokus-st button {{
+  min-height: {T.TARGET_SENTUH}; border: 1px solid {T.AKSEN_TEAL_TUA};
+  border-radius: {T.RADIUS_SEDANG}; background: {T.LATAR_KARTU};
+  color: {T.AKSEN_TEAL_TUA}; font: inherit; font-weight: 700; cursor: pointer;
+}}
+.atur-latihan-st > .buat-latihan-st {{ margin: 0 0 {T.SP_4}; border: 0; padding: 0; }}
+@media (max-width: 34rem) {{
+  .strip-rencana-st {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+  .kartu-rencana-st {{ padding: {T.SP_4}; }}
+}}
 
 /* ── Kartu "Buat latihan" (3 Sep, Fase C): tab CSS-only ──
    Tiga form sebelumnya berdiri sebagai tiga kartu abu-abu berurutan; di

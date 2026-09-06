@@ -13,6 +13,7 @@ import json
 import brand
 import design_tokens as T
 from templates import label_kelas
+from learning_stage_labels import penanda_tahap
 from topics import Topik, dari_sesi
 from students import (
     AWALAN_PILIHAN,
@@ -608,7 +609,7 @@ def halaman_kerja(
   <a class="btn secondary hanya-layar" href="/murid">Sesi lain</a>
 </div>
 <p class="meta-sesi-line">{_escape(info['tanggal'])} &middot; {_escape(label_kelas(info['level']))}
- &middot; {len(daftar)} soal
+ &middot; {len(daftar)} soal {penanda_tahap(info.get('tujuan', 'bebas'))}
  {'&middot; Latihan Cepat' if drill else ''}</p>
 {strip}
 {kabar}
@@ -647,7 +648,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
     _IKON_SESI = ["quiz", "calculate", "schedule", "extension"]
 
     baris = kon.execute(
-        """SELECT id, tanggal, level, topik, mode, jenis,
+        """SELECT id, tanggal, level, topik, mode, jenis, tujuan,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
                   s.selesai, s.direview,
                   (SELECT COUNT(*) FROM sesi_soal ss
@@ -692,7 +693,9 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
         )
 
         # Badge mode (terpisah, di baris meta)
-        if b["jenis"] == "remedial":
+        if penanda_tahap(b["tujuan"]):
+            mode_label = penanda_tahap(b["tujuan"])
+        elif b["jenis"] == "remedial":
             fokus = _nama_fokus_remedial(kon, int(b["id"]))
             mode_label = (
                 '<span class="st-badge latihan">Remedial</span>'
@@ -1200,7 +1203,7 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
 </div>
 <div class="kerja-badan-st">
 <p class="kerja-meta-st"><b>Halo, {_escape(info['nama'])}</b> &middot; {_escape(info['tanggal'])}
- &middot; {_escape(label_kelas(info['level']))} &middot; {len(daftar)} soal
+ &middot; {_escape(label_kelas(info['level']))} &middot; {len(daftar)} soal {penanda_tahap(info.get('tujuan', 'bebas'))}
  {'&middot; Latihan Cepat' if drill else ''}</p>
 {strip}
 {kabar}
@@ -1244,7 +1247,7 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
     _WARNA_ICON = ["#0FA3A3", "#FF6B5B", "#FFB020", "#8B5CF6"]
 
     baris = kon.execute(
-        """SELECT id, tanggal, level, topik, mode, jenis,
+        """SELECT id, tanggal, level, topik, mode, jenis, tujuan,
                   (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
                   s.selesai, s.direview,
                   (SELECT COUNT(*) FROM sesi_soal ss
@@ -1280,14 +1283,14 @@ def halaman_daftar_sesi(kon, siswa_id: int, nama: str, sesi_selesai: int | None 
             )
         # Tag "latihan" untuk sesi Latihan Cepat (drill) — biar anak tahu
         # sesi ini bukan diagnosa penuh.
-        tag_latihan = ""
-        if b["jenis"] == "remedial":
+        tag_latihan = penanda_tahap(b["tujuan"])
+        if not tag_latihan and b["jenis"] == "remedial":
             fokus = _nama_fokus_remedial(kon, int(b["id"]))
             tag_latihan = (
                 '<span class="badge-latihan">Remedial</span> '
                 f'<span>Fokus {_escape(fokus)}</span>'
             )
-        elif b["mode"] == "drill":
+        elif not tag_latihan and b["mode"] == "drill":
             tag_latihan = '<span class="badge-latihan">latihan</span>'
         kartu.append(
             f'<a class="kartu-sesi" href="/murid/kerjakan/{b["id"]}">'

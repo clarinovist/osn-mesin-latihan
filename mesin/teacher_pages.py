@@ -18,6 +18,7 @@ from datetime import datetime
 import database
 import brand
 import design_tokens as T
+import learning_cycle_ui
 import share_links
 import worksheets
 from diagnosis import diagnosa
@@ -667,7 +668,7 @@ def halaman_anak(
             _kartu_sesi(r, _kelas_sorot(r["id"])) for r in sesi
         )
     else:
-        item = '<p class="sub">Belum ada sesi — buat yang pertama di bawah.</p>'
+        item = '<p class="sub">Belum ada sesi — mulai dari rencana belajar di atas.</p>'
 
     label_keluarga = ""
     if peran == "admin":
@@ -792,6 +793,13 @@ def halaman_anak(
         if pesan
         else ""
     )
+    kartu_rencana = learning_cycle_ui.kartu_rencana(kon, int(siswa["id"]))
+    latihan_manual = (
+        '<details class="atur-latihan-st">'
+        '<summary>Atur latihan sendiri</summary>'
+        '<p class="sub">Latihan bebas tidak mengubah progres rencana terpandu.</p>'
+        f"{blok_buat_latihan}</details>"
+    )
 
     return _halaman_stitch(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
@@ -803,10 +811,10 @@ def halaman_anak(
         "</h1>"
         "</div>"
         f"{kabar}"
-        # Dua kolom di desktop (>= 64rem): riwayat di kiri, alat buat-latihan
-        # di kanan. Di HP grid mati dan urutan sumber yang berlaku — riwayat
-        # dulu, form menyusul, persis seperti sebelum kolom ini ada.
-        '<div class="anak-grid">'
+        f"{kartu_rencana}"
+        # Struktur lama dipertahankan; CSS data-rencana memindahkan kolom
+        # alat manual secara visual ke atas riwayat tanpa entry point ganda.
+        '<div class="anak-grid" data-rencana="vertikal">'
         '<section class="anak-kolom-kiri">'
         '<div class="kepala-riwayat-st">'
         '<h2 class="st">Riwayat latihan</h2>'
@@ -817,9 +825,8 @@ def halaman_anak(
         f'<div class="daftar-anak">{item}</div>'
         "</section>"
         '<div class="anak-kolom-kanan">'
-        f"{blok_buat_latihan}"
-        "</div>"
-        "</div>"
+        f"{latihan_manual}"
+        "</div></div>"
         "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
         "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin dan berlaku 7 hari.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil. Tautan berlaku 7 hari.';return false;}}"
         "async function bagikan(t,k){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});k.textContent='Tautan dibagikan dan berlaku 7 hari.';return;}catch(e){if(e.name==='AbortError'){k.textContent='';return;}}}await salin(t,k);}"
