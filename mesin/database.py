@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Iterator, Optional
 
 from generator import LEVEL_BAWAAN, buat_lembar
+import outcome_presentations
 import question_views
 from schema import MIGRASI, SKEMA, VIEW_USANG
 from templates import Soal
@@ -49,6 +50,7 @@ def buka(path: Path | str | None = None) -> Iterator[sqlite3.Connection]:
     kon = sqlite3.connect(str(path))
     kon.row_factory = sqlite3.Row
     kon.execute("PRAGMA foreign_keys = ON")
+    outcome_presentations.daftarkan_validasi(kon)
     try:
         yield kon
         kon.commit()
@@ -112,6 +114,7 @@ def siapkan(path: Path | str = BAWAAN) -> None:
         import migrate_params
 
         migrate_params.jalankan(kon)
+        outcome_presentations.lengkapi(kon)
         if kon.execute("PRAGMA foreign_key_check").fetchone() is not None:
             raise sqlite3.IntegrityError("migrasi meninggalkan foreign key tidak valid")
 
@@ -1165,6 +1168,18 @@ def konfirmasi_hasil(
     dilewati: set[int] | None = None,
     cek_pemahaman: dict[int, str] | None = None,
 ) -> int:
+    """Sahkan snapshot dan provenance atomik, tanpa meng-commit pemanggil."""
+    with outcome_presentations.transaksi(kon):
+        return _konfirmasi_hasil(kon, sesi_id, guru, dilewati, cek_pemahaman)
+
+
+def _konfirmasi_hasil(
+    kon: sqlite3.Connection,
+    sesi_id: int,
+    guru: str,
+    dilewati: set[int] | None,
+    cek_pemahaman: dict[int, str] | None,
+) -> int:
     """Sahkan outcome lengkap menjadi snapshot immutable dan event audit."""
     dilewati = dilewati or set()
     cek_pemahaman = cek_pemahaman or {}
@@ -1177,6 +1192,11 @@ def konfirmasi_hasil(
         raise ValueError("sesi belum selesai")
 
     outcome = isi_sesi(kon, sesi_id)
+    jumlah_butir = kon.execute(
+        "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
+    ).fetchone()[0]
+    if len(outcome) != jumlah_butir:
+        raise ValueError("hubungan snapshot penyajian sesi tidak lengkap")
     if not outcome:
         raise ValueError("sesi tidak memiliki butir")
     id_butir = {int(b["sesi_soal_id"]) for b in outcome}
@@ -1235,6 +1255,7 @@ def konfirmasi_hasil(
         (sesi_id, fingerprint),
     ).fetchone()
     if aktif is not None:
+        outcome_presentations.lengkapi(kon, int(aktif["id"]))
         return int(aktif["id"])
     nomor_urut = int(
         kon.execute(
@@ -1275,6 +1296,7 @@ def konfirmasi_hasil(
                 salinan["target_malrule_id"],
             ),
         )
+    outcome_presentations.lengkapi(kon, konfirmasi_id)
     kon.execute(
         """INSERT INTO kejadian_belajar
                (siswa_id, putaran_id, sesi_id, konfirmasi_id, jenis, data)
@@ -1442,15 +1464,10 @@ def muat_bukti_siklus(kon: sqlite3.Connection, siswa_id: int):
                                 item["target_malrule_id"],
                             )
                         ),
+                        mode_representasi=item["mode_representasi"],
+                        fingerprint_penyajian=item["fingerprint_penyajian"],
                     )
-                    for item in kon.execute(
-                        """SELECT template_id, benar, kode_final, malrule_id,
-                                  dilewati, cek_pemahaman, target_template_id,
-                                  target_kode_intervensi, target_malrule_id
-                           FROM snapshot_outcome WHERE konfirmasi_id = ?
-                           ORDER BY nomor""",
-                        (aktif["id"],),
-                    ).fetchall()
+                    for item in outcome_presentations.muat(kon, int(aktif["id"]))
                 )
         sesi_hasil.append(
             SesiSiklus(

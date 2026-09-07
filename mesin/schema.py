@@ -533,6 +533,57 @@ BEGIN
     SELECT RAISE(ABORT, 'target fokus snapshot tidak valid');
 END;
 
+-- Provenance penyajian terpisah: tidak mengubah fingerprint outcome historis.
+CREATE TABLE IF NOT EXISTS penyajian_outcome (
+    snapshot_outcome_id INTEGER PRIMARY KEY
+        REFERENCES snapshot_outcome(id) ON DELETE RESTRICT,
+    mode_representasi TEXT NOT NULL CHECK (
+        typeof(mode_representasi) = 'text' AND LENGTH(TRIM(mode_representasi)) > 0
+    ),
+    fingerprint_penyajian TEXT CHECK (
+        fingerprint_penyajian IS NULL OR (
+            typeof(fingerprint_penyajian) = 'text'
+            AND LENGTH(fingerprint_penyajian) = 64
+            AND fingerprint_penyajian NOT GLOB '*[^0-9a-f]*'
+        )
+    )
+);
+CREATE TRIGGER IF NOT EXISTS penyajian_outcome_validasi_insert
+BEFORE INSERT ON penyajian_outcome
+WHEN NOT EXISTS (
+    SELECT 1 FROM snapshot_outcome so
+    JOIN konfirmasi_hasil kh ON kh.id = so.konfirmasi_id
+    JOIN sesi_soal ss ON ss.id = so.sesi_soal_id
+        AND ss.sesi_id = kh.sesi_id AND ss.nomor = so.nomor
+    JOIN soal s ON s.id = ss.soal_id AND s.template_id = so.template_id
+    WHERE so.id = NEW.snapshot_outcome_id
+      AND osn_provenance_outcome_sah(
+          NEW.mode_representasi, NEW.fingerprint_penyajian,
+          ss.teks_soal, ss.bagian_soal, ss.tantangan_soal, ss.minta_restatement,
+          ss.penyajian_json, ss.penyajian_versi, ss.renderer_versi, ss.asal_teks,
+          ss.status_visual, ss.mode_representasi, ss.fingerprint_matematis,
+          ss.fingerprint_penyajian, s.template_id, s.parameter, s.level, s.cerita
+      ) = 1
+)
+BEGIN
+    SELECT RAISE(ABORT, 'provenance penyajian outcome tidak valid');
+END;
+CREATE TRIGGER IF NOT EXISTS penyajian_outcome_tolak_replace
+BEFORE INSERT ON penyajian_outcome
+WHEN EXISTS (SELECT 1 FROM penyajian_outcome
+             WHERE snapshot_outcome_id = NEW.snapshot_outcome_id)
+BEGIN
+    SELECT RAISE(ABORT, 'penyajian_outcome append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS penyajian_outcome_tolak_update
+BEFORE UPDATE ON penyajian_outcome BEGIN
+    SELECT RAISE(ABORT, 'penyajian_outcome append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS penyajian_outcome_tolak_delete
+BEFORE DELETE ON penyajian_outcome BEGIN
+    SELECT RAISE(ABORT, 'penyajian_outcome append-only');
+END;
+
 -- Kejadian domain append-only. `data` adalah JSON kanonis untuk payload yang
 -- berbeda per jenis; FK opsional menjaga provenance sesi/putaran/konfirmasi.
 CREATE TABLE IF NOT EXISTS kejadian_belajar (

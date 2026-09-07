@@ -62,7 +62,7 @@ def pola_arsir(ident):
 def label_tidak_berskala():
     return teks(
         T.GEO_LEBAR / 2,
-        T.GEO_TINGGI - T.GEO_MARGIN / 2,
+        T.GEO_TINGGI - T.GEO_CATATAN_BAWAH,
         "Tidak berskala",
         "catatan-skala",
         ukuran=T.GEO_FONT_CATATAN,

@@ -364,6 +364,13 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
     """Render satu rekomendasi tanpa menulis state domain."""
     if bukti.siswa_id != siswa_id:
         raise ValueError("bukti bukan milik siswa")
+    from cycle_carry import bukti_lanjutan
+    from cycle_representations import CATATAN_PEMISAHAN, bukti_satu_representasi
+    from learning_cycle import _putaran_aktif
+    bukti = bukti_lanjutan(bukti)
+    terpilih = bukti_satu_representasi(bukti, _putaran_aktif(bukti))
+    catatan_mode = (f'<p class="sub">{CATATAN_PEMISAHAN}</p>' if terpilih != bukti else "")
+    bukti = terpilih
     fokus = _fokus_utama(rencana)
     materi = _materi(rencana, fokus)
     tanggal = (
@@ -405,7 +412,7 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
         f'<h2 class="st" id="judul-rencana-belajar">{html.escape(_judul(rencana, fokus, bukti))}</h2>'
         f'<p class="alasan-rencana-st">{html.escape(_alasan(rencana, fokus))}</p>'
         f'<p class="progres-rencana-st">{html.escape(_progres(rencana, bukti))}</p>'
-        f'{catatan_histori}{_strip_tahap(rencana, bukti)}{tindakan}{contoh}{catatan_materi}{tanggal}'
+        f'{catatan_histori}{catatan_mode}{_strip_tahap(rencana, bukti)}{tindakan}{contoh}{catatan_materi}{tanggal}'
         f'{_cta(rencana, bukti, siswa_id, fokus, materi)}{_override(rencana, siswa_id)}'
         "</section>"
     )

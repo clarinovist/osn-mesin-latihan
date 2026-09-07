@@ -420,7 +420,9 @@ def _hasil_saat_bukti(bukti, putaran, kunci, item):
         sesi_item = next(sesi for sesi in sebelum.sesi if sesi.id == item.sesi_id)
         rangkaian = replace(sebelum, sesi=tuple(
             sesi for sesi in sebelum.sesi
-            if sesi.tujuan == "checkpoint" and sesi.occurrence == sesi_item.occurrence
+            if sesi.tujuan == "evaluasi" or (
+                sesi.tujuan == "checkpoint" and sesi.occurrence == sesi_item.occurrence
+            )
         ))
         terakhir, _ = lc._checkpoint_sukses(rangkaian, putaran, kunci)
         hasil = "bertahan" if terakhir == item.tanggal else None
@@ -513,6 +515,12 @@ def perjalanan_belajar(
     hari = hari_ini or date.today()
     rekomendasi = lc.rencana_berikutnya(asli, siswa_id, hari)
     putaran = lc._putaran_dengan_override(lc._putaran_aktif(bukti), bukti.kejadian)
+    from cycle_representations import CATATAN_PEMISAHAN, bukti_satu_representasi
+    terpilih = bukti_satu_representasi(bukti, putaran)
+    catatan_representasi = (() if terpilih == bukti else (
+        CATATAN_PEMISAHAN,
+    ))
+    bukti = terpilih
     sesi_pemetaan, _, status = _ringkasan_dasar(bukti, putaran)
     fokus = _fokus_aktif(
         bukti,
@@ -528,7 +536,7 @@ def perjalanan_belajar(
         _histori_putaran(asli),
         None if putaran is None else putaran.id,
         status.tanggal_pemetaan,
-        _catatan_bukti(bukti, putaran)
+        _catatan_bukti(bukti, putaran) + catatan_representasi
         + catatan_histori_beda_level(
             bukti,
             mulai_dari_awal=(

@@ -1,5 +1,9 @@
 # Statistika visual — Fase 3 internal
 
+Catatan lanjutan: pemisahan provenance/bukti dan gate lintas keluarga dikerjakan
+pada Fase 8. Status rilis terkini ada di `verifikasi-soal-visual.md`; daftar
+blocker di bawah adalah catatan historis Fase 3, bukan status implementasi terbaru.
+
 ## Cakupan
 
 Empat renderer SVG deterministik: batang (baca/jumlah/selisih), turus

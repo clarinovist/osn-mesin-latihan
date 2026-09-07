@@ -21,7 +21,7 @@ def mulai_putaran_baru(kon, siswa_id):
 def _mulai(kon, siswa_id):
     from cycle_carry import bukti_lanjutan
 
-    bukti = bukti_lanjutan(database.muat_bukti_siklus(kon, siswa_id))
+    bukti = database.muat_bukti_siklus(kon, siswa_id)
     aktif = lc._putaran_dengan_override(lc._putaran_aktif(bukti), bukti.kejadian)
     rencana = lc.rencana_berikutnya(bukti, siswa_id)
     if aktif is None:
@@ -36,7 +36,8 @@ def _mulai(kon, siswa_id):
     kambuh = tuple(f.kunci for f in rencana.putaran.fokus)
     diteruskan = tuple(k for k in aktif.fokus if k not in kambuh)
     fokus = (*kambuh, *diteruskan)
-    sumber = tuple(s for s in bukti.sesi
+    # Carry hanya untuk provenance, bukan antrean operasional reducer.
+    sumber = tuple(s for s in bukti_lanjutan(bukti).sesi
                    if s.putaran_id == aktif.id and s.selesai is not None
                    and s.dikonfirmasi is not None and s.dibatalkan is None
                    and any(k in s.target_fokus or any(lc._kunci_outcome(o) == k

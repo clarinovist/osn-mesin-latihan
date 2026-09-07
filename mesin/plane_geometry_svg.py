@@ -37,11 +37,11 @@ def _sudut_pasangan(d):
               cy - panjang * math.sin(math.radians(a)), "sinar-sudut")
         for a in arah
     )
-    lx = cx + 52 * math.cos(math.radians(diketahui / 2))
-    ly = cy - 52 * math.sin(math.radians(diketahui / 2))
-    ux = cx + 58 * math.cos(math.radians((diketahui + total) / 2))
-    uy = cy - 58 * math.sin(math.radians((diketahui + total) / 2))
-    isi = sinar + teks(lx, ly, f"{diketahui}°") + teks(ux, uy, "?")
+    lx = cx + T.GEO_RADIUS_LABEL_SUDUT * math.cos(math.radians(diketahui / 2))
+    ly = cy - T.GEO_RADIUS_LABEL_SUDUT * math.sin(math.radians(diketahui / 2))
+    ux = cx + T.GEO_RADIUS_LABEL_SUDUT * math.cos(math.radians((diketahui + total) / 2))
+    uy = cy - T.GEO_RADIUS_LABEL_SUDUT * math.sin(math.radians((diketahui + total) / 2))
+    isi = sinar + teks(lx, ly+T.GEO_BASELINE_LABEL_SUDUT, f"{diketahui}°") + teks(ux, uy+T.GEO_BASELINE_LABEL_SUDUT, "?")
     if total == 90:
         isi += siku(cx, cy, 1, -1)
     return isi
@@ -68,9 +68,9 @@ def _segitiga(d, rasio=False):
                  "x" if d["r"] == 1 else f"{d['r']}x")
     else:
         nilai = (f"{d['a']}°", f"{d['b']}°", "?")
-    return (isi + _label_sudut(92, 165, nilai[0], "A")
-            + _label_sudut(265, 165, nilai[1], "B")
-            + _label_sudut(190, 72, nilai[2], "C"))
+    return (isi + _label_sudut(*T.GEO_LABEL_SEGITIGA[0], nilai[0], "A")
+            + _label_sudut(*T.GEO_LABEL_SEGITIGA[1], nilai[1], "B")
+            + _label_sudut(*T.GEO_LABEL_SEGITIGA[2], nilai[2], "C"))
 
 
 def _segitiga_luar(d):
@@ -81,9 +81,9 @@ def _segitiga_luar(d):
         poligon((a, b, c), "segitiga")
         + polyline((a, b, (325, 180)), "alas-diperpanjang")
         + busur
-        + _label_sudut(92, 164, f"{d['a']}°", "A")
-        + _label_sudut(175, 76, f"{d['b']}°", "C")
-        + _label_sudut(277, 164, "?", "B-luar")
+        + _label_sudut(*T.GEO_LABEL_SEGITIGA_LUAR[0], f"{d['a']}°", "A")
+        + _label_sudut(*T.GEO_LABEL_SEGITIGA_LUAR[1], f"{d['b']}°", "C")
+        + _label_sudut(*T.GEO_LABEL_SEGITIGA_LUAR[2], "?", "B-luar")
     )
 
 
@@ -97,10 +97,10 @@ def _persegi_panjang(d, balik=False):
     isi = f'<rect class="persegi-panjang" x="{x}" y="{y}" width="{w}" height="{h}" fill="{T.LATAR_KARTU}" stroke="{T.TEKS_UTAMA}" stroke-width="{T.GEO_GARIS}"/>'
     isi += teks(x+w/2, y+h+22, f"{d['p']} cm")
     if balik:
-        isi += teks(x-15, y+h/2, "?", jangkar="end")
+        isi += teks(x-T.GEO_JARAK_LABEL_SISI, y+h/2, "?", jangkar="end")
         isi += teks(x+w/2, y-12, f"K = {d['K']} cm")
     else:
-        isi += teks(x-15, y+h/2, f"{d['l']} cm", jangkar="end")
+        isi += teks(x-T.GEO_JARAK_LABEL_SISI, y+h/2, f"{d['l']} cm", jangkar="end")
     return isi
 
 
@@ -139,14 +139,8 @@ def _tinggi(d, jajargenjang=False):
         isi += garis(kaki_x, dasar_y, ujung, dasar_y, "perpanjangan-alas", putus=True)
     arah_siku = 1 if kaki_x <= b[0] else -1
     isi += siku(kaki_x, dasar_y, arah_siku, -1)
-    isi += teks((a[0]+b[0])/2, dasar_y+T.GEO_MARGIN, f"a = {d['a']} cm")
-    # Label t dan s ditempel dekat ruasnya, tetapi berjarak vertikal agar
-    # kombinasi nilai pendek tidak saling menimpa.
-    label_t_x = max(T.GEO_MARGIN + 48, min(T.GEO_LEBAR-T.GEO_MARGIN, kaki_x-8))
-    jangkar_t = "end" if kaki_x >= T.GEO_LEBAR/2 else "start"
-    isi += teks(label_t_x, (dasar_y+puncak[1])/2-10, f"t = {d['t']} cm", jangkar=jangkar_t)
-    isi += teks((a[0]+miring_atas[0])/2+8, (a[1]+miring_atas[1])/2+12, f"s = {d['s']} cm", jangkar="start")
-    return isi
+    return isi + "".join(teks(*posisi, f"{nama} = {d[nama]} cm")
+                         for posisi, nama in zip(T.GEO_LABEL_UKURAN, ("a", "t", "s")))
 
 
 def _trapesium(d):
@@ -159,7 +153,7 @@ def _trapesium(d):
     return (poligon(pts, "trapesium") + sambungan + teks(T.GEO_LEBAR/2, y0+T.GEO_MARGIN, f"{d['b']} cm")
             + teks(T.GEO_LEBAR/2, max(T.GEO_FONT, y0-tinggi-T.GEO_MARGIN/2), f"{d['a']} cm")
             + garis(x0+masuk, y0-tinggi, x0+masuk, y0, "tinggi", putus=True)
-            + siku(x0+masuk, y0) + teks(x0+masuk-8, y0-tinggi/2, f"{d['t']} cm", jangkar="end"))
+            + siku(x0+masuk, y0) + teks(*T.GEO_LABEL_TINGGI_TRAPESIUM, f"tinggi = {d['t']} cm"))
 
 
 def _ketupat(d, balik=False):
@@ -177,8 +171,8 @@ def _ketupat(d, balik=False):
         isi += teks(cx, cy-10, f"{d['d1']} cm") + teks(cx+T.GEO_MARGIN, cy-h/4, "?")
         isi += teks(cx, T.GEO_LABEL_UTAMA_Y, f"L = {d['L']} cm²")
     else:
-        isi += teks(cx, cy+T.GEO_MARGIN, f"{d['d1']} cm")
-        isi += teks(cx+T.GEO_MARGIN, cy-h/4-T.GEO_FONT, f"{d['d2']} cm")
+        isi += teks(*T.GEO_LABEL_DIAGONAL[0], f"d₁ = {d['d1']} cm")
+        isi += teks(*T.GEO_LABEL_DIAGONAL[1], f"d₂ = {d['d2']} cm")
     return isi
 
 
