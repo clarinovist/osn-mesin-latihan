@@ -59,6 +59,9 @@ def _render_visual(
 ) -> str:
     data = descriptor.data
     pasangan = (descriptor.jenis, descriptor.versi)
+    if descriptor.versi == 2 and descriptor.jenis in {"korek", "titik"}:
+        from number_patterns_svg import render_pola
+        return render_pola(descriptor.jenis, data, namespace)
     if pasangan == ("korek", 1):
         return _svg_korek(
             data["n_tampil"],
@@ -181,14 +184,14 @@ def _ringkasan_descriptor(descriptor: DescriptorVisual) -> str:
     if (descriptor.jenis, descriptor.versi) == ("geometri_datar", 1):
         from plane_geometry_svg import ringkasan_geometri_datar
         return ringkasan_geometri_datar(data)
-    if (descriptor.jenis, descriptor.versi) == ("korek", 1):
+    if descriptor.jenis == "korek" and descriptor.versi in {1, 2}:
         jumlah = [
             data["awal"] + data["tambah"] * indeks
             for indeks in range(data["n_tampil"])
         ]
         daftar = ", ".join(str(nilai) for nilai in jumlah)
         return f"Visual menampilkan {data['n_tampil']} tahap: {daftar} batang."
-    if (descriptor.jenis, descriptor.versi) == ("titik", 1):
+    if descriptor.jenis == "titik" and descriptor.versi in {1, 2}:
         jumlah = [
             tahap * (tahap + 1) // 2
             for tahap in range(1, data["n_tampil"] + 1)

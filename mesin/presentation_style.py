@@ -7,4 +7,8 @@ GAYA_PENYAJIAN = f"""
   display: block; width: {T.LEBAR_VISUAL_SOAL}; max-width: 100%; height: auto;
   margin: {T.JARAK_VISUAL_SOAL} auto;
 }}
+@media print {{
+  .rumus-kartu-st, .bantuan-visual {{ break-inside: avoid; }}
+  .hasil-soal-st {{ break-inside: avoid; }}
+}}
 """

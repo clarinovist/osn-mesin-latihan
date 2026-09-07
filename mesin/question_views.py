@@ -131,6 +131,7 @@ def _proyeksi_visual_aktif(soal: Soal):
     from topic_solid_geometry_visual import proyeksi_geometri_ruang
     from topic_combinatorics_visual import proyeksi_kombinatorik
     from topic_measurement_visual import proyeksi_pengukuran
+    from topic_number_patterns_visual import proyeksi_pola
 
     konfigurasi = os.environ.get("OSN_VISUAL_KELUARGA", "").strip()
     if not konfigurasi:
@@ -142,6 +143,7 @@ def _proyeksi_visual_aktif(soal: Soal):
         "geometri-ruang": proyeksi_geometri_ruang,
         "kombinatorik": proyeksi_kombinatorik,
         "pengukuran": proyeksi_pengukuran,
+        "pola-bilangan": proyeksi_pola,
     }
     asing = keluarga - proyektor.keys()
     if asing:

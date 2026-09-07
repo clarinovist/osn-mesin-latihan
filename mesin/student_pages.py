@@ -1424,6 +1424,8 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
         b["template_id"] for b in hasil["soal"]
         if b["dijawab"] and not b["benar"]
     ]
+    from learning_visuals import render_bantuan
+
     kartu_rumus = modul_rumus.kartu_untuk_banyak(salah_ids)
     blok_rumus = ""
     if kartu_rumus:
@@ -1435,8 +1437,11 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
                 f'<div class="rumus-contoh-st">Contoh: {_escape(k.contoh)}</div>'
                 if k.contoh else ""
             )
+            + (render_bantuan(k.bantuan, konteks="hasil_sah",
+                              namespace=f"hasil-{sesi_id}-kartu-{indeks}")
+               if k.bantuan is not None else "")
             + "</div>"
-            for k in kartu_rumus
+            for indeks, k in enumerate(kartu_rumus)
         )
         blok_rumus = (
             '<div class="rumus-blok-st">'

@@ -22,6 +22,9 @@ teori basa-basi yang salah sasaran).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
+
+from learning_visuals import BantuanVisual
 
 
 @dataclass(frozen=True)
@@ -31,6 +34,7 @@ class Kartu:
     judul: str
     inti: str
     contoh: str = ""
+    bantuan: Optional[BantuanVisual] = None
 
 
 # Kartu per KONSEP. Bahasa sengaja bahasa anak SD: rumus ditulis dengan
@@ -53,6 +57,22 @@ KARTU: dict[str, Kartu] = {
         inti="Cari BEDA antara dua suku berdekatan. Kalau bedanya tetap, "
              "tambahkan beda itu untuk suku berikutnya.",
         contoh="7, 11, 15, … beda 4 → berikutnya 15 + 4 = 19.",
+    ),
+    "pola_korek": Kartu(
+        judul="Pola korek api",
+        inti="Hitung batang awal, lalu amati batang baru pada setiap langkah. "
+             "Dari gambar 1 ke gambar 4 ada tiga langkah penambahan.",
+        contoh="Awal 4 batang, tambah 3 tiap langkah: 4, 7, 10, 13. "
+               "Ada 3 kali penambahan: 4 + 3 × 3 = 13.",
+        bantuan=BantuanVisual("korek"),
+    ),
+    "pola_titik_segitiga": Kartu(
+        judul="Pola titik segitiga",
+        inti="Setiap gambar menambah satu baris yang lebih panjang. "
+             "Jumlahkan banyak titik di setiap baris; pertambahannya bukan beda tetap.",
+        contoh="Gambar 1–4 berisi 1, 3, 6, 10 titik. "
+               "Empat baris pada gambar 4: 1 + 2 + 3 + 4 = 10.",
+        bantuan=BantuanVisual("titik"),
     ),
     "pola_geometri": Kartu(
         judul="Pola dikali",
@@ -420,7 +440,7 @@ KONSEP_TEMPLATE: dict[str, str] = {
     "simetri_bangun": "simetri",
     # pola & siklus
     "deret_bertingkat": "pola_bilangan",
-    "titik_segitiga": "pola_bilangan",
+    "titik_segitiga": "pola_titik_segitiga",
     "siklus_huruf": "siklus",
     "siklus_warna": "siklus",
     "jumlah_siklus": "siklus",
@@ -446,7 +466,7 @@ KONSEP_TEMPLATE: dict[str, str] = {
     "jangkauan_data": "jangkauan",
     "sarang_merpati": "sarang_merpati",
     "jalur_petak": "jalur_petak",
-    "korek_api": "pola_bilangan",
+    "korek_api": "pola_korek",
     # kombinatorik
     "permutasi_urutan": "kombinatorik",
     "permutasi_blok": "kombinatorik",

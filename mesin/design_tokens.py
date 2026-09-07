@@ -32,6 +32,21 @@ screen_style.py (browser) + print_style.py (kertas A4); murid di students.py.
 
 # Ukuran diagram pertanyaan yang dibagikan seluruh permukaan.
 LEBAR_VISUAL_SOAL = "24rem"
+# Pola v2 dan contoh belajar; koordinat tetap dua kolom.
+POLA_LEBAR = 360
+POLA_TINGGI = 320
+POLA_SEL_LEBAR = 180
+POLA_SEL_TINGGI = 160
+POLA_BENTUK_Y = 64
+POLA_RUAS = 22
+POLA_GARIS = 2
+POLA_TEBAL = 5
+POLA_SAMBUNGAN = 3
+POLA_FONT = 16
+POLA_LABEL_Y = 122
+POLA_TITIK_ATAS = 30
+POLA_TITIK_JARAK = 22
+POLA_TITIK_RADIUS = 5
 # Geometri SVG statistika; satuan koordinat viewBox.
 STAT_LEBAR = 360
 STAT_MARGIN = 24

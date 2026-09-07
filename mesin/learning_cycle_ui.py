@@ -348,6 +348,18 @@ def _override(rencana: RencanaBelajar, siswa_id: int) -> str:
     )
 
 
+def _visual_materi(rencana, materi, siswa_id):
+    """Bantuan hanya di kartu belajar, tidak pernah di pertanyaan sesi."""
+    if (rencana.tindakan not in {"intervensi", "pengenalan"}
+            or materi is None or not materi.tersedia or materi.bantuan is None):
+        return ""
+    from learning_visuals import render_bantuan
+    return render_bantuan(
+        materi.bantuan, konteks="pelajari_bersama",
+        namespace=f"rencana-{siswa_id}-{materi.pendekatan_id}",
+    )
+
+
 def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -> str:
     """Render satu rekomendasi tanpa menulis state domain."""
     if bukti.siswa_id != siswa_id:
@@ -363,7 +375,8 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
     materi_tidak_tersedia = bool(materi is not None and not materi.tersedia)
     contoh = (
         '<div class="contoh-rencana-st"><b>Contoh terbimbing</b>'
-        f'<p>{html.escape(materi.contoh_terbimbing)}</p></div>'
+        f'<p>{html.escape(materi.contoh_terbimbing)}</p>'
+        + _visual_materi(rencana, materi, siswa_id) + '</div>'
         if materi is not None and materi.tersedia and materi.contoh_terbimbing else ""
     )
     catatan_materi = (

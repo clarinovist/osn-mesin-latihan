@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import rumus
+from learning_visuals import BantuanVisual
 
 KunciFokus = Tuple[str, str, Optional[str]]
 
@@ -17,6 +18,7 @@ class MateriIntervensi:
     contoh_terbimbing: str
     strategi_anak: str
     tersedia: bool = True
+    bantuan: Optional[BantuanVisual] = None
 
 
 _STRATEGI = {
@@ -68,6 +70,16 @@ def pilihan_untuk_fokus(kunci: KunciFokus) -> tuple[MateriIntervensi, ...]:
         kartu.contoh,
         "Jelaskan kembali alasan tiap langkah tanpa menyalin contoh.",
     )
+    if kunci[0] in ("korek_api", "titik_segitiga") and kartu.bantuan is not None:
+        visual = MateriIntervensi(
+            f"visual-pola-v1:{kunci[0]}:{kunci[2] or 'umum'}",
+            "Amati contoh gambar bersama. Minta anak menunjuk bagian baru "
+            "pada setiap gambar dan menjelaskan cara menghitungnya.",
+            kartu.contoh,
+            "Tunjuk bagian yang bertambah, lalu jelaskan cara menghitung jumlahnya.",
+            bantuan=kartu.bantuan,
+        )
+        return (visual, utama, alternatif)
     return (utama, alternatif)
 
 
