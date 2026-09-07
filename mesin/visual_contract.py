@@ -13,6 +13,7 @@ from typing import Any, Mapping, Optional
 
 from templates import LEVEL
 from statistics_visual_data import VALIDATOR_STATISTIKA
+from plane_geometry_visual_data import validasi_data as validasi_geometri_datar
 
 PENYAJIAN_VERSI = 1
 RENDERER_VERSI = 1
@@ -196,6 +197,7 @@ _SKEMA_DESCRIPTOR = {
     ("placeholder", 1): _validasi_placeholder_v1,
     ("korek", 1): _validasi_korek_v1,
     ("titik", 1): _validasi_titik_v1,
+    ("geometri_datar", 1): validasi_geometri_datar,
     **{(jenis, 1): validator for jenis, validator in VALIDATOR_STATISTIKA.items()},
 }
 

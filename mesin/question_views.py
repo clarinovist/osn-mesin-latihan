@@ -125,15 +125,31 @@ def _penyajian_snapshot(baris) -> PenyajianPertanyaan:
     return penyajian
 
 
+def _proyeksi_visual_aktif(soal: Soal):
+    """Validasi seluruh allow-list sebelum memilih proyektor snapshot baru."""
+    from topic_plane_geometry_visual import proyeksi_geometri_datar
+
+    konfigurasi = os.environ.get("OSN_VISUAL_KELUARGA", "").strip()
+    if not konfigurasi:
+        return None
+    keluarga = frozenset(nama.strip() for nama in konfigurasi.split(","))
+    proyektor = {
+        "statistika": proyeksi_statistika,
+        "geometri-datar": proyeksi_geometri_datar,
+    }
+    asing = keluarga - proyektor.keys()
+    if asing:
+        raise ValueError(f"keluarga visual tidak dikenal: {sorted(asing)!r}")
+    for nama in sorted(keluarga):
+        hasil = proyektor[nama](soal.template_id, soal.parameter)
+        if hasil is not None:
+            return hasil
+    return None
+
+
 def penyajian_dari_soal(soal: Soal) -> PenyajianPertanyaan:
     """Proyeksikan soal baru; default teks dan visual hanya lewat opt-in."""
-    keluarga = os.environ.get("OSN_VISUAL_KELUARGA", "").strip()
-    if not keluarga:
-        proyeksi = None
-    elif keluarga == "statistika":
-        proyeksi = proyeksi_statistika(soal.template_id, soal.parameter)
-    else:
-        raise ValueError(f"keluarga visual tidak dikenal: {keluarga!r}")
+    proyeksi = _proyeksi_visual_aktif(soal)
 
     teks = soal.teks
     status_visual = "tanpa_visual"

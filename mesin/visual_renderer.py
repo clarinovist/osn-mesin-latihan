@@ -72,6 +72,9 @@ def _render_visual(
         "batang", "turus", "piktogram", "lingkaran"
     }:
         return render_statistika(descriptor.jenis, data, namespace)
+    if pasangan == ("geometri_datar", 1):
+        from plane_geometry_svg import render_geometri_datar
+        return render_geometri_datar(data, namespace)
     if descriptor.jenis == "placeholder":
         raise ValueError("placeholder bukan visual asli dan tidak boleh dirender")
     raise ValueError(
@@ -139,6 +142,9 @@ def render_pertanyaan(
 
 def _ringkasan_descriptor(descriptor: DescriptorVisual) -> str:
     data = descriptor.data
+    if (descriptor.jenis, descriptor.versi) == ("geometri_datar", 1):
+        from plane_geometry_svg import ringkasan_geometri_datar
+        return ringkasan_geometri_datar(data)
     if (descriptor.jenis, descriptor.versi) == ("korek", 1):
         jumlah = [
             data["awal"] + data["tambah"] * indeks

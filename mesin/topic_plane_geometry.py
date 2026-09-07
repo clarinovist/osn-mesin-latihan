@@ -4,8 +4,9 @@ Dua belas template menutup cakupan geometri datar OSN SD: sudut (bagian A),
 keliling & luas (B), lingkaran (C), arsiran & perubahan ukuran (D), dan
 dasar P3 (E): luas dari kotak satuan serta simetri bangun dasar.
 Level P3–P6; P3 dibuka selaras band SASMO Primary 1–4 (geometry &
-mensuration). Soal berbentuk teks dulu; diagram SVG adalah penyempurnaan
-`render_badan` belakangan.
+mensuration). Template mempertahankan teks dan identitas matematis lama;
+penyajian SVG sesi baru diproyeksikan lewat topic_plane_geometry_visual
+pada jalur snapshot dengan opt-in keluarga geometri-datar.
 
 Python tetap menghitung parameter, kunci, dan malrule; ini bukan soal
 yang ditulis LLM. Malrule lulus `saring_malrule` dengan jalur K dan H
