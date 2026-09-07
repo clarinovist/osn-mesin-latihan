@@ -8,6 +8,7 @@ volume (C). P3/P4 tidak didukung.
 from __future__ import annotations
 
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
@@ -172,13 +173,14 @@ def test_volume_prisma_tabung_kunci():
         if p["varian"] == "prisma_V":
             expected = (p["a"] * p["t_segitiga"] // 2) * p["t_prisma"]
         elif p["varian"] == "tabung_V":
-            pi = 22 / 7 if p["r"] % 7 == 0 else 3.14
-            expected = int(pi * p["r"] * p["r"] * p["t"])
+            pi = Fraction(22, 7) if p["r"] % 7 == 0 else Fraction(314, 100)
+            expected = pi * p["r"] * p["r"] * p["t"]
         elif p["varian"] == "prisma_balik":
             expected = p["t_prisma"]
         else:
-            expected = p["t"]
-        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+            pi = Fraction(22, 7) if p["r"] % 7 == 0 else Fraction(314, 100)
+            expected = Fraction(str(p["V"]).replace(",", ".")) / (pi * p["r"] ** 2)
+        assert Fraction(s.kunci.replace(",", ".")) == expected, p
         assert s.kunci not in [m.jawaban for m in s.malrule]
         assert {"K", "H"} <= {m.kode for m in s.malrule}, p
 
@@ -200,11 +202,12 @@ def test_luas_permukaan_kunci():
         elif p["varian"] == "balok_cari_p":
             expected = p["p"]
         elif p["varian"] == "tabung_LP":
-            pi = 22 / 7 if p["r"] % 7 == 0 else 3.14
-            expected = int(2 * pi * p["r"] * p["r"] + 2 * pi * p["r"] * p["t"])
+            pi = Fraction(22, 7) if p["r"] % 7 == 0 else Fraction(314, 100)
+            expected = 2 * pi * p["r"] * (p["r"] + p["t"])
         else:
-            expected = p["t"]
-        assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"
+            pi = Fraction(22, 7) if p["r"] % 7 == 0 else Fraction(314, 100)
+            expected = Fraction(str(p["LP"]).replace(",", ".")) / (2 * pi * p["r"]) - p["r"]
+        assert Fraction(s.kunci.replace(",", ".")) == expected, p
         assert s.kunci not in [m.jawaban for m in s.malrule]
         assert {"K", "H"} <= {m.kode for m in s.malrule}, p
 
@@ -256,6 +259,9 @@ def test_perbandingan_volume_kunci():
         p = s.parameter
         if p["varian"] == "cari_k":
             expected = p["k"]
+            assert expected ** 3 == p["V_baru"]
+        elif p["varian"] == "cari_V_baru":
+            expected = p["k"] ** 3
         else:
             expected = p["k"] ** 3 * p["s"]
         assert s.kunci == str(expected), f"{p=}, kunci={s.kunci}"

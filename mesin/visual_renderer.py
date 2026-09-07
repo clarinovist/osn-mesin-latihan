@@ -72,6 +72,9 @@ def _render_visual(
         "batang", "turus", "piktogram", "lingkaran"
     }:
         return render_statistika(descriptor.jenis, data, namespace)
+    if pasangan == ("geometri_ruang", 1):
+        from solid_geometry_svg import render_geometri_ruang
+        return render_geometri_ruang(data, namespace)
     if pasangan == ("geometri_datar", 1):
         from plane_geometry_svg import render_geometri_datar
         return render_geometri_datar(data, namespace)
@@ -142,6 +145,9 @@ def render_pertanyaan(
 
 def _ringkasan_descriptor(descriptor: DescriptorVisual) -> str:
     data = descriptor.data
+    if (descriptor.jenis, descriptor.versi) == ("geometri_ruang", 1):
+        from solid_geometry_svg import ringkasan_geometri_ruang
+        return ringkasan_geometri_ruang(data)
     if (descriptor.jenis, descriptor.versi) == ("geometri_datar", 1):
         from plane_geometry_svg import ringkasan_geometri_datar
         return ringkasan_geometri_datar(data)

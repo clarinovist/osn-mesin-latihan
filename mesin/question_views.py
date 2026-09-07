@@ -128,6 +128,7 @@ def _penyajian_snapshot(baris) -> PenyajianPertanyaan:
 def _proyeksi_visual_aktif(soal: Soal):
     """Validasi seluruh allow-list sebelum memilih proyektor snapshot baru."""
     from topic_plane_geometry_visual import proyeksi_geometri_datar
+    from topic_solid_geometry_visual import proyeksi_geometri_ruang
 
     konfigurasi = os.environ.get("OSN_VISUAL_KELUARGA", "").strip()
     if not konfigurasi:
@@ -136,6 +137,7 @@ def _proyeksi_visual_aktif(soal: Soal):
     proyektor = {
         "statistika": proyeksi_statistika,
         "geometri-datar": proyeksi_geometri_datar,
+        "geometri-ruang": proyeksi_geometri_ruang,
     }
     asing = keluarga - proyektor.keys()
     if asing:

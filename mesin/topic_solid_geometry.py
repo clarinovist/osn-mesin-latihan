@@ -2,8 +2,8 @@
 
 Tujuh template menutup cakupan geometri ruang OSN SD: unsur bangun ruang
 & volume (bagian A), luas permukaan & jaring (B), kubus dicat & perbandingan
-volume (C). Level P5/P6 (P3/P4 tidak didukung). Soal berbentuk teks dulu;
-diagram SVG adalah penyempurnaan render_badan belakangan.
+volume (C). Level P5/P6 (P3/P4 tidak didukung). Fungsi tanpa versi menjaga
+teks warisan; soal baru memakai matematika versi2 dan SVG snapshot opt-in.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import random
 
 from templates import Malrule, Soal, saring_malrule
 from topics import Topik, daftarkan
+from solid_geometry_versions import soal_berversi, parameter_baru
 
 
 # ── Data bangun ruang ───────────────────────────────────────────────────
@@ -225,6 +226,7 @@ def volume_kubus_balok(varian: str, s: int = 0, p: int = 0,
     )
 
 
+@soal_berversi
 def volume_prisma_tabung(varian: str, a: int = 0, t_segitiga: int = 0,
                           t_prisma: int = 0, r: int = 0,
                           t: int = 0, V: int = 0) -> Soal:
@@ -302,6 +304,7 @@ def volume_prisma_tabung(varian: str, a: int = 0, t_segitiga: int = 0,
 # ── Bagian B — Luas permukaan & jaring ─────────────────────────────────
 
 
+@soal_berversi
 def luas_permukaan(varian: str, s: int = 0,
                    p: int = 0, l: int = 0, t: int = 0,
                    r: int = 0, LP: int = 0) -> Soal:
@@ -401,6 +404,7 @@ def _gambar_jaring(koordinat: tuple[tuple[int, int], ...]) -> str:
     return "\n".join(baris) if baris else "(kosong)"
 
 
+@soal_berversi
 def jaring_jaring(pilihan_benar: int, urutan: tuple[int, ...]) -> Soal:
     """Dari 5 pilihan, pilih jaring yang bisa dilipat jadi kubus."""
     # Bangun 5 pilihan: 1 benar + 4 palsu (diacak posisinya)
@@ -558,6 +562,7 @@ def kubus_dicat(n: int, tanya: str, n_kubus: int = 1) -> Soal:
     )
 
 
+@soal_berversi
 def perbandingan_volume(varian: str, k: int, s: int = 0,
                          V: int = 0, V_baru: int = 0) -> Soal:
     """Skala k: V baru = k³ × V lama; dua arah."""
@@ -665,6 +670,7 @@ CATATAN_BAGIAN = {
 }
 
 
+@parameter_baru
 def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
     if template_id == "unsur_bangun":
         bangun = rng.choice(("kubus", "balok", "prisma_segitiga", "tabung",
