@@ -15,3 +15,8 @@ kodenya identik dengan produksi.
 import os
 
 os.environ.setdefault("OSN_PBKDF2_ITERASI", "1000")
+
+# Suite fitur menguji matematika terkoreksi secara eksplisit, termasuk data
+# yang dibuat saat collection. Test rollout menghapus/mengganti env ini untuk
+# menguji default image jembatan dan override warisan. Tidak masuk image app.
+os.environ.setdefault("OSN_MATEMATIKA_VERSI", "2")

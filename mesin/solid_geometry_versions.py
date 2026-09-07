@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import inspect
 from functools import wraps
+from generator_version import versi_generator_baru
 from typing import Callable
 
 from templates import Soal
@@ -38,6 +39,8 @@ def parameter_baru(fungsi):
     """Generator baru beridentitas baru; RNG dan jalur lain tetap."""
     @wraps(fungsi)
     def parameter(template_id, rng, level):
+        if versi_generator_baru() == 1:
+            return fungsi(template_id, rng, level)
         if template_id == 'jaring_jaring':
             from solid_geometry_nets import parameter_jaring_v2
             return parameter_jaring_v2(rng)

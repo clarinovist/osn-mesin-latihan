@@ -4,6 +4,7 @@ from __future__ import annotations
 import inspect
 from dataclasses import replace
 from functools import wraps
+from generator_version import versi_generator_baru
 
 from templates import Malrule
 
@@ -89,6 +90,8 @@ def parameter_baru(fungsi):
     """Buat input bilangan bulat yang konsisten, bukan membulatkan jawaban."""
     @wraps(fungsi)
     def parameter(template_id, rng, level):
+        if versi_generator_baru() == 1:
+            return fungsi(template_id, rng, level)
         lama = fungsi(template_id, rng, level)
         if template_id == "skala_peta":
             peta = lama["peta"]
