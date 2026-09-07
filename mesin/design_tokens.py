@@ -32,6 +32,29 @@ screen_style.py (browser) + print_style.py (kertas A4); murid di students.py.
 
 # Ukuran diagram pertanyaan yang dibagikan seluruh permukaan.
 LEBAR_VISUAL_SOAL = "24rem"
+# Geometri SVG statistika; satuan koordinat viewBox.
+STAT_LEBAR = 360
+STAT_MARGIN = 24
+STAT_FONT = 16
+STAT_GARIS = 2
+STAT_GARIS_TIPIS = 1
+STAT_LABEL_DX = 8
+STAT_LABEL_DY = 5
+STAT_ARSIR_JARAK = 8
+STAT_NAMA_PER_BARIS = 18
+STAT_BARIS = 96
+STAT_ATAS = 28
+STAT_PLOT_TINGGI = 280
+STAT_PLOT_KIRI = 48
+STAT_PLOT_KANAN = 336
+STAT_RADIUS = 96
+STAT_PUSAT_X = 180
+STAT_PUSAT_Y = 124
+STAT_IKON_RADIUS = 7
+STAT_IKON_JARAK = 24
+STAT_TURUS_JARAK = 8
+STAT_TURUS_BUNDEL = 48
+STAT_TURUS_TINGGI = 24
 JARAK_VISUAL_SOAL = "0.75rem"
 
 # Latar

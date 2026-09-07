@@ -826,12 +826,18 @@ def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
     ).fetchall()
     hasil = []
     dicoba = 0
+    dilewati_visual = 0
     for b in target:
         snapshot_selesai = (
             b["fingerprint_penyajian"] is not None
             and b["asal_teks"] == "cerita"
         )
         if snapshot_selesai:
+            continue
+        # Visual-esensial harus mempertahankan teks proyektor yang selaras
+        # dengan descriptor; parafrase dapat memunculkan kembali data mentah.
+        if b["status_visual"] == "siap":
+            dilewati_visual += 1
             continue
         dicoba += 1
         soal_ini = ambil_soal(b)
@@ -844,11 +850,18 @@ def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
             hasil.append((b, _snapshot_cerita(b, kalimat)))
 
     if not hasil:
+        tambahan = (
+            f" {dilewati_visual} soal visual dilewati."
+            if dilewati_visual
+            else ""
+        )
         if dicoba == 0:
+            if dilewati_visual:
+                return 0, 0, tambahan.strip()
             return 0, 0, "Semua soal sudah punya versi cerita."
         return 0, dicoba, (
             f"{dicoba} soal dicoba, tidak ada yang lolos verifikasi angka — "
-            "kalimat bawaan tetap dipakai."
+            f"kalimat bawaan tetap dipakai.{tambahan}"
         )
 
     # Penulisan snapshot atomik per sesi, tetapi transaksi tetap milik pemanggil.
@@ -869,4 +882,7 @@ def bungkus_sesi(kon, sesi_id: int, ambil_soal) -> tuple[int, int, str]:
         return 0, dicoba, "Variasi cerita gagal disimpan karena snapshot berubah."
 
     berhasil = len(hasil)
-    return berhasil, dicoba, f"{berhasil} dari {dicoba} soal dapat versi cerita."
+    catatan = f"{berhasil} dari {dicoba} soal dapat versi cerita."
+    if dilewati_visual:
+        catatan += f" {dilewati_visual} soal visual dilewati."
+    return berhasil, dicoba, catatan

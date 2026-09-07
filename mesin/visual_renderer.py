@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+from statistics_svg import render_statistika
 from topic_number_patterns_svg import _svg_korek, _svg_titik
 from visual_contract import (
     DescriptorVisual,
@@ -67,6 +68,10 @@ def _render_visual(
         )
     if pasangan == ("titik", 1):
         return _svg_titik(data["n_tampil"], namespace=namespace)
+    if descriptor.versi == 1 and descriptor.jenis in {
+        "batang", "turus", "piktogram", "lingkaran"
+    }:
+        return render_statistika(descriptor.jenis, data, namespace)
     if descriptor.jenis == "placeholder":
         raise ValueError("placeholder bukan visual asli dan tidak boleh dirender")
     raise ValueError(
@@ -148,6 +153,39 @@ def _ringkasan_descriptor(descriptor: DescriptorVisual) -> str:
         ]
         daftar = ", ".join(str(nilai) for nilai in jumlah)
         return f"Visual menampilkan {data['n_tampil']} tahap: {daftar} titik."
+    if (descriptor.jenis, descriptor.versi) == ("batang", 1):
+        daftar = ", ".join(
+            f"{nama} setinggi {nilai}"
+            for nama, nilai in zip(data["nama"], data["data"])
+        )
+        return f"Fakta visual: diagram batang memuat {daftar}."
+    if (descriptor.jenis, descriptor.versi) == ("turus", 1):
+        daftar = ", ".join(
+            f"{nama} memiliki {nilai} turus"
+            for nama, nilai in zip(data["nama"], data["data"])
+        )
+        return f"Fakta visual: tabel memuat {daftar}."
+    if (descriptor.jenis, descriptor.versi) == ("piktogram", 1):
+        daftar = ", ".join(
+            f"{nama} memiliki {jumlah} gambar"
+            for nama, jumlah in zip(data["nama"], data["gambar"])
+        )
+        return (
+            f"Fakta visual: {daftar}; satu gambar mewakili "
+            f"{data['satuan']} buah."
+        )
+    if (descriptor.jenis, descriptor.versi) == ("lingkaran", 1):
+        if data["varian"] == "cari_nilai":
+            return (
+                "Fakta visual: total data "
+                f"{data['total']} siswa dan sudut bagian olahraga "
+                f"{data['sudut']} derajat."
+            )
+        return (
+            "Fakta visual: total data "
+            f"{data['total']} siswa dan bagian membaca berisi "
+            f"{data['nilai']} siswa; sudutnya belum diberi nilai."
+        )
     raise ValueError(
         f"descriptor visual tidak didukung: {descriptor.jenis!r} v{descriptor.versi!r}"
     )

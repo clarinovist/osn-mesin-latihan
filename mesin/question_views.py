@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import replace
 from typing import Any
 
 from generator import LEVEL_BAWAAN
 from templates import REGISTRI, Soal
+from topic_statistics_visual import proyeksi_statistika
 from visual_contract import (
     PenyajianPertanyaan,
     buat_penyajian,
@@ -124,18 +126,36 @@ def _penyajian_snapshot(baris) -> PenyajianPertanyaan:
 
 
 def penyajian_dari_soal(soal: Soal) -> PenyajianPertanyaan:
-    """Proyeksikan soal baru menjadi snapshot penyajian teks bawaan."""
+    """Proyeksikan soal baru; default teks dan visual hanya lewat opt-in."""
+    keluarga = os.environ.get("OSN_VISUAL_KELUARGA", "").strip()
+    if not keluarga:
+        proyeksi = None
+    elif keluarga == "statistika":
+        proyeksi = proyeksi_statistika(soal.template_id, soal.parameter)
+    else:
+        raise ValueError(f"keluarga visual tidak dikenal: {keluarga!r}")
+
+    teks = soal.teks
+    status_visual = "tanpa_visual"
+    mode_representasi = "teks-v1"
+    descriptor = None
+    if proyeksi is not None:
+        teks, descriptor = proyeksi
+        status_visual = "siap"
+        mode_representasi = f"{descriptor.jenis}-v{descriptor.versi}"
+
     return buat_penyajian(
         template_id=soal.template_id,
         level=soal.level,
         parameter=soal.parameter,
-        teks_soal=soal.teks,
+        teks_soal=teks,
         bagian_soal=soal.bagian,
         tantangan_soal=soal.tantangan,
         minta_restatement=soal.minta_restatement,
         asal_teks="bawaan",
-        status_visual="tanpa_visual",
-        mode_representasi="teks-v1",
+        status_visual=status_visual,
+        mode_representasi=mode_representasi,
+        descriptor=descriptor,
     )
 
 

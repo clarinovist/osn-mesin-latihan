@@ -964,6 +964,17 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
             f'style="margin-top:0">Variasi cerita &nbsp;✨</button></form>'
         )
 
+    jumlah_visual = sum(p.status_visual == "siap" for p in penyajian)
+    if jumlah_visual:
+        catatan += (
+            f" {jumlah_visual} soal visual memakai kalimat tetap agar sesuai gambar."
+        )
+        if not any(
+            p.status_visual != "siap" and p.asal_teks != "cerita"
+            for p in penyajian
+        ):
+            tombol = ""
+
     if llm._sesi_terkunci(kon, sesi_id):
         catatan += " Penyajian sesi sudah dikunci; buat sesi baru untuk variasi lain."
         tombol = ""
