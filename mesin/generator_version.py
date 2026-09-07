@@ -2,7 +2,7 @@
 import os
 
 # Naikkan hanya setelah image reader jembatan terverifikasi di produksi.
-VERSI_GENERATOR_BAWAAN = 1
+VERSI_GENERATOR_BAWAAN = 2
 
 
 def versi_generator_baru() -> int:

@@ -48,6 +48,13 @@ def test_default_dan_override_writer(monkeypatch):
         assert versi.versi_generator_baru() == harapan
 
 
+def test_default_rilis_versi2_setelah_image_jembatan(monkeypatch):
+    from generator_version import versi_generator_baru
+    monkeypatch.delenv("OSN_MATEMATIKA_VERSI", raising=False)
+    assert versi_generator_baru() == 2
+    assert all(s.parameter.get("versi") == 2 for s in _soal_v2())
+
+
 def _soal_v2():
     def satu(topik, tid):
         parameter = next(p for p in (topik._parameter(tid, random.Random(s), "P6")
