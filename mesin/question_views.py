@@ -129,6 +129,8 @@ def _proyeksi_visual_aktif(soal: Soal):
     """Validasi seluruh allow-list sebelum memilih proyektor snapshot baru."""
     from topic_plane_geometry_visual import proyeksi_geometri_datar
     from topic_solid_geometry_visual import proyeksi_geometri_ruang
+    from topic_combinatorics_visual import proyeksi_kombinatorik
+    from topic_measurement_visual import proyeksi_pengukuran
 
     konfigurasi = os.environ.get("OSN_VISUAL_KELUARGA", "").strip()
     if not konfigurasi:
@@ -138,6 +140,8 @@ def _proyeksi_visual_aktif(soal: Soal):
         "statistika": proyeksi_statistika,
         "geometri-datar": proyeksi_geometri_datar,
         "geometri-ruang": proyeksi_geometri_ruang,
+        "kombinatorik": proyeksi_kombinatorik,
+        "pengukuran": proyeksi_pengukuran,
     }
     asing = keluarga - proyektor.keys()
     if asing:

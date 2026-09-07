@@ -75,6 +75,21 @@ def _render_visual(
     if pasangan == ("geometri_ruang", 1):
         from solid_geometry_svg import render_geometri_ruang
         return render_geometri_ruang(data, namespace)
+    if pasangan == ("skala_peta", 1):
+        from measurement_scale_visual import render_skala
+        return render_skala(data, namespace)
+    if pasangan == ("venn_dua", 1):
+        from combinatorics_sets_visual import render_venn
+        return render_venn(data, namespace)
+    if pasangan == ("susunan_objek", 1):
+        from combinatorics_arrangements_svg import render_susunan
+        return render_susunan(data, namespace)
+    if pasangan == ("jalur_petak", 1):
+        from combinatorics_svg import render_petak
+        return render_petak(data, namespace)
+    if pasangan == ("linimasa_jam", 1):
+        from measurement_svg import render_waktu
+        return render_waktu(data, namespace)
     if pasangan == ("geometri_datar", 1):
         from plane_geometry_svg import render_geometri_datar
         return render_geometri_datar(data, namespace)
@@ -148,6 +163,21 @@ def _ringkasan_descriptor(descriptor: DescriptorVisual) -> str:
     if (descriptor.jenis, descriptor.versi) == ("geometri_ruang", 1):
         from solid_geometry_svg import ringkasan_geometri_ruang
         return ringkasan_geometri_ruang(data)
+    if (descriptor.jenis, descriptor.versi) == ("skala_peta", 1):
+        from measurement_scale_visual import ringkasan_skala
+        return ringkasan_skala(data)
+    if (descriptor.jenis, descriptor.versi) == ("venn_dua", 1):
+        from combinatorics_sets_visual import ringkasan_venn
+        return ringkasan_venn(data)
+    if (descriptor.jenis, descriptor.versi) == ("susunan_objek", 1):
+        from combinatorics_arrangements_svg import ringkasan_susunan
+        return ringkasan_susunan(data)
+    if (descriptor.jenis, descriptor.versi) == ("jalur_petak", 1):
+        from combinatorics_svg import ringkasan_petak
+        return ringkasan_petak(data)
+    if (descriptor.jenis, descriptor.versi) == ("linimasa_jam", 1):
+        from measurement_svg import ringkasan_waktu
+        return ringkasan_waktu(data)
     if (descriptor.jenis, descriptor.versi) == ("geometri_datar", 1):
         from plane_geometry_svg import ringkasan_geometri_datar
         return ringkasan_geometri_datar(data)

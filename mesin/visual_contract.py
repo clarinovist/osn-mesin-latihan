@@ -12,6 +12,9 @@ from types import MappingProxyType
 from typing import Any, Mapping, Optional
 
 from templates import LEVEL
+from measurement_scale_data import validasi_skala
+from combinatorics_visual_data import validasi_venn, validasi_susunan
+from measurement_combinatorics_visual_data import validasi_petak, validasi_waktu
 from statistics_visual_data import VALIDATOR_STATISTIKA
 from plane_geometry_visual_data import validasi_data as validasi_geometri_datar
 from solid_geometry_visual_data import validasi_data as validasi_geometri_ruang
@@ -200,6 +203,11 @@ _SKEMA_DESCRIPTOR = {
     ("titik", 1): _validasi_titik_v1,
     ("geometri_datar", 1): validasi_geometri_datar,
     ("geometri_ruang", 1): validasi_geometri_ruang,
+    ("jalur_petak", 1): validasi_petak,
+    ("linimasa_jam", 1): validasi_waktu,
+    ("skala_peta", 1): validasi_skala,
+    ("venn_dua", 1): validasi_venn,
+    ("susunan_objek", 1): validasi_susunan,
     **{(jenis, 1): validator for jenis, validator in VALIDATOR_STATISTIKA.items()},
 }
 

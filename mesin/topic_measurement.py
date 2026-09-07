@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import random
 
+from measurement_versions import parameter_baru, soal_berversi
 from templates import Malrule, Soal, saring_malrule
 from topics import Topik, daftarkan
 
@@ -19,6 +20,7 @@ from topics import Topik, daftarkan
 # ── Bagian A — Skala peta ──────────────────────────────────────────────
 
 
+@soal_berversi
 def skala_peta(varian: str, sebenarnya: int, peta: int, skala: int) -> Soal:
     """Skala = peta:sebenarnya (cm:cm). Dua arah: cari skala, peta, atau sebenarnya."""
     # skala = peta:sebenarnya_cm — sebenarnya dalam km, konversi ke cm ×100.000
@@ -127,6 +129,7 @@ def satuan_waktu_lama(varian: str, nilai: int, hasil: int) -> Soal:
     )
 
 
+@soal_berversi
 def jam_menit_detik(varian: str, jam: int, menit: int, detik: int) -> Soal:
     """Konversi jam↔menit↔detik; varian durasi (jam:menit ke menit total)."""
     if varian == "jam_ke_menit":
@@ -698,6 +701,7 @@ def _diagnosis_utuh(soal: Soal, harap: int = 3) -> bool:
     return len(soal.malrule) == harap
 
 
+@parameter_baru
 def _parameter(template_id: str, rng: random.Random, level: str) -> dict:
     if template_id == "skala_peta":
         varian = rng.choice(("cari_skala", "cari_peta", "cari_sebenarnya"))
