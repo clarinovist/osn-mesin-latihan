@@ -152,4 +152,3 @@ def test_radius_berawal_di_pusat_elips_yang_ditandai():
             ukuran = re.search(r'A ([\d.]+) ([\d.]+)', b.attrib['d'])
             assert ukuran is not None
             assert tuple(map(float, ukuran.groups())) == (float(elips.attrib['rx']), float(elips.attrib['ry']))
-
