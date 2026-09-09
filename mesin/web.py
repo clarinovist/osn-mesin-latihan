@@ -824,18 +824,20 @@ class Penangan(BaseHTTPRequestHandler):
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
     def _halaman_masuk_stitch(self, galat: str = "") -> bytes:
-        """Versi Stitch dari halaman masuk (S7).
+        """Form masuk editorial dengan dekorasi buku latihan di desktop.
 
-        Single-column card: brand owl + nama, judul + tagline, form nama/sandi,
-        tombol coral Masuk, link Lupa sandi. Markup mengikuti mockup
-        masuk_mobile. Logika auth TIDAK berubah — ini hanya render.
+        Di ponsel fokus tetap pada form. Logo menaut beranda, pesan galat
+        terkait secara semantik ke form. Handler autentikasi tidak berubah.
         """
         from style_stitch import gaya_stitch
         from teacher_style import SKRIP_MATA_SANDI
 
         kabar = (
-            f'<div class="masuk-galat-st">{html.escape(galat)}</div>' if galat else ""
+            '<div class="masuk-galat-st" id="galat-masuk" role="alert" aria-atomic="true">'
+            '<b>Periksa kembali</b>'
+            f'<p>{html.escape(galat)}</p></div>' if galat else ""
         )
+        deskripsi_galat = ' aria-describedby="galat-masuk"' if galat else ""
         body = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul("Masuk"))}</title>
@@ -845,32 +847,52 @@ class Penangan(BaseHTTPRequestHandler):
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
 <style>{gaya_stitch()}</style></head>
 <body class="st">
-<div class="masuk-badan-st">
-  <div class="masuk-kartu-st">
-    <div class="masuk-brand-st">
-      {brand.mark("badge", kelas="ik-owl")}
-      <span class="nama-brand">{T.NAMA_PRODUK}</span>
-    </div>
-    <h1 class="masuk-judul-st">Masuk ke Akun Kamu</h1>
-    <p class="masuk-sub-st">{T.TAGLINE}</p>
-    {kabar}
-    <form class="masuk-form-st" method="post" action="/masuk">
-      <div class="masuk-field-st">
-        <label for="nama">Nama</label>
-        <input type="text" id="nama" name="nama" autocomplete="username" required>
-      </div>
-      <div class="masuk-field-st">
-        <label for="sandi">Sandi</label>
-        <input type="password" id="sandi" name="sandi" autocomplete="current-password" required>
-      </div>
-      <button class="masuk-tombol-st" type="submit">
-        <span class="material-symbols-outlined" style="font-size:1.1rem">login</span>
-        Masuk
-      </button>
-    </form>
-    <p class="masuk-link-st"><a href="/lupa-sandi">Lupa sandi?</a></p>
+<main class="masuk-badan-st" aria-labelledby="judul-masuk">
+  <div class="masuk-kepala-st">
+    <a class="masuk-brand-st" href="/" aria-label="{html.escape(T.NAMA_PRODUK)} — kembali ke beranda">
+      {brand.mark("topbar", kelas="ik-owl")}
+      <span class="nama-brand">{html.escape(T.NAMA_PRODUK)}</span>
+      <span class="masuk-beranda-st" aria-hidden="true">/ beranda</span>
+    </a>
   </div>
-</div>
+  <div class="masuk-panel-st">
+    <div class="masuk-catatan-st" aria-hidden="true">
+      <p class="masuk-alis-st">LEMBAR BARU, SEMANGAT BARU</p>
+      <p class="masuk-pesan-st">Mulai lagi,<br><span>dengan caramu.</span></p>
+      <div class="masuk-buku-st">
+        <span class="masuk-coret-st">✳</span>
+        <img class="masuk-maskot-st" src="/aset/maskot-menunjuk-240.png"
+             width="240" height="240" alt="">
+        <span class="masuk-catatan-kecil-st">Satu langkah dulu.</span>
+      </div>
+    </div>
+    <section class="masuk-kartu-st" aria-labelledby="judul-masuk">
+      <div class="masuk-sapaan-st">
+        <p class="masuk-alis-st">AKUN BELAJARMU</p>
+        <h1 class="masuk-judul-st" id="judul-masuk">Selamat datang kembali</h1>
+        <p class="masuk-sub-st">{html.escape(T.TAGLINE)}</p>
+      </div>
+      {kabar}
+      <form class="masuk-form-st" method="post" action="/masuk"{deskripsi_galat}>
+        <div class="masuk-field-st">
+          <label for="nama">Nama pengguna</label>
+          <input type="text" id="nama" name="nama" autocomplete="username"
+                 aria-describedby="petunjuk-nama" required>
+          <p class="masuk-petunjuk-st" id="petunjuk-nama">Gunakan nama pengguna saat mendaftar,
+          atau akun dari orang tua atau guru.</p>
+        </div>
+        <div class="masuk-field-st">
+          <label for="sandi">Kata sandi</label>
+          <input type="password" id="sandi" name="sandi" autocomplete="current-password" required>
+        </div>
+        <button class="masuk-tombol-st" type="submit">
+          Masuk <span aria-hidden="true">→</span>
+        </button>
+      </form>
+      <p class="masuk-link-st"><a href="/lupa-sandi">Lupa sandi?</a></p>
+    </section>
+  </div>
+</main>
 <script>{SKRIP_MATA_SANDI}</script>
 </body></html>"""
         return body.encode()
