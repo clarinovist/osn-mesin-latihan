@@ -1,12 +1,16 @@
 {
   "commands": [
     {
+      "name": "palang-codebase-dan-privasi",
+      "argv": ["mesin/.venv/bin/python", "scripts/check_repo.py"]
+    },
+    {
       "name": "pytest-semua-dan-warning-error",
       "argv": ["mesin/.venv/bin/python", "-m", "pytest", "mesin/__tests__/", "-q", "-n", "auto", "-W", "error", "-p", "no:cacheprovider"]
     },
     {
       "name": "kompilasi-python",
-      "argv": ["mesin/.venv/bin/python", "-W", "error", "-B", "-c", "from pathlib import Path; berkas=tuple(Path('mesin').glob('*.py'))+tuple(Path('mesin/__tests__').glob('*.py')); hasil=tuple(compile(p.read_text(),str(p),'exec') for p in berkas); print('Kompilasi lulus:',len(hasil),'berkas')"]
+      "argv": ["mesin/.venv/bin/python", "-W", "error", "-B", "-c", "from pathlib import Path; berkas=tuple(Path('mesin').glob('*.py'))+tuple(Path('mesin/__tests__').glob('*.py'))+tuple(Path('scripts').glob('*.py')); hasil=tuple(compile(p.read_text(),str(p),'exec') for p in berkas); print('Kompilasi lulus:',len(hasil),'berkas')"]
     }
   ]
 }

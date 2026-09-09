@@ -1377,7 +1377,7 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
 .landing-footer-isi-st a {{ color: {T.AKSEN_TEAL_TUA}; }}
 
 /* Blok contoh diagnosis — 3 kartu B/K/H dari kartu pitch validasi pasar
-   (riset-pasar/Protokol Wawancara). Statis: contoh tertulis, BUKAN data
+   (arsip lokal osn-referensi/riset-pasar/Protokol Wawancara). Statis: contoh tertulis, BUKAN data
    anak mana pun. Pakai ulang kelas .landing-kartu-st supaya satu rasa;
    yang khas hanya dot warna + label contoh. */
 .landing-contoh-judul-st {{

@@ -1,38 +1,9 @@
-# macOS
+# macOS dan artefak lokal
 .DS_Store
-
-# Ekstraksi teks dari PDF/HTML — turunan, bisa dibangkitkan ulang dari sumbernya.
-# Dipakai sebagai bahan baca kerja, bukan sumber kebenaran.
 .tmp_txt/
-
-# Setelan lokal per-mesin
-.claude/settings.local.json
-.commandcode/
-
-# ── Data anak: JANGAN PERNAH masuk repo ──────────────────────────────
-# PRD §7.1 menetapkan privacy-by-default: tidak ada data anak yang keluar
-# dari Mac+HP keluarga. Repo git bisa di-push/di-clone, jadi seluruh lapisan
-# kejadian & turunan (PRD §8.4) diblokir di sini sejak sebelum ada datanya —
-# supaya tidak ada momen di mana ia "kebetulan" ter-commit lalu permanen di
-# riwayat git. Yang boleh masuk repo hanya lapisan konten/.
-kejadian/
-turunan/
-
-# Lembar latihan yang SUDAH DIISI anak. Lembar kosong (SOAL/PENILAIAN) itu
-# lapisan konten dan boleh masuk repo; begitu terisi jawaban, berkasnya jadi
-# data anak dan tunduk aturan yang sama dengan turunan/. Konvensi nama:
-# akhiri dengan -ISI.md atau taruh di latihan/hasil/.
-latihan/hasil/
-latihan/*-ISI.*
-
-# Cache respons LLM: berisi diagnosis atas coretan anak (bukti, diagnosis,
-# topik) — turunan langsung dari data anak, jadi diperlakukan sama dengan
-# turunan/. Bisa dibangkitkan ulang dengan memanggil API lagi.
-cache_llm/
-
-# Artefak build/runtime app & skrip (belum ada, disiapkan lebih awal)
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 *.pyc
 .venv/
 build/
@@ -40,58 +11,51 @@ build/
 local.properties
 .gradle/
 
-# Artefak bundel (dibangkitkan ulang: python spike/bundel.py)
-spike/latihan.html
-spike/latihan-mudah.html
-
-# Mesin latihan — lingkungan & artefak yang bisa dibangkitkan ulang
-mesin/.venv/
-mesin/**/__pycache__/
-mesin/lembar/
-
-# Basis data latihan: berisi jawaban & diagnosis anak. Sama statusnya dengan
-# turunan/ — data anak, tidak pernah masuk repo. Cadangannya ke luar git.
-mesin/*.db
-mesin/*.db-journal
-mesin/*.db-wal
-mesin/*.db-shm
-mesin/cadangan/
-
-# Hash sandi guru & sesi runtime. Sandi bukan teks biasa tapi tetap kredensial;
-# sesi.json memuat token otentikasi aktif. Keduanya per-mesin (disetel ulang
-# di tiap tempat aplikasi dipasang).
-mesin/sandi.json
-mesin/sesi.json
-
-# Rencana kerja memuat detail internal (lihat AGENTS.md project polyflow untuk
-# alasan yang sama): tetap lokal.
-docs/plan/
-# Catatan kerja agen & prompt sesi — lokal saja, bukan bagian produk.
+# Setelan/catatan alat per mesin, bukan bagian aplikasi
+.claude/settings.local.json
+.commandcode/
 .hermes/
+.codegraph/
+graphify-out/
 PROMPT-*.md
 
-# Knowledge graph graphify — artefak lokal, dibangkitkan ulang.
-graphify-out/
+# Data anak: dilarang masuk Git di kedalaman mana pun.
+# CI juga memeriksa nama berkas tracked lewat scripts/check_repo.py.
+kejadian/
+turunan/
+cache_llm/
+cadangan/
+lembar/
+hasil/
+*-ISI.*
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+sandi.json
+sesi.json
+.env
+.env.*
+*.pem
+*.key
 
-# Dokumen turunan di produk/: PDF/HTML hasil ekspor dari .md sumber.
-produk/PRD.pdf
-produk/Rencana Produk - Peta Jalan.pdf
-produk/Rencana Produk - Peta Jalan.html
-produk/Rencana Spike - Coretan ke Diagnosis.html
+# Rencana dan preview kerja tetap lokal; dokumentasi teknis docs/ dilacak.
+/docs/plan/
 
-# Instrumen wawancara: PDF hasil ekspor dari .md sumber, bisa dibangkitkan ulang.
-riset-pasar/wawancara-validasi-pasar/*.pdf
-# Instrumen pilot aktif adalah template kosong yang dilacak; salinan lain tetap lokal.
-riset-pasar/wawancara-validasi-pasar/*-pilot.md
-!riset-pasar/wawancara-validasi-pasar/07-naskah-exit-interview-pilot.md
-!riset-pasar/wawancara-validasi-pasar/07b-cek-mingguan-pilot.md
-!riset-pasar/wawancara-validasi-pasar/08-lembar-skor-pilot.md
-!riset-pasar/wawancara-validasi-pasar/09-lembar-rekap-pilot.md
-# Artefak ekstraksi riset mentah tetap lokal; laporan kurasi dan ledger dilacak.
-riset-pasar/**/alc-package-list-raw.txt
-riset-pasar/**/ekstraksi-*.json
-riset-pasar/**/pencarian-*.json
-riset-pasar/**/hitung-ekonomi.json
-riset-pasar/**/sumber-lokal.json
-riset-pasar/**/sumber-permintaan.json
-riset-pasar/**/citation-ledger.json
+# Materi non-codebase disimpan di ../osn-referensi, bukan repo ini.
+# Blokir agar tidak terseret lagi oleh git add yang terlalu luas.
+/riset-pasar/
+/desain-ui/
+/kurikulum/
+/latihan/
+/produk/
+/spike/
+/docs/riset-*.md

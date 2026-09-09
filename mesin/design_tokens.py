@@ -14,13 +14,13 @@ dan garis cetak; latar semua halaman adalah LATAR_MURID.
 
 == Mockup ==
 
-9 mockup UI/UX ada di ~/Documents/osn/desain-ui/:
+9 mockup UI/UX ada di ~/Documents/osn-referensi/desain-ui/:
   - murid-sesiku.png, murid-kerjakan.png (mobile portrait)
   - guru-masuk.png, guru-dashboard.png, guru-sesi.png, guru-laporan.png,
     guru-akun.png (desktop landscape)
   - guru-lembar-soal.png, guru-lembar-kunci.png (A4 portrait)
 
-Script generator: desain-ui/gen_guru.py (gpt-image-2 via chenzk.top).
+Script generator (arsip lokal): ~/Documents/osn-referensi/desain-ui/gen_guru.py (gpt-image-2 via chenzk.top).
 
 Permukaan guru diimplementasi di teacher_style.py (5 halaman layar); lembar di
 screen_style.py (browser) + print_style.py (kertas A4); murid di students.py.

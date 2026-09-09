@@ -28,12 +28,16 @@ gaya OSN/SASMO: generator soal berparameter, diagnosis kesalahan otomatis
 
 | Path | Isi |
 |---|---|
-| `mesin/` | **Aplikasi.** Semua kode Python + `__tests__/` ada di sini |
-| `docs/` | Riset & keputusan. `docs/plan/` **gitignored** (lokal saja) |
-| `produk/` | PRD, peta jalan |
-| `latihan/`, `kurikulum/`, `riset-pasar/` | Materi & riset, bukan kode |
-| `desain-ui/` | Mockup design system (Stitch) |
-| `spike/` | Eksperimen lama, ortogonal dari `mesin/` |
+| `mesin/` | **Aplikasi.** Kode Python, `__tests__/`, aset runtime, Dockerfile, dan skrip cadangan |
+| `docs/` | Spesifikasi dan dokumentasi teknis aktif; `docs/plan/` **gitignored** (lokal saja) |
+| `scripts/` | Otomasi pengembangan dan palang codebase/privasi CI |
+| `.github/` | Workflow test, build, dan deploy |
+
+Repo hanya memuat codebase beserta pendukung teknisnya. Riset pasar, materi,
+kurikulum, mockup, dokumen bisnis, dan eksperimen lama dipisahkan ke folder
+saudara lokal `../osn-referensi/`; bukan dependensi aplikasi/tes/build.
+Jangan masukkan kembali materi tersebut ke Git. Data lokal terproteksi yang
+masih berada di direktori ignored tetap tidak boleh dilacak.
 
 ## 3. Aturan git yang WAJIB — repo hantu
 
@@ -140,7 +144,7 @@ pengelola.
 bukan palangnya yang dikendurkan.
 
 **Siklus belajar terpandu.** Sumber kebenaran produk adalah
-`produk/Siklus Belajar Terpandu.md`; rincian implementasi ada di
+`docs/siklus-belajar-terpandu.md`; rincian implementasi ada di
 `docs/plan/2026-09-06-siklus-belajar-terpandu.md` (gitignored). Jangan
 menyederhanakannya menjadi diagnosis → lebih banyak soal. Kontrak wajib:
 
@@ -341,7 +345,7 @@ diputuskan sendiri.
 ## 12. Konteks kurikulum & klaim produk
 
 Angka dari audit 1.237 soal OSN asli 2016–2026
-(`docs/riset-soal-osn-10-tahun.md`) — pakai ini, bukan tebakan:
+(arsip lokal `../osn-referensi/docs/riset-soal-osn-10-tahun.md`) — pakai ini, bukan tebakan:
 
 - 85 template menutup **74,7%** konsep soal nyata. NAS-eksplorasi cuma
   **24,4%**.

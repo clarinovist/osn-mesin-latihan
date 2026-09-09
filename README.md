@@ -1,29 +1,46 @@
-# OSN — Mesin Latihan & Eksperimen Pendukung
+# Jagomat — Codebase
 
-Repo aplikasi web Jagomat untuk beberapa keluarga: latihan matematika SD,
-diagnosis kesalahan, remedial, laporan, serta eksperimen pendukung yang
-terpisah dari aplikasi utama.
+Aplikasi web latihan matematika SD: generator soal, diagnosis kesalahan,
+siklus belajar terpandu, lembar cetak, dan laporan per anak.
+Pure Python stdlib; dependensi pengembangan hanya pytest dan pytest-xdist.
 
-## Peta singkat
+## Struktur
 
-| Folder | Apa isinya |
+| Path | Peran |
 |---|---|
-| [`mesin/`](mesin/README.md) | **Aplikasi utama** — generator soal, diagnosis otomatis, lembar cetak, laporan per anak. Sudah dipakai. Mulai dari sini. |
-| [`spike/`](spike/README.md) | Eksperimen perekam goresan jari (Fase 0) — ortogonal dari `mesin/`, tidak bergantung padanya. |
-| [`riset-pasar/`](riset-pasar/README.md) | Validasi kebutuhan & pemetaan kompetitor. Acuan keputusan produk, bukan kode. |
-| [`produk/`](produk/README.md) | PRD, peta jalan, dan desain studi. Mulai dari README folder itu karena sebagian dokumen adalah keputusan historis, bukan roadmap aktif. |
-| [`kurikulum/`](kurikulum/README.md) | Acuan: kurikulum OSN SD 2027 + instrumen tes. PDF, tidak ada kode. |
-| [`latihan/`](latihan/README.md) | Lembar soal & penilaian untuk satu sesi konkret. Pola penamaan: `<tanggal>-<level>-<topik>-{SOAL,PENILAIAN}.{md,html,pdf}`. Lembar yang sudah diisi (`*-ISI.*`) di-gitignore. |
-| [`docs/`](docs/README.md) | Catatan keputusan & diskusi internal. `plan/` masuk .gitignore. |
+| [`mesin/`](mesin/README.md) | Kode aplikasi, tes, aset runtime, Dockerfile, dan skrip cadangan |
+| [`docs/`](docs/README.md) | Spesifikasi dan dokumentasi teknis aktif |
+| `scripts/check_repo.py` | Palang isi repo dan nama berkas sensitif untuk CI |
+| `.github/workflows/deploy.yml` | Test, build image, dan deploy |
+| [`CLAUDE.md`](CLAUDE.md) | Panduan kontributor dan palang keamanan/arsitektur |
 
-## Untuk siapa
+## Pengembangan
 
-- **Guru (pengguna aplikasi)** → [`mesin/README.md`](mesin/README.md)
-- **Penjaga repo / kontributor** → mulai dari `CLAUDE.md`, lalu baca
-  [`produk/README.md`](produk/README.md) untuk hierarki dokumen keputusan.
+Jalankan dari root repo, dengan venv aplikasi yang sudah disiapkan:
 
-## Aturan privasi
+```bash
+mesin/.venv/bin/python -m pytest mesin/__tests__/ -q -n auto -W error
+mesin/.venv/bin/python scripts/check_repo.py
+```
 
-Tidak ada data anak yang boleh masuk repo. Basis data, hash sandi, lembar
-terisi, dan cache LLM semuanya masuk `.gitignore` **sebelum** ada datanya —
-lihat komentar di `.gitignore` untuk alasannya.
+Palang repo memeriksa nama berkas di index Git, bukan isi berkas atau data
+runtime. Kegagalan membaca Git membuat pemeriksaan gagal, bukan dianggap
+bersih. Panduan penggunaan dan setup ada di [`mesin/README.md`](mesin/README.md).
+
+## Batas isi repo
+
+Yang dilacak: kode, tes/fixture sintetis, aset yang digunakan aplikasi,
+konfigurasi build/deploy, skrip operasional, dan dokumentasi teknis aktif.
+Spesifikasi siklus berada di
+[`docs/siklus-belajar-terpandu.md`](docs/siklus-belajar-terpandu.md).
+
+Riset pasar, mockup, kurikulum, lembar contoh, dokumen bisnis, dan eksperimen
+lama disimpan terpisah di folder lokal `../osn-referensi/`. Folder itu bukan
+dependensi aplikasi dan tidak diperlukan untuk menjalankan tes atau build.
+Jangan menyalinnya kembali ke repo; `.gitignore` dan palang CI mencegahnya.
+
+Data anak, kredensial, sesi, cadangan, cache, dan rencana kerja lokal tidak
+boleh dilacak. Sebagian data lokal lama tetap berada di direktori ignored;
+keberadaannya bukan izin untuk memasukkannya ke Git. Jangan gunakan
+`git add -f` untuk melewati palang. Pembersihan berkas terkini tidak
+menghapus salinan dalam riwayat Git.

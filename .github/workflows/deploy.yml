@@ -36,20 +36,13 @@ jobs:
       - name: Pasang pytest
         run: pip install --quiet pytest pytest-xdist
 
+      - name: Pastikan tidak ada data siswa ter-commit
+        # Periksa index, bukan hanya ignore. Nama sensitif tidak dicetak ke log.
+        # Riset, mockup, materi, dan eksperimen lokal juga bukan isi codebase.
+        run: python scripts/check_repo.py
+
       - name: Jalankan seluruh test
         run: python -m pytest mesin/__tests__/ -q -n auto
-
-      - name: Pastikan tidak ada data siswa ter-commit
-        # Palang terakhir sebelum apa pun terbit. Basis data, hash sandi, dan
-        # lembar terisi tidak boleh pernah masuk repo publik; .gitignore bisa
-        # saja tertimpa atau dilewati dengan `git add -f`.
-        run: |
-          set -e
-          if git ls-files | grep -iE '\.db$|sandi\.json|^lembar/|^cadangan/'; then
-            echo "::error::Ada berkas data siswa ter-commit"
-            exit 1
-          fi
-          echo "Bersih: tidak ada berkas data siswa"
 
   bangun:
     name: Build & Push

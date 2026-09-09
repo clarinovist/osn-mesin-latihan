@@ -4,7 +4,7 @@
 
 Dokumen ini memuat kontrak yang harus bertahan lintas implementasi. Rincian
 urutan kerja TDD ada di
-`../docs/plan/2026-09-06-siklus-belajar-terpandu.md` (lokal/gitignored),
+`plan/2026-09-06-siklus-belajar-terpandu.md` (lokal/gitignored),
 sedangkan perilaku yang sudah tersedia tetap dibuktikan oleh kode dan test
 `../mesin/`.
 
