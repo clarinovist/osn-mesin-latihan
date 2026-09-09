@@ -1264,6 +1264,88 @@ tr.sorot-baru, div.sorot-baru {{
   background: {T.LATAR_KARTU}; padding: 0 {T.SP_3};
 }}
 
+/* ── Pendaftaran editorial — scoped, form/skrip shared tidak diubah ── */
+.daftar-editorial-st {{ max-width: 68rem; margin: 0 auto; padding: {T.SP_3} {T.SP_4} 0; }}
+.daftar-editorial-st .publik-topbar-st {{
+  position: static; height: auto; min-height: 3.5rem; max-width: none;
+  background: transparent; border: 0; padding: 0; margin-bottom: {T.SP_5}; gap: {T.SP_4};
+}}
+.daftar-editorial-st .brand {{ min-height: {T.TARGET_SENTUH}; color: {T.AKSEN_TEAL_TUA}; font-size: 1.5rem; letter-spacing: -.04em; border-radius: {T.RADIUS_KECIL}; }}
+.daftar-editorial-st .tombol-putih {{ border: 1px solid {T.AKSEN_TEAL_TUA}; background: transparent; color: {T.AKSEN_TEAL_TUA}; border-radius: {T.RADIUS_PIL}; padding: {T.SP_2} {T.SP_5}; min-height: {T.TARGET_SENTUH}; }}
+.daftar-editorial-st .tombol-putih:hover {{ background: {T.LATAR_KARTU}; text-decoration: underline; }}
+.daftar-editorial-st .daftar-panel-st {{
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_CATATAN};
+  border-radius: {T.RADIUS_KARTU}; box-shadow: 8px 10px 0 {T.BORDER_CATATAN};
+}}
+.daftar-editorial-st .daftar-catatan-st {{
+  min-width: 0; border-radius: {T.RADIUS_KARTU} 0 0 {T.RADIUS_KARTU};
+  background: {T.KODE_BELUM_LIAT_BG}; border-right: 1px solid {T.BORDER_VARIAN}; padding: 2.5rem;
+}}
+.daftar-editorial-st .daftar-alis-st {{ color: {T.AKSEN_TEAL_TUA}; font: 800 .7rem/1.5 {T.FONT_HEADLINE}; letter-spacing: .1em; margin: 0 0 {T.SP_3}; }}
+.daftar-editorial-st .daftar-catatan-st h2 {{ font: 800 clamp(1.8rem, 3vw, 2.5rem)/1.15 {T.FONT_HEADLINE}; letter-spacing: -.055em; color: {T.TEKS_JUDUL}; margin: 0; }}
+.daftar-editorial-st .daftar-catatan-st h2 span {{ color: {T.AKSEN_TEAL_TUA}; }}
+.daftar-editorial-st .daftar-pengantar-st {{ font-size: .85rem; line-height: 1.75; color: {T.TEKS_VARIAN}; margin: {T.SP_4} 0 0; }}
+.daftar-editorial-st .daftar-buku-st {{
+  position: relative; display: flex; align-items: center; justify-content: center; flex-direction: column;
+  margin: {T.SP_5} 0; padding: {T.SP_4}; border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KECIL};
+  background-color: {T.LATAR_KARTU};
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, {T.LATAR_SEKUNDER_NETRAL} 31px, {T.LATAR_SEKUNDER_NETRAL} 32px);
+}}
+.daftar-editorial-st .daftar-buku-st::before {{ content: ""; position: absolute; width: 4rem; height: 1.2rem; background: {T.AKSEN_MURID_AMBER}; opacity: .65; top: -.6rem; left: calc(50% - 2rem); transform: rotate(-5deg); }}
+.daftar-editorial-st .daftar-maskot-st {{ width: 8.5rem; height: 8.5rem; object-fit: contain; }}
+.daftar-editorial-st .daftar-buku-st > span {{ color: {T.TEKS_VARIAN}; font: 600 .8rem/1.5 {T.FONT_HEADLINE}; transform: rotate(-3deg); }}
+.daftar-editorial-st .daftar-langkah-st {{ list-style: none; padding: 0; margin: {T.SP_5} 0 0; display: grid; gap: {T.SP_4}; }}
+.daftar-editorial-st .daftar-langkah-st li {{ display: flex; align-items: flex-start; gap: {T.SP_3}; }}
+.daftar-editorial-st .daftar-langkah-st li > span {{ font: 800 .75rem/1.8 {T.FONT_HEADLINE}; color: {T.AKSEN_TEAL_TUA}; }}
+.daftar-editorial-st .daftar-langkah-st b {{ font: 700 .85rem/1.5 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; }}
+.daftar-editorial-st .daftar-langkah-st p {{ font-size: .75rem; color: {T.TEKS_VARIAN}; margin: {T.SP_1} 0 0; line-height: 1.6; }}
+.daftar-editorial-st .daftar-kartu-st {{
+  width: 100%; min-width: 0; max-width: none; margin: 0; padding: 2.5rem;
+  display: flex; flex-direction: column; justify-content: center; gap: {T.SP_5};
+  background: transparent; box-shadow: none; border: 0; border-radius: 0 {T.RADIUS_KARTU} {T.RADIUS_KARTU} 0;
+}}
+.daftar-editorial-st .publik-judul-st {{ font: 800 clamp(1.7rem, 3vw, 2.1rem)/1.2 {T.FONT_HEADLINE}; letter-spacing: -.045em; margin: 0 0 {T.SP_3}; color: {T.TEKS_JUDUL}; }}
+.daftar-editorial-st .publik-sub-st {{ font-size: .9rem; line-height: 1.7; color: {T.TEKS_VARIAN}; margin: 0; }}
+.daftar-editorial-st .masuk-form-st {{ gap: {T.SP_5}; }}
+.daftar-editorial-st .masuk-field-st {{ gap: {T.SP_2}; }}
+.daftar-editorial-st .masuk-field-st label {{ font-size: .85rem; color: {T.TEKS_JUDUL}; }}
+.daftar-editorial-st .masuk-field-st input {{ min-height: 3rem; border-color: {T.BORDER_VARIAN}; }}
+.daftar-editorial-st .daftar-petunjuk-st {{ font-size: .75rem; color: {T.TEKS_VARIAN}; line-height: 1.65; margin: 0; }}
+.daftar-editorial-st .daftar-persetujuan-st {{ background: {T.LATAR_CATATAN}; border: 1px solid {T.BORDER_CATATAN}; border-radius: {T.RADIUS_SEDANG}; padding: {T.SP_3}; }}
+.daftar-editorial-st .koreksi-centang-st {{ gap: {T.SP_3}; margin: 0; align-items: flex-start; font: 400 .8rem/1.7 {T.FONT_BODY}; color: {T.TEKS_VARIAN}; cursor: pointer; }}
+.daftar-editorial-st .koreksi-centang-st input {{ margin: .2rem 0 0; width: 1.2rem; height: 1.2rem; accent-color: {T.AKSEN_TEAL_TUA}; flex: none; }}
+.daftar-editorial-st .koreksi-centang-st a {{ color: {T.AKSEN_TEAL_TUA}; text-underline-offset: .2em; }}
+.daftar-editorial-st .masuk-tombol-st {{
+  min-height: 3.25rem; justify-content: space-between; padding: {T.SP_3} {T.SP_5};
+  font-size: 1rem; background: {T.AKSEN_KORAL_TUA}; color: {T.TEKS_PUTIH};
+  border-radius: {T.RADIUS_PIL}; box-shadow: none;
+}}
+.daftar-editorial-st .masuk-tombol-st:hover {{ filter: none; text-decoration: underline; }}
+.daftar-editorial-st .masuk-tombol-st:disabled {{ opacity: .65; cursor: not-allowed; }}
+.daftar-editorial-st .daftar-bawah-st {{ margin: -{T.SP_2} 0 0; font-size: .75rem; line-height: 1.6; color: {T.TEKS_VARIAN}; }}
+.daftar-editorial-st .masuk-galat-st {{ text-align: left; padding: {T.SP_3} {T.SP_4}; border-left: 3px solid {T.TEKS_GALAT}; font-size: .85rem; overflow-wrap: anywhere; }}
+.daftar-editorial-st .masuk-galat-st p {{ margin: {T.SP_1} 0 0; }}
+.daftar-editorial-st .pesan-st {{ padding: {T.SP_3} {T.SP_4}; border: 1px solid {T.BORDER_VARIAN}; background: {T.LATAR_SEKUNDER_LEMBUT}; border-radius: {T.RADIUS_SEDANG}; font-size: .85rem; color: {T.TEKS_VARIAN}; overflow-wrap: anywhere; }}
+.daftar-editorial-st .pesan-st p {{ margin: {T.SP_1} 0 0; }}
+.daftar-editorial-st :is(a, button, input):focus-visible,
+.daftar-editorial-st .masuk-field-st input:focus-visible {{ outline: 3px solid {T.AKSEN_TEAL_TUA}; outline-offset: 3px; box-shadow: none; }}
+.daftar-editorial-st .daftar-kaki-st {{ font-size: .75rem; text-align: center; color: {T.TEKS_VARIAN}; margin: {T.SP_5} 0 0; }}
+@media (max-width: 59.99rem), (max-height: 36rem) {{
+  .daftar-editorial-st {{ max-width: 32rem; padding: 0; }}
+  .daftar-editorial-st .daftar-panel-st {{ grid-template-columns: minmax(0, 1fr); box-shadow: 4px 6px 0 {T.BORDER_CATATAN}; }}
+  .daftar-editorial-st .daftar-catatan-st {{ display: none; }}
+  .daftar-editorial-st .daftar-kartu-st {{ padding: {T.SP_6} {T.SP_5}; }}
+  .daftar-editorial-st .publik-topbar-st {{ margin-bottom: {T.SP_4}; }}
+}}
+@media (max-width: 24rem) {{
+  .daftar-editorial-st .daftar-kartu-st {{ padding: {T.SP_5} {T.SP_4}; gap: {T.SP_4}; }}
+  .daftar-editorial-st .publik-judul-st {{ font-size: 1.65rem; }}
+  .daftar-editorial-st .masuk-form-st {{ gap: {T.SP_4}; }}
+  .daftar-editorial-st .tombol-putih {{ padding: {T.SP_2} {T.SP_4}; }}
+  .daftar-editorial-st .brand {{ font-size: 1.35rem; }}
+}}
+
 /* ── Halaman masuk editorial — kanvas khusus, bukan form daftar ── */
 .masuk-badan-st {{
   min-height: 100vh; max-width: 62rem; margin: 0 auto;

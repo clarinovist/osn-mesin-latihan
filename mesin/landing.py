@@ -72,49 +72,75 @@ def _topbar_publik_st() -> str:
 def halaman_daftar(
     pesan: str = "", galat: bool = False, nama: str = ""
 ) -> bytes:
-    """Form pendaftaran mandiri pengelola (orang tua / guru / les).
+    """Form pendaftaran mandiri pendamping (orang tua / guru / les).
 
     pesan = teks feedback; galat=True membuatnya dirender sebagai galat.
     nama = nama yang diketik pengguna (dikembalikan supaya tidak mengetik ulang).
     """
-    n = html.escape(T.NAMA_PRODUK)
     kotak = ""
     if pesan:
         kelas = "masuk-galat-st" if galat else "pesan-st"
-        kotak = f'<div class="{kelas}">{html.escape(pesan)}</div>'
+        peran = "alert" if galat else "status"
+        judul_pesan = "Periksa kembali" if galat else "Catatan untukmu"
+        kotak = (
+            f'<div class="{kelas}" id="pesan-daftar" role="{peran}" aria-atomic="true">'
+            f'<b>{judul_pesan}</b><p>{html.escape(pesan)}</p></div>'
+        )
+    deskripsi = ' aria-describedby="pesan-daftar"' if pesan else ""
 
     isi = f"""
+<main class="daftar-editorial-st" aria-labelledby="judul-daftar">
 {_topbar_publik_st()}
-<div class="publik-bungkus-st">
-<section class="publik-kartu-st">
-<h1 class="publik-judul-st">Daftar {n}</h1>
-<p class="publik-sub-st">Buat akun orang tua — untuk orang tua yang menemani anak,
-guru, atau les privat. Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
+<div class="daftar-panel-st">
+<aside class="daftar-catatan-st" aria-labelledby="judul-pendamping">
+<p class="daftar-alis-st">MULAI DARI MENEMANI</p>
+<h2 id="judul-pendamping">Belajar anak,<br><span>didampingi kamu.</span></h2>
+<p class="daftar-pengantar-st">Bukan hanya mengumpulkan jawaban benar.<br>Temani anak memahami caranya.</p>
+<div class="daftar-buku-st" aria-hidden="true">
+<img class="daftar-maskot-st" src="/aset/maskot-menunjuk-240.png" width="240" height="240" alt="">
+<span>Satu langkah, bersama.</span>
+</div>
+<ol class="daftar-langkah-st">
+<li><span>01</span><div><b>Buat akunmu</b><p>Akun untuk orang tua, guru, atau pendamping les.</p></div></li>
+<li><span>02</span><div><b>Siapkan profil anak</b><p>Akun anak dibuat dari dalam aplikasi.</p></div></li>
+<li><span>03</span><div><b>Mulai mendampingi</b><p>Siapkan latihan, lalu tinjau cara anak menjawab.</p></div></li>
+</ol>
+</aside>
+<section class="publik-kartu-st daftar-kartu-st" aria-labelledby="judul-daftar">
+<div class="daftar-sapaan-st">
+<p class="daftar-alis-st">AKUN PENDAMPING</p>
+<h1 class="publik-judul-st" id="judul-daftar">Buat akun orang tua</h1>
+<p class="publik-sub-st">Untuk orang tua, guru, atau pendamping les.
+Akun anak dibuat setelah ini, dari dalam aplikasi.</p>
+</div>
 {kotak}
-<form class="masuk-form-st" method="post" action="/daftar">
+<form class="masuk-form-st" method="post" action="/daftar"{deskripsi}>
   <div class="masuk-field-st">
     <label for="nama">Nama pengguna</label>
     <input type="text" id="nama" name="nama" autocomplete="username" required
-     value="{html.escape(nama)}">
+     aria-describedby="petunjuk-nama-daftar" value="{html.escape(nama)}">
+    <p class="daftar-petunjuk-st" id="petunjuk-nama-daftar">Pilih nama pengguna yang mudah diingat. Tidak perlu email atau nomor telepon.</p>
   </div>
   <div class="masuk-field-st">
-    <label for="sandi">Kata sandi (minimal 8 karakter)</label>
-    <input type="password" id="sandi" name="sandi" autocomplete="new-password" required minlength="8">
+    <label for="sandi">Kata sandi</label>
+    <input type="password" id="sandi" name="sandi" autocomplete="new-password" required minlength="8"
+     aria-describedby="petunjuk-sandi-daftar">
+    <p class="daftar-petunjuk-st" id="petunjuk-sandi-daftar">Minimal 8 karakter. Simpan nama pengguna dan sandimu di tempat aman.</p>
   </div>
-  <p style="font-size:.9rem">
-   <label class="koreksi-centang-st" style="font-weight:400">
-    <input type="checkbox" name="setuju" value="1">
+  <div class="daftar-persetujuan-st">
+   <label class="koreksi-centang-st" for="setuju">
+    <input type="checkbox" id="setuju" name="setuju" value="1" required>
     <span>Saya orang tua/wali atau pendidik yang bertanggung jawab, dan saya
     menyetujui <a href="/kebijakan-privasi">Kebijakan Privasi</a>.</span>
    </label>
-  </p>
-  <button class="masuk-tombol-st" type="submit">
-    <span class="material-symbols-outlined" style="font-size:1.1rem">person_add</span>
-    Buat akun
-  </button>
+  </div>
+  <button class="masuk-tombol-st" type="submit">Buat akun <span aria-hidden="true">→</span></button>
 </form>
+<p class="daftar-bawah-st">Setelah mendaftar, kamu langsung masuk ke ruang pendamping.</p>
 </section>
 </div>
+<p class="daftar-kaki-st">{html.escape(T.TAGLINE)}</p>
+</main>
 """
     return _halaman_publik_stitch(f"Daftar — {T.NAMA_PRODUK}", isi)
 
