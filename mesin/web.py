@@ -911,8 +911,11 @@ class Penangan(BaseHTTPRequestHandler):
         ip = self.client_address[0] if self.client_address else "unknown"
         if sessions.sedang_diblokir(nama, ip):
             return self._kirim(
-                halaman_daftar("Terlalu banyak percobaan. Coba lagi 15 menit lagi."),
-                galat=True,
+                halaman_daftar(
+                    "Terlalu banyak percobaan. Coba lagi 15 menit lagi.",
+                    galat=True, nama=nama,
+                ),
+                429,
             )
         galat = None
         if not nama:
