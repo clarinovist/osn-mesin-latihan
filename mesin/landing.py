@@ -31,7 +31,8 @@ def _font_link() -> str:
 
 
 def _halaman_publik_stitch(
-    judul: str, isi: str, og: dict[str, str] | None = None
+    judul: str, isi: str, og: dict[str, str] | None = None,
+    *, kelas_badan: str = "publik-badan-st",
 ) -> bytes:
     """Kerangka halaman publik versi Stitch — GAYA_STITCH, body.st.
 
@@ -41,6 +42,7 @@ def _halaman_publik_stitch(
 
     og = metadata share (WhatsApp/Facebook) untuk halaman yang memang
     dibagikan; None berarti favicon + manifest saja.
+    kelas_badan memisahkan kanvas landing dari padding halaman form.
     """
     from style_stitch import gaya_stitch
 
@@ -50,7 +52,7 @@ def _halaman_publik_stitch(
 {brand.tag_kepala(og)}
 {_font_link()}
 <style>{gaya_stitch()}</style></head>
-<body class="st"><div class="publik-badan-st">{isi}</div>
+<body class="st"><div class="{html.escape(kelas_badan, quote=True)}">{isi}</div>
 <script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
 
 
@@ -236,44 +238,44 @@ ulang — sandimu terikat ke keluarga mereka.</li>
 
 
 def halaman_landing() -> bytes:
-    """Landing publik — mengikuti mockup Stitch landing_page_desktop.
+    """Landing editorial bertema buku latihan, tanpa membaca data anak.
 
-    Memakai kerangka .landing-*-st sendiri (container 75rem), BUKAN
-    .publik-*-st yang diklem 46rem untuk form: klem itu membuat
-    halaman tampil separo layar di laptop (keluhan 4 Sep 2026).
-
-    Yang sengaja TIDAK disalin dari mockup: nama "Caraku" (pakai
-    T.NAMA_PRODUK), logo dari URL asing (pakai brand.mark), Tailwind
-    CDN (CSS manual + token), klaim "Tulis Tangan" (aplikasi tidak
-    punya input tulis tangan — yang ada foto lembar + AI vision yang
-    dikonfirmasi guru), klaim "gratis" (keputusan bisnis), dan tombol
-    "Cek Jawaban" (kontrol mati di halaman publik).
+    Kanvas lebar terpisah dari form publik. Contoh tetap statis, maskot
+    hanya dekorasi, dan setiap aksi punya satu pintu. Tidak menambah
+    JavaScript, klaim produk, atau kontrol demo yang tidak berfungsi.
     """
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
     mark_topbar = brand.mark("topbar")
-    mark_hero = brand.mark("badge")
     isi = f"""
+<a class="landing-lewati-st" href="#konten">Lewati ke konten</a>
 <header class="landing-topbar-st"><div class="landing-topbar-isi-st">
 <a class="brand" href="/">{mark_topbar}<span>{n}</span></a>
-<nav class="topbar-navigasi"><a class="tombol-putih" href="/masuk">Masuk</a></nav>
+<nav class="topbar-navigasi" aria-label="Navigasi utama">
+<a class="landing-nav-st" href="#cara-kerja">Kenali {n}</a>
+<a class="landing-nav-st" href="#contoh">Contoh latihan</a>
+<a class="tombol-putih" href="/masuk">Masuk</a></nav>
 </div></header>
 
-<div class="landing-bungkus-st">
-<section class="landing-hero-st">
+<main class="landing-bungkus-st" id="konten" tabindex="-1">
+<section class="landing-hero-st" aria-labelledby="judul-landing">
 <div class="landing-hero-teks-st">
-  <div class="landing-merek-st">{mark_hero}<span>{n}</span></div>
-  <h1 class="landing-judul-st">Latih. Tulis caramu. Ketahui letak salahmu.</h1>
+  <p class="landing-alis-st"><span aria-hidden="true">✳</span> Matematika SD · OSN &amp; SASMO</p>
+  <h1 class="landing-judul-st" id="judul-landing">Bukan sekadar<br>benar.
+  <span>Paham caranya.</span></h1>
   <p class="landing-tagline-st">{tag}</p>
   <p class="landing-sub-st">Anak berlatih matematika, menuliskan <b>caranya</b>, dan
   sistem menunjukkan letak kesalahannya — salah baca, salah konsep, salah
   hitung, atau salah tulis. Orang tua dan guru melihat peta belajarnya, bukan
   sekadar nilai.</p>
   <p class="landing-cta-baris-st"><a class="tombol-coral" href="/daftar">
-  <span class="material-symbols-outlined" style="font-size:1.15rem">rocket_launch</span>
-  Mulai — daftar sekarang</a></p>
+  Mulai — daftar sekarang <span aria-hidden="true">↗</span></a></p>
+  <p class="landing-catatan-cta-st">Untuk orang tua, guru, dan les privat · Kelas 3–6 SD</p>
 </div>
 
+<div class="landing-panggung-st">
+  <span class="landing-coret-st" aria-hidden="true">✳</span>
+  <p class="landing-catatan-kertas-st">Di balik jawaban,<br><b>ada cara berpikir.</b></p>
 <div class="landing-demo-st">
   <div class="landing-demo-kepala-st"><span>Soal 4/10</span><span>Contoh</span></div>
   <p class="landing-demo-soal-st">Berapa hasil dari 345 + 128?</p>
@@ -293,24 +295,31 @@ def halaman_landing() -> bytes:
     simpan 1. Jadi jawabannya 473, bukan 463.</p>
   </div>
 </div>
+  <img class="landing-maskot-st" src="/aset/maskot-menunjuk-240.png"
+       width="240" height="240" alt="" aria-hidden="true">
+  <p class="landing-demo-keterangan-st">Ilustrasi latihan · bukan data anak</p>
+</div>
 </section>
 
-<section class="landing-pill-baris-st">
-  <span class="landing-pill-st">
-  <span class="material-symbols-outlined" style="font-size:1.15rem">edit_document</span>
-  Tulis caranya</span>
-  <span class="landing-pill-st">
-  <span class="material-symbols-outlined" style="font-size:1.15rem">query_stats</span>
-  Peta belajar</span>
-  <span class="landing-pill-st">
-  <span class="material-symbols-outlined" style="font-size:1.15rem">mood</span>
-  Tanpa tekanan</span>
+<section class="landing-manfaat-st" aria-labelledby="judul-manfaat">
+  <h2 id="judul-manfaat">Latih. Tulis caramu. Ketahui letak salahmu.</h2>
+  <div class="landing-pill-baris-st">
+    <span class="landing-pill-st"><span aria-hidden="true">01 /</span> Tulis caranya</span>
+    <span class="landing-pill-st"><span aria-hidden="true">02 /</span> Peta belajar</span>
+    <span class="landing-pill-st"><span aria-hidden="true">03 /</span> Tanpa tekanan</span>
+  </div>
 </section>
 
-<div class="landing-grid-st">
-<section class="landing-kartu-st">
-  <h2 class="landing-kartu-judul-st">
-  <span class="material-symbols-outlined">groups</span>Untuk siapa</h2>
+<section class="landing-kenali-st" id="cara-kerja" aria-labelledby="judul-kenali">
+<div class="landing-bagian-kepala-st">
+  <p class="landing-alis-st">BELAJAR DENGAN ARAH</p>
+  <h2 id="judul-kenali">Bukan cuma berapa nilainya.<br>Kenali cara belajarnya.</h2>
+  <p>Untuk anak yang sedang membangun fondasi, dan orang dewasa yang mendampingi.</p>
+</div>
+<div class="landing-grid-st landing-info-st">
+<section class="landing-kartu-st landing-untuk-st">
+  <h3 class="landing-kartu-judul-st">
+  <span class="landing-nomor-st" aria-hidden="true">01</span>Untuk siapa</h3>
   <div class="landing-kartu-isi-st">
   <p><b>Orang tua</b> — temani anak belajar di rumah, lihat perkembangannya
   dari laporan mingguan.</p>
@@ -319,9 +328,9 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 
-<section class="landing-kartu-st">
-  <h2 class="landing-kartu-judul-st">
-  <span class="material-symbols-outlined">list_alt</span>Cara kerja</h2>
+<section class="landing-kartu-st landing-cara-st">
+  <h3 class="landing-kartu-judul-st">
+  <span class="landing-nomor-st" aria-hidden="true">↗</span>Cara kerja</h3>
   <div class="landing-kartu-isi-st">
   <ol>
     <li>Buat sesi latihan — pilih topik &amp; kelas.</li>
@@ -332,18 +341,18 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 
-<section class="landing-kartu-st">
-  <h2 class="landing-kartu-judul-st">
-  <span class="material-symbols-outlined">functions</span>Topik latihan</h2>
+<section class="landing-kartu-st landing-topik-st">
+  <h3 class="landing-kartu-judul-st">
+  <span class="landing-nomor-st" aria-hidden="true">02</span>Topik latihan</h3>
   <div class="landing-kartu-isi-st">
   <p>Pola bilangan, aritmetika dasar, geometri datar, kombinatorik — dengan
   soal yang dibuat otomatis sehingga tiap sesi berbeda dari sebelumnya.</p>
   </div>
 </section>
 
-<section class="landing-kartu-st">
-  <h2 class="landing-kartu-judul-st">
-  <span class="material-symbols-outlined">emoji_events</span>Ke arah kompetisi</h2>
+<section class="landing-kartu-st landing-kompetisi-st">
+  <h3 class="landing-kartu-judul-st">
+  <span class="landing-nomor-st" aria-hidden="true">03</span>Ke arah kompetisi</h3>
   <div class="landing-kartu-isi-st">
   <p>Materi disusun mengikuti silabus OSN Matematika SD (Bilangan,
   Aritmatika, Geometri, Statistika &amp; Pengukuran, Kombinatorik) dan cocok
@@ -353,11 +362,15 @@ def halaman_landing() -> bytes:
   </div>
 </section>
 </div>
+</section>
 
-<section style="margin-bottom:3rem">
-<h2 class="landing-contoh-judul-st">Contoh yang dilihat orang tua</h2>
+<section class="landing-contoh-st" id="contoh" aria-labelledby="judul-contoh">
+<div class="landing-bagian-kepala-st">
+<p class="landing-alis-st">LEBIH DARI BENAR ATAU SALAH</p>
+<h2 class="landing-contoh-judul-st" id="judul-contoh">Contoh yang dilihat orang tua</h2>
 <p class="landing-contoh-sub-st">Contoh tertulis — bukan data anak mana pun.</p>
-<div class="landing-grid-st" style="margin-bottom:0">
+</div>
+<div class="landing-grid-st">
 <section class="landing-kartu-st">
   <div class="landing-contoh-kode-st">
   <span class="landing-contoh-dot-st" style="background:{T.STATUS_SALAH}"></span>
@@ -398,16 +411,23 @@ def halaman_landing() -> bytes:
 </div>
 </section>
 
-<section style="margin-bottom:3rem">
-<h2 class="landing-contoh-judul-st">Ikut pilot</h2>
+<section class="landing-pilot-st" aria-labelledby="judul-pilot">
+<div>
+<p class="landing-alis-st">TUMBUH BERSAMA {n}</p>
+<h2 class="landing-contoh-judul-st" id="judul-pilot">Ikut pilot</h2>
+</div>
 <p class="landing-contoh-sub-st">Dibuka untuk 10–20 keluarga pertama
 (kelas 4–6). Syaratnya: minimal 6 sesi latihan, izin memakai data
 anonim untuk bukti, dan testimoni di akhir. Tertarik? Daftar lewat
 tombol di atas — gratis selama masa pilot.</p>
 </section>
 
-<section class="landing-faq-st">
-<h2 class="landing-contoh-judul-st">Sering ditanya</h2>
+<section class="landing-faq-st" aria-labelledby="judul-faq">
+<div class="landing-bagian-kepala-st">
+<p class="landing-alis-st">SEBELUM MULAI</p>
+<h2 class="landing-contoh-judul-st" id="judul-faq">Sering ditanya</h2>
+</div>
+<div class="landing-faq-daftar-st">
 <details><summary>Untuk kelas berapa?</summary>
 <p>Kelas 3–6 SD. Kelas 4–5 paling cocok untuk pilot.</p></details>
 <details><summary>Anak mengerjakan di HP atau kertas?</summary>
@@ -429,8 +449,9 @@ menyimpan email atau nomor telepon siapa pun.</p></details>
 yang daftar sendiri hubungi WA {html.escape(T.WA_SUPPORT)}
 (sebutkan nama akunmu). Detailnya ada di halaman
 <a href="/lupa-sandi">Lupa sandi</a>.</p></details>
-</section>
 </div>
+</section>
+</main>
 
 <footer class="landing-footer-st"><div class="landing-footer-isi-st">
   <div><a href="/kebijakan-privasi">Kebijakan Privasi</a> ·
@@ -449,4 +470,5 @@ yang daftar sendiri hubungi WA {html.escape(T.WA_SUPPORT)}
             ),
             "jalur": "/",
         },
+        kelas_badan="landing-halaman-st",
     )
