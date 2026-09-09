@@ -203,6 +203,79 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 .menu-isi a:hover, .menu-isi button:hover {{ background: {T.LATAR_SEKUNDER_LEMBUT}; }}
 .menu-pisah {{ border-top: 1px solid {T.BORDER_VARIAN}; margin: {T.SP_1} 0; }}
 
+/* Beranda pendamping editorial — semua override dibatasi ke kanvas ini. */
+.guru-beranda-st {{ padding-top: {T.SP_5}; }}
+.guru-beranda-st :is(a, button, summary):focus-visible {{
+  outline: 3px solid {T.AKSEN_TEAL_TUA}; outline-offset: 4px;
+}}
+.guru-beranda-st .st-topbar {{
+  position: relative; height: auto; min-height: {T.TARGET_SENTUH};
+  background: transparent; padding: 0 0 {T.SP_4}; gap: {T.SP_3};
+}}
+.guru-beranda-st .brand {{ text-decoration: none; }}
+.guru-beranda-st .brand .nama {{ color: {T.AKSEN_TEAL_TUA}; font-size: 1.5rem; letter-spacing: -.04em; }}
+.guru-beranda-st .topbar-navigasi {{ gap: {T.SP_2}; min-width: 0; }}
+.guru-beranda-st .menu-pengguna {{ min-width: 0; }}
+.guru-beranda-st .menu-pengguna summary {{
+  font-size: .82rem; overflow-wrap: anywhere; gap: {T.SP_2};
+}}
+.guru-beranda-st .menu-pengguna summary::after {{ content: '⌄'; flex: none; }}
+.guru-beranda-st .badge-peran-guru {{ background: transparent; color: {T.TEKS_VARIAN}; font-weight: 500; }}
+.guru-sapaan-st {{ display: grid; grid-template-columns: minmax(0, 1fr) 13rem; gap: {T.SP_5}; align-items: center; padding: 3rem 0; }}
+.guru-alis-st {{ color: {T.AKSEN_TEAL_TUA}; font: 700 .7rem/1.5 {T.FONT_HEADLINE}; letter-spacing: .1em; margin: 0 0 {T.SP_3}; }}
+.guru-sapaan-st h1 {{ color: {T.TEKS_JUDUL}; font: 800 2.7rem/1.17 {T.FONT_HEADLINE}; letter-spacing: -.045em; margin: 0 0 {T.SP_4}; }}
+.guru-sapaan-st h1 span {{ color: {T.AKSEN_TEAL_TUA}; }}
+.guru-sapaan-st p:not(.guru-alis-st) {{ color: {T.TEKS_VARIAN}; font-size: .9rem; line-height: 1.8; margin: 0; }}
+.guru-catatan-st {{
+  position: relative; border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KARTU};
+  background-color: {T.LATAR_KARTU}; transform: rotate(4deg); padding: {T.SP_3}; text-align: center;
+  background-image: linear-gradient(color-mix(in srgb, {T.AKSEN_TEAL_TUA} 7%, transparent) 1px, transparent 1px);
+  background-size: 100% 1.5rem;
+}}
+.guru-catatan-st img {{ display: block; width: 100%; height: auto; }}
+.guru-catatan-st > span:last-child {{ display: block; font-size: .66rem; color: {T.TEKS_VARIAN}; }}
+.guru-coret-st {{ position: absolute; right: {T.SP_2}; top: -.7rem; font-size: 2.5rem; color: {T.AKSEN_KORAL_TUA}; }}
+.guru-kepala-daftar-st {{ display: flex; gap: {T.SP_4}; align-items: center; justify-content: space-between; flex-wrap: wrap; }}
+.guru-kepala-daftar-st .guru-alis-st {{ margin-bottom: {T.SP_1}; }}
+.guru-kepala-daftar-st h2 {{ color: {T.TEKS_JUDUL}; font: 800 1.45rem/1.4 {T.FONT_HEADLINE}; margin: 0; }}
+.guru-kepala-daftar-st h2 span {{ font-size: .85rem; font-weight: 500; color: {T.TEKS_VARIAN}; margin-left: {T.SP_2}; }}
+.guru-tambah-st {{ display: inline-flex; align-items: center; justify-content: center; gap: {T.SP_2}; min-height: {T.TARGET_SENTUH}; padding: {T.SP_2} {T.SP_4}; color: {T.TEKS_PUTIH}; background: {T.AKSEN_KORAL_TUA}; border-radius: {T.RADIUS_KECIL}; text-decoration: none; font: 700 .8rem/1.5 {T.FONT_HEADLINE}; }}
+.guru-tambah-st:hover {{ background: color-mix(in srgb, {T.AKSEN_KORAL_TUA} 90%, {T.TEKS_JUDUL}); }}
+.guru-petunjuk-st {{ color: {T.TEKS_VARIAN}; font-size: .8rem; line-height: 1.7; margin: {T.SP_3} 0 {T.SP_5}; }}
+.guru-beranda-st .daftar-anak {{ display: grid; gap: {T.SP_3}; }}
+.guru-beranda-st .kartu-anak {{ display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; align-items: center; gap: {T.SP_4}; padding: {T.SP_5}; text-decoration: none; color: inherit; box-shadow: none; }}
+.guru-beranda-st .kartu-anak:hover {{ border-color: {T.AKSEN_TEAL_TUA}; background: color-mix(in srgb, {T.LATAR_KARTU} 95%, {T.AKSEN_TEAL_TUA}); }}
+.guru-inisial-st {{ display: grid; place-items: center; width: 3rem; height: 3.5rem; background: {T.LATAR_SEKUNDER_LEMBUT}; color: {T.AKSEN_TEAL_TUA}; border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KECIL}; font: 700 1.5rem/1 {T.FONT_HEADLINE}; }}
+.guru-identitas-st {{ min-width: 0; }}
+.guru-nama-st {{ font: 800 1.12rem/1.4 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; margin: 0 0 {T.SP_1}; overflow-wrap: anywhere; }}
+.guru-meta-st {{ display: flex; flex-wrap: wrap; gap: {T.SP_2}; color: {T.TEKS_VARIAN}; font-size: .75rem; overflow-wrap: anywhere; }}
+.guru-meta-st > span + span::before {{ content: '·'; margin-right: {T.SP_2}; }}
+.guru-status-daftar-st {{ display: flex; flex-wrap: wrap; gap: {T.SP_2}; margin-top: {T.SP_3}; }}
+.guru-status-st {{ font-size: .72rem; color: {T.TEKS_VARIAN}; }}
+.guru-status-st.periksa {{ color: {T.BADGE_ADMIN_TEKS}; background: {T.BADGE_ADMIN_BG}; padding: 0 {T.SP_2}; border-radius: {T.RADIUS_KECIL}; }}
+.guru-buka-st {{ font: 700 .75rem/1.5 {T.FONT_HEADLINE}; color: {T.AKSEN_TEAL_TUA}; }}
+.guru-buka-st > span {{ margin-left: {T.SP_2}; }}
+.guru-kosong-st {{ border: 1px dashed {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KARTU}; padding: {T.SP_6}; background: color-mix(in srgb, {T.LATAR_KARTU} 65%, transparent); }}
+.guru-kosong-st h2 {{ font: 800 1.8rem/1.3 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; max-width: 20rem; margin: 0 0 {T.SP_4}; }}
+.guru-kosong-st > p:not(.guru-alis-st) {{ color: {T.TEKS_VARIAN}; font-size: .85rem; max-width: 32rem; }}
+.guru-kosong-st .guru-tambah-st {{ margin-top: {T.SP_3}; }}
+.guru-kosong-st .guru-petunjuk-st {{ margin-bottom: 0; }}
+.guru-kaki-st {{ display: flex; gap: {T.SP_2}; align-items: center; color: {T.TEKS_VARIAN}; font-size: .75rem; border-top: 1px solid {T.BORDER_VARIAN}; margin-top: {T.SP_6}; padding-top: {T.SP_5}; }}
+.guru-kaki-st > span {{ color: {T.AKSEN_KORAL_TUA}; font-size: 1.5rem; }}
+@media (max-width: 36rem) {{
+  .guru-beranda-st .st-topbar {{ flex-wrap: wrap; }}
+  .guru-beranda-st .topbar-navigasi {{ flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }}
+  .guru-beranda-st .badge-peran-guru {{ font-size: .65rem; padding: 0; }}
+  .guru-sapaan-st {{ grid-template-columns: minmax(0, 1fr); padding: {T.SP_6} 0; }}
+  .guru-sapaan-st h1 {{ font-size: 2.3rem; }}
+  .guru-catatan-st {{ display: none; }}
+  .guru-beranda-st .kartu-anak {{ grid-template-columns: 2.4rem minmax(0, 1fr); padding: {T.SP_4}; gap: {T.SP_3}; }}
+  .guru-inisial-st {{ width: 2.4rem; height: 3rem; font-size: 1.2rem; align-self: start; }}
+  .guru-buka-st {{ grid-column: 2; }}
+  .guru-kosong-st {{ padding: {T.SP_5}; }}
+}}
+/* Akhir beranda pendamping */
+
 /* Input + tombol */
 .st-input {{
   font: inherit; font-size: 1rem;

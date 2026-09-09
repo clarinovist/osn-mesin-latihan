@@ -298,7 +298,7 @@ def _badge_peran(peran: str) -> str:
     if peran == "admin":
         return '<span class="badge-peran badge-peran-admin">Pengelola</span>'
     if peran == "guru":
-        return '<span class="badge-peran badge-peran-guru">Orang Tua</span>'
+        return '<span class="badge-peran badge-peran-guru">Orang Tua / Guru</span>'
     return ""
 
 def _topbar(pengguna: str, peran: str) -> str:
@@ -314,7 +314,7 @@ def _topbar(pengguna: str, peran: str) -> str:
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand_href, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
+        brand_href, item = "/guru", '<a href="/akun">Akun &amp; Siswa</a>'
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         f'<div class="topbar">'
@@ -349,7 +349,7 @@ def _topbar_stitch(pengguna: str, peran: str) -> str:
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand_href, item = "/", '<a href="/akun">Akun &amp; Siswa</a>'
+        brand_href, item = "/guru", '<a href="/akun">Akun &amp; Siswa</a>'
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         '<div class="st-topbar">'
@@ -402,82 +402,93 @@ def halaman_utama_stitch(
     peran: str = "guru",
     sorot: int | None = None,
 ) -> bytes:
-    """Dashboard pengelola versi Stitch. Signature identik dengan
-    halaman_utama supaya bisa dipasang berdampingan (web.py beralih saat).
+    """Beranda pendamping: satu pintu per anak, tanpa keputusan belajar baru.
 
-    Perilaku data dan query DIPERTAHANKAN SAMA — hanya markup + kelas CSS
-    yang baru. Baris sesi baru tetap diberi kelas sorot-baru.
+    Status kirim/review hanya ringkasan aktivitas, bukan bukti penguasaan.
+    Rencana belajar tetap berada pada profil anak dan reducer yang sama.
     """
     baris = []
     for s in database.daftar_siswa(kon, pemilik):
-        # Dashboard ringkas (feedback Filia 1 Sep 2026 no. 6): satu kartu
-        # NAMA per anak — klik masuk ke /anak/<id> tempat history lengkap
-        # dan strip buat sesi. Ringkasan cukup angka, tanpa daftar sesi.
         rekap = kon.execute(
             """SELECT COUNT(*) AS jumlah,
-                      SUM(CASE WHEN direview IS NULL THEN 1 ELSE 0 END) AS belum_review
+                      SUM(CASE WHEN selesai IS NOT NULL AND direview IS NULL
+                          THEN 1 ELSE 0 END) AS belum_review,
+                      SUM(CASE WHEN selesai IS NULL THEN 1 ELSE 0 END) AS belum_kirim
                FROM sesi WHERE siswa_id = ?""",
             (s["id"],),
         ).fetchone()
         jumlah_sesi = rekap["jumlah"] or 0
         belum_review = rekap["belum_review"] or 0
-        badge_review = (
-            f'<span class="st-badge review">{belum_review} belum direview</span>'
-            if belum_review
-            else '<span class="st-badge diagnostik">semua direview</span>'
-        )
+        belum_kirim = rekap["belum_kirim"] or 0
+        status = []
+        if belum_review:
+            status.append(f'<span class="guru-status-st periksa">{belum_review} menunggu diperiksa</span>')
+        if belum_kirim:
+            status.append(f'<span class="guru-status-st">{belum_kirim} belum dikirim</span>')
+        if not status:
+            status.append(
+                '<span class="guru-status-st">semua direview</span>' if jumlah_sesi
+                else '<span class="guru-status-st">Belum ada sesi</span>'
+            )
         label_keluarga = ""
         if peran == "admin":
-            siapa = s["pemilik"] or "warisan"
-            label_keluarga = (
-                '<span class="st-badge selesai">keluarga: '
-                f"{html.escape(siapa)}</span>"
-            )
-
+            label_keluarga = f'<span>keluarga: {html.escape(s["pemilik"] or "warisan")}</span>'
+        nama = str(s["nama"])
         baris.append(
-            f'<a class="st-kartu kartu-anak" href="/anak/{s["id"]}" '
-            'style="display:flex;align-items:center;gap:.9rem;'
-            'text-decoration:none;color:inherit">'
-            '<span class="material-symbols-outlined" style="font-size:2rem;'
-            f'color:{T.AKSEN_MURID_UTAMA};flex:none">person</span>'
-            '<span style="flex:1;min-width:0">'
-            f'<h2 class="st" style="margin:0">{html.escape(s["nama"])}'
-            f'<span class="st-badge selesai">({html.escape(label_kelas(str(s["tingkat"])))})</span>'
-            f"{label_keluarga}"
-            "</h2>"
-            f'<span style="font-size:.9rem;color:{T.TEKS_VARIAN}">'
-            f"{jumlah_sesi} sesi</span>"
-            "</span>"
-            f"{badge_review}"
-            '<span class="material-symbols-outlined" style="flex:none;'
-            f'color:{T.TEKS_SUBTLE}">chevron_right</span>'
-            "</a>"
+            f'<a class="st-kartu kartu-anak" href="/anak/{s["id"]}">'
+            f'<span class="guru-inisial-st" aria-hidden="true">{html.escape(nama[:1].upper())}</span>'
+            '<div class="guru-identitas-st">'
+            f'<h3 class="guru-nama-st">{html.escape(nama)}</h3>'
+            '<div class="guru-meta-st">'
+            f'<span>{html.escape(label_kelas(str(s["tingkat"])))}</span>'
+            f'<span>{jumlah_sesi} sesi</span>{label_keluarga}</div>'
+            f'<div class="guru-status-daftar-st">{"".join(status)}</div></div>'
+            '<span class="guru-buka-st">Buka profil <span aria-hidden="true">↗</span></span>'
+            '</a>'
         )
 
-    isi_utama = "".join(baris) or (
-        '<div class="st-kartu"><p style="margin:0 0 .6rem">'
-        "<b>Langkah 1 dari 3 selesai ✓</b> — akunmu sudah jadi.</p>"
-        '<p style="margin:0 0 .6rem"><b>Langkah 2:</b> '
-        '<a href="/akun?section=siswa">Tambah anak</a> '
-        "(nama panggilan + kata sandi untuk anak).</p>"
-        '<p class="sub" style="margin:0">Langkah 3: klik nama anak di sini, '
-        "lalu tekan “Buat sesi baru”.</p></div>"
+    tambah = (
+        '<a class="guru-tambah-st" href="/akun?section=siswa">'
+        '<span aria-hidden="true">＋</span> '
+        + ('Tambah anak' if baris else 'Tambahkan anak pertama') + '</a>'
     )
-
+    isi_utama = (
+        '<div class="guru-kepala-daftar-st"><div>'
+        '<p class="guru-alis-st">RUANG BELAJAR MEREKA</p>'
+        f'<h2 id="daftar-anak">Anak &amp; siswa <span>{len(baris)}</span></h2>'
+        f'</div>{tambah}</div>'
+        '<p class="guru-petunjuk-st">Pilih nama untuk membuka rencana belajar dan riwayat sesi.</p>'
+        f'<div class="daftar-anak">{"".join(baris)}</div>'
+    ) if baris else (
+        '<div class="guru-kosong-st">'
+        '<p class="guru-alis-st">MULAI DARI SINI</p>'
+        '<h2 id="daftar-anak">Kenali langkah pertama mereka.</h2>'
+        '<p>Akunmu sudah siap. Tambahkan anak dengan nama panggilan, '
+        'lalu buka profilnya untuk mulai mendampingi belajar.</p>'
+        f'{tambah}<p class="guru-petunjuk-st">Belum ada sesi latihan. '
+        'Rencana belajar akan tersedia di profil anak.</p></div>'
+    )
     kabar = (
-        '<div class="st-banner-sukses"><span class="ikon">✓</span>'
-        f"<span>{html.escape(pesan)}</span></div>"
-        if pesan
-        else ""
+        '<div class="st-banner-sukses" role="status"><span class="ikon" aria-hidden="true">✓</span>'
+        f'<span>{html.escape(pesan)}</span></div>' if pesan else ''
     )
-
     return _halaman_stitch(
-        T.NAMA_PRODUK,
-        f'<h1 class="st">{T.NAMA_PRODUK} — Latihan Matematika SD</h1>'
-        '<p class="sub">Klik nama anak untuk melihat history dan membuat sesi latihan.</p>'
-        f"{kabar}"
-        f'<div class="daftar-anak">{isi_utama}</div>',
+        "Ruang pendamping",
+        '<main aria-labelledby="judul-guru">'
+        '<header class="guru-sapaan-st"><div>'
+        '<p class="guru-alis-st">RUANG ORANG TUA &amp; GURU</p>'
+        '<h1 id="judul-guru">Langkah kecil,<br><span>tumbuh bersama.</span></h1>'
+        '<p>Temani prosesnya, bukan hanya hasilnya.<br>'
+        'Mulai dari ruang belajar anak di bawah ini.</p></div>'
+        '<div class="guru-catatan-st" aria-hidden="true">'
+        '<span class="guru-coret-st">✳</span>'
+        '<img src="/aset/maskot-menunjuk-240.png" width="240" height="240" alt="">'
+        '<span>Satu langkah yang berarti.</span></div></header>'
+        f'{kabar}<section aria-labelledby="daftar-anak">{isi_utama}</section>'
+        '<footer class="guru-kaki-st"><span aria-hidden="true">✳</span> '
+        'Beri ruang untuk mencoba, bertanya, dan menjelaskan.</footer></main>',
         ident=(pemilik if pemilik else "guru", peran),
+        kelas_bungkus="guru-beranda-st",
     )
 
 
@@ -780,7 +791,7 @@ def halaman_anak(
 
     return _halaman_stitch(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
-        f'<div class="jejak"><a href="/">&larr; Semua anak</a></div>'
+        f'<div class="jejak"><a href="{"/admin" if peran == "admin" else "/guru"}">&larr; Semua anak</a></div>'
         '<div class="kepala-anak-st">'
         f'<h1 class="st">{html.escape(siswa["nama"])}'
         f'<span class="st-badge selesai">({html.escape(label_kelas(str(siswa["tingkat"])))})</span>'

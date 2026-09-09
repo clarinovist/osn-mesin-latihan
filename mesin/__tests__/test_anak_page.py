@@ -43,9 +43,10 @@ def _dua_anak_dengan_sesi(db):
         a = database.tambah_siswa(kon, "Arkan", pemilik="ortu", tingkat="P5")
         b = database.tambah_siswa(kon, "Bila", pemilik="ortu", tingkat="P3")
         database.buat_sesi(kon, a, seed=11, topik="statistika")
-        # tandai ter-review supaya badge muncul
+        # Sesi yang selesai dan ditinjau menampilkan status semua direview.
         kon.execute(
-            "UPDATE sesi SET direview = datetime('now', '+7 hours') "
+            "UPDATE sesi SET selesai = datetime('now', '+7 hours'), "
+            "direview = datetime('now', '+7 hours') "
             "WHERE siswa_id = ?"
         , (a,))
     return a, b

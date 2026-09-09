@@ -432,43 +432,42 @@ class Penangan(BaseHTTPRequestHandler):
                 galat = q["galat"][0]
             # hilangkan sesi lain di URL supaya tidak membingungkan
             return self._kirim(self._halaman_masuk_stitch(galat=galat))
-        if jalur == "/":
-            # Launch publik: / adalah landing untuk yang belum masuk.
-            # Guru dengan sesi valid tetap dapat dashboard. Admin dialihkan
-            # ke dashboardnya sendiri di /admin — panel dukungan tempat
-            # semua keluarga terlihat sekaligus.
-            # Murid & anonim -> landing (bukan 401) — dashboard guru bukan
-            # rahasia sekuat data anak, tapi tetap tak boleh dilihat murid.
+        if jalur in ("/", "/guru", "/ortu"):
+            # Orang tua dan guru memakai peran yang sama. Root tetap publik
+            # bagi anonim/murid; beranda pendamping punya alamat eksplisit.
             ident = self._identitas()
-            if ident and ident[1] == "admin":
+            if jalur == "/" and (not ident or ident[1] not in ("guru", "admin")):
+                from landing import halaman_landing
+
+                return self._kirim(halaman_landing())
+            if not self._lolos_sandi():
+                return
+            if ident[1] == "admin":
                 self.send_response(303)
                 self.send_header("Location", "/admin")
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
-            if ident and ident[1] == "guru":
-                try:
-                    q = urllib.parse.parse_qs(
-                        urllib.parse.urlparse(self.path).query
-                    )
-                    pesan = (q.get("pesan") or [""])[0]
-                    sorot_raw = (q.get("sorot") or [""])[0]
-                    try:
-                        sorot = int(sorot_raw) if sorot_raw else None
-                    except ValueError:
-                        sorot = None
-                    with database.buka() as kon:
-                        return self._kirim(
-                            halaman_utama_stitch(
-                                kon, pesan=pesan, pemilik=ident[0],
-                                peran=ident[1], sorot=sorot,
-                            )
-                        )
-                except Exception:
-                    pass  # DB bermasalah -> landing saja, jangan 500 mentah
-            from landing import halaman_landing
-
-            return self._kirim(halaman_landing())
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if jalur != "/guru":
+                # Alias lama mempertahankan kabar, bukan tujuan bebas dari URL.
+                qs = urllib.parse.urlencode({
+                    k: q[k][0] for k in ("pesan", "sorot") if k in q
+                })
+                self.send_response(303)
+                self.send_header("Location", "/guru" + ("?" + qs if qs else ""))
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            pesan = (q.get("pesan") or [""])[0][:200]
+            try:
+                sorot = int((q.get("sorot") or [""])[0])
+            except ValueError:
+                sorot = None
+            with database.buka() as kon:
+                return self._kirim(halaman_utama_stitch(
+                    kon, pesan=pesan, pemilik=ident[0], peran=ident[1], sorot=sorot,
+                ))
         if jalur == "/daftar":
             from landing import halaman_daftar
 
@@ -931,7 +930,7 @@ class Penangan(BaseHTTPRequestHandler):
 
         token = sessions.buat(nama, "guru")
         self.send_response(303)
-        self.send_header("Location", "/")
+        self.send_header("Location", "/guru")
         self.send_header("Set-Cookie", self._set_cookie(token))
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -951,7 +950,7 @@ class Penangan(BaseHTTPRequestHandler):
         sessions.catat_berhasil(nama, ip)
         token = sessions.buat(nama, peran)
         tujuan = "/murid" if peran == "murid" else (
-            "/admin" if peran == "admin" else "/"
+            "/admin" if peran == "admin" else "/guru"
         )
         self.send_response(303)
         self.send_header("Location", tujuan)

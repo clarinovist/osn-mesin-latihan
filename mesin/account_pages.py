@@ -329,7 +329,7 @@ def halaman_akun(
 
     return _halaman(
         "Akun",
-        f'<div class="jejak"><a href="/">&larr; Semua siswa</a></div>'
+        f'<div class="jejak"><a href="{"/admin" if peran == "admin" else "/guru"}">&larr; Semua siswa</a></div>'
         f"<h1>Akun &amp; pengaturan</h1>"
         f"{kabar}"
         f'<div class="layout-samping">'
