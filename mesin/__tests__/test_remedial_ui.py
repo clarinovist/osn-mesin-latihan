@@ -153,8 +153,9 @@ def test_riwayat_guru_dan_murid_menandai_sesi_remedial(db):
     assert f"Sesi #{remedial_id}" in guru
     assert "Remedial" in guru
     assert "Fokus Soal tentang umur" in guru
-    assert "Remedial" in murid
-    assert "Fokus Soal tentang umur" in murid
+    assert "Latihan terarah" in murid
+    assert "Remedial" not in murid
+    assert "Fokus Soal tentang umur" not in murid
 
 
 def test_post_sumber_dari_anak_lain_404_dan_tidak_membuat_sesi(server):

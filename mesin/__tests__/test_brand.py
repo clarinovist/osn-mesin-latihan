@@ -529,18 +529,13 @@ def server_kosong(tmp_path, monkeypatch):
 
 
 def test_sapaan_anak_pakai_maskot(server):
-    """Sapaan "Halo, <nama>!" memakai maskot, bukan lambang brand.
-
-    Lambang tetap di topbar sebagai penanda identitas; badge sapaan adalah
-    tempat yang tepat untuk maskot — di situ ia menghangatkan, bukan
-    menggeser identitas.
-    """
+    """Maskot mendampingi kartu utama; lambang tetap menjadi identitas topbar."""
     from http_test_kit import SANDI_MURID
 
     kode, isi, _ = server.minta("/murid", auth=("feby", SANDI_MURID))
     assert kode == 200
     assert "Halo, feby!" in isi
-    assert "/aset/maskot-netral-" in isi, "sapaan anak tanpa maskot"
+    assert "/aset/maskot-menunjuk-" in isi, "kartu utama anak tanpa maskot"
     # topbar tetap memakai lambang: identitas tidak digeser hiasan
     assert "/aset/mark-sederhana.svg" in isi
 
@@ -549,8 +544,13 @@ def test_banner_selesai_pakai_maskot_merayakan(server):
     """Banner setelah semua jawaban terkirim memakai pose merayakan."""
     from http_test_kit import SANDI_MURID
 
+    with server.buka() as kon:
+        sesi_feby = kon.execute(
+            "SELECT s.id FROM sesi s JOIN siswa w ON w.id=s.siswa_id WHERE w.nama='feby'"
+        ).fetchone()["id"]
+        database.tandai_selesai(kon, sesi_feby)
     kode, isi, _ = server.minta(
-        f"/murid?selesai={server.sesi_id}", auth=("feby", SANDI_MURID)
+        f"/murid?selesai={sesi_feby}", auth=("feby", SANDI_MURID)
     )
     assert kode == 200
     assert "Selesai!" in isi

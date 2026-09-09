@@ -590,7 +590,7 @@ def test_http_semua_terisi_langsung_ke_daftar_sesi_dengan_banner(server):
         data=data,
     )
     assert kode == 200  # 303 diikuti sampai /murid
-    assert "Semua jawabanmu sudah masuk" in isi, "banner perayaan tampil"
+    assert "Selesai! Latihanmu sudah dikirim." in isi, "banner perayaan tampil"
     assert "Simpan jawabanku" not in isi, "bukan lembar kerja lagi"
 
 

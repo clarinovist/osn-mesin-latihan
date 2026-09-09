@@ -100,4 +100,4 @@ def test_teks_status_review_explicit_bukan_abu_sama(db):
     """Teks badge antara dua status benar-benar berbeda (bukan warna doang)."""
     _sesi_tiga_status(db)
     html = _html_daftar(db)
-    assert "Menunggu direview" in html
+    assert "Menunggu diperiksa" in html.split("</style>")[-1]

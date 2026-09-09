@@ -343,6 +343,158 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
   .st-progres-soal {{ width: 5.5rem; }}
 }}
 
+/* ── Beranda murid — buku belajar pribadi ── */
+.murid-beranda-st {{
+  --murid-teal-lembut: color-mix(in srgb, {T.AKSEN_MURID_UTAMA} 6%, {T.LATAR_KARTU});
+  --murid-amber-lembut: color-mix(in srgb, {T.AKSEN_MURID_AMBER} 24%, {T.LATAR_KARTU});
+}}
+.murid-beranda-st :is(a, button, summary):focus-visible {{
+  outline: 3px solid {T.AKSEN_TEAL_TUA}; outline-offset: 5px;
+}}
+.murid-lewati-st {{ position: absolute; left: {T.SP_4}; top: -8rem; padding: {T.SP_3}; background: {T.LATAR_KARTU}; z-index: 100; }}
+.murid-lewati-st:focus {{ top: {T.SP_3}; }}
+.murid-kepala-st {{ border-bottom: 1px solid {T.BORDER_CATATAN}; }}
+.murid-kepala-st > div {{ max-width: 70rem; margin: auto; padding: 0 2.5rem; min-height: 5.5rem; display: flex; justify-content: space-between; align-items: center; gap: {T.SP_4}; }}
+.murid-brand-st {{ display: flex; gap: {T.SP_2}; align-items: center; font: 800 1.7rem/1 {T.FONT_HEADLINE}; color: {T.AKSEN_TEAL_TUA}; letter-spacing: -.04em; }}
+.murid-kepala-st form {{ margin: 0; }}
+.murid-kepala-st button {{ font: 600 .85rem {T.FONT_HEADLINE}; color: {T.TEKS_VARIAN}; background: none; border: 0; min-height: {T.TARGET_SENTUH}; padding: {T.SP_2} {T.SP_3}; cursor: pointer; }}
+.murid-kepala-st button:hover {{ color: {T.AKSEN_KORAL_TUA}; }}
+.murid-kanvas-st {{ max-width: 70rem; margin: auto; padding: 2.5rem 2.5rem 0; }}
+.murid-sapaan-st {{ margin-bottom: 1.9rem; }}
+.murid-alis-st {{ font: 700 .75rem/1.5 {T.FONT_HEADLINE}; letter-spacing: .09em; color: {T.AKSEN_TEAL_TUA}; margin: 0 0 {T.SP_2}; }}
+.murid-sapaan-st h1 {{ font: 800 2.4rem/1.25 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; letter-spacing: -.04em; margin: 0 0 {T.SP_2}; overflow-wrap: anywhere; }}
+.murid-sapaan-st > p:not(.murid-alis-st) {{ font-size: .95rem; margin: 0; }}
+.murid-akun-hint-st {{ display: block; margin-top: {T.SP_1}; font-size: .75rem; color: {T.TEKS_SUBTLE}; }}
+.murid-grid-st {{ display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 1.75rem; align-items: start; }}
+.murid-grid-st.satu-kolom {{ grid-template-columns: minmax(0, 1fr); max-width: 46rem; }}
+.murid-kolom-utama-st, .murid-pendamping-st {{ min-width: 0; }}
+.murid-pendamping-st {{ display: grid; gap: {T.SP_5}; }}
+.murid-ikon-st {{ display: block; width: 1.35rem; height: 1.35rem; flex: none; }}
+.murid-beranda-st .st-kartu-baris {{
+  display: grid; grid-template-columns: 2.8rem minmax(0, 1fr) auto; gap: {T.SP_3};
+  align-items: center; padding: {T.SP_4}; border: 1px solid {T.BORDER_HALUS};
+  border-radius: {T.RADIUS_KARTU}; color: {T.TEKS_VARIAN}; background: {T.LATAR_KARTU};
+  text-decoration: none; margin: {T.SP_3} 0 0;
+}}
+.murid-beranda-st a.st-kartu-baris:hover {{ border-color: {T.AKSEN_TEAL_TUA}; }}
+.murid-beranda-st .st-kartu-baris > * {{ min-width: 0; }}
+.murid-beranda-st .st-kartu-teks {{ gap: {T.SP_1}; }}
+.murid-ikon-topik-st {{ width: 2.8rem; height: 2.8rem; border-radius: {T.RADIUS_KARTU}; display: grid; place-items: center; color: {T.AKSEN_TEAL_TUA}; background: var(--murid-teal-lembut); }}
+.murid-judul-kartu-st {{ font: 800 1.05rem/1.4 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; overflow-wrap: anywhere; }}
+.murid-tahap-st {{ font: 600 .8rem/1.5 {T.FONT_HEADLINE}; color: {T.TEKS_VARIAN}; overflow-wrap: anywhere; }}
+.murid-meta-st {{ font-size: .75rem; color: {T.TEKS_SUBTLE}; overflow-wrap: anywhere; }}
+.murid-beranda-st .st-badge {{ align-self: flex-start; padding: 0; font-size: .75rem; border-radius: 0; font-weight: 500; background: transparent; line-height: 1.5; }}
+.murid-beranda-st .st-badge.baru {{ color: {T.AKSEN_KORAL_TUA}; }}
+.murid-beranda-st .st-badge.selesai {{ color: {T.TEKS_SUBTLE}; }}
+.murid-beranda-st .st-badge.review {{ color: {T.BADGE_ADMIN_TEKS}; max-width: none; }}
+.murid-beranda-st .st-badge.diagnostik {{ color: {T.AKSEN_TEAL_TUA}; }}
+.murid-ujung-st {{ display: flex; flex-direction: column; align-items: flex-end; gap: {T.SP_2}; width: auto; max-width: 8rem; }}
+.murid-beranda-st .st-progres-soal, .murid-beranda-st .st-jumlah-soal {{ white-space: normal; margin-left: 0 !important; }}
+.murid-jumlah-st {{ font-size: .75rem; color: {T.TEKS_SUBTLE}; }}
+.murid-beranda-st .st-progres-label {{ font-size: .75rem; white-space: normal; }}
+.murid-beranda-st .st-progres-jalur {{ width: 100%; min-width: 4rem; height: .45rem; }}
+.murid-beranda-st .st-progres-isi {{ background: {T.AKSEN_TEAL_TUA}; }}
+.murid-aksi-st {{ display: inline-flex; gap: {T.SP_1}; align-items: center; color: {T.AKSEN_TEAL_TUA}; font: 700 .8rem/1.4 {T.FONT_HEADLINE}; }}
+.murid-aksi-st .murid-ikon-st {{ width: 1rem; height: 1rem; }}
+
+/* Satu tautan: tombol hanya penanda visual dari kartu yang menaut. */
+.murid-beranda-st .st-kartu-baris[data-utama] {{
+  position: relative; isolation: isolate; grid-template-columns: minmax(0, 1fr);
+  gap: 0; padding: 0; margin: 0; border: 1px solid {T.AKSEN_TEAL_TUA}; border-radius: 1.4rem;
+  background: var(--murid-teal-lembut); overflow: hidden;
+  box-shadow: 0 5px 0 color-mix(in srgb, {T.AKSEN_TEAL_TUA} 7%, transparent);
+}}
+.murid-beranda-st [data-utama] > .st-kartu-teks {{
+  grid-column: 1; grid-row: 1; display: block; min-height: 18rem; padding: {T.SP_5} 2rem;
+  padding-right: 43%; background-image: linear-gradient(color-mix(in srgb, {T.AKSEN_TEAL_TUA} 4%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, {T.AKSEN_TEAL_TUA} 4%, transparent) 1px, transparent 1px); background-size: 1.5rem 1.5rem;
+}}
+.murid-label-utama-st {{ display: block; color: {T.AKSEN_TEAL_TUA}; font: 700 .8rem/1.5 {T.FONT_HEADLINE}; }}
+.murid-beranda-st [data-utama] .murid-tahap-st {{ display: block; margin: 1.5rem 0 {T.SP_2}; color: {T.AKSEN_TEAL_TUA}; }}
+.murid-judul-sampul-st {{ display: block; font: 800 2.65rem/1.12 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; letter-spacing: -.04em; overflow-wrap: anywhere; }}
+.murid-sub-sampul-st {{ display: block; font-size: .8rem; margin-top: {T.SP_3}; }}
+.murid-beranda-st [data-utama] .murid-meta-st {{ display: block; margin-top: {T.SP_2}; }}
+.murid-ilustrasi-st {{ position: absolute; z-index: -1; right: 1rem; top: 3.5rem; width: 12rem; height: 14rem; }}
+.murid-ilustrasi-st img {{ position: absolute; width: 100%; bottom: 1rem; right: 0; display: block; }}
+.murid-lingkaran-st {{ position: absolute; right: .3rem; bottom: 1.7rem; width: 10rem; height: 10rem; border-radius: 50%; background: var(--murid-amber-lembut); }}
+.murid-beranda-st [data-utama] > .murid-lanjut-bawah-st {{
+  grid-column: 1; grid-row: 2; display: flex; flex-direction: column; align-items: stretch;
+  width: 100%; max-width: none; gap: {T.SP_3}; padding: {T.SP_5} 2rem;
+  background: {T.LATAR_KARTU}; border-top: 1px solid {T.BORDER_VARIAN};
+}}
+.murid-beranda-st [data-utama] .st-progres-label {{ font-size: .9rem; }}
+.murid-tombol-utama-st {{ display: flex; align-items: center; justify-content: space-between; gap: {T.SP_4}; min-height: 3.25rem; padding: {T.SP_3} {T.SP_5}; border-radius: {T.RADIUS_KARTU}; background: {T.AKSEN_KORAL_TUA}; color: {T.TEKS_PUTIH}; font: 700 1rem/1.4 {T.FONT_HEADLINE}; margin-top: {T.SP_2}; }}
+.murid-beranda-st [data-utama]:hover .murid-tombol-utama-st {{ background: color-mix(in srgb, {T.AKSEN_KORAL_TUA} 90%, {T.TEKS_JUDUL}); }}
+.murid-aman-st {{ text-align: center; font-size: .75rem; color: {T.TEKS_SUBTLE}; }}
+.murid-latihan-lain-st {{ margin-top: {T.SP_6}; }}
+.murid-kepala-bagian-st {{ display: flex; justify-content: space-between; gap: {T.SP_3}; align-items: center; }}
+.murid-kepala-bagian-st h2 {{ font: 800 1.15rem/1.4 {T.FONT_HEADLINE}; margin: 0; color: {T.TEKS_JUDUL}; }}
+.murid-kepala-bagian-st > span {{ font-size: .8rem; color: {T.TEKS_SUBTLE}; }}
+.murid-menunggu-st {{ border: 1px solid {T.BORDER_CATATAN}; border-radius: 1.2rem; background: {T.LATAR_CATATAN}; padding: {T.SP_5}; }}
+.murid-menunggu-st > h2 {{ display: flex; gap: {T.SP_2}; align-items: center; font: 700 .9rem/1.5 {T.FONT_HEADLINE}; color: {T.BADGE_ADMIN_TEKS}; margin: 0; }}
+.murid-menunggu-st h3 {{ font: 800 1.5rem/1.25 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; margin: {T.SP_5} 0 {T.SP_3}; }}
+.murid-menunggu-st > p {{ font-size: .9rem; margin: 0; }}
+.murid-menunggu-st .st-kartu-baris {{ background: transparent; padding: {T.SP_4} 0 0; border: 0; border-top: 1px solid {T.BORDER_CATATAN}; border-radius: 0; grid-template-columns: 1.4rem minmax(0, 1fr); gap: {T.SP_3}; align-items: start; }}
+.murid-menunggu-st .murid-ikon-topik-st {{ width: auto; height: auto; background: none; margin-top: {T.SP_1}; }}
+.murid-menunggu-st .murid-ujung-st {{ grid-column: 2; align-items: flex-start; }}
+.murid-riwayat-st {{ background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_HALUS}; border-radius: {T.RADIUS_KARTU}; }}
+.murid-riwayat-st summary {{ display: flex; gap: {T.SP_3}; align-items: center; list-style: none; padding: {T.SP_4}; min-height: {T.TARGET_SENTUH}; cursor: pointer; border-radius: {T.RADIUS_KARTU}; }}
+.murid-riwayat-st summary::-webkit-details-marker {{ display: none; }}
+.murid-riwayat-st summary > span {{ flex: 1; display: flex; flex-direction: column; gap: {T.SP_1}; min-width: 0; }}
+.murid-riwayat-st summary b {{ font: 700 .9rem/1.4 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; }}
+.murid-riwayat-st summary span span {{ font-size: .75rem; color: {T.TEKS_SUBTLE}; }}
+.murid-riwayat-st summary .murid-ikon-st {{ width: 1.2rem; height: 1.2rem; color: {T.AKSEN_TEAL_TUA}; }}
+.murid-riwayat-st[open] summary > svg:last-child {{ transform: rotate(90deg); }}
+.murid-riwayat-isi-st {{ padding: 0 {T.SP_4} {T.SP_4}; }}
+.murid-riwayat-isi-st .st-kartu-baris {{ display: flex; flex-wrap: wrap; gap: {T.SP_3}; padding: {T.SP_3} 0 0; border: 0; border-top: 1px solid {T.BORDER_HALUS}; border-radius: 0; }}
+.murid-riwayat-isi-st .murid-ikon-topik-st {{ display: none; }}
+.murid-riwayat-isi-st .st-kartu-teks {{ flex: 1 1 8rem; }}
+.murid-riwayat-isi-st .murid-ujung-st {{ align-items: flex-start; }}
+.murid-keadaan-st {{ border: 1px solid {T.BORDER_CATATAN}; border-radius: 1.4rem; padding: {T.SP_6}; background: {T.LATAR_KARTU}; }}
+.murid-keadaan-st img {{ width: 9rem; height: auto; display: block; margin: 0 auto {T.SP_5}; }}
+.murid-keadaan-st h2 {{ font: 800 2rem/1.25 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; margin: 0 0 {T.SP_4}; }}
+.murid-keadaan-st p {{ font-size: .95rem; margin: 0; }}
+.murid-kaki-st {{ display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: {T.SP_3}; margin: {T.SP_6} {T.SP_4}; font-size: .75rem; color: {T.TEKS_SUBTLE}; }}
+.murid-kaki-st > span {{ color: {T.AKSEN_KORAL_TUA}; }}
+@media (max-width: 60rem) {{
+  .murid-grid-st {{ grid-template-columns: minmax(0, 1fr) 17rem; gap: {T.SP_5}; }}
+  .murid-ilustrasi-st {{ width: 9rem; right: .6rem; }}
+  .murid-lingkaran-st {{ width: 8rem; height: 8rem; }}
+  .murid-judul-sampul-st {{ font-size: 2.2rem; }}
+}}
+@media (max-width: 48rem) {{
+  .murid-kepala-st > div {{ min-height: 4.5rem; padding: 0 1.35rem; }}
+  .murid-brand-st {{ font-size: 1.5rem; }}
+  .murid-kanvas-st {{ padding: 1.7rem 1.35rem 0; max-width: 36rem; }}
+  .murid-sapaan-st {{ margin-bottom: {T.SP_5}; }}
+  .murid-sapaan-st h1 {{ font-size: 1.95rem; }}
+  .murid-sapaan-st > p:not(.murid-alis-st) {{ font-size: .9rem; }}
+  .murid-grid-st {{ display: flex; flex-direction: column; gap: 1.75rem; }}
+  .murid-kolom-utama-st, .murid-pendamping-st {{ width: 100%; }}
+  .murid-beranda-st [data-utama] > .st-kartu-teks {{ min-height: 17rem; padding: 1.3rem; padding-right: 40%; }}
+  .murid-ilustrasi-st {{ width: 8.5rem; top: 3.5rem; height: 12rem; right: .3rem; }}
+  .murid-lingkaran-st {{ width: 7.5rem; height: 7.5rem; right: 0; }}
+  .murid-judul-sampul-st {{ font-size: 2.15rem; }}
+  .murid-beranda-st [data-utama] > .murid-lanjut-bawah-st {{ padding: 1.3rem; }}
+  .murid-tombol-utama-st {{ font-size: .95rem; padding: {T.SP_3} {T.SP_4}; }}
+  .murid-beranda-st .st-kartu-baris:not([data-utama]) {{ grid-template-columns: 2.2rem minmax(0, 1fr); }}
+  .murid-beranda-st .st-kartu-baris:not([data-utama]) .murid-ujung-st {{ grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; max-width: none; width: 100%; }}
+  .murid-beranda-st .st-kartu-baris:not([data-utama]) .st-progres-label {{ width: 100%; }}
+  .murid-beranda-st .st-kartu-baris:not([data-utama]) .st-progres-jalur {{ width: 55%; }}
+  .murid-ikon-topik-st {{ width: 2.2rem; height: 2.5rem; }}
+  .murid-menunggu-st .st-kartu-baris:not([data-utama]) {{ grid-template-columns: 1.4rem minmax(0, 1fr); }}
+  .murid-menunggu-st {{ padding: 1.3rem; }}
+  .murid-riwayat-isi-st .st-kartu-baris:not([data-utama]) {{ display: block; }}
+  .murid-riwayat-isi-st .murid-ujung-st {{ margin-top: {T.SP_2}; }}
+}}
+@media (max-width: 23.5rem) {{
+  .murid-kanvas-st {{ padding-left: {T.SP_4}; padding-right: {T.SP_4}; }}
+  .murid-sapaan-st h1 {{ font-size: 1.75rem; }}
+  .murid-beranda-st [data-utama] > .st-kartu-teks {{ padding: {T.SP_4}; padding-right: 39%; }}
+  .murid-judul-sampul-st {{ font-size: 1.85rem; }}
+  .murid-ilustrasi-st {{ width: 6.3rem; top: 4.2rem; right: .25rem; }}
+  .murid-lingkaran-st {{ width: 6rem; height: 6rem; }}
+}}
+
 /* Sorot-baru — sisip baris yang baru dibuat */
 tr.sorot-baru, div.sorot-baru {{
   background: {T.AKSEN_MURID_UTAMA}20;

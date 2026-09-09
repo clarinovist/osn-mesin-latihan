@@ -29,6 +29,84 @@ def _ambil_topik(baris) -> str:
         return dari_sesi(None).id
     return dari_sesi(nilai).id
 
+def beranda_murid(kon, siswa_id: int) -> dict:
+    """Proyeksi metadata beranda tanpa membaca hasil atau alasan guru.
+
+    Sesi terpandu memakai selector yang sama dengan reducer. Bila belum ada
+    putaran aktif, satu latihan bebas level kini boleh disorot sebagai pintasan
+    operasional; itu bukan keputusan materi/kelulusan. Sesi lama tetap sekunder.
+    """
+    from datetime import date
+    import learning_cycle as siklus
+
+    siswa = kon.execute(
+        "SELECT tingkat FROM siswa WHERE id = ?", (siswa_id,)
+    ).fetchone()
+    if siswa is None:
+        return {"level": "", "sesi": [], "utama_id": None, "terpandu": False}
+
+    def tanggal(nilai):
+        try:
+            return date.fromisoformat(str(nilai)[:10])
+        except ValueError:
+            return date.min
+
+    baris = kon.execute(
+        """SELECT s.id, s.siswa_id, s.tanggal, s.dibuat, s.level, s.topik,
+                  s.mode, s.jenis, s.tujuan, s.putaran_id, s.selesai, s.direview,
+                  s.dibatalkan,
+                  (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id=s.id) AS jumlah,
+                  (SELECT COUNT(*) FROM sesi_soal ss JOIN jawaban j ON j.sesi_soal_id=ss.id
+                   WHERE ss.sesi_id=s.id AND
+                     (TRIM(IFNULL(j.jawaban,'')) <> '' OR TRIM(IFNULL(j.cara,'')) <> ''
+                      OR TRIM(IFNULL(j.restatement,'')) <> '' OR j.belum_pernah=1)) AS terisi
+           FROM sesi s WHERE s.siswa_id = ? ORDER BY s.id DESC""",
+        (siswa_id,),
+    ).fetchall()
+    putaran = tuple(
+        siklus.PutaranSiklus(b["id"], siswa_id, b["level"], tanggal(b["dibuka"]))
+        for b in kon.execute(
+            "SELECT id, level, dibuka FROM putaran_fokus WHERE siswa_id=? ORDER BY id",
+            (siswa_id,),
+        )
+    )
+    kejadian = tuple(
+        siklus.KejadianSiklus(b["id"], b["jenis"], tanggal(b["dibuat"]), b["putaran_id"])
+        for b in kon.execute(
+            """SELECT id, jenis, dibuat, putaran_id FROM kejadian_belajar
+               WHERE siswa_id=? AND jenis IN
+                 ('putaran_ditutup','diganti_level','override_ditutup') ORDER BY id""",
+            (siswa_id,),
+        )
+    )
+    metadata = siklus.BuktiSiklus(
+        siswa_id, siswa["tingkat"],
+        sesi=tuple(siklus.SesiSiklus(
+            b["id"], b["siswa_id"], b["level"], b["tujuan"], tanggal(b["tanggal"]),
+            dibuat=b["dibuat"], selesai=b["selesai"], putaran_id=b["putaran_id"],
+            dibatalkan=b["dibatalkan"],
+        ) for b in baris),
+        putaran=putaran, kejadian=kejadian,
+    )
+    aktif = siklus._putaran_aktif(metadata)
+    pilihan = siklus.sesi_berjalan(metadata)
+    tersedia = [dict(b) for b in baris if b["dibatalkan"] is None]
+    utama_id = pilihan.id if pilihan is not None else None
+    if aktif is None:
+        manual = [b for b in tersedia
+                  if b["tujuan"] == "bebas" and b["selesai"] is None
+                  and b["level"] == siswa["tingkat"] and b["jumlah"] > 0]
+        if manual:
+            utama_id = max(manual, key=lambda b: (b["terisi"] > 0, b["id"]))["id"]
+    # Renderer hanya menerima kolom daftar putih; metadata putaran tidak
+    # diteruskan ke template atau atribut HTML.
+    kolom_aman = ("id", "tanggal", "level", "topik", "mode", "jenis", "tujuan",
+                  "selesai", "direview", "jumlah", "terisi")
+    return {"level": siswa["tingkat"],
+            "sesi": [{k: b[k] for k in kolom_aman} for b in tersedia],
+            "utama_id": utama_id, "terpandu": aktif is not None}
+
+
 def sesi_murid(kon, siswa_id: int, sesi_id: int) -> dict | None:
     """Data sesi versi murid — TANPA kunci/malrule/diagnosis.
 

@@ -631,193 +631,237 @@ def halaman_kerja(
 </div></body></html>"""
     return isi.encode()
 
-def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | None = None) -> bytes:
-    """Halaman /murid versi Stitch — daftar sesi milik murid ini saja.
-
-    Perilaku data dan logika badge dipertahankan SAMA dengan versi lama;
-    yang berubah hanya markup + kelas CSS (mengadopsi GAYA_STITCH).
-
-    Palang mutlak: TIDAK memuat kata kunci/malrule/diagnosa.
-    Sumber visual: mockup mobile halaman_murid_mobile + Stitch terpadu.
-    """
-    from style_stitch import gaya_stitch
-
-    _WARNA_ICON = [
-        ("#d8f2f2", "#0a7d7d"),  # teal lembut
-        ("#ffe0dc", "#cc3f2b"),  # coral lembut
-        ("#fff0d6", "#815600"),  # amber lembut
-        ("#efe6fd", "#6a4bb0"),  # ungu lembut
-    ]
-    _IKON_SESI = ["quiz", "calculate", "schedule", "extension"]
-
-    baris = kon.execute(
-        """SELECT id, tanggal, level, topik, mode, jenis, tujuan,
-                  (SELECT COUNT(*) FROM sesi_soal ss WHERE ss.sesi_id = s.id) AS jumlah,
-                  s.selesai, s.direview,
-                  (SELECT COUNT(*) FROM sesi_soal ss
-                   JOIN jawaban j ON j.sesi_soal_id = ss.id
-                   WHERE ss.sesi_id = s.id) AS terisi,
-                  (SELECT COUNT(*) FROM sesi_soal ss
-                   JOIN jawaban j ON j.sesi_soal_id = ss.id
-                   JOIN diagnosis d ON d.jawaban_id = j.id
-                   WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
-           FROM sesi s WHERE s.siswa_id = ? ORDER BY s.id DESC""",
-        (siswa_id,),
-    ).fetchall()
-
-    kartu = []
-    for i, b in enumerate(baris):
-        bg, fg = _WARNA_ICON[i % len(_WARNA_ICON)]
-        ikon = _IKON_SESI[i % len(_IKON_SESI)]
-
-        # Badge status — urutan if persis sama dengan versi lama
-        if b["terisi"] == 0:
-            badge = '<span class="st-badge baru">Baru</span>'
-        elif b["selesai"] is None:
-            badge = '<span class="st-badge selesai">Dikerjakan</span>'
-        elif b["direview"] is None:
-            # Feedback orang tua 1 Sep 2026: status ini dulunya pakai kelas
-            # .selesai (abu) — TIDAK BISA dibedakan dari "Selesai X/Y benar".
-            # Kelas review (amber) + teks eksplisit, urutan if tetap.
-            badge = '<span class="st-badge review">Menunggu direview</span>'
-        else:
-            badge = (
-                f'<span class="st-badge diagnostik">Selesai &middot; '
-                f'{b["benar"]}/{b["jumlah"]} benar</span>'
-            )
-
-        # Tujuan kartu: sesi yang SUDAH direview membuka halaman hasil +
-        # pembahasan (poin b feedback Filia) — itulah yang dicari anak
-        # setelah dinilai. Sesi lain tetap membuka lembar kerjanya.
-        tujuan = (
-            f"/murid/hasil/{b['id']}"
-            if b["direview"] is not None
-            else f"/murid/kerjakan/{b['id']}"
-        )
-
-        # Badge mode (terpisah, di baris meta)
-        if penanda_tahap(b["tujuan"]):
-            mode_label = penanda_tahap(b["tujuan"])
-        elif b["jenis"] == "remedial":
-            fokus = _nama_fokus_remedial(kon, int(b["id"]))
-            mode_label = (
-                '<span class="st-badge latihan">Remedial</span>'
-                f'<span>Fokus {_escape(fokus)}</span>'
-            )
-        elif b["mode"] == "drill":
-            mode_label = '<span class="st-badge latihan">Latihan Cepat</span>'
-        else:
-            mode_label = '<span class="st-badge diagnostik">Diagnostik</span>'
-
-        # Penanda jumlah soal (3 Sep, feedback layout). Dulu ditulis di dalam
-        # span kolom teks → kena stretch flex-column jadi 271px di HP /
-        # 617px di desktop untuk konten +-67px ("blok abu memanjang").
-        # Sekarang anak LANGSUNG kartu, dan bentuknya kontekstual:
-        # bar berisi hanya untuk sesi yang sedang dikerjakan (0 < terisi <
-        # jumlah) — saat pecahannya memang informatif. Sesi baru (0%) dan
-        # sesi selesai (100%) tetap pill statis; angkanya sudah tergambar
-        # badge statusnya sendiri.
-        sedang_jalan = 0 < b["terisi"] < b["jumlah"]
-        if sedang_jalan:
-            persen = round(b["terisi"] / b["jumlah"] * 100, 1)
-            penanda = (
-                '<span class="st-progres-soal">'
-                '<span class="st-progres-jalur">'
-                f'<span class="st-progres-isi" style="width:{persen}%"></span>'
-                "</span>"
-                f'<span class="st-progres-label">{b["terisi"]} dari '
-                f'{b["jumlah"]} soal</span>'
-                "</span>"
-            )
-        else:
-            penanda = (
-                '<span class="st-badge selesai st-jumlah-soal">'
-                f'{b["jumlah"]} soal</span>'
-            )
-
-        kartu.append(
-            f'<a class="st-kartu-baris" href="{tujuan}"'
-            ' style="text-decoration:none;color:inherit">'
-            f'<span style="flex:none;width:2.5rem;height:2.5rem;border-radius:50%;'
-            f"background:{bg};display:inline-flex;align-items:center;justify-content:center;\">"
-            f'<span class="material-symbols-outlined" style="font-size:1.2rem;color:{fg}">{ikon}</span>'
-            "</span>"
-            '<span class="st-kartu-teks">'
-            f'<span style="font-weight:700;font-size:1rem;color:{T.TEKS_JUDUL}">{_escape(b["tanggal"])}</span>'
-            f'<span style="font-size:0.85rem;color:{T.TEKS_VARIAN};display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
-            f"{_escape(label_kelas(b['level']))} &middot; {_escape(_ambil_topik(b))}"
-            f" {mode_label}"
-            # 1 Sep:badge review = baris METANYA sendiri (flex-wrap) supaya
-            # selalu dalam viewport di HP — terukur lewat piksel screenshot.
-            f'<span style="flex-basis:100%;display:flex;align-items:center;">{badge}</span></span>'
-            "</span>"
-            f"{penanda}"
-            "</a>"
-        )
-
-    kartu_html = "\n".join(kartu) or (
-        # Bug 3 Sep: baris pertama dulu BUKAN f-string, jadi
-        # '{T.BORDER_VARIAN}' terkirim mentah ke browser sebagai teks dan
-        # bordernya tidak berwarna semestinya. Semua baris kini f-string.
-        f'<div style="border:1.5px dashed {T.BORDER_VARIAN}; '
-        f'border-radius:{T.RADIUS_KARTU}; padding:{T.SP_5}; text-align:center;'
-        f'color:{T.TEKS_VARIAN}; font-size:0.95rem">'
-        f'{brand.maskot("netral", 96)}'
-        '<div style="margin-top:0.6rem">'
-        'Belum ada sesi. Minta gurumu membuatkan.</div></div>'
+def _ikon_beranda(nama: str) -> str:
+    """Ikon dekoratif lokal; setiap kontrol tetap punya nama berupa teks."""
+    bentuk = {
+        "panah": '<path d="M4 12h15m-6-6 6 6-6 6"/>',
+        "buku": '<path d="M12 6c-3-2-7-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-2-1-6-1-9 1Zm0 0v14"/>',
+        "grafik": '<path d="M4 20h17M7 16v-5m5 5V5m5 11V8"/>',
+        "bilangan": '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 12h1m6 0h1m-8 5h1m6 0h1"/>',
+        "jam": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        "lipat": '<path d="m9 5 7 7-7 7"/>',
+    }
+    return (
+        '<svg class="murid-ikon-st" viewBox="0 0 24 24" fill="none" '
+        'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" '
+        f'stroke-linejoin="round" aria-hidden="true">{bentuk[nama]}</svg>'
     )
 
-    banner = ""
-    if sesi_selesai is not None:
-        banner = (
-            '<div class="st-banner-sukses">'
-            f'{brand.maskot("merayakan", 96, kelas="maskot-banner")}'
-            '<span class="ikon">✓</span>'
-            "<span>Selesai! Semua jawabanmu sudah masuk.</span></div>"
-        )
 
-    isi = f"""<!DOCTYPE html>
+def _tanggal_beranda(nilai: str) -> str:
+    """Tanggal manusiawi; nilai warisan yang bukan ISO tetap di-escape caller."""
+    from datetime import date
+    bulan = ("Januari", "Februari", "Maret", "April", "Mei", "Juni",
+             "Juli", "Agustus", "September", "Oktober", "November", "Desember")
+    try:
+        tanggal = date.fromisoformat(str(nilai)[:10])
+    except ValueError:
+        return str(nilai)
+    return f"{tanggal.day} {bulan[tanggal.month - 1]} {tanggal.year}"
+
+
+def _judul_beranda(sesi: dict) -> tuple[str, str]:
+    """Topik dan ikon stabil, tidak berubah ketika urutan daftar berubah."""
+    paket = dari_sesi(sesi["topik"])
+    if paket.id == "campuran":
+        return "Latihan campuran", "buku"
+    if paket.id.startswith("gabungan:"):
+        return "Latihan gabungan", "buku"
+    ikon = "grafik" if paket.id == "statistika" else (
+        "bilangan" if paket.id in {"pola-bilangan", "teori-bilangan",
+                                  "aritmetika-dasar", "aritmatika-lanjut"} else "buku"
+    )
+    return paket.nama[:1].upper() + paket.nama[1:].lower(), ikon
+
+
+def _tahap_beranda(sesi: dict) -> str:
+    """Sesi bebas dan warisan juga memakai istilah netral untuk anak."""
+    tahap = penanda_tahap(sesi["tujuan"])
+    if tahap:
+        return tahap
+    if sesi["jenis"] == "remedial":
+        return "Latihan terarah"
+    return "Latihan Cepat" if sesi["mode"] == "drill" else "Latihan campuran"
+
+
+def _penanda_beranda(sesi: dict) -> str:
+    """Progres hanya untuk sesi yang masih dikerjakan, bukan nilai benar."""
+    n, jumlah = sesi["terisi"], sesi["jumlah"]
+    if sesi["selesai"] is None and n > 0 and jumlah > 0:
+        persen = round(min(n, jumlah) / jumlah * 100, 1)
+        return (
+            '<span class="st-progres-label">'
+            f'{n} dari {jumlah} soal tersimpan</span>'
+            '<span class="st-progres-jalur" role="progressbar" '
+            f'aria-label="Soal tersimpan" aria-valuemin="0" aria-valuemax="{jumlah}" '
+            f'aria-valuenow="{min(n, jumlah)}">'
+            f'<span class="st-progres-isi" style="width:{persen}%"></span>'
+            '</span>'
+        )
+    return f'<span class="murid-jumlah-st">{jumlah} soal</span>'
+
+
+def _kartu_beranda(sesi: dict, utama: bool = False) -> str:
+    """Satu tautan per sesi, tanpa tombol/link bersarang di kartu utama."""
+    judul, ikon = _judul_beranda(sesi)
+    tahap = _tahap_beranda(sesi)
+    selesai = sesi["selesai"] is not None
+    direview = selesai and sesi["direview"] is not None
+    if direview:
+        label, kelas = "Selesai · sudah diperiksa", "diagnostik"
+        aksi, jalur = "Lihat hasil", f"/murid/hasil/{sesi['id']}"
+    elif selesai:
+        label, kelas = "Menunggu diperiksa", "review"
+        aksi, jalur = "", ""
+    elif sesi["terisi"]:
+        label, kelas = "Sedang dikerjakan", "selesai"
+        aksi, jalur = "Lanjutkan", f"/murid/kerjakan/{sesi['id']}"
+    else:
+        label, kelas = "Belum dimulai", "baru"
+        aksi, jalur = "Mulai", f"/murid/kerjakan/{sesi['id']}"
+    badge = f'<span class="st-badge {kelas}">{label}</span>'
+    penanda = _penanda_beranda(sesi)
+    kelas_penanda = (
+        "st-progres-soal"
+        if not selesai and sesi["terisi"] > 0 and sesi["jumlah"] > 0
+        else "st-jumlah-soal"
+    )
+    tanggal = _escape(_tanggal_beranda(sesi["tanggal"]))
+    meta = f'{_escape(label_kelas(sesi["level"]))} · {tanggal}'
+    # Marker tiga anak kartu dipertahankan: ikon, kolom teks, penanda.
+    if utama:
+        label_utama = "Lanjutkan latihanmu" if sesi["terisi"] else "Latihan untukmu"
+        aksi = "Lanjutkan latihan" if sesi["terisi"] else "Mulai latihan"
+        ilustrasi = (
+            '<span class="murid-ilustrasi-st" aria-hidden="true">'
+            '<span class="murid-lingkaran-st"></span>'
+            f'{brand.maskot("menunjuk", 240)}</span>'
+        )
+        teks = (
+            '<span class="st-kartu-teks">'
+            f'<span class="murid-label-utama-st">{label_utama}</span>'
+            f'<span class="murid-tahap-st">{tahap}</span>'
+            f'<span class="murid-judul-sampul-st" role="heading" aria-level="2">{_escape(judul)}</span>'
+            '<span class="murid-sub-sampul-st">Kerjakan pelan-pelan, ya.</span>'
+            f'<span class="murid-meta-st">{meta}</span></span>'
+        )
+        ujung = (
+            f'<span class="murid-lanjut-bawah-st {kelas_penanda}">' + penanda
+            + f'<span class="murid-tombol-utama-st">{aksi}{_ikon_beranda("panah")}</span>'
+            + ('<span class="murid-aman-st">Jawaban tersimpan aman</span>' if sesi["terisi"] else '')
+            + '</span>'
+        )
+        return (
+            f'<a class="st-kartu-baris" data-utama="true" href="{jalur}">'
+            f'{ilustrasi}{teks}{ujung}</a>'
+        )
+    teks = (
+        '<span class="st-kartu-teks">'
+        f'<span class="murid-judul-kartu-st">{_escape(judul)}</span>'
+        f'<span class="murid-tahap-st">{tahap}</span>'
+        f'<span class="murid-meta-st">{meta}</span>{badge}</span>'
+    )
+    ujung = f'<span class="murid-ujung-st {kelas_penanda}">' + penanda
+    if aksi:
+        ujung += f'<span class="murid-aksi-st">{aksi}{_ikon_beranda("panah")}</span>'
+    ujung += '</span>'
+    tag = "a" if jalur else "div"
+    href = f' href="{jalur}"' if jalur else ''
+    return (
+        f'<{tag} class="st-kartu-baris"{href}>'
+        f'<span class="murid-ikon-topik-st">{_ikon_beranda(ikon)}</span>'
+        f'{teks}{ujung}</{tag}>'
+    )
+
+
+def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | None = None) -> bytes:
+    """Beranda buku belajar: satu sesi utama, tugas lain, kabar, dan riwayat."""
+    from style_stitch import gaya_stitch
+    from students import beranda_murid
+
+    data = beranda_murid(kon, siswa_id)
+    daftar = data["sesi"]
+    utama = next((s for s in daftar if s["id"] == data["utama_id"]), None)
+    tugas = [s for s in daftar if s["selesai"] is None and s is not utama]
+    menunggu = [s for s in daftar if s["selesai"] is not None and s["direview"] is None]
+    riwayat = [s for s in daftar if s["selesai"] is not None and s["direview"] is not None]
+    banner = ""
+    if any(s["id"] == sesi_selesai and s["selesai"] is not None for s in daftar):
+        banner = (
+            '<div class="st-banner-sukses" role="status">'
+            f'{brand.maskot("merayakan", 96, kelas="maskot-banner")}'
+            '<span>Selesai! Latihanmu sudah dikirim.</span></div>'
+        )
+    kolom = _kartu_beranda(utama, True) if utama else ""
+    if not utama:
+        if not daftar:
+            judul, pesan = "Siap untuk latihan pertama?", (
+                "Belum ada sesi latihan yang disiapkan. Minta orang tua atau gurumu membuatkan, ya."
+            )
+        elif tugas:
+            judul, pesan = "Belajar selangkah lagi", (
+                "Gurumu akan menyiapkan langkah berikutnya. Latihan lain yang tersedia tetap bisa kamu buka di bawah."
+            )
+        elif menunggu:
+            judul, pesan = "Terima kasih sudah mencoba!", (
+                "Latihanmu sudah dikirim. Sekarang boleh istirahat dulu."
+            )
+        else:
+            judul, pesan = "Latihanmu sudah diperiksa", (
+                "Kamu bisa membuka hasil latihan sebelumnya di bawah."
+            )
+        kolom = (
+            '<section class="murid-keadaan-st">'
+            f'{brand.maskot("netral", 240)}'
+            f'<div><h2>{judul}</h2><p>{pesan}</p></div></section>'
+        )
+    if tugas:
+        kolom += (
+            '<section class="murid-latihan-lain-st" aria-labelledby="judul-lain">'
+            '<div class="murid-kepala-bagian-st"><h2 id="judul-lain">Latihan lainnya</h2>'
+            f'<span>{len(tugas)} latihan</span></div>'
+            + ''.join(_kartu_beranda(s) for s in tugas) + '</section>'
+        )
+    pendamping = ""
+    if menunggu:
+        pendamping += (
+            '<section class="murid-menunggu-st" aria-labelledby="judul-menunggu">'
+            f'<h2 id="judul-menunggu">{_ikon_beranda("jam")}Menunggu diperiksa</h2>'
+            '<h3>Jawabanmu sudah masuk.</h3>'
+            '<p>Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</p>'
+            + ''.join(_kartu_beranda(s) for s in menunggu) + '</section>'
+        )
+    if riwayat:
+        pendamping += (
+            '<details class="murid-riwayat-st"><summary>'
+            f'{_ikon_beranda("buku")}<span><b>Latihan selesai</b>'
+            f'<span>{len(riwayat)} latihan sudah diperiksa</span></span>{_ikon_beranda("lipat")}'
+            '</summary><div class="murid-riwayat-isi-st">'
+            + ''.join(_kartu_beranda(s) for s in riwayat) + '</div></details>'
+        )
+    grid = "murid-grid-st" + (" satu-kolom" if not pendamping else "")
+    isi = f'''<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{brand.judul("Sesiku")}</title>
-{brand.tag_kepala()}
+<title>{brand.judul("Ruang belajarku")}</title>{brand.tag_kepala()}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
-<style>{gaya_stitch()}</style>
-</head><body class="st">
-<div class="bungkus-st">
-  <div class="st-topbar">
-    <div class="brand">
-      {brand.mark("topbar")}
-      <span class="nama">{T.NAMA_PRODUK}</span>
-    </div>
-    <form method="post" action="/keluar" style="margin:0">
-      <button type="submit" class="cta">Keluar</button>
-    </form>
-  </div>
-
-  <div style="padding:{T.SP_4} 0">
-    <div style="display:flex;align-items:center;gap:{T.SP_4};margin:0.4rem 0 1.2rem">
-      <span style="flex:none;width:4.5rem;height:4.5rem;border-radius:50%;background:#d8f2f2;display:flex;align-items:center;justify-content:center">
-        {brand.maskot("netral", 96, kelas="maskot-sapaan")}
-      </span>
-      <div>
-        <h1 class="st" style="margin:0">Halo, {_escape(nama)}!</h1>
-        <div style="font-size:0.95rem;color:{T.TEKS_VARIAN}">{T.TAGLINE}</div>
-        <div style="font-size:0.8rem;color:{T.TEKS_VARIAN}">Bukan kamu? Tekan Keluar dulu.</div>
-      </div>
-    </div>
-
-    {banner}
-
-    <p style="margin:0.4rem 0 1rem;color:{T.TEKS_VARIAN};font-size:0.95rem">
-      Pilih sesi untuk mulai latihan</p>
-    <div style="display:flex;flex-direction:column;gap:0.7rem">
-      {kartu_html}
-    </div>
-  </div>
-</div></body></html>"""
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>{gaya_stitch()}</style></head><body class="st murid-beranda-st">
+<a class="murid-lewati-st" href="#utama">Lewati ke latihan</a>
+<header class="murid-kepala-st"><div>
+<span class="murid-brand-st">{brand.mark("topbar")}<span>{T.NAMA_PRODUK}</span></span>
+<form method="post" action="/keluar"><button type="submit">Keluar</button></form>
+</div></header>
+<main id="utama" class="murid-kanvas-st">
+<section class="murid-sapaan-st" aria-labelledby="judul-sapaan">
+<p class="murid-alis-st">RUANG BELAJARKU · {_escape(label_kelas(data["level"]))}</p>
+<h1 id="judul-sapaan">Halo, {_escape(nama)}!</h1><p>Sedikit demi sedikit, makin mengerti.</p>
+<span class="murid-akun-hint-st">Bukan kamu? Tekan Keluar dulu.</span></section>
+{banner}<div class="{grid}"><div class="murid-kolom-utama-st">{kolom}</div>
+{'<aside class="murid-pendamping-st" aria-label="Kabar latihanmu">' + pendamping + '</aside>' if pendamping else ''}
+</div></main><footer class="murid-kaki-st">{T.TAGLINE} <span aria-hidden="true">✦</span> Satu langkah setiap kali.</footer>
+</body></html>'''
     return isi.encode()
 
 

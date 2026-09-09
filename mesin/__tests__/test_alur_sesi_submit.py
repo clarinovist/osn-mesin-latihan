@@ -86,7 +86,8 @@ def test_kirim_final_boleh_menyisakan_soal_kosong_dan_mengunci_sesi(server):
     )
 
     assert kode == 200
-    assert "Semua jawabanmu sudah masuk" in isi
+    assert "Selesai! Latihanmu sudah dikirim." in isi
+    assert "Semua jawabanmu" not in isi
     with s.buka() as kon:
         selesai = kon.execute(
             "SELECT selesai FROM sesi WHERE id = ?", (sesi_id,),
@@ -112,7 +113,8 @@ def test_kirim_final_boleh_semua_soal_kosong(server):
     )
 
     assert kode == 200
-    assert "Semua jawabanmu sudah masuk" in isi
+    assert "Selesai! Latihanmu sudah dikirim." in isi
+    assert "Semua jawabanmu" not in isi
     with s.buka() as kon:
         baris = kon.execute(
             "SELECT mulai, selesai FROM sesi WHERE id = ?", (sesi_id,),

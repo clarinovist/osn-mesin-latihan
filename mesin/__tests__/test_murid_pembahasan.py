@@ -153,11 +153,12 @@ def test_kartu_sesi_direview_menuju_halaman_hasil(db):
     assert f'href="/murid/hasil/{sesi_id}"' in html
 
 
-def test_kartu_sesi_belum_direview_tetap_ke_lembar(db):
+def test_sesi_terkirim_belum_direview_hanya_status_menunggu(db):
     with database.buka(db) as kon:
         sid, sesi_id = _sesi_dikerjakan(kon, "AnakKartu2", direview=False)
         html = student_pages.halaman_daftar_sesi_baru(kon, sid, "AnakKartu2").decode()
-    assert f'href="/murid/kerjakan/{sesi_id}"' in html
+    assert "Menunggu diperiksa" in html
+    assert f'href="/murid/kerjakan/{sesi_id}"' not in html
     assert f'href="/murid/hasil/{sesi_id}"' not in html
 
 

@@ -174,6 +174,19 @@ def _sesi_pemblokir(
     )
 
 
+def sesi_berjalan(bukti: BuktiSiklus) -> Optional[SesiSiklus]:
+    """Sesi terpandu belum selesai, memakai metadata saja tanpa outcome.
+
+    Beranda anak dan reducer berbagi prioritas ini. Tidak membutuhkan fokus,
+    alasan internal, atau snapshot jawaban untuk memilih sesi yang sudah ada.
+    """
+    return next(
+        (s for s in _sesi_pemblokir(bukti, _putaran_aktif(bukti))
+         if s.selesai is None),
+        None,
+    )
+
+
 def _sesi_bukti_pemetaan(
     bukti: BuktiSiklus, putaran: Optional[PutaranSiklus]
 ) -> Tuple[SesiSiklus, ...]:
@@ -765,9 +778,8 @@ def rencana_berikutnya(
     putaran = _putaran_dengan_override(_putaran_aktif(bukti), bukti.kejadian)
 
     pemblokir = _sesi_pemblokir(bukti, putaran)
-    belum_selesai = [s for s in pemblokir if s.selesai is None]
-    if belum_selesai:
-        sesi = belum_selesai[0]
+    sesi = sesi_berjalan(bukti)
+    if sesi is not None:
         return RencanaBelajar(
             "lanjutkan_sesi", "Sesi terpandu aktif belum selesai", sesi_id=sesi.id
         )
