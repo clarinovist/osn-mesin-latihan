@@ -76,8 +76,27 @@ def test_profil_anak_baru_menampilkan_rencana_sebelum_riwayat_dan_manual_tertutu
 
     assert kode == 200
     assert isi.index("Rencana belajar hari ini") < isi.index("Riwayat latihan")
-    assert "Pemetaan 0 dari 3" in isi
+    assert "Kenali cara anak menyelesaikan soal" in isi
+    assert "Pemetaan membantu melihat materi yang sudah nyaman" in isi
+    assert "Hari ini: 1 sesi · 15 soal" in isi
+    assert "Sesi ini hanya untuk pemetaan awal." not in isi
+    assert "Pemetaan awal: 0 dari 3 sesi terkonfirmasi" in isi
+    assert "Ketiga sesi dilakukan pada tanggal berbeda." in isi
+    assert "Peran orang tua/guru" in isi
+    assert "Setelah selesai, periksa hasil dan konfirmasikan." in isi
     assert f'<form method="post" action="/siklus/{siswa_id}/buat"' in isi
+    assert ">Siapkan sesi pemetaan pertama</button>" in isi
+    assert "Sesudah ini, ikuti petunjuk agar anak mulai mengerjakan." in isi
+    assert '<details class="alur-rencana-jelas-st">' in isi
+    assert "<summary>" in isi
+    assert "Bagaimana alur belajar ini bekerja?" in isi
+    assert "Tahap sekarang: Pemetaan" in isi
+    kartu = isi.split('<section class="kartu-rencana-st"', 1)[1].split("</section>", 1)[0]
+    assert kartu.count("<h2") == 1
+    assert '<h2 class="st judul-tugas-rencana-st" id="judul-rencana-belajar">' in kartu
+    assert '<span class="penanda-judul-rencana-lama-st" aria-hidden="true">Mulai pemetaan</span>' in kartu
+    assert isi.count("Pemetaan membantu melihat materi yang sudah nyaman") == 1
+    assert "/* Rencana belajar jelas — kartu */" in isi.split("</style>", 1)[0]
     form_utama = isi.split(f'action="/siklus/{siswa_id}/buat"', 1)[1].split("</form>", 1)[0]
     assert "<input" not in form_utama
     assert '<details class="atur-latihan-st">' in isi
@@ -111,8 +130,12 @@ def test_pemetaan_dua_dari_tiga_berasal_dari_snapshot_terkonfirmasi(server):
     kode, isi, _ = s.minta(f"/anak/{siswa_id}", auth=("guru", SANDI_GURU))
 
     assert kode == 200
-    assert "Pemetaan 2 dari 3" in isi
+    assert "Pemetaan awal: 2 dari 3 sesi terkonfirmasi" in isi
+    assert "Dua sesi terkonfirmasi membantu memperjelas pola belajar anak." in isi
+    assert "Lanjutkan pemetaan level aktif." not in isi
     assert "Lanjutkan pemetaan" in isi
+    assert ">Siapkan sesi pemetaan berikutnya</button>" in isi
+    assert "Siapkan sesi pemetaan pertama" not in isi
     assert f'action="/siklus/{siswa_id}/buat"' in isi
 
 
@@ -345,8 +368,14 @@ def test_strip_tahap_dan_override_terpandu_terpisah_dari_latihan_bebas(server):
     _, isi, _ = s.minta(f"/anak/{siswa_id}", auth=("guru", SANDI_GURU))
     kartu = isi.split("Rencana belajar hari ini", 1)[1].split("Riwayat latihan", 1)[0]
 
-    for label in ("Pemetaan", "Pelajari", "Latihan", "Evaluasi", "Checkpoint", "Lanjut"):
+    for label in ("Pemetaan", "Pelajari", "Latihan", "Evaluasi", "Cek kembali", "Lanjut"):
         assert label in kartu
+    assert "Checkpoint" not in kartu
+    assert '<details class="alur-rencana-jelas-st">' in kartu
+    assert "Bagaimana alur belajar ini bekerja?" in kartu
+    assert "Tahap sekarang: Pelajari" in kartu
+    assert 'class="tahap-rencana-st selesai"' not in kartu
+    assert kartu.index('class="tindakan-rencana-st"') < kartu.index('class="alur-rencana-jelas-st"')
     assert '<details class="ubah-fokus-st">' in kartu
     assert "Ubah fokus terpandu" in kartu
     assert "menutup konfigurasi lama" in kartu
@@ -408,6 +437,40 @@ def test_override_hanya_menawarkan_template_level_aktif():
     sah = {tid for nama in topics.daftar_topik() if nama != "campuran"
            for tid in topics.ambil(nama).komposisi.get("P3", ())}
     assert aktual and aktual <= sah
+
+
+def test_tunggu_pemetaan_memakai_copy_positif_dan_tanggal_reducer():
+    putaran = PutaranFokus(
+        7, "P3", (), (date(2026, 9, 10),),
+    )
+    rencana = RencanaBelajar(
+        "tunggu_pemetaan",
+        "Sesi pemetaan harus pada tanggal berbeda",
+        putaran=putaran,
+        tersedia_pada=date(2026, 9, 11),
+    )
+
+    isi = learning_cycle_ui.render_rencana(rencana, BuktiSiklus(9, "P3"), 9)
+
+    assert '<h2 class="st" id="judul-rencana-belajar">Cukup untuk hari ini</h2>' in isi
+    assert "Satu langkah pemetaan sudah selesai untuk hari ini." in isi
+    assert "11 September 2026" in isi
+    assert "Lanjutkan pemetaan besok" not in isi
+
+
+def test_css_kartu_rencana_berada_di_gaya_profil_dengan_disclosure_native():
+    import style_stitch
+
+    css = style_stitch.gaya_stitch()
+    assert "/* Rencana belajar jelas — kartu */" in css
+    assert "/* Rencana belajar jelas — kartu */" not in style_stitch.CSS_SESI
+    blok = css.split("/* Rencana belajar jelas — kartu */", 1)[1].split(
+        "/* Akhir rencana belajar jelas — kartu */", 1
+    )[0]
+    aturan_summary = blok.split(".alur-rencana-jelas-st > summary {", 1)[1].split("}", 1)[0]
+    assert "display: list-item" in aturan_summary
+    assert ".alur-rencana-jelas-st > summary:focus-visible" in blok
+    assert "outline" in blok
 
 
 def test_layout_vertikal_manual_meregang_di_desktop():

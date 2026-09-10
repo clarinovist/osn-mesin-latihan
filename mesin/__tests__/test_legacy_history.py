@@ -254,7 +254,8 @@ def test_http_profil_dan_laporan_menjelaskan_histori_beda_level_tanpa_mutasi(ser
     assert "Pemetaan 0 dari 3" in laporan
     assert profil.count('class="rencana-cta-utama-st"') == 1
     kartu = profil.split('class="kartu-rencana-st"', 1)[1].split('</section>', 1)[0]
-    assert 'id="judul-rencana-belajar">Mulai pemetaan</h2>' in kartu
+    assert 'id="judul-rencana-belajar">Kenali cara anak menyelesaikan soal</h2>' in kartu
+    assert "Siapkan sesi pemetaan pertama" in kartu
     assert f'action="/siklus/{siswa_id}/buat"' in kartu
     assert "Lanjutkan sesi" not in kartu
     assert "Tinjau hasil" not in kartu

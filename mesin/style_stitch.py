@@ -2146,6 +2146,45 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
   .kerja-editorial-st .kerja-pill-st:has(input:checked) {{ background: transparent; color: {T.TEKS_UTAMA}; border: 2px solid {T.TEKS_UTAMA}; }}
 }}
 /* Akhir WORKER B editorial scoped. */
+/* Rencana belajar jelas — kartu */
+.kartu-rencana-st .penanda-judul-rencana-lama-st,
+.kartu-rencana-st .penanda-rencana-lama-st {{ display: none; }}
+.kartu-rencana-st .judul-tugas-rencana-st {{ margin: 0; }}
+.kartu-rencana-st .konteks-pemetaan-jelas-st {{
+  display: grid; gap: {T.SP_2}; padding: {T.SP_3} {T.SP_4};
+  background: {T.LATAR_SEKUNDER_LEMBUT}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_SEDANG};
+}}
+.kartu-rencana-st .konteks-pemetaan-jelas-st p,
+.kartu-rencana-st .petunjuk-sesudah-cta-st {{ margin: 0; }}
+.kartu-rencana-st .petunjuk-sesudah-cta-st {{
+  color: {T.TEKS_VARIAN}; font-size: .9rem; text-align: center;
+}}
+.kartu-rencana-st .alur-rencana-jelas-st {{
+  border-top: 1px solid {T.BORDER_VARIAN}; padding-top: {T.SP_2};
+}}
+.kartu-rencana-st .alur-rencana-jelas-st > summary {{
+  min-height: {T.TARGET_SENTUH}; display: list-item; padding: {T.SP_2} 0;
+  color: {T.AKSEN_TEAL_TUA}; font-family: {T.FONT_HEADLINE};
+  font-weight: 700; cursor: pointer;
+}}
+.kartu-rencana-st .alur-rencana-jelas-st > summary::marker {{
+  color: {T.AKSEN_TEAL_TUA};
+}}
+.kartu-rencana-st .alur-rencana-jelas-st > summary:focus-visible {{
+  outline: 3px solid {T.FOKUS_AKSEN}; outline-offset: 3px;
+  border-radius: {T.RADIUS_KECIL};
+}}
+.kartu-rencana-st .tahap-aktif-ringkas-st {{
+  display: block; margin-top: {T.SP_1}; color: {T.TEKS_VARIAN};
+  font-size: .78rem; font-weight: 600;
+}}
+.kartu-rencana-st .isi-alur-rencana-st {{
+  display: grid; gap: {T.SP_2}; padding-top: {T.SP_2};
+}}
+.kartu-rencana-st .isi-alur-rencana-st p {{ margin: 0; color: {T.TEKS_VARIAN}; }}
+/* Akhir rencana belajar jelas — kartu */
+
 /* WORKER A editorial scoped — permukaan pendamping, bukan beranda/murid. */
 .pendamping-editorial-st {{
   max-width: 68rem; padding: {T.SP_5} {T.SP_5} 4rem;
@@ -2578,6 +2617,49 @@ CSS_SESI = f"""
   background: {T.LATAR_KARTU}; color: {T.TEKS_UTAMA};
   border: 1px solid {T.BORDER_HALUS}; box-shadow: none;
 }}
+
+/* Rencana belajar jelas — panduan sesi */
+.panduan-sesi-st > div {{ flex: 1; min-width: 0; }}
+.marker-status-lama-st {{ display: none; }}
+.panduan-sesi-st form {{ margin: {T.SP_3} 0 0; }}
+.panduan-sesi-st button,
+.panduan-rencana-st {{
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: {T.TARGET_SENTUH}; padding: {T.SP_2} {T.SP_4};
+  border-radius: {T.RADIUS_SEDANG}; font: 700 .9rem/1.4 {T.FONT_HEADLINE};
+  cursor: pointer; text-decoration: none;
+}}
+.pendamping-editorial-st .panduan-sesi-st .panduan-aksi-utama-st button,
+.panduan-rencana-st {{
+  color: {T.TEKS_PUTIH}; background: {T.AKSEN_KORAL_TUA};
+  border: 1px solid {T.AKSEN_KORAL_TUA};
+}}
+.pendamping-editorial-st .panduan-sesi-st .panduan-aksi-sekunder-st button {{
+  color: {T.TEKS_JUDUL}; background: {T.LATAR_KARTU};
+  border: 1px solid {T.BORDER_VARIAN};
+}}
+.panduan-rencana-st {{ margin: 0 0 {T.SP_4}; }}
+.panduan-pratinjau-st,
+.panduan-edit-hasil-st {{
+  margin: 0 0 {T.SP_4}; border: 1px solid {T.BORDER_VARIAN};
+  border-radius: {T.RADIUS_KARTU}; background: {T.LATAR_SEKUNDER_LEMBUT};
+  padding: {T.SP_3} {T.SP_4};
+}}
+.panduan-pratinjau-st summary,
+.panduan-edit-hasil-st summary {{
+  min-height: {T.TARGET_SENTUH}; padding-block: {T.SP_2};
+  color: {T.TEKS_JUDUL}; font: 700 .9rem/1.4 {T.FONT_HEADLINE}; cursor: pointer;
+}}
+.panduan-pratinjau-st summary::marker,
+.panduan-edit-hasil-st summary::marker {{ color: {T.AKSEN_TEAL_TUA}; }}
+.panduan-pratinjau-st summary:focus-visible,
+.panduan-edit-hasil-st summary:focus-visible {{
+  outline: 2px solid {T.FOKUS_AKSEN}; outline-offset: 3px;
+}}
+.panduan-pratinjau-st > .sub,
+.panduan-edit-hasil-st > .sub {{ color: {T.TEKS_VARIAN}; font-size: .85rem; }}
+.panduan-pratinjau-st .koreksi-kartu-st:first-of-type,
+.panduan-edit-hasil-st .koreksi-kartu-st:first-of-type {{ margin-top: {T.SP_3}; }}
 
 /* Danger zone hapus sesi. */
 .danger-zone-st {{

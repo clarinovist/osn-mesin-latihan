@@ -1155,10 +1155,24 @@ class Penangan(BaseHTTPRequestHandler):
                         _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                     )
                 if jalur.endswith("/bagikan"):
-                    sudah = kon.execute(
-                        "SELECT selesai FROM sesi WHERE id = ?", (sesi_id,)
-                    ).fetchone()["selesai"]
-                    if sudah:
+                    # Kunci status sampai token tersimpan: pembatalan/submit
+                    # bersamaan tidak boleh menyelinap setelah pemeriksaan.
+                    kon.execute("BEGIN IMMEDIATE")
+                    status = kon.execute(
+                        "SELECT selesai, dibatalkan FROM sesi WHERE id = ?", (sesi_id,)
+                    ).fetchone()
+                    if status is None:
+                        return self._kirim(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    if status["dibatalkan"] is not None:
+                        return self._kirim_tautan(_halaman(
+                            "Sesi dibatalkan",
+                            "<h1>Sesi dibatalkan</h1>"
+                            "<p>Tautan sesi tidak dapat dibuat. Riwayat tetap tersimpan; "
+                            "kembali ke profil anak untuk melihat rencana berikutnya.</p>",
+                        ), 409)
+                    if status["selesai"]:
                         # Tautan baru langsung mati karena gerbang ambil
                         # mensyaratkan selesai IS NULL — menolak dengan
                         # penjelasan lebih jujur daripada menyerahkan link

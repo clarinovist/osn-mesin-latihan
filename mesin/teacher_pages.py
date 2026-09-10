@@ -549,7 +549,7 @@ def halaman_anak(
     sesi = kon.execute(
         """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
                   s.jenis, s.sumber_sesi_id,
-                  s.mulai, s.selesai, s.direview,
+                  s.mulai, s.selesai, s.direview, s.dibatalkan,
                   (SELECT MIN(j.dicatat) FROM sesi_soal ss
                    JOIN jawaban j ON j.sesi_soal_id = ss.id
                    WHERE ss.sesi_id = s.id) AS dicatat_awal,
@@ -574,7 +574,7 @@ def halaman_anak(
 
     def _aksi_tautan(baris):
         rid = baris["id"]
-        if baris["selesai"]:
+        if baris["selesai"] or baris["dibatalkan"] is not None:
             return ""
         aktif = share_links.aktif(kon, rid)
         cabut = ""
@@ -1104,6 +1104,21 @@ def _pil_sesi_stitch(kon, sesi_id: int, aktif: str) -> str:
     )
 
 
+def _label_tahap_sesi(tujuan: str, *, riwayat: bool = False) -> str:
+    """Label tahap ramah; sesi nonaktif ditandai sebagai riwayat."""
+    label = {
+        "pemetaan": "Pemetaan",
+        "pengenalan": "Pelajari bersama",
+        "latihan_terbimbing": "Latihan terbimbing",
+        "penguatan": "Coba mandiri",
+        "evaluasi": "Evaluasi setelah jeda",
+        "checkpoint": "Cek kembali pemahaman",
+        "maintenance": "Latihan campuran",
+        "bebas": "Latihan pilihan sendiri",
+    }.get(tujuan, "Sesi belajar")
+    return f"Riwayat {label.lower()}" if riwayat else label
+
+
 def halaman_sesi_stitch(
     kon, sesi_id: int, pesan: str = "", peran: str = "guru",
     pengguna: str = "",
@@ -1122,7 +1137,7 @@ def halaman_sesi_stitch(
                   (SELECT COUNT(*) FROM sesi_soal ss
                    JOIN jawaban j ON j.sesi_soal_id = ss.id
                    WHERE ss.sesi_id = s.id) AS terisi,
-                  w.nama, w.id AS siswa_id
+                  w.nama, w.id AS siswa_id, w.tingkat AS level_aktif
            FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
         (sesi_id,),
     ).fetchone()
@@ -1131,8 +1146,28 @@ def halaman_sesi_stitch(
 
     sudah_dikirim = bool(info["selesai"])
     drill = info["mode"] == "drill"
+    sesi_dibatalkan = info["dibatalkan"] is not None
+    sesi_terpandu = info["putaran_id"] is not None and info["tujuan"] != "bebas"
+    from learning_cycle import _putaran_aktif
+    putaran_aktif = _putaran_aktif(
+        database.muat_bukti_siklus(kon, int(info["siswa_id"]))
+    )
+    putaran_aktif_id = putaran_aktif.id if putaran_aktif is not None else None
+    sesi_terpandu_aktif = (
+        sesi_terpandu
+        and int(info["putaran_id"]) == putaran_aktif_id
+        and info["level"] == info["level_aktif"]
+        and not sesi_dibatalkan
+    )
+    sesi_terpandu_riwayat = sesi_terpandu and not sesi_terpandu_aktif
+    tautan_aktif = (
+        not sesi_dibatalkan
+        and not sudah_dikirim
+        and share_links.aktif(kon, sesi_id)
+    )
     snapshot_terakhir = {}
     opt_in_pemetaan_aktif = False
+    konfirmasi_masih_aktif = False
     konfirmasi_terakhir = kon.execute(
         """SELECT id, fingerprint FROM konfirmasi_hasil
            WHERE sesi_id = ? ORDER BY nomor_urut DESC, id DESC LIMIT 1""",
@@ -1339,13 +1374,12 @@ def halaman_sesi_stitch(
         )
 
     if sudah_dikirim:
-        sudah_dikonfirmasi = bool(info["dikonfirmasi_guru"])
-        sesi_dibatalkan = info["dibatalkan"] is not None
+        sudah_dikonfirmasi = konfirmasi_masih_aktif
         status_sesi = (
             '<div class="status-sesi-st selesai">'
             '<span class="material-symbols-outlined">cancel</span>'
             '<div><b>Sesi dibatalkan</b>'
-            '<p>Riwayat sesi tetap tersimpan, tetapi hasilnya tidak aktif dalam siklus belajar.</p>'
+            '<p>Sesi dibatalkan. Riwayat tetap tersimpan dan hasilnya tidak aktif dalam rencana.</p>'
             '</div></div>'
             if sesi_dibatalkan
             else (
@@ -1357,8 +1391,8 @@ def halaman_sesi_stitch(
                 if sudah_dikonfirmasi
                 else (
                     '<div class="status-sesi-st selesai">'
-                    '<span class="material-symbols-outlined">task_alt</span>'
-                    '<div><b>Sudah dikirim — siap dikoreksi</b>'
+                    '<span class="material-symbols-outlined">rule</span>'
+                    f'<div><b>{"Koreksi berubah — konfirmasi ulang diperlukan" if pernah_dikonfirmasi else "Tinjau jawaban, cara, dan pemahaman anak"}</b>'
                     '<p>Diagnosis awal dibuat otomatis. Simpan hanya jika kamu '
                     'mengubah koreksi. Periksa juga pemahaman, lalu konfirmasi hasil.</p>'
                     '</div></div>'
@@ -1390,41 +1424,110 @@ def halaman_sesi_stitch(
                 f'<button type="submit" formaction="/sesi/{sesi_id}/konfirmasi">'
                 f'{label_konfirmasi}</button>'
             )
-        blok_isi = (
-            f'<form method="post" action="/sesi/{sesi_id}">'
-            f'{"".join(kartu)}'
-            f'{opsi_pemetaan}'
-            f'<div class="koreksi-simpan-st"><button type="submit">'
-            f'Simpan koreksi</button>{aksi_konfirmasi}</div></form>'
-            if not sesi_dibatalkan
-            else "".join(kartu)
-        )
+        if sesi_dibatalkan:
+            blok_isi = "".join(kartu)
+        else:
+            # Pertahankan submit bawaan Enter sebagai simpan koreksi;
+            # konfirmasi bukti harus tetap dipilih eksplisit oleh pendamping.
+            urutan_aksi = (
+                f'<button type="submit">Simpan koreksi</button>{aksi_konfirmasi}'
+            )
+            form_hasil = (
+                f'<form method="post" action="/sesi/{sesi_id}">'
+                f'{"".join(kartu)}{opsi_pemetaan}'
+                f'<div class="koreksi-simpan-st">{urutan_aksi}</div></form>'
+            )
+            blok_isi = (
+                '<details class="panduan-edit-hasil-st">'
+                '<summary>Koreksi hasil — perlu konfirmasi ulang bila diubah</summary>'
+                '<p class="sub">Hasil saat ini sudah sah. Jika koreksi diubah, '
+                'periksa kembali lalu konfirmasikan ulang.</p>'
+                f'{form_hasil}</details>'
+                if konfirmasi_masih_aktif else form_hasil
+            )
     else:
-        label_status = "Sedang dikerjakan" if info["terisi"] else "Menunggu anak"
-        ikon_status = "pending_actions" if info["terisi"] else "schedule"
-        status_sesi = (
-            '<div class="status-sesi-st menunggu">'
-            f'<span class="material-symbols-outlined">{ikon_status}</span>'
-            f'<div><b>{label_status}</b>'
-            f'<p>Terisi {info["terisi"]} dari {info["jumlah_soal"]}. '
-            'Koreksi terbuka setelah anak menekan “Selesai &amp; kirim”.</p>'
-            '</div></div>'
-        )
-        blok_isi = "".join(kartu)
+        sudah_mulai = bool(info["mulai"] or info["terisi"])
+        if sesi_dibatalkan:
+            status_sesi = (
+                '<div class="status-sesi-st selesai">'
+                '<span class="material-symbols-outlined">cancel</span>'
+                '<div><b>Sesi dibatalkan</b>'
+                '<p>Sesi dibatalkan. Riwayat tetap tersimpan dan hasilnya tidak aktif dalam rencana.</p>'
+                '</div></div>'
+            )
+            blok_isi = "".join(kartu)
+        elif sesi_terpandu_riwayat:
+            keterangan_riwayat = (
+                "Sesi level lama ini tidak mengubah rencana level aktif."
+                if info["level"] != info["level_aktif"] else
+                "Sesi ini tersimpan sebagai riwayat dan tidak mengubah rencana level aktif."
+            )
+            status_sesi = (
+                '<div class="status-sesi-st">'
+                '<span class="material-symbols-outlined">history</span>'
+                '<div><b>Riwayat sesi terpandu</b>'
+                f'<p>{keterangan_riwayat}</p></div></div>'
+            )
+            blok_isi = (
+                '<details class="panduan-pratinjau-st">'
+                '<summary>Pratinjau soal &amp; kunci untuk guru</summary>'
+                f'{"".join(kartu)}</details>'
+            )
+        else:
+            label_status = (
+                "Sedang dikerjakan · giliran anak"
+                if sudah_mulai else
+                "Sesi siap — berikut cara anak mengerjakan"
+            )
+            ikon_status = "pending_actions" if sudah_mulai else "send"
+            penjelasan_status = (
+                f'Terisi {info["terisi"]} dari {info["jumlah_soal"]}. '
+                'Tunggu anak menekan “Selesai &amp; kirim” sebelum meninjau.'
+                if sudah_mulai else
+                'Bagikan tautan sesi, lalu biarkan anak mencoba dengan caranya sendiri.'
+            )
+            label_bagikan = (
+                "Bagikan ulang ke anak" if sudah_mulai else
+                "Buat tautan baru" if tautan_aktif else
+                "Bagikan sesi ke anak"
+            )
+            konfirmasi_rotasi = (
+                ' onsubmit="return confirm(\'Membuat tautan baru akan '
+                'menonaktifkan tautan sebelumnya. Lanjutkan?\')"'
+                if tautan_aktif else ""
+            )
+            kelas_aksi = (
+                "panduan-aksi-sekunder-st" if sudah_mulai else
+                "panduan-aksi-utama-st"
+            )
+            marker_status_lama = (
+                "" if sudah_mulai else
+                '<span class="marker-status-lama-st">Menunggu anak</span>'
+            )
+            status_sesi = (
+                '<section class="status-sesi-st panduan-sesi-st">'
+                f'<span class="material-symbols-outlined">{ikon_status}</span>'
+                f'<div><b>{label_status}</b>{marker_status_lama}'
+                f'<p>{penjelasan_status}</p>'
+                f'<form class="{kelas_aksi}" method="post" '
+                f'action="/sesi/{sesi_id}/bagikan"{konfirmasi_rotasi}>'
+                f'<button type="submit">{label_bagikan}</button></form>'
+                '</div></section>'
+            )
+            blok_isi = (
+                '<details class="panduan-pratinjau-st">'
+                '<summary>Pratinjau soal &amp; kunci untuk guru</summary>'
+                '<p class="sub">Bagian ini untuk pendamping, bukan halaman yang dibagikan kepada anak.</p>'
+                f'{"".join(kartu)}</details>'
+            )
 
-    sesi_dibatalkan = info["dibatalkan"] is not None
-    sesi_terpandu_aktif = (
-        info["putaran_id"] is not None
-        and info["tujuan"] != "bebas"
-        and not sesi_dibatalkan
-    )
     sesi_manual_berbukti = pernah_dikonfirmasi and not sesi_dibatalkan
     if sesi_dibatalkan:
         tombol_hapus = ""
         keterangan_bahaya = (
             "Sesi ini sudah dibatalkan. Histori dan bukti tetap tersimpan."
         )
-    elif sesi_terpandu_aktif or sesi_manual_berbukti:
+    elif sesi_terpandu or sesi_manual_berbukti:
         tombol_hapus = (
             f'<form method="post" action="/sesi/{sesi_id}/batalkan" '
             'style="margin:.4rem 0" '
@@ -1432,7 +1535,7 @@ def halaman_sesi_stitch(
             'tersimpan dalam histori, tetapi tidak lagi aktif dalam siklus belajar.\')">'
             '<label for="alasan-batal">Alasan pembatalan (opsional)</label>'
             '<input id="alasan-batal" type="text" name="alasan" maxlength="300" '
-            'placeholder="Alasan pembatalan (opsional)">'
+            'placeholder="Tulis alasan">'
             '<button type="submit" class="tombol-kecil-st">'
             'Batalkan sesi</button></form>'
         )
@@ -1446,12 +1549,33 @@ def halaman_sesi_stitch(
         )
         keterangan_bahaya = "Zona bahaya — hapus tidak bisa dibatalkan."
 
+    tahap_ramah = _label_tahap_sesi(
+        info["tujuan"], riwayat=sesi_terpandu_riwayat
+    )
+    if sesi_dibatalkan or sesi_terpandu_riwayat:
+        orientasi_peran = "tidak aktif"
+    elif sudah_dikirim:
+        orientasi_peran = "hasil sah" if konfirmasi_masih_aktif else "giliran orang tua/guru"
+    elif info["mulai"] or info["terisi"]:
+        orientasi_peran = "giliran anak"
+    else:
+        orientasi_peran = "giliran orang tua/guru"
+    tautan_profil = f'/anak/{info["siswa_id"]}'
+    aksi_rencana = (
+        f'<a class="panduan-rencana-st" href="{tautan_profil}">Lihat rencana berikutnya</a>'
+        if konfirmasi_masih_aktif and not sesi_dibatalkan else ""
+    )
+    jejak = (
+        "" if aksi_rencana else
+        f'<div class="sesi-jejak-st"><a href="{tautan_profil}">&larr; '
+        f'Semua sesi {html.escape(info["nama"])}</a></div>'
+    )
+
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
     isi = (
         f'<main class="sesi-badan-st" aria-labelledby="judul-koreksi">'
-        f'<div class="sesi-jejak-st"><a href="/anak/{info["siswa_id"]}">&larr; '
-        f'Semua sesi {html.escape(info["nama"])}</a></div>'
-        '<header class="editorial-kepala-st"><p class="editorial-alis-st">CATATAN SESI</p>'
+        f'{jejak}'
+        f'<header class="editorial-kepala-st"><p class="editorial-alis-st">{html.escape(tahap_ramah)} · {orientasi_peran}</p>'
         f'<h1 class="sesi-judul-st" id="judul-koreksi">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
@@ -1460,6 +1584,7 @@ def halaman_sesi_stitch(
         f"{kabar}"
         f"{pil}"
         f"{status_sesi}"
+        f"{aksi_rencana}"
         f"{blok_isi}"
         f"{blok_remedial}"
         f'<div class="danger-zone-st">'
