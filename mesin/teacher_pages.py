@@ -248,6 +248,8 @@ def _topik_untuk_level(level: str) -> list[str]:
     return daftar
 
 def _badge_review_status(baris) -> str:
+    if _ambil(baris, "dibatalkan", None) is not None:
+        return '<span class="badge-direview batal st-badge selesai">Dibatalkan</span>'
     direview = _ambil(baris, "direview", None)
     selesai = _ambil(baris, "selesai", None)
     terisi = _ambil(baris, "terisi", 0)
@@ -411,13 +413,18 @@ def halaman_utama_stitch(
     for s in database.daftar_siswa(kon, pemilik):
         rekap = kon.execute(
             """SELECT COUNT(*) AS jumlah,
-                      SUM(CASE WHEN selesai IS NOT NULL AND direview IS NULL
+                      SUM(CASE WHEN dibatalkan IS NOT NULL
+                          THEN 1 ELSE 0 END) AS dibatalkan,
+                      SUM(CASE WHEN dibatalkan IS NULL
+                          AND selesai IS NOT NULL AND direview IS NULL
                           THEN 1 ELSE 0 END) AS belum_review,
-                      SUM(CASE WHEN selesai IS NULL THEN 1 ELSE 0 END) AS belum_kirim
+                      SUM(CASE WHEN dibatalkan IS NULL AND selesai IS NULL
+                          THEN 1 ELSE 0 END) AS belum_kirim
                FROM sesi WHERE siswa_id = ?""",
             (s["id"],),
         ).fetchone()
         jumlah_sesi = rekap["jumlah"] or 0
+        dibatalkan = rekap["dibatalkan"] or 0
         belum_review = rekap["belum_review"] or 0
         belum_kirim = rekap["belum_kirim"] or 0
         status = []
@@ -426,10 +433,16 @@ def halaman_utama_stitch(
         if belum_kirim:
             status.append(f'<span class="guru-status-st">{belum_kirim} belum dikirim</span>')
         if not status:
-            status.append(
-                '<span class="guru-status-st">semua direview</span>' if jumlah_sesi
-                else '<span class="guru-status-st">Belum ada sesi</span>'
-            )
+            if jumlah_sesi == 0:
+                ringkasan = "Belum ada sesi"
+            elif jumlah_sesi == dibatalkan:
+                ringkasan = "Tidak ada latihan yang perlu dikerjakan."
+            else:
+                ringkasan = "semua direview"
+            status.append(f'<span class="guru-status-st">{ringkasan}</span>')
+        label_batal = (
+            f'<span>{dibatalkan} dibatalkan</span>' if dibatalkan else ""
+        )
         label_keluarga = ""
         if peran == "admin":
             label_keluarga = f'<span>keluarga: {html.escape(s["pemilik"] or "warisan")}</span>'
@@ -441,7 +454,7 @@ def halaman_utama_stitch(
             f'<h3 class="guru-nama-st">{html.escape(nama)}</h3>'
             '<div class="guru-meta-st">'
             f'<span>{html.escape(label_kelas(str(s["tingkat"])))}</span>'
-            f'<span>{jumlah_sesi} sesi</span>{label_keluarga}</div>'
+            f'<span>{jumlah_sesi} latihan tercatat</span>{label_batal}{label_keluarga}</div>'
             f'<div class="guru-status-daftar-st">{"".join(status)}</div></div>'
             '<span class="guru-buka-st">Buka profil <span aria-hidden="true">↗</span></span>'
             '</a>'

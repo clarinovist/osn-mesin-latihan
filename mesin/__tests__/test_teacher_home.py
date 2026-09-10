@@ -195,7 +195,80 @@ def test_status_campuran_tetap_memisahkan_sesi_belum_dikirim(server):
     isi = _isi(server)
     assert "1 menunggu diperiksa" in isi
     assert "1 belum dikirim" in isi
-    assert "2 sesi" in isi
+    assert "2 latihan tercatat" in isi
+
+
+@pytest.mark.parametrize("keadaan_batal", ["baru", "selesai", "direview", "warisan"])
+@pytest.mark.parametrize("keadaan_lain", [None, "baru", "selesai", "direview", "warisan"])
+def test_sesi_dibatalkan_dipisah_dari_antrean(server, keadaan_batal, keadaan_lain):
+    def atur(kon, sesi, keadaan):
+        kon.execute("UPDATE sesi SET selesai=?, direview=? WHERE id=?", (
+            "2026-09-09 12:00:00" if keadaan in ("selesai", "direview") else None,
+            "2026-09-09 12:01:00" if keadaan in ("direview", "warisan") else None,
+            sesi,
+        ))
+
+    with server.buka() as kon:
+        siswa = kon.execute("SELECT id FROM siswa WHERE pemilik='guru'").fetchone()[0]
+        batal = kon.execute("SELECT id FROM sesi WHERE siswa_id=?", (siswa,)).fetchone()[0]
+        atur(kon, batal, keadaan_batal)
+        database.batalkan_sesi(kon, batal, "Pembatalan sintetis")
+        if keadaan_lain:
+            lain = database.buat_sesi(kon, siswa, seed=9)
+            atur(kon, lain, keadaan_lain)
+        sebelum = tuple(kon.iterdump())
+    kode, isi, _ = server.minta("/guru", auth=("guru", SANDI_GURU))
+    assert kode == 200
+    kartu = re.search(r'<a class="st-kartu kartu-anak"[^>]*>.*?</a>', isi, re.S).group()
+    # Assertion status ditempatkan sebelum label total: merah harus menangkap
+    # bug antrean, bukan hanya pergantian kata "sesi" menjadi "latihan".
+    assert ("belum dikirim" in kartu) == (keadaan_lain in ("baru", "warisan"))
+    assert ("menunggu diperiksa" in kartu) == (keadaan_lain == "selesai")
+    assert ("semua direview" in kartu) == (keadaan_lain == "direview")
+    if keadaan_lain in ("baru", "warisan"):
+        assert ">1 belum dikirim</span>" in kartu
+    if keadaan_lain == "selesai":
+        assert ">1 menunggu diperiksa</span>" in kartu
+    assert ("Tidak ada latihan yang perlu dikerjakan." in kartu) == (keadaan_lain is None)
+    assert ">1 dibatalkan</span>" in kartu
+    assert f'>{2 if keadaan_lain else 1} latihan tercatat</span>' in kartu
+    assert "Belum ada sesi" not in kartu
+    assert "Anak Keluarga Lain" not in isi
+    with server.buka() as kon:
+        assert tuple(kon.iterdump()) == sebelum
+
+
+def test_rekap_pembatalan_tidak_tercampur_antar_anak(server):
+    with server.buka() as kon:
+        pertama = kon.execute("SELECT id FROM siswa WHERE pemilik='guru'").fetchone()[0]
+        kedua = database.tambah_siswa(kon, "Anak Demo Kedua", pemilik="guru")
+        kosong = database.tambah_siswa(kon, "Anak Demo Tanpa Sesi", pemilik="guru")
+        for seed, keadaan in ((21, "batal"), (22, "selesai"), (23, "direview")):
+            sesi = database.buat_sesi(kon, pertama, seed=seed)
+            if keadaan == "batal":
+                database.batalkan_sesi(kon, sesi)
+            else:
+                kon.execute("UPDATE sesi SET selesai=?, direview=? WHERE id=?", (
+                    "2026-09-09 12:00:00",
+                    "2026-09-09 12:01:00" if keadaan == "direview" else None, sesi,
+                ))
+        database.batalkan_sesi(kon, database.buat_sesi(kon, kedua, seed=24))
+        database.batalkan_sesi(kon, database.buat_sesi(kon, kedua, seed=25))
+    isi = _isi(server)
+    kartu = dict(re.findall(
+        r'<a class="st-kartu kartu-anak" href="/anak/(\d+)">(.*?)</a>', isi, re.S,
+    ))
+    assert set(kartu) == {str(pertama), str(kedua), str(kosong)}
+    assert ">4 latihan tercatat</span>" in kartu[str(pertama)]
+    for teks in ("1 dibatalkan", "1 belum dikirim", "1 menunggu diperiksa"):
+        assert f">{teks}</span>" in kartu[str(pertama)]
+    assert "semua direview" not in kartu[str(pertama)]
+    assert ">2 latihan tercatat</span>" in kartu[str(kedua)]
+    assert ">2 dibatalkan</span>" in kartu[str(kedua)]
+    assert "Tidak ada latihan yang perlu dikerjakan." in kartu[str(kedua)]
+    assert ">0 latihan tercatat</span>" in kartu[str(kosong)]
+    assert "Belum ada sesi" in kartu[str(kosong)]
+    assert "dibatalkan" not in kartu[str(kosong)]
 
 
 def test_nama_dan_pesan_http_tetap_di_escape(server):

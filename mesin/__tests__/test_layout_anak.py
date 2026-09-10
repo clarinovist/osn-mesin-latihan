@@ -338,6 +338,34 @@ def test_status_sesi_mengikuti_pengiriman_final_bukan_jumlah_isian():
     assert "Belum Direview" in teacher_pages._badge_review_status(terkirim_kosong)
 
 
+@pytest.mark.parametrize("keadaan", ["baru", "sebagian", "selesai", "direview", "warisan"])
+def test_badge_riwayat_mendahulukan_pembatalan(db, keadaan):
+    with database.buka(db) as kon:
+        siswa = database.tambah_siswa(kon, "Anak Demo Batal", pemilik="ortu")
+        sesi = database.buat_sesi(kon, siswa, seed=27)
+        if keadaan == "sebagian":
+            soal = kon.execute("SELECT id FROM sesi_soal WHERE sesi_id=? LIMIT 1", (sesi,)).fetchone()[0]
+            kon.execute("INSERT INTO jawaban (sesi_soal_id, jawaban) VALUES (?, '7')", (soal,))
+        kon.execute("UPDATE sesi SET selesai=?, direview=? WHERE id=?", (
+            "2026-09-09 12:00:00" if keadaan in ("selesai", "direview") else None,
+            "2026-09-09 12:01:00" if keadaan in ("direview", "warisan") else None,
+            sesi,
+        ))
+        database.batalkan_sesi(kon, sesi, "Pembatalan sintetis")
+        sebelum = tuple(kon.iterdump())
+    markup = _tanpa_gaya(_render_anak(db, siswa))
+    kartu = re.search(r'<article class="st-kartu-baris kartu-sesi-guru .*?</article>', markup, re.S).group()
+    assert ">Dibatalkan</span>" in kartu
+    for status in ("Belum Dikerjakan", "Sedang Dikerjakan", "Belum Direview", "Sudah Direview"):
+        assert status not in kartu
+    assert f'href="/sesi/{sesi}"' in kartu
+    assert "data-bagikan-url" not in kartu
+    with database.buka(db) as kon:
+        assert tuple(kon.iterdump()) == sebelum
+        baris = kon.execute("SELECT * FROM sesi WHERE id=?", (sesi,)).fetchone()
+        assert ">Dibatalkan</span>" in teacher_pages._badge_review_status(baris)
+
+
 def test_tanggal_kartu_kanonis_aman_dan_tidak_terpotong():
     assert teacher_pages._tanggal_ringkas("2026-9-4") == (
         '<time datetime="2026-09-04">4 Sep 2026</time>'

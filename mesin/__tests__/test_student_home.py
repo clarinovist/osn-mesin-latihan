@@ -80,6 +80,32 @@ def test_beranda_tanpa_sesi_tidak_menyuruh_memilih(db):
     assert html.count('action="/keluar"') == 1
 
 
+@pytest.mark.parametrize("keadaan", ["baru", "selesai", "direview"])
+@pytest.mark.parametrize("ada_pengganti", [False, True])
+def test_sesi_dibatalkan_tetap_tersembunyi_di_beranda(db_terjaga, keadaan, ada_pengganti):
+    with database.buka(db_terjaga) as kon:
+        siswa = _siswa(kon)
+        batal = _sesi(kon, siswa)
+        if keadaan != "baru":
+            database.tandai_selesai(kon, batal)
+        if keadaan == "direview":
+            kon.execute("UPDATE sesi SET direview='2026-09-09' WHERE id=?", (batal,))
+        database.batalkan_sesi(kon, batal, "Alasan pembatalan sintetis rahasia")
+        pengganti = _sesi(kon, siswa) if ada_pengganti else None
+        sebelum = tuple(kon.iterdump())
+        html = _html(kon, siswa)
+        assert tuple(kon.iterdump()) == sebelum
+    assert f'href="/murid/kerjakan/{batal}"' not in html
+    assert f'href="/murid/hasil/{batal}"' not in html
+    assert "Alasan pembatalan sintetis rahasia" not in html
+    if ada_pengganti:
+        assert _utama(html) == [str(pengganti)]
+        assert html.count(f'href="/murid/kerjakan/{pengganti}"') == 1
+    else:
+        assert not _utama(html)
+        assert "Belum ada sesi latihan yang disiapkan." in html
+
+
 @pytest.mark.parametrize("kondisi", ["manual", "level", "tertutup", "batal", "putaran_lama", "siswa_lain"])
 def test_sesi_tidak_relevan_tidak_mengambil_prioritas_terpandu(db, kondisi):
     with database.buka(db) as kon:

@@ -72,7 +72,7 @@ def test_kartu_anak_menyematkan_ringkasan_jumlah_sesi(db):
             kon, pemilik="ortu", peran="guru"
         ).decode()
     # ringkasan tanpa membuka: jumlah sesi per anak terlihat
-    assert "1 sesi" in html
+    assert "1 latihan tercatat" in html
     # Arkan sesinya sudah direview → "semua direview"; sesi Bila (0) tak
     # menampilkan badge belum-review (0 x apa pun tak pernah tampil)
     assert "semua direview" in html
