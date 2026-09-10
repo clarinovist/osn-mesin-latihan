@@ -468,20 +468,30 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
         if pemetaan_pertama else ""
     )
     kelas_judul = "st judul-tugas-rencana-st" if pemetaan_pertama else "st"
+    cta = _cta(rencana, bukti, siswa_id, fokus, materi)
+    petunjuk = (
+        '<p class="petunjuk-sesudah-cta-st">Sesudah ini, ikuti petunjuk agar anak mulai mengerjakan.</p>'
+        if rencana.tindakan == "pemetaan" else ""
+    )
     return (
         '<section class="kartu-rencana-st" aria-labelledby="judul-rencana-belajar">'
+        '<div class="studio-layout-st">'
+        '<div class="studio-utama-st">'
         '<p class="label-rencana-st">Rencana belajar hari ini</p>'
         f'<h2 class="{kelas_judul}" id="judul-rencana-belajar">{html.escape(judul_tampil)}</h2>'
         f'{penanda_judul_lama}'
         f'<p class="alasan-rencana-st">{html.escape(_alasan(rencana, fokus))}</p>'
         f'{_konteks_pemetaan(rencana)}'
+        f'{catatan_histori}{catatan_mode}{contoh}{catatan_materi}{tanggal}'
+        '</div>'
+        '<aside class="studio-pendamping-st" aria-label="Posisi dan peran pendamping">'
         f'<p class="progres-rencana-st">{html.escape(_progres(rencana, bukti))}'
         f'{_penanda_progres_lama(rencana)}</p>'
-        f'{catatan_histori}{catatan_mode}{tindakan}{contoh}{catatan_materi}{tanggal}'
-        f'{_cta(rencana, bukti, siswa_id, fokus, materi)}'
-        + ('<p class="petunjuk-sesudah-cta-st">Sesudah ini, ikuti petunjuk agar anak mulai mengerjakan.</p>'
-           if rencana.tindakan == "pemetaan" else '')
-        + f'{_alur_rencana(rencana, bukti)}{_override(rencana, siswa_id)}'
+        f'{tindakan}{_alur_rencana(rencana, bukti)}'
+        '</aside>'
+        f'<div class="studio-aksi-st">{cta}{petunjuk}</div>'
+        '</div>'
+        f'{_override(rencana, siswa_id)}'
         "</section>"
     )
 

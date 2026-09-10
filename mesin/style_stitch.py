@@ -2281,18 +2281,72 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
 .pendamping-editorial-st.profil-editorial-st {{ max-width: 62rem; }}
 .profil-editorial-st .kepala-anak-st h1 .st-badge {{ display: inline-flex; vertical-align: middle; margin-left: {T.SP_2}; letter-spacing: 0; }}
 .profil-editorial-st .kartu-rencana-st {{
-  box-shadow: none; border: 1px solid {T.BORDER_CATATAN}; border-top: 3px solid {T.AKSEN_TEAL_TUA};
-  background: {T.LATAR_KARTU}; border-radius: {T.RADIUS_KARTU}; padding: {T.SP_5}; gap: {T.SP_3};
+  box-shadow: 0 14px 34px color-mix(in srgb, {T.TEKS_JUDUL} 5%, transparent);
+  border: 1px solid {T.BORDER_CATATAN}; border-top: 4px solid {T.AKSEN_TEAL_TUA};
+  background: {T.LATAR_KARTU}; border-radius: {T.RADIUS_KARTU};
+  padding: clamp({T.SP_5}, 4vw, 2.5rem); gap: {T.SP_3};
 }}
+.profil-editorial-st .studio-layout-st {{
+  display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(15rem, .72fr);
+  grid-template-areas: "utama pendamping" "aksi pendamping";
+  column-gap: clamp({T.SP_6}, 5vw, 4rem); row-gap: {T.SP_4};
+}}
+.profil-editorial-st .studio-utama-st {{ grid-area: utama; display: grid; gap: {T.SP_3}; align-content: start; min-width: 0; }}
+.profil-editorial-st .studio-pendamping-st {{
+  grid-area: pendamping; display: flex; flex-direction: column; gap: {T.SP_4};
+  border-left: 1px solid {T.BORDER_CATATAN}; padding-left: {T.SP_5}; min-width: 0;
+}}
+.profil-editorial-st .studio-aksi-st {{ grid-area: aksi; display: grid; gap: {T.SP_2}; justify-items: start; min-width: 0; }}
 .profil-editorial-st .label-rencana-st {{ color: {T.AKSEN_TEAL_TUA}; }}
-.profil-editorial-st .tahap-rencana-st {{ border-radius: {T.RADIUS_KECIL}; color: {T.TEKS_VARIAN}; }}
-.profil-editorial-st .tahap-rencana-st.aktif {{ background: {T.AKSEN_TEAL_TUA}; color: {T.TEKS_PUTIH}; }}
-.profil-editorial-st :is(.progres-rencana-st, .tindakan-rencana-st, .contoh-rencana-st) {{ background: {T.LATAR_CATATAN}; border-color: {T.BORDER_CATATAN}; }}
+.profil-editorial-st #judul-rencana-belajar {{ font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.045em; max-width: 22ch; }}
+.profil-editorial-st .alasan-rencana-st {{ font-size: 1.04rem; }}
+.profil-editorial-st .konteks-pemetaan-jelas-st {{
+  background: transparent; border: 0; border-block: 1px solid {T.BORDER_CATATAN};
+  border-radius: 0; padding: {T.SP_3} 0;
+}}
+.profil-editorial-st .progres-rencana-st {{ margin: 0; padding: 0 0 {T.SP_4}; background: transparent; }}
+.profil-editorial-st .progres-rencana-st::before {{
+  content: "Posisi sekarang"; display: block; color: {T.TEKS_VARIAN};
+  font: 500 .78rem/1.5 {T.FONT_LAYAR}; margin-bottom: {T.SP_1};
+}}
+.profil-editorial-st .tindakan-rencana-st {{
+  margin: 0; padding: {T.SP_4} 0; border: 0; border-block: 1px solid {T.BORDER_CATATAN};
+  border-radius: 0; background: transparent;
+}}
+.profil-editorial-st .contoh-rencana-st {{ background: {T.LATAR_CATATAN}; border-color: {T.AKSEN_MURID_AMBER}; padding: {T.SP_4}; }}
+.profil-editorial-st .tanggal-rencana-st {{ border-left: 3px solid {T.AKSEN_TEAL_TUA}; padding-left: {T.SP_4}; }}
+.profil-editorial-st .alur-rencana-jelas-st {{ margin: 0; padding: {T.SP_1} 0 0; border: 0; }}
+.profil-editorial-st .isi-alur-rencana-st .strip-rencana-st {{ display: grid; grid-template-columns: minmax(0, 1fr); margin: {T.SP_3} 0; }}
+.profil-editorial-st .strip-rencana-st .tahap-rencana-st {{
+  position: relative; text-align: left; padding: {T.SP_1} 0 {T.SP_3} 1.7rem;
+  background: transparent; color: {T.TEKS_VARIAN}; border-radius: 0;
+}}
+.profil-editorial-st .strip-rencana-st .tahap-rencana-st::before {{
+  content: ""; position: absolute; left: .18rem; top: .55rem; width: .62rem; height: .62rem;
+  border: 2px solid {T.BORDER_VARIAN}; background: {T.LATAR_KARTU}; border-radius: {T.RADIUS_BULAT};
+}}
+.profil-editorial-st .strip-rencana-st .tahap-rencana-st.aktif {{ font-weight: 700; color: {T.TEKS_JUDUL}; }}
+.profil-editorial-st .strip-rencana-st .tahap-rencana-st.aktif::before {{ background: {T.AKSEN_TEAL_TUA}; border-color: {T.AKSEN_TEAL_TUA}; }}
+.profil-editorial-st .strip-rencana-st .tahap-rencana-st:not(:last-child)::after {{
+  content: ""; position: absolute; left: .52rem; top: 1.25rem; bottom: -.15rem;
+  width: 1px; background: {T.BORDER_VARIAN};
+}}
+.profil-editorial-st .rencana-cta-utama-st {{ width: auto; min-width: 16rem; }}
+.profil-editorial-st .petunjuk-sesudah-cta-st {{ text-align: left; }}
+.profil-editorial-st .ubah-fokus-st {{ margin-top: {T.SP_4}; }}
 .profil-editorial-st .atur-latihan-st {{ background: transparent; border: 0; border-block: 1px solid {T.BORDER_CATATAN}; border-radius: 0; padding: {T.SP_3} 0; }}
 .profil-editorial-st .atur-latihan-st summary {{ display: flex; align-items: center; gap: {T.SP_2}; color: {T.AKSEN_TEAL_TUA}; }}
 .profil-editorial-st .atur-latihan-st summary::before {{ content: '+'; font-size: 1.2rem; }}
 .profil-editorial-st .atur-latihan-st[open] summary::before {{ content: '−'; }}
-.profil-editorial-st .buat-latihan-st {{ box-shadow: none; }}
+.profil-editorial-st .atur-latihan-st > .buat-latihan-st > h2 {{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }}
+.profil-editorial-st .buat-latihan-st {{ box-shadow: none; padding-top: {T.SP_4}; }}
+.profil-editorial-st .tab-label-st {{ white-space: normal; flex: 1 1 10rem; }}
+.profil-editorial-st [data-panel="baru"] > .strip-sesi {{
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: {T.SP_4};
+}}
+.profil-editorial-st [data-panel="baru"] > .strip-sesi > * {{ grid-column: 1 / -1; min-width: 0; }}
+.profil-editorial-st [data-panel="baru"] > .strip-sesi > .strip-kolom:nth-of-type(-n+2) {{ grid-column: auto; }}
+.profil-editorial-st .strip-sesi select.st-input {{ width: 100%; max-width: 100%; }}
 .profil-editorial-st .kepala-riwayat-st {{ align-items: center; gap: {T.SP_3}; flex-wrap: wrap; }}
 .profil-editorial-st .tautan-laporan-st {{ min-height: {T.TARGET_SENTUH}; color: {T.AKSEN_TEAL_TUA}; }}
 .profil-editorial-st .kartu-sesi-guru {{ border: 0; border-bottom: 1px solid {T.BORDER_CATATAN}; background: transparent; box-shadow: none; border-radius: 0; padding: {T.SP_4} 0; }}
@@ -2352,6 +2406,19 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
 .hapus-editorial-st form {{ flex-wrap: wrap; }}
 .hapus-editorial-st form a {{ display: inline-flex; align-items: center; min-height: {T.TARGET_SENTUH}; padding-inline: {T.SP_3}; }}
 
+/* Studio kembali satu kolom sebelum ruang materi menjadi terlalu sempit. */
+@media (max-width: 48rem) {{
+  .profil-editorial-st .studio-layout-st {{ display: flex; flex-direction: column; }}
+  .profil-editorial-st .studio-utama-st {{ order: 1; }}
+  .profil-editorial-st .studio-pendamping-st {{ display: contents; }}
+  .profil-editorial-st .tindakan-rencana-st {{ order: 2; padding: {T.SP_3} 0 {T.SP_3} {T.SP_4}; border: 0; border-left: 3px solid {T.BORDER_CATATAN}; }}
+  .profil-editorial-st .studio-aksi-st {{ order: 3; }}
+  .profil-editorial-st .progres-rencana-st {{ order: 4; margin-top: {T.SP_1}; padding: {T.SP_4} 0 0; border-top: 1px solid {T.BORDER_CATATAN}; }}
+  .profil-editorial-st .alur-rencana-jelas-st {{ order: 5; }}
+  .profil-editorial-st .rencana-cta-utama-st {{ width: 100%; min-width: 0; }}
+  .profil-editorial-st [data-panel="baru"] > .strip-sesi {{ grid-template-columns: minmax(0, 1fr); }}
+  .profil-editorial-st .tab-label-st {{ flex: 1 1 8rem; justify-content: center; text-align: center; }}
+}}
 @media (max-width: 40rem) {{
   .pendamping-editorial-st {{ padding: {T.SP_4} {T.SP_4} 3rem; }}
   .pendamping-editorial-st .st-topbar {{ flex-wrap: wrap; }}
@@ -2364,7 +2431,6 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
   .pendamping-editorial-st .kartu-stat {{ gap: {T.SP_2}; }}
   .pendamping-editorial-st .angka-besar {{ font-size: 1.7rem; }}
   .pendamping-editorial-st .stat-label {{ font-size: .78rem; }}
-  .profil-editorial-st .strip-rencana-st {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
   .profil-editorial-st .kartu-sesi-guru {{ flex-wrap: wrap; }}
   .profil-editorial-st .aksi-sesi-st {{ width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }}
   .pendamping-editorial-st:is(.akun-editorial-st, .admin-editorial-st) table {{ min-width: 0; }}
