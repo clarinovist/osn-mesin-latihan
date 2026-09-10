@@ -13,7 +13,7 @@ def test_ci_worksteal_tetap_menjalankan_seluruh_test():
     assert baris.startswith("run: ")
     assert shlex.split(baris[len("run: "):]) == [
         "python", "-m", "pytest", "mesin/__tests__/", "-q", "-n", "auto",
-        "--dist=worksteal",
+        "--dist=worksteal", "-W", "error",
     ]
 
 

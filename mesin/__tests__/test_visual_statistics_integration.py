@@ -79,7 +79,7 @@ def test_default_tetap_teks_dan_golden_generator_tidak_berubah(monkeypatch):
 
 @pytest.mark.parametrize(
     ("soal", "jenis"),
-    zip(_soal_statistika(), ("batang", "turus", "piktogram", "lingkaran")),
+    tuple(zip(_soal_statistika(), ("batang", "turus", "piktogram", "lingkaran"))),
 )
 def test_opt_in_memproyeksikan_dan_reload_descriptor_statistika(
     db, monkeypatch, soal, jenis
