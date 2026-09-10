@@ -97,7 +97,7 @@ def halaman_daftar(
 <h2 id="judul-pendamping">Belajar anak,<br><span>didampingi kamu.</span></h2>
 <p class="daftar-pengantar-st">Bukan hanya mengumpulkan jawaban benar.<br>Temani anak memahami caranya.</p>
 <div class="daftar-buku-st" aria-hidden="true">
-<img class="daftar-maskot-st" src="/aset/maskot-menunjuk-240.png" width="240" height="240" alt="">
+<img class="daftar-maskot-st" src="/aset/maskot-menyapa-v2-240.png" width="240" height="240" alt="">
 <span>Satu langkah, bersama.</span>
 </div>
 <ol class="daftar-langkah-st">
@@ -330,7 +330,7 @@ def halaman_landing() -> bytes:
     simpan 1. Jadi jawabannya 473, bukan 463.</p>
   </div>
 </div>
-  <img class="landing-maskot-st" src="/aset/maskot-menunjuk-240.png"
+  <img class="landing-maskot-st" src="/aset/maskot-menunjuk-v2-240.png"
        width="240" height="240" alt="" aria-hidden="true">
   <p class="landing-demo-keterangan-st">Ilustrasi latihan · bukan data anak</p>
 </div>

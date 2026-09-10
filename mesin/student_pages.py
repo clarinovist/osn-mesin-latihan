@@ -130,7 +130,7 @@ def _kartu_beranda(sesi: dict, utama: bool = False) -> str:
         ilustrasi = (
             '<span class="murid-ilustrasi-st" aria-hidden="true">'
             '<span class="murid-lingkaran-st"></span>'
-            f'{brand.maskot("menunjuk", 240)}</span>'
+            f'{brand.maskot("menulis", 240)}</span>'
         )
         teks = (
             '<span class="st-kartu-teks">'
@@ -207,7 +207,7 @@ def halaman_daftar_sesi_baru(kon, siswa_id: int, nama: str, sesi_selesai: int | 
             )
         kolom = (
             '<section class="murid-keadaan-st">'
-            f'{brand.maskot("netral", 240)}'
+            f'{brand.maskot("berpikir", 240)}'
             f'<div><h2>{judul}</h2><p>{pesan}</p></div></section>'
         )
     if tugas:

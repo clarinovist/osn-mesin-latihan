@@ -54,9 +54,8 @@ ASET: dict[str, str] = {
     "pwa-192.png": "image/png",
     "pwa-512.png": "image/png",
     "og-image.png": "image/png",
-    # Maskot ayam jago. Dua ukuran per pose: 240px (sapaan/banner) dan 96px
-    # (inline kecil) — bukan satu berkas besar yang di-scale CSS, karena
-    # halaman anak sering dibuka di HP.
+    # Aset maskot lama tetap terlayani untuk halaman yang masih di cache.
+    # Isi URL immutable tidak diganti; halaman baru memakai versi v2.
     "maskot-netral-240.png": "image/png",
     "maskot-netral-96.png": "image/png",
     "maskot-merayakan-240.png": "image/png",
@@ -65,10 +64,13 @@ ASET: dict[str, str] = {
     "maskot-menunjuk-96.png": "image/png",
 }
 
-# Pose maskot yang tersedia. "berpikir" TIDAK ada: di character sheet
-# aslinya palet warna berada di dalam kotak badan, jadi memotong paletnya
-# ikut memotong ekor — lebih baik tidak ada daripada cacat.
-POSE_MASKOT = ("netral", "merayakan", "menunjuk")
+# Enam crop dari satu master yang disetujui, masing-masing 240px dan 96px.
+# Nama berkas berversi agar cache immutable tidak menampilkan maskot lama.
+POSE_MASKOT = ("menyapa", "menunjuk", "berpikir", "membaca", "menulis", "merayakan")
+ASET.update({
+    f"maskot-{pose}-v2-{px}.png": "image/png"
+    for pose in POSE_MASKOT for px in (240, 96)
+})
 
 NAMA_MANIFEST = "manifest.json"
 
@@ -77,7 +79,7 @@ NAMA_MANIFEST = "manifest.json"
 def _isi(nama: str) -> bytes:
     """Isi berkas aset, di-cache di memori.
 
-    Aset totalnya ~53 KB dan tidak pernah berubah selama proses hidup, jadi
+    Aset kecil dan tidak pernah berubah selama proses hidup, jadi
     membacanya sekali lebih murah daripada I/O per permintaan favicon.
     """
     return (FOLDER_ASET / nama).read_bytes()
@@ -229,7 +231,7 @@ def judul(halaman: str = "") -> str:
     return f"{nama} · {T.NAMA_PRODUK}"
 
 
-def maskot(pose: str = "netral", px: int = 240, alt: str = "", kelas: str = "") -> str:
+def maskot(pose: str = "menyapa", px: int = 240, alt: str = "", kelas: str = "") -> str:
     """<img> maskot ayam jago.
 
     Maskot BUKAN logo: ia hiasan/pendamping, bukan penanda identitas. Karena
@@ -244,10 +246,10 @@ def maskot(pose: str = "netral", px: int = 240, alt: str = "", kelas: str = "") 
         raise ValueError(f"pose maskot tidak dikenal: {pose!r}")
     if px not in (240, 96):
         raise ValueError(f"ukuran maskot tidak tersedia: {px}")
-    berkas_maskot = f"maskot-{pose}-{px}.png"
+    berkas_maskot = f"maskot-{pose}-v2-{px}.png"
     atribut_kelas = f' class="{kelas}"' if kelas else ""
     return (
         f'<img src="/aset/{berkas_maskot}" alt="{_esc(alt)}"{atribut_kelas} '
-        f'loading="lazy" decoding="async" '
+        f'width="{px}" height="{px}" loading="lazy" decoding="async" '
         f'style="max-width:{px}px;height:auto">'
     )

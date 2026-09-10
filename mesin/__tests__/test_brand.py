@@ -435,7 +435,7 @@ def test_maskot_aset_ada_dan_transparan():
 
     for pose in brand.POSE_MASKOT:
         for px in (240, 96):
-            nama = f"maskot-{pose}-{px}.png"
+            nama = f"maskot-{pose}-v2-{px}.png"
             assert nama in brand.ASET, f"{nama} tidak di allow-list"
             p = ROOT / "aset" / nama
             assert p.is_file(), f"{nama} tidak ada di disk"
@@ -451,31 +451,77 @@ def test_maskot_aset_ada_dan_transparan():
                 assert b"tRNS" in data, f"{nama}: palette tanpa tRNS = tak transparan"
 
 
+@pytest.mark.parametrize("pose", brand.POSE_MASKOT)
+@pytest.mark.parametrize("px", (96, 240))
+def test_maskot_v2_alpha_nyata_dan_margin_utuh(pose, px):
+    """Dekode piksel: alpha di header saja tidak membuktikan latar transparan."""
+    import struct
+    import zlib
+
+    data = (ROOT / "aset" / f"maskot-{pose}-v2-{px}.png").read_bytes()
+    assert data[24:26] == bytes((8, 3)), "crop memakai palet 8-bit"
+    offset, kompresi, alpha = 8, bytearray(), b""
+    while offset < len(data):
+        panjang = struct.unpack(">I", data[offset:offset+4])[0]
+        jenis = data[offset+4:offset+8]
+        isi = data[offset+8:offset+8+panjang]
+        crc = struct.unpack(">I", data[offset+8+panjang:offset+12+panjang])[0]
+        assert zlib.crc32(jenis + isi) == crc
+        if jenis == b"IDAT":
+            kompresi.extend(isi)
+        elif jenis == b"tRNS":
+            alpha = isi
+        offset += panjang + 12
+    mentah = zlib.decompress(kompresi)
+    assert len(mentah) == (px + 1) * px
+    baris_sebelum = [0] * px
+    piksel_alpha = []
+    for y in range(px):
+        awal = y * (px + 1)
+        filter_png = mentah[awal]
+        assert filter_png in (0, 1, 2), "filter crop harus None, Sub, atau Up"
+        baris = []
+        for x, nilai in enumerate(mentah[awal+1:awal+1+px]):
+            prediksi = (baris[x-1] if x else 0) if filter_png == 1 else (
+                baris_sebelum[x] if filter_png == 2 else 0
+            )
+            baris.append((nilai + prediksi) % 256)
+        piksel_alpha.append([alpha[i] for i in baris])
+        baris_sebelum = baris
+    # Seluruh pinggir kosong: tubuh/jengger/kaki tidak menabrak batas crop.
+    assert not any(piksel_alpha[0] + piksel_alpha[-1])
+    assert all(baris[0] == baris[-1] == 0 for baris in piksel_alpha)
+    datar = [a for baris in piksel_alpha for a in baris]
+    assert datar.count(0) > px * px * 0.2
+    assert datar.count(255) > px * px * 0.2, "karakter tidak boleh ikut hilang"
+    assert any(0 < a < 255 for a in datar), "tepi harus punya antialias"
+
+
 def test_maskot_ringan():
-    """Halaman anak sering dibuka di HP. Aset mentah 132 KB per pose;
-    setelah crop+kuantisasi harus jauh di bawah itu."""
+    """Enam pose tetap ringan: batas per berkas tidak naik dari versi lama."""
     total = 0
     for pose in brand.POSE_MASKOT:
         for px in (240, 96):
-            n = (ROOT / "aset" / f"maskot-{pose}-{px}.png").stat().st_size
+            n = (ROOT / "aset" / f"maskot-{pose}-v2-{px}.png").stat().st_size
             batas = 15_000 if px == 240 else 5_000
-            assert n < batas, f"maskot-{pose}-{px}.png {n}B melebihi {batas}B"
+            assert n < batas, f"maskot-{pose}-v2-{px}.png {n}B melebihi {batas}B"
             total += n
-    assert total < 40_000, f"total maskot {total}B terlalu berat"
+    assert total < 80_000, f"total enam pose maskot {total}B terlalu berat"
 
 
 def test_maskot_helper_menolak_pose_dan_ukuran_asing():
-    """Pose 'berpikir' sengaja tidak ada (crop-nya cacat). Helper harus
-    MENOLAK keras, bukan diam-diam menyajikan 404 ke anak."""
-    import pytest as _pytest
-
-    assert "berpikir" not in brand.POSE_MASKOT
-    with _pytest.raises(ValueError):
-        brand.maskot("berpikir")
-    with _pytest.raises(ValueError):
-        brand.maskot("netral", 512)
+    """Enam pose disetujui; nama/ukuran asing tetap ditolak sebelum render."""
+    assert set(brand.POSE_MASKOT) == {
+        "menyapa", "menunjuk", "berpikir", "membaca", "menulis", "merayakan",
+    }
+    for pose in ("terbang", "../sandi", "netral"):
+        with pytest.raises(ValueError):
+            brand.maskot(pose)
+    with pytest.raises(ValueError):
+        brand.maskot("menyapa", 512)
     for pose in brand.POSE_MASKOT:
-        assert f"/aset/maskot-{pose}-240.png" in brand.maskot(pose)
+        assert f"/aset/maskot-{pose}-v2-240.png" in brand.maskot(pose)
+    assert "/aset/maskot-menyapa-v2-240.png" in brand.maskot()
 
 
 def test_maskot_alt_kosong_default():
@@ -496,10 +542,35 @@ def test_maskot_lazy_load():
 def test_maskot_terlayani_lewat_rute_aset(server):
     for pose in brand.POSE_MASKOT:
         for px in (240, 96):
-            kode, isi, hdr = server.minta(f"/aset/maskot-{pose}-{px}.png", biner=True)
-            assert kode == 200, f"maskot-{pose}-{px} -> {kode}"
+            nama = f"maskot-{pose}-v2-{px}.png"
+            kode, isi, hdr = server.minta(f"/aset/{nama}", biner=True)
+            assert kode == 200, f"{nama} -> {kode}"
             assert hdr["Content-Type"] == "image/png"
-            assert isi[:8] == b"\x89PNG\r\n\x1a\n"
+            assert isi == (ROOT / "aset" / nama).read_bytes()
+            assert "immutable" in hdr["Cache-Control"]
+
+
+@pytest.mark.parametrize("jalur,pose,kred", (
+    ("/", "menunjuk", None),
+    ("/masuk", "menyapa", None),
+    ("/daftar", "menyapa", None),
+    ("/", "membaca", ("guru", SANDI_GURU)),
+))
+def test_halaman_publik_dan_guru_pakai_pose_baru(server, jalur, pose, kred):
+    """Tak ada URL maskot lama di halaman baru; logo identitas tetap terpisah."""
+    import re
+
+    kode, isi, _ = server.minta(jalur, auth=kred)
+    assert kode == 200
+    gambar = re.findall(r'src="(/aset/maskot-[^"]+)"', isi)
+    assert gambar == [f"/aset/maskot-{pose}-v2-240.png"]
+    assert "/aset/mark-" in isi or "/aset/lockup-" in isi
+
+
+def test_maskot_helper_ukuran_intrinsik_tetap():
+    """Ukuran disediakan sebelum unduhan agar gambar tidak menggeser layout."""
+    for px in (96, 240):
+        assert f'width="{px}" height="{px}"' in brand.maskot(px=px)
 
 
 def test_maskot_tidak_dicetak():
@@ -534,7 +605,7 @@ def test_sapaan_anak_pakai_maskot(server):
     kode, isi, _ = server.minta("/murid", auth=("feby", SANDI_MURID))
     assert kode == 200
     assert "Halo, feby!" in isi
-    assert "/aset/maskot-menunjuk-" in isi, "kartu utama anak tanpa maskot"
+    assert "/aset/maskot-menulis-v2-240.png" in isi, "kartu utama anak tanpa maskot latihan"
     # topbar tetap memakai lambang: identitas tidak digeser hiasan
     assert "/aset/mark-sederhana.svg" in isi
 
@@ -553,7 +624,7 @@ def test_banner_selesai_pakai_maskot_merayakan(server):
     )
     assert kode == 200
     assert "Selesai!" in isi
-    assert "/aset/maskot-merayakan-" in isi, "banner perayaan tanpa maskot"
+    assert "/aset/maskot-merayakan-v2-96.png" in isi, "banner perayaan tanpa maskot"
 
 
 def test_keadaan_kosong_pakai_maskot(server_kosong):
@@ -563,7 +634,7 @@ def test_keadaan_kosong_pakai_maskot(server_kosong):
     kode, isi, _ = server_kosong.minta("/murid", auth=("feby", SANDI_MURID))
     assert kode == 200
     assert "Belum ada sesi" in isi
-    assert "/aset/maskot-netral-" in isi, "keadaan kosong tanpa maskot"
+    assert "/aset/maskot-berpikir-v2-240.png" in isi, "keadaan kosong tanpa maskot"
 
 
 def test_keadaan_kosong_border_bukan_teks_literal(server_kosong):

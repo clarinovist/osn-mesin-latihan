@@ -80,7 +80,7 @@ def test_maskot_lokal_dekoratif_berukuran_tetap(markup):
     maskot = [atribut for atribut in markup.cari("img")
               if atribut.get("class") == "landing-maskot-st"]
     assert len(maskot) == 1
-    assert maskot[0]["src"] == "/aset/maskot-menunjuk-240.png"
+    assert maskot[0]["src"] == "/aset/maskot-menunjuk-v2-240.png"
     assert maskot[0]["alt"] == ""
     assert maskot[0]["aria-hidden"] == "true"
     assert maskot[0]["width"] == maskot[0]["height"] == "240"
