@@ -320,7 +320,8 @@ def halaman_laporan(
         f"Laporan {siswa['nama']}",
         f'<div class="jejak"><a href="/anak/{siswa_id}">&larr; Riwayat '
         f"{nama_siswa}</a></div>"
-        f'<h1>Laporan perkembangan {nama_siswa}</h1>'
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">CATATAN PERKEMBANGAN</p>'
+        f'<h1 id="judul-laporan">Laporan perkembangan {nama_siswa}</h1></header>'
         f'{perjalanan_html}'
         '<div class="ringkasan-dashboard-laporan">'
         f'<div class="kartu-stat">'
@@ -375,5 +376,6 @@ def halaman_laporan(
         f'<tbody>{daftar_peta}</tbody></table></div></details>',
         ident=(pengguna, peran) if pengguna else None,
         stitch=True,
-        kelas_bungkus="laporan-lebar",
+        kelas_bungkus="laporan-lebar pendamping-editorial-st laporan-editorial-st",
+        id_utama="judul-laporan",
     )

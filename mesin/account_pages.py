@@ -62,7 +62,7 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
             else:
                 status = '<span class="status-ok">terhubung</span>'
             baris += (
-                f"<tr><td>{nama_esc}</td><td>{status}</td><td>"
+                f'<tr><td data-label="Nama">{nama_esc}</td><td data-label="Status">{status}</td><td data-label="Aksi">'
                 f'<div class="baris-aksi">'
                 f'<form method="post" action="/akun" '
                 f'style="display:inline-flex;gap:.3rem;align-items:center" '
@@ -75,7 +75,8 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
                 f'<form method="post" action="/akun" style="display:inline-flex;gap:.3rem;align-items:center;margin-left:.4rem">'
                 f'<input type="hidden" name="aksi" value="akun_murid_sandi">'
                 f'<input type="hidden" name="nama" value="{nama_esc}">'
-                f'<input type="password" name="baru" placeholder="sandi baru" required class="input-sandi-kecil">'
+                f'<label>Sandi baru untuk {nama_esc}'
+                f'<input type="password" name="baru" placeholder="sandi baru" required class="input-sandi-kecil"></label>'
                 f'<button type="submit" class="tombol-kecil">Setel sandi baru</button>'
                 f"</form>"
                 f"</div>"
@@ -101,7 +102,7 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
             for s in belum_terhubung
         )
         pilih = (
-            '<select name="siswa_id" required>'
+            '<select id="pulihkan-siswa" name="siswa_id" required>'
             '<option value="">— pilih anak —</option>' + opsi + "</select>"
         )
         tambah = (
@@ -110,13 +111,13 @@ def _kartu_akun_murid(kon, pengguna: str | None = None, peran: str = "guru") -> 
             f'<p class="sub">Anak berikut belum punya akun masuk — '
             f"buatkan di sini:</p>"
             f'<div class="baris">'
-            f"<div><label>Anak</label>"
+            f'<div><label for="pulihkan-siswa">Anak</label>'
             f"{pilih}</div>"
-            f"<div><label>Nama untuk masuk</label>"
-            f'<input type="text" name="nama_akun" placeholder="mis. bima-santoso" required></div>'
+            f'<div><label for="pulihkan-nama">Nama untuk masuk</label>'
+            f'<input id="pulihkan-nama" type="text" name="nama_akun" placeholder="mis. bima-santoso" required></div>'
             f"</div>"
-            f'<div><label>Sandi baru (minimal 8 karakter)</label>'
-            f'<input type="password" name="sandi" placeholder="sandi untuk murid" required minlength="8">'
+            f'<div><label for="pulihkan-sandi">Sandi baru (minimal 8 karakter)</label>'
+            f'<input id="pulihkan-sandi" type="password" name="sandi" placeholder="sandi untuk murid" required minlength="8">'
             f"</div>"
             f'<p style="margin-top:.6rem"><button type="submit">Buat akun masuk</button></p>'
             f"</form>"
@@ -189,11 +190,11 @@ def halaman_akun(
         section = "akun"
 
     daftar = "".join(
-        f'<tr><td>{html.escape(s["nama"])}</td>'
-        f'<td><form method="post" action="/akun" style="display:flex;gap:.4rem">'
+        f'<tr><td data-label="Nama">{html.escape(s["nama"])}</td>'
+        f'<td data-label="Kelas"><form method="post" action="/akun" style="display:flex;gap:.4rem">'
         f'<input type="hidden" name="aksi" value="tingkat">'
         f'<input type="hidden" name="siswa_id" value="{s["id"]}">'
-        f'<select name="tingkat" style="width:auto">'
+        f'<select name="tingkat" style="width:auto" aria-label="Kelas {html.escape(s["nama"])}">'
         + "".join(
             f'<option value="{lv}"{" selected" if lv == s["tingkat"] else ""}>{html.escape(label_kelas(lv))}</option>'
             for lv in LEVEL
@@ -201,17 +202,17 @@ def halaman_akun(
         + '</select>'
         f'<button type="submit" style="padding:.3rem .7rem;font-size:.85rem">'
         f"Simpan</button></form></td>"
-        f'<td class="angka">'
+        f'<td class="angka" data-label="Sesi">'
         f'{kon.execute("SELECT COUNT(*) AS n FROM sesi WHERE siswa_id = ?", (s["id"],)).fetchone()["n"]}'
         f"</td>"
-        f"<td>{status_akun_latihan(kon, s['id'])}</td>"
-        f'<td><form method="post" action="/akun" style="display:inline-flex">'
+        f'<td data-label="Akun latihan">{status_akun_latihan(kon, s["id"])}</td>'
+        f'<td data-label="Aksi"><form method="post" action="/akun" style="display:inline-flex">'
         f'<input type="hidden" name="aksi" value="siswa_hapus">'
         f'<input type="hidden" name="siswa_id" value="{s["id"]}">'
         f'<button type="submit" class="tombol-kecil tombol-hapus">Hapus</button>'
         f"</form></td></tr>"
         for s in database.daftar_siswa(kon, None if peran == "admin" else pengguna)
-    )
+    ) or '<tr><td colspan="5" class="kosong">Belum ada siswa. Tambahkan anak pertama di bawah.</td></tr>'
 
     kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
     if galat:
@@ -237,12 +238,12 @@ def halaman_akun(
         f"masuk lagi dengan sandi baru.</p>"
         f'<form method="post" action="/akun">'
         f'<input type="hidden" name="aksi" value="sandi">'
-        f"<label>Sandi lama</label>"
-        f'<input type="password" name="lama" autocomplete="current-password" required>'
-        f"<label>Sandi baru (minimal 12 karakter)</label>"
-        f'<input type="password" name="baru" autocomplete="new-password" required>'
-        f"<label>Ulangi sandi baru</label>"
-        f'<input type="password" name="ulang" autocomplete="new-password" required>'
+        f'<label for="sandi-lama">Sandi lama</label>'
+        f'<input id="sandi-lama" type="password" name="lama" autocomplete="current-password" required>'
+        f'<label for="sandi-baru">Sandi baru (minimal 12 karakter)</label>'
+        f'<input id="sandi-baru" type="password" name="baru" autocomplete="new-password" required>'
+        f'<label for="sandi-ulang">Ulangi sandi baru</label>'
+        f'<input id="sandi-ulang" type="password" name="ulang" autocomplete="new-password" required>'
         f'<p style="margin-top:.8rem">'
         f'<button type="submit" class="tombol-sekunder">Ganti sandi</button></p>'
         f"</form></div>"
@@ -268,21 +269,21 @@ def halaman_akun(
         f'<form method="post" action="/akun">'
         f'<input type="hidden" name="aksi" value="anak_baru">'
         f'<div class="baris">'
-        f'<div><label>Nama anak (nama panggilan)</label>'
-        f'<input type="text" name="nama" placeholder="mis. Aisha" required></div>'
-        f'<div><label>Kelas</label>'
-        f'<select name="tingkat">'
+        f'<div><label for="anak-nama">Nama anak (nama panggilan)</label>'
+        f'<input id="anak-nama" type="text" name="nama" placeholder="mis. Aisha" required></div>'
+        f'<div><label for="anak-kelas">Kelas</label>'
+        f'<select id="anak-kelas" name="tingkat">'
         + "".join(
             f'<option value="{lv}"{" selected" if lv == LEVEL_BAWAAN else ""}>{html.escape(label_kelas(lv))}</option>'
             for lv in LEVEL
         )
         + f"</select></div></div>"
-        f"<label>Nama login anak (opsional — bawaan sama dengan nama anak)"
+        f'<label for="anak-login">Nama login anak (opsional — bawaan sama dengan nama anak)'
         f"</label>"
-        f'<input type="text" name="nama_akun" '
+        f'<input id="anak-login" type="text" name="nama_akun" '
         f'placeholder="mis. aisha2 — isi bila nama anak dipakai keluarga lain">'
-        f"<label>Kata sandi anak (minimal 8 karakter, boleh sama polanya dengan sandimu)</label>"
-        f'<input type="password" name="sandi_anak" autocomplete="new-password" '
+        f'<label for="anak-sandi">Kata sandi anak (minimal 8 karakter, boleh sama polanya dengan sandimu)</label>'
+        f'<input id="anak-sandi" type="password" name="sandi_anak" autocomplete="new-password" '
         f'required minlength="8">'
         f'<p style="font-size:.9rem">'
         f'<label style="display:flex;gap:.5rem;align-items:flex-start">'
@@ -322,7 +323,7 @@ def halaman_akun(
     ]
     nav = "".join(
         f'<a href="/akun?section={sid}"'
-        + (' class="aktif"' if sid == section else "")
+        + (' class="aktif" aria-current="page"' if sid == section else "")
         + f">{label}</a>"
         for sid, label in item
     )
@@ -330,14 +331,17 @@ def halaman_akun(
     return _halaman(
         "Akun",
         f'<div class="jejak"><a href="{"/admin" if peran == "admin" else "/guru"}">&larr; Semua siswa</a></div>'
-        f"<h1>Akun &amp; pengaturan</h1>"
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">RUANG PENDAMPING</p>'
+        '<h1 id="judul-akun">Akun &amp; pengaturan</h1>'
+        '<p class="sub">Kelola akses dan ruang belajar keluarga.</p></header>'
         f"{kabar}"
         f'<div class="layout-samping">'
-        f'<nav class="nav-samping">{nav}</nav>'
+        f'<nav class="nav-samping" aria-label="Pengaturan akun">{nav}</nav>'
         f"<div>{isi_section}</div>"
         f"</div>",
         ident=(pengguna or "guru", peran),
-        stitch=True,
+        stitch=True, kelas_bungkus="pendamping-editorial-st akun-editorial-st",
+        id_utama="judul-akun",
     )
 
 def _akun_murid_milik(kon, pengguna: str, peran: str, nama: str) -> bool:
@@ -698,11 +702,11 @@ def halaman_admin(
         ).fetchone()["t"] or "—"
         peran_label = "Pengelola" if a.get("peran") == "admin" else "Orang Tua"
         keluarga.append(
-            f"<tr><td>{html.escape(nama)}</td>"
-            f"<td>{peran_label}</td>"
-            f'<td class="angka">{len(anak)}</td>'
-            f"<td>{daftar_anak}</td>"
-            f"<td>{terakhir}</td></tr>"
+            f'<tr><td data-label="Akun">{html.escape(nama)}</td>'
+            f'<td data-label="Peran">{peran_label}</td>'
+            f'<td class="angka" data-label="Jumlah anak">{len(anak)}</td>'
+            f'<td data-label="Nama anak">{daftar_anak}</td>'
+            f'<td data-label="Sesi terakhir">{terakhir}</td></tr>'
         )
     tabel = (
         "<table><tr><th>Akun</th><th>Peran</th><th>Jumlah anak</th>"
@@ -746,10 +750,10 @@ def halaman_admin(
         f'<form method="post" action="/admin">'
         f'<input type="hidden" name="aksi" value="guru_sandi">'
         f'<div class="baris">'
-        f'<div><label>Akun orang tua</label>'
-        f"{pilih_guru}</div>"
-        f"<div><label>Sandi baru (minimal 12 karakter)</label>"
-        f'<input type="password" name="baru" autocomplete="new-password" '
+        f'<div><label>Akun orang tua'
+        f"{pilih_guru}</label></div>"
+        f'<div><label for="guru-reset-sandi">Sandi baru (minimal 12 karakter)</label>'
+        f'<input id="guru-reset-sandi" type="password" name="baru" autocomplete="new-password" '
         f'required minlength="12"></div>'
         f"</div>"
         f'<p style="margin-top:.8rem">'
@@ -791,8 +795,8 @@ def halaman_admin(
         f'ada — hanya loginnya yang hilang.\')">'
         f'<input type="hidden" name="aksi" value="guru_hapus">'
         f'<div class="baris">'
-        f'<div><label>Akun orang tua</label>'
-        f"{pilih_hapus}</div>"
+        f'<div><label>Akun orang tua'
+        f"{pilih_hapus}</label></div>"
         f"</div>"
         f'<p style="margin-top:.8rem">'
         f'<button type="submit" class="tombol-hapus"{dis_hapus}>'
@@ -802,13 +806,15 @@ def halaman_admin(
 
     return _halaman(
         "Panel Pengelola",
-        f"<h1>Panel Pengelola</h1>"
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">RUANG PENGELOLA</p>'
+        '<h1 id="judul-admin">Panel Pengelola</h1>'
+        '<p class="sub">Keluarga, akses akun, dan aktivitas belajar.</p></header>'
         f'{kabar}'
         f"{ringkas}"
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">🏡</span>'
         f"<h2>Keluarga</h2></div>"
-        f"{tabel}"
+        f'<div class="tabel-wrap">{tabel}</div>'
         f"</div>"
         f'<div class="kartu">'
         f'<div class="kartu-judul"><span class="ikon-kartu">➕</span>'
@@ -816,10 +822,10 @@ def halaman_admin(
         f'<form method="post" action="/admin">'
         f'<input type="hidden" name="aksi" value="guru_baru">'
         f'<div class="baris">'
-        f'<div><label>Nama akun</label>'
-        f'<input type="text" name="pengguna" autocomplete="off" required></div>'
-        f"<div><label>Kata sandi (minimal 12 karakter)</label>"
-        f'<input type="password" name="sandi" autocomplete="new-password" '
+        f'<div><label for="guru-nama">Nama akun</label>'
+        f'<input id="guru-nama" type="text" name="pengguna" autocomplete="off" required></div>'
+        f'<div><label for="guru-sandi">Kata sandi (minimal 12 karakter)</label>'
+        f'<input id="guru-sandi" type="password" name="sandi" autocomplete="new-password" '
         f'required minlength="12"></div>'
         f"</div>"
         f'<p style="margin-top:.8rem">'
@@ -832,5 +838,6 @@ def halaman_admin(
         f"{kartu_sandi_guru}"
         f"{kartu_hapus_guru}",
         ident=(pengguna, "admin") if pengguna else None,
-        stitch=True,
+        stitch=True, kelas_bungkus="pendamping-editorial-st admin-editorial-st",
+        id_utama="judul-admin",
     )

@@ -149,4 +149,20 @@ svg {{ display: block; margin: 1.5mm 0; }}
   border: 0.8pt solid #000; padding: 1.6mm 2mm; font-size: 9.5pt;
 }}
 .rekap th {{ background: #eee; }}
+
+/* Editorial cetak: garis ringan, A4 dan ruang Caraku tidak dikurangi. */
+.lembar-editorial {{ color: {T.TEKS_UTAMA}; background: {T.LATAR_KARTU}; }}
+.lembar-editorial .mesin-banner {{ border-bottom-width: 1pt; gap: 3mm; }}
+.lembar-editorial :is(.petunjuk, .kunci-headline) {{
+  background: transparent; border-width: .7pt;
+}}
+.lembar-editorial .soal {{ border-width: .7pt; }}
+.lembar-editorial :is(.kunci-tabel, .rekap) {{ table-layout: fixed; overflow-wrap: anywhere; }}
+.lembar-editorial :is(.kunci-tabel, .rekap) th {{ background: transparent; }}
+.lembar-editorial :is(.kunci-tabel, .rekap) tr {{ break-inside: avoid; page-break-inside: avoid; }}
+.lembar-editorial .kunci-tabel :is(th, td):first-child {{ width: 13mm; }}
+.lembar-editorial .rekap :is(th, td):first-child {{ width: 10mm; }}
+.lembar-editorial .meta-template {{ overflow-wrap: anywhere; }}
+.lembar-editorial :is(h1, .catatan-bagian) {{ break-after: avoid; page-break-after: avoid; }}
+.lembar-editorial :is(p, li) {{ orphans: 3; widows: 3; }}
 """

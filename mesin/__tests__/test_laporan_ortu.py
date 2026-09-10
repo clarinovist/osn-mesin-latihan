@@ -305,7 +305,7 @@ def test_laporan_memakai_kanvas_lebar_dan_kembali_ke_riwayat_anak(db):
         h = reports.halaman_laporan(kon, sid, pengguna="ortu").decode()
 
     isi = h.split("</style>", 1)[1]
-    assert 'class="bungkus-st laporan-lebar"' in h
+    assert 'class="bungkus-st laporan-lebar pendamping-editorial-st laporan-editorial-st"' in h
     assert f'<a href="/anak/{sid}">&larr; Riwayat Claudia</a>' in isi
     assert "Laporan perkembangan Claudia" in isi
     assert "Laporan — Claudia" not in isi

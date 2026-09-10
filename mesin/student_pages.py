@@ -924,12 +924,15 @@ def halaman_kerja_baru(
         isi = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{brand.judul("Jawaban sudah dikirim")}</title>{brand.tag_kepala()}
-<style>{gaya_stitch()}</style></head><body class="st">
-<div class="kerja-badan-st"><div class="kerja-tersimpan-st">
+<style>{gaya_stitch()}</style></head><body class="st kerja-editorial-st">
+<main class="kerja-badan-st kerja-selesai-st" aria-labelledby="judul-kerja">
+<p class="kerja-alis-st">CATATAN LATIHAN</p>
+<h1 id="judul-kerja">Selesai untuk sekarang.</h1>
+<div class="kerja-tersimpan-st" role="status">
 <span class="ikon">✓</span><span><b>Jawabanmu sudah dikirim.</b><br>
 Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
 <p><a class="kerja-btn-sekunder-st" href="/murid">Kembali ke sesi lain</a></p>
-</div></body></html>"""
+</main></body></html>"""
         return isi.encode()
 
     kartu: list[str] = []
@@ -967,8 +970,8 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
   {nomor}{bintang}
   {teks}
   <div class="kerja-jawab-st">
-    <span class="head-jawab"><span class="material-symbols-outlined">edit</span> Jawabanku</span>
-    <input type="text" name="jwb_{ssid}"
+    <label class="head-jawab" for="jawab-{ssid}">Jawabanku</label>
+    <input type="text" id="jawab-{ssid}" name="jwb_{ssid}"
            value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
   </div>
   <label class="kerja-centang-st">
@@ -983,9 +986,9 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
         if s["minta_restatement"]:
             nilai = _escape(t.get("restatement", ""))
             restate = (
-                '<label class="kerja-label-st">Soal ini mintanya apa? '
+                f'<label class="kerja-label-st" for="restate-{ssid}">Soal ini mintanya apa? '
                 "(tulis pakai kalimatmu sendiri)</label>"
-                f'<textarea class="kerja-restate-st" name="restate_{ssid}">{nilai}</textarea>'
+                f'<textarea class="kerja-restate-st" id="restate-{ssid}" name="restate_{ssid}">{nilai}</textarea>'
             )
 
         cara_tersimpan = t.get("cara", "") or ""
@@ -1010,13 +1013,15 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
   {nomor}{bintang}
   {teks}
   {restate}
-  <label class="kerja-label-st"><span class="material-symbols-outlined">psychology</span> Caraku — pilih dulu yang paling mirip:</label>
+  <fieldset class="kerja-cara-pilih-st">
+  <legend class="kerja-label-st">Caraku — pilih dulu yang paling mirip:</legend>
   <div class="kerja-pill-grup-st">{tombol}</div>
-  <label class="kerja-label-st">Kalau mau, tulis lebih jelas di sini (boleh dikosongkan):</label>
-  <textarea class="kerja-cara-st" name="cara_{ssid}">{_escape(teks_cara)}</textarea>
+  </fieldset>
+  <label class="kerja-label-st" for="cara-{ssid}">Kalau mau, tulis lebih jelas di sini (boleh dikosongkan):</label>
+  <textarea class="kerja-cara-st" id="cara-{ssid}" name="cara_{ssid}">{_escape(teks_cara)}</textarea>
   <div class="kerja-jawab-st">
-    <span class="head-jawab"><span class="material-symbols-outlined">edit</span> Jawabanku</span>
-    <input type="text" name="jwb_{ssid}"
+    <label class="head-jawab" for="jawab-{ssid}">Jawabanku</label>
+    <input type="text" id="jawab-{ssid}" name="jwb_{ssid}"
            value="{_escape(t.get('jawaban', ''))}" autocomplete="off">
   </div>
   <label class="kerja-centang-st">
@@ -1185,7 +1190,7 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
         kabar_foto_html = ""
         if kabar_foto:
             kabar_foto_html = (
-                f'<p class="kerja-foto-kabar-st">{_escape(kabar_foto)}</p>'
+                f'<p class="kerja-foto-kabar-st" role="status">{_escape(kabar_foto)}</p>'
             )
         n_foto = kon.execute(
             "SELECT COUNT(*) AS n FROM lampiran WHERE sesi_id = ?", (sesi_id,)
@@ -1208,7 +1213,8 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
   {daftar_foto}
   <form method="post" action="/murid/foto/{sesi_id}"
         enctype="multipart/form-data" class="kerja-foto-form-st">
-    <input type="file" name="foto" accept="image/*" capture="environment">
+    <label class="kerja-label-st" for="foto-cara">Pilih foto lembar</label>
+    <input type="file" id="foto-cara" name="foto" accept="image/*" capture="environment">
     <button type="submit" class="kerja-btn-sekunder-st">Kirim foto caraku</button>
   </form>
 </div>"""
@@ -1226,10 +1232,9 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
             "body:'aksi=mulai',keepalive:true}).catch(function(){});</script>"
         )
     navigasi_bawah = "" if akses_tautan else (
-        '<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">'
+        '<div class="kerja-navigasi-st hanya-layar">'
         '<button class="kerja-btn-sekunder-st" type="button" onclick="window.print()">'
-        '<span class="material-symbols-outlined" style="font-size:1.1rem">print</span> Cetak / PDF</button>'
-        '<a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a></div>'
+        '<span class="material-symbols-outlined" style="font-size:1.1rem">print</span> Cetak / PDF</button></div>'
         '<form method="post" action="/keluar" class="hanya-layar" style="margin-top:0.7rem">'
         '<button class="kerja-btn-sekunder-st" type="submit">Keluar</button></form>'
     )
@@ -1242,18 +1247,22 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
-<style>{gaya_stitch()}</style></head><body class="st">
-<div class="kerja-topbar-st">
+<style>{gaya_stitch()}</style></head><body class="st kerja-editorial-st">
+<header class="kerja-topbar-st">
   <div class="brand">
     {brand.mark("topbar", kelas="ik-owl")}
     <span class="nama-osn">{T.NAMA_PRODUK}</span>
   </div>
   {tautan_tutup}
-</div>
-<div class="kerja-badan-st">
+</header>
+<main class="kerja-badan-st" aria-labelledby="judul-kerja">
+<header class="kerja-pembuka-st">
+<p class="kerja-alis-st">LEMBAR LATIHAN</p>
+<h1 id="judul-kerja">{'Latihan cepat' if drill else 'Tunjukkan caramu.'}</h1>
 <p class="kerja-meta-st"><b>Halo, {_escape(info['nama'])}</b> &middot; {_escape(info['tanggal'])}
  &middot; {_escape(label_kelas(info['level']))} &middot; {len(daftar)} soal {penanda_tahap(info.get('tujuan', 'bebas'))}
  {'&middot; Latihan Cepat' if drill else ''}</p>
+</header>
 {strip}
 {kabar}
 <div class="kerja-petunjuk-st">
@@ -1275,7 +1284,7 @@ Gurumu akan memeriksanya. Kamu tidak perlu mengirim ulang.</span></div>
 {navigasi_bawah}
 {blok_foto}
 {jaga}{skrip}{script_mulai}
-</div></body></html>"""
+</main></body></html>"""
     return isi.encode()
 
 
@@ -1503,26 +1512,29 @@ def halaman_hasil_murid(kon, siswa_id: int, sesi_id: int) -> bytes | None:
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
-<style>{gaya_stitch()}</style></head><body class="st">
-<div class="kerja-topbar-st">
+<style>{gaya_stitch()}</style></head><body class="st hasil-editorial-st">
+<header class="kerja-topbar-st">
   <div class="brand">
     {brand.mark("topbar", kelas="ik-owl")}
     <span class="nama-osn">{T.NAMA_PRODUK}</span>
   </div>
-  <a class="cta-keluar hanya-layar" href="/murid"><span class="material-symbols-outlined" style="font-size:1.1rem">arrow_back</span> Sesi lain</a>
-</div>
-<div class="kerja-badan-st">
+  <a class="cta-keluar hanya-layar" href="/murid"><span aria-hidden="true">←</span> Sesi lain</a>
+</header>
+<main class="kerja-badan-st" aria-labelledby="judul-hasil">
+<header class="kerja-pembuka-st">
+<p class="kerja-alis-st">CATATAN LATIHAN</p>
+<h1 id="judul-hasil">Lihat hasil &amp; caranya.</h1>
 <p class="kerja-meta-st"><b>Halo, {_escape(hasil['nama'])}</b> &middot;
  {_escape(hasil['tanggal'])} &middot; {_escape(label_kelas(hasil['level']))}</p>
+</header>
 <div class="hasil-ringkas-st">
-  <div class="hasil-skor-st">{n_benar}<span>/{n_soal}</span></div>
+  <div class="hasil-skor-st">{n_benar}<span>/{n_soal}</span><small>jawaban benar</small></div>
   <div class="hasil-pesan-st">{pesan}</div>
 </div>
 {blok_rumus}
 {"".join(kartu)}
-<div class="hanya-layar" style="display:flex;gap:0.7rem;margin-top:1rem">
+<div class="kerja-navigasi-st hanya-layar">
   <a class="kerja-btn-sekunder-st" href="/murid/kerjakan/{sesi_id}">Lihat lembarku</a>
-  <a class="kerja-btn-sekunder-st" href="/murid">Sesi lain</a>
 </div>
-</div></body></html>"""
+</main></body></html>"""
     return isi.encode()

@@ -156,10 +156,12 @@ def halaman_kebijakan() -> bytes:
     """
     n = html.escape(T.NAMA_PRODUK)
     isi = f"""
+<main class="dukungan-editorial-st privasi-editorial-st" aria-labelledby="judul-privasi">
 {_topbar_publik_st()}
 <div class="publik-bungkus-st">
 <section class="publik-kartu-st lebar">
-<h1>Kebijakan Privasi</h1>
+<p class="dukungan-alis-st">CATATAN TENTANG DATAMU</p>
+<div id="judul-privasi"><h1>Kebijakan Privasi</h1></div>
 <p class="publik-sub-st">Ringkas dan jujur, tanpa bahasa hukum.
 Terakhir diperbarui 6 September 2026.</p>
 
@@ -220,6 +222,7 @@ lebih besar (seluruh data keluarga), hubungi pengelola server lewat WA
 </div>
 </section>
 </div>
+</main>
 """
     return _halaman_publik_stitch(f"Kebijakan Privasi — {T.NAMA_PRODUK}", isi)
 
@@ -236,10 +239,15 @@ def halaman_lupa_sandi() -> bytes:
     """
     n = html.escape(T.NAMA_PRODUK)
     isi = f"""
-{_topbar_publik_st()}
+<main class="dukungan-editorial-st lupa-editorial-st" aria-labelledby="judul-lupa">
+<div class="dukungan-topbar-st">
+<a class="brand" href="/">{brand.mark("topbar")}<span>{n}</span></a>
+<span class="dukungan-topbar-catatan-st">Ruang bantuan</span>
+</div>
 <div class="publik-bungkus-st">
-<section class="publik-kartu-st" style="max-width:30rem">
-<h1 class="publik-judul-st">Lupa sandi?</h1>
+<section class="publik-kartu-st">
+<p class="dukungan-alis-st">KITA CARI JALANNYA</p>
+<h1 class="publik-judul-st" id="judul-lupa">Lupa sandi?</h1>
 <p class="publik-sub-st">Tidak apa-apa — sandimu bisa disetel ulang, hanya saja tidak
 lewat email.</p>
 <div class="publik-isi-st">
@@ -255,10 +263,11 @@ ulang oleh pengelola.</li>
 <li><b>Akunmu dibuatkan les/guru?</b> Minta ke mereka yang menyetel
 ulang — sandimu terikat ke keluarga mereka.</li>
 </ul>
-<p><a href="/masuk">Kembali ke halaman masuk</a></p>
+<p class="dukungan-kembali-st"><a href="/masuk">Kembali ke halaman masuk <span aria-hidden="true">→</span></a></p>
 </div>
 </section>
 </div>
+</main>
 """
     return _halaman_publik_stitch(f"Lupa sandi? — {T.NAMA_PRODUK}", isi)
 

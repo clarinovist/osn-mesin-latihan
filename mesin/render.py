@@ -146,8 +146,8 @@ def lembar_soal(
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(topik_paket.judul_lembar))}</title>
-{brand.tag_kepala(cetak=True)}<style>{css}</style></head><body>
-<div class="wrap">
+{brand.tag_kepala(cetak=True)}<style>{css}</style></head><body class="lembar-editorial">
+<main class="wrap">
 <div class="mesin-banner">
   <span class="nama-app">{html.escape(T.NAMA_PRODUK)}</span>
   <span class="meta-sesi">{html.escape(nama)} &middot; {len(soal)} soal</span>
@@ -172,7 +172,7 @@ def lembar_soal(
 <div class="akhir"><b>Sudah selesai?</b> Cek sekali lagi: apakah setiap kotak
 "Caraku" ada isinya? Kalau ada jawaban yang kamu tulis tanpa cara, tulis dulu
 caranya sekarang.</div>
-</div>
+</main>
 </body></html>"""
 
 
@@ -223,8 +223,8 @@ def lembar_penilaian(
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(topik_paket.judul_penilaian))}</title>
-{brand.tag_kepala(cetak=True)}<style>{css}</style></head><body>
-<div class="wrap">
+{brand.tag_kepala(cetak=True)}<style>{css}</style></head><body class="lembar-editorial">
+<main class="wrap">
 <div class="mesin-banner banner-kunci">
   <span class="nama-app">{html.escape(T.NAMA_PRODUK)}</span>
   <span class="meta-sesi">{html.escape(nama)} &middot; {len(soal)} soal</span>
@@ -262,7 +262,7 @@ def lembar_penilaian(
 <p>2. ______________________________________________</p>
 <p>3. ______________________________________________</p>
 </div>
-</div>
+</main>
 </body></html>"""
 
 

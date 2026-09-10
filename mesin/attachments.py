@@ -425,10 +425,10 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
   {visual_renderer.render_pertanyaan(s['penyajian'], gaya='guru', namespace=str(s['nomor']))}
   {_blok_jawaban_lama(s)}
   <div class="baris">
-    <div><label>Jawaban (bacaan AI)</label>
-      <input type="text" name="jwb_{s['sesi_soal_id']}" value="{jwb_u}"></div>
-    <div><label>Caraku (bacaan AI)</label>
-      <input type="text" name="cara_{s['sesi_soal_id']}" value="{cara_u}"></div>
+    <div><label for="foto-jwb-{s['sesi_soal_id']}">Jawaban (bacaan AI)</label>
+      <input id="foto-jwb-{s['sesi_soal_id']}" type="text" name="jwb_{s['sesi_soal_id']}" value="{jwb_u}"></div>
+    <div><label for="foto-cara-{s['sesi_soal_id']}">Caraku (bacaan AI)</label>
+      <input id="foto-cara-{s['sesi_soal_id']}" type="text" name="cara_{s['sesi_soal_id']}" value="{cara_u}"></div>
   </div>
   <label class="centang"><input type="checkbox" name="blm_{s['sesi_soal_id']}">
     anak menulis "belum pernah lihat"</label>
@@ -460,20 +460,22 @@ def halaman_konfirmasi(kon, lampiran_id: int, pesan: str = "") -> bytes | None:
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
 <style>{GAYA_KONFIRMASI}{gaya_stitch()}{CSS_SESI}</style></head>
-<body class="st"><div class="bungkus-st">
-{_topbar_stitch("", "guru")}
-<div class="sesi-badan-st">
+<body class="st"><div class="bungkus-st pendamping-editorial-st foto-editorial-st">
+{_topbar_stitch("", "guru").replace('<summary></summary>', '<summary aria-label="Menu pendamping">Menu</summary>')}
+<main class="sesi-badan-st" aria-labelledby="judul-foto">
 <div class="jejak"><a href="/sesi/{sesi_id}">&larr; Kembali ke sesi</a></div>
-<h1 class="sesi-judul-st">Konfirmasi bacaan AI — Sesi #{sesi_id}</h1>
+<header class="editorial-kepala-st"><p class="editorial-alis-st">DARI KERTAS KE CATATAN</p>
+<h1 class="sesi-judul-st" id="judul-foto">Konfirmasi bacaan AI — Sesi #{sesi_id}</h1>
+<p class="sub">Cocokkan bacaan dengan foto sebelum menerapkan. Hasil AI masih perlu diperiksa.</p></header>
 {kabar}{catatan_status}
-<div class="kartu"><img class="foto-lembar"
+<div class="kartu pratinjau-foto-st"><img class="foto-lembar"
   src="/lampiran/berkas/{lampiran_id}" alt="Foto lembar anak"></div>
 {blok_baca_ulang}
 <form method="post" action="/lampiran/{lampiran_id}/terapkan">
 {''.join(kartu)}
 <div class="koreksi-simpan-st"><button type="submit">Terapkan &amp; diagnosis</button></div>
 </form>
-</div></div></body></html>"""
+</main></div></body></html>"""
     return isi.encode()
 
 

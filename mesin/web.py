@@ -37,8 +37,9 @@ from account_pages import (
 )
 from generator import LEVEL_BAWAAN
 from reports import diagnosa_murid, halaman_laporan
+from support_pages import halaman_pesan as _halaman
 from teacher_pages import (
-    _halaman,
+    _halaman as _halaman_guru,
     _soal_dari_baris,
     _topik_untuk_level,
     _nama_template,
@@ -1182,7 +1183,7 @@ class Penangan(BaseHTTPRequestHandler):
                         return self._kirim_json({"tautan": tautan})
                     # Fallback tanpa JavaScript: respons sederhana tetap
                     # memungkinkan tautan dipilih dan disalin manual.
-                    isi = _halaman(
+                    isi = _halaman_guru(
                         f"Bagikan sesi #{sesi_id}",
                         f'<h1>Bagikan sesi #{sesi_id}</h1>'
                         f'<input id="tautan-sesi" type="text" readonly '

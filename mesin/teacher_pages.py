@@ -116,18 +116,24 @@ def _form_remedial(
 
 def _halaman(
     judul: str, isi: str, ident: tuple[str, str] | None = None,
-    stitch: bool = False, kelas_bungkus: str = "",
+    stitch: bool = False, kelas_bungkus: str = "", id_utama: str = "",
 ) -> bytes:
     """Bingkai semua halaman pengelola. `ident=(pengguna, peran)` menampilkan
     topbar dengan menu pengguna di atas isi — satu pintu agar konsisten.
 
     stitch=True: pakai GAYA_STITCH + body.st + <link> font CDN (S11-S17).
     `kelas_bungkus` hanya berlaku pada bingkai Stitch untuk kanvas khusus.
+    `id_utama` opsional memberi landmark main; default menjaga markup lama.
     """
     if stitch:
         from style_stitch import gaya_stitch, CSS_SESI
         batang = _topbar_stitch(*ident) if ident else ""
         kelas = f"bungkus-st {kelas_bungkus}".strip()
+        buka_isi = (
+            f'<main class="sesi-badan-st" aria-labelledby="{html.escape(id_utama)}">'
+            if id_utama else '<div class="sesi-badan-st">'
+        )
+        tutup_isi = "</main>" if id_utama else "</div>"
         return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(judul))}</title>
@@ -136,7 +142,7 @@ def _halaman(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
 <style>{GAYA}{gaya_stitch()}{CSS_SESI}</style></head>
-<body class="st"><div class="{kelas}">{batang}<div class="sesi-badan-st">{isi}</div></div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+<body class="st"><div class="{kelas}">{batang}{buka_isi}{isi}{tutup_isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
     batang = _topbar(*ident) if ident else ""
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -668,10 +674,10 @@ def halaman_anak(
 
     strip_sesi = (
         f'<form method="post" action="/sesi-baru/{siswa["id"]}" class="strip-sesi">'
-        f'<div class="strip-kolom"><label>Topik</label>'
-        f'<select name="topik" class="st-input">{opsi_topik}</select></div>'
-        f'<div class="strip-kolom"><label>Jumlah Soal (estimasi ±3 mnt/soal)</label>'
-        f'<select name="jumlah_soal" class="st-input">'
+        f'<div class="strip-kolom"><label for="manual-topik">Topik</label>'
+        f'<select id="manual-topik" name="topik" class="st-input">{opsi_topik}</select></div>'
+        f'<div class="strip-kolom"><label for="manual-jumlah">Jumlah Soal (estimasi ±3 mnt/soal)</label>'
+        f'<select id="manual-jumlah" name="jumlah_soal" class="st-input">'
         f'<option value="" selected>Default (sesuai topik)</option>'
         f'<option value="10">10 soal (± 30 mnt)</option>'
         f'<option value="15">15 soal (± 45 mnt)</option>'
@@ -716,8 +722,8 @@ def halaman_anak(
         '<p class="sub">Centang dua topik atau lebih. Soalnya dicampur '
         "bergantian antar-topik yang kamu pilih.</p>"
         f'<div class="mode-pilih">{centang_topik}</div></div>'
-        '<div class="strip-kolom"><label>Jumlah Soal</label>'
-        '<select name="jumlah_soal" class="st-input">'
+        '<div class="strip-kolom"><label for="gabungan-jumlah">Jumlah Soal</label>'
+        '<select id="gabungan-jumlah" name="jumlah_soal" class="st-input">'
         '<option value="10" selected>10 soal (± 30 mnt)</option>'
         '<option value="15">15 soal (± 45 mnt)</option>'
         '<option value="20">20 soal (± 60 mnt)</option>'
@@ -791,13 +797,15 @@ def halaman_anak(
 
     return _halaman_stitch(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
+        '<main aria-labelledby="judul-profil">'
         f'<div class="jejak"><a href="{"/admin" if peran == "admin" else "/guru"}">&larr; Semua anak</a></div>'
-        '<div class="kepala-anak-st">'
-        f'<h1 class="st">{html.escape(siswa["nama"])}'
+        '<header class="kepala-anak-st editorial-kepala-st">'
+        '<p class="editorial-alis-st">CATATAN BELAJAR ANAK</p>'
+        f'<h1 class="st" id="judul-profil">{html.escape(siswa["nama"])}'
         f'<span class="st-badge selesai">({html.escape(label_kelas(str(siswa["tingkat"])))})</span>'
         f"{label_keluarga}"
         "</h1>"
-        "</div>"
+        "</header>"
         f"{kabar}"
         f"{kartu_rencana}"
         # Struktur lama dipertahankan; CSS data-rencana memindahkan kolom
@@ -814,7 +822,7 @@ def halaman_anak(
         "</section>"
         '<div class="anak-kolom-kanan">'
         f"{latihan_manual}"
-        "</div></div>"
+        "</div></div></main>"
         "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
         "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin dan berlaku 7 hari.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil. Tautan berlaku 7 hari.';return false;}}"
         "async function bagikan(t,k){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});k.textContent='Tautan dibagikan dan berlaku 7 hari.';return;}catch(e){if(e.name==='AbortError'){k.textContent='';return;}}}await salin(t,k);}"
@@ -823,7 +831,7 @@ def halaman_anak(
         "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan,k);}"
         "catch(e){k.textContent='Tautan belum berhasil dibuat. Coba lagi.';}finally{x.disabled=false;}});}})()</script>",
         ident=(pengguna if pengguna else "guru", peran),
-        kelas_bungkus="lebar",
+        kelas_bungkus="lebar pendamping-editorial-st profil-editorial-st",
     )
 
 def halaman_utama(
@@ -1029,7 +1037,8 @@ def halaman_konfirmasi_hapus(
     return _halaman(
         f"Hapus sesi #{sesi_id}?",
         f'<div class="jejak"><a href="/sesi/{sesi_id}">&larr; Batal, kembali ke sesi</a></div>'
-        f"<h1>Hapus sesi #{sesi_id}?</h1>"
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">PERIKSA SEBELUM MENGHAPUS</p>'
+        f'<h1 id="judul-hapus">Hapus sesi #{sesi_id}?</h1></header>'
         f'<div class="kartu">'
         f'<p>Sesi <b>#{sesi_id}</b> milik <b>{html.escape(info["nama"])}</b> '
         f'&middot; {info["tanggal"]} &middot; {html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} '
@@ -1047,6 +1056,8 @@ def halaman_konfirmasi_hapus(
         f'<a href="/sesi/{sesi_id}">Batal</a>'
         f"</form></div>",
         ident=(pengguna, peran) if pengguna else None,
+        stitch=True, kelas_bungkus="pendamping-editorial-st hapus-editorial-st",
+        id_utama="judul-hapus",
     )
 
 def _pil_sesi(kon, sesi_id: int, aktif: str) -> str:
@@ -1056,9 +1067,10 @@ def _pil_sesi(kon, sesi_id: int, aktif: str) -> str:
     ).fetchone()[0]
     def _a(kunci: str, label: str, href: str) -> str:
         cls = "pil aktif" if kunci == aktif else "pil"
-        return f'<a class="{cls}" href="{href}">{label}</a>'
+        kini = ' aria-current="page"' if kunci == aktif else ''
+        return f'<a class="{cls}" href="{href}"{kini}>{label}</a>'
     return (
-        '<nav class="pil-sesi">'
+        '<nav class="pil-sesi" aria-label="Alat sesi">'
         + _a("koreksi", "Koreksi", f"/sesi/{sesi_id}")
         + _a("cetak", "Cetak & Cerita", f"/sesi/{sesi_id}/cetak")
         + _a("lampiran", f"Lampiran ({n_lamp})", f"/sesi/{sesi_id}/lampiran")
@@ -1087,20 +1099,23 @@ def halaman_sesi_cetak(
         f"Sesi #{sesi_id} — Cetak",
         f'<div class="jejak"><a href="/anak/{info["siswa_id"]}">&larr; '
         f'Semua sesi {html.escape(info["nama"])}</a></div>'
-        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">CETAK &amp; CERITA</p>'
+        f'<h1 id="judul-cetak">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1></header>'
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
         f'seed {info["seed"]} {badge_mode}</p>'
         f"{kabar}"
         f"{pil}"
-        f'<div class="kartu"><h2>Cetak</h2>'
+        f'<div class="kartu cetak-pilihan-st"><h2>Siapkan lembar latihan</h2>'
         f'<p><a class="btn" href="/lembar/{sesi_id}" target="_blank">Lembar soal</a> '
         f'<a class="btn" href="/lembar/{sesi_id}/penilaian" target="_blank">Lembar kunci</a></p>'
-        f'<p class="sub">Dibuka di tab baru — siap cetak.</p></div>'
+        f'<p class="sub">Dibuka di tab baru — siap cetak. Lembar soal untuk anak; '
+        f'lembar kunci untuk pendamping.</p></div>'
         f"{blok_cerita}",
         ident=(pengguna, peran) if pengguna else None,
-        stitch=True,
+        stitch=True, kelas_bungkus="pendamping-editorial-st cetak-editorial-st",
+        id_utama="judul-cetak",
     )
 
 
@@ -1136,8 +1151,8 @@ def halaman_sesi_lampiran(
     unggah = (
         f'<form method="post" action="/lampiran/{sesi_id}" '
         'enctype="multipart/form-data">'
-        "<label>Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>"
-        '<input type="file" name="foto" accept="image/jpeg,image/png">'
+        '<label for="foto-lembar">Foto lembar yang sudah diisi anak (jpeg/png, maks 8MB)</label>'
+        '<input id="foto-lembar" type="file" name="foto" accept="image/jpeg,image/png">'
         '<button type="submit">Upload foto</button>'
         "</form>"
     )
@@ -1153,7 +1168,8 @@ def halaman_sesi_lampiran(
         f"Sesi #{sesi_id} — Lampiran",
         f'<div class="jejak"><a href="/anak/{info["siswa_id"]}">&larr; '
         f'Semua sesi {html.escape(info["nama"])}</a></div>'
-        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">ARSIP LEMBAR LATIHAN</p>'
+        f'<h1 id="judul-lampiran">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1></header>'
         f'<p class="sub">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
@@ -1162,7 +1178,8 @@ def halaman_sesi_lampiran(
         f"{pil}"
         f"{blok_lampiran}",
         ident=(pengguna, peran) if pengguna else None,
-        stitch=True,
+        stitch=True, kelas_bungkus="pendamping-editorial-st lampiran-editorial-st",
+        id_utama="judul-lampiran",
     )
 
 
@@ -1309,9 +1326,10 @@ def _pil_sesi_stitch(kon, sesi_id: int, aktif: str) -> str:
     ).fetchone()[0]
     def _a(kunci: str, label: str, href: str) -> str:
         cls = "aktif" if kunci == aktif else ""
-        return f'<a class="{cls}" href="{href}">{label}</a>'
+        kini = ' aria-current="page"' if kunci == aktif else ''
+        return f'<a class="{cls}" href="{href}"{kini}>{label}</a>'
     return (
-        '<nav class="pil-sesi-st">'
+        '<nav class="pil-sesi-st" aria-label="Alat sesi">'
         + _a("koreksi", "Koreksi", f"/sesi/{sesi_id}")
         + _a("cetak", "Cetak &amp; Cerita", f"/sesi/{sesi_id}/cetak")
         + _a("lampiran", f"Lampiran ({n_lamp})", f"/sesi/{sesi_id}/lampiran")
@@ -1464,9 +1482,9 @@ def halaman_sesi_stitch(
         cara_html = ""
         if not drill:
             cara_html = (
-                '<label class="koreksi-label-st">Isi kotak &quot;Caraku&quot; — '
+                f'<label class="koreksi-label-st" for="cara-{b["sesi_soal_id"]}">Isi kotak &quot;Caraku&quot; — '
                 'ringkas saja, cukup yang menunjukkan caranya</label>'
-                f'<textarea class="koreksi-textarea-st" name="cara_{b["sesi_soal_id"]}">'
+                f'<textarea class="koreksi-textarea-st" id="cara-{b["sesi_soal_id"]}" name="cara_{b["sesi_soal_id"]}">'
                 f'{html.escape(b["cara"] or "")}</textarea>'
             )
 
@@ -1498,13 +1516,13 @@ def halaman_sesi_stitch(
     {restate}
     <div class="koreksi-baris-st">
       <div>
-        <label class="koreksi-label-st"><span class="material-symbols-outlined" style="font-size:1rem">edit</span> Jawaban anak</label>
-        <input type="text" class="koreksi-input-st" name="jwb_{b["sesi_soal_id"]}"
+        <label class="koreksi-label-st" for="jwb-{b["sesi_soal_id"]}">Jawaban anak</label>
+        <input type="text" class="koreksi-input-st" id="jwb-{b["sesi_soal_id"]}" name="jwb_{b["sesi_soal_id"]}"
                value="{html.escape(b["jawaban"] or "")}">
       </div>
       <div>
-        <label class="koreksi-label-st">Kode (kosong = usulan mesin)</label>
-        <select class="koreksi-select-st" name="kode_{b["sesi_soal_id"]}">{pilih}</select>
+        <label class="koreksi-label-st" for="kode-{b["sesi_soal_id"]}">Kode (kosong = usulan mesin)</label>
+        <select class="koreksi-select-st" id="kode-{b["sesi_soal_id"]}" name="kode_{b["sesi_soal_id"]}">{pilih}</select>
       </div>
     </div>
     {cara_html}
@@ -1645,7 +1663,8 @@ def halaman_sesi_stitch(
             'style="margin:.4rem 0" '
             'onsubmit="return confirm(\'Batalkan sesi ini? Sesi dan bukti tetap '
             'tersimpan dalam histori, tetapi tidak lagi aktif dalam siklus belajar.\')">'
-            '<input type="text" name="alasan" maxlength="300" '
+            '<label for="alasan-batal">Alasan pembatalan (opsional)</label>'
+            '<input id="alasan-batal" type="text" name="alasan" maxlength="300" '
             'placeholder="Alasan pembatalan (opsional)">'
             '<button type="submit" class="tombol-kecil-st">'
             'Batalkan sesi</button></form>'
@@ -1662,14 +1681,15 @@ def halaman_sesi_stitch(
 
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
     isi = (
-        f'<div class="sesi-badan-st">'
+        f'<main class="sesi-badan-st" aria-labelledby="judul-koreksi">'
         f'<div class="sesi-jejak-st"><a href="/anak/{info["siswa_id"]}">&larr; '
         f'Semua sesi {html.escape(info["nama"])}</a></div>'
-        f'<h1 class="sesi-judul-st">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">CATATAN SESI</p>'
+        f'<h1 class="sesi-judul-st" id="judul-koreksi">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
         f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
-        f'seed {info["seed"]} {badge_mode} {badge_remedial}</p>'
+        f'seed {info["seed"]} {badge_mode} {badge_remedial}</p></header>'
         f"{kabar}"
         f"{pil}"
         f"{status_sesi}"
@@ -1678,7 +1698,7 @@ def halaman_sesi_stitch(
         f'<div class="danger-zone-st">'
         f'<p class="sub">{keterangan_bahaya}</p>'
         f"{tombol_hapus}</div>"
-        f"</div>"
+        f"</main>"
     )
     skrip_extra = (
         f"<script>{SKRIP_MATA_SANDI}</script>"
@@ -1693,7 +1713,7 @@ def halaman_sesi_stitch(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
 <style>{gaya_stitch()}{CSS_SESI}</style></head>
-<body class="st"><div class="bungkus-st">{batang}{isi}</div>{skrip_extra}</body></html>"""
+<body class="st"><div class="bungkus-st pendamping-editorial-st koreksi-editorial-st">{batang}{isi}</div>{skrip_extra}</body></html>"""
     ).encode()
 
 

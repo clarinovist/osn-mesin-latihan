@@ -17,6 +17,7 @@ rusak diam-diam oleh perubahan berikutnya:
 from __future__ import annotations
 
 import sys
+import re
 from pathlib import Path
 
 import pytest
@@ -152,5 +153,8 @@ def test_pembahasan_tidak_bocor_ke_halaman_murid(db):
         sid = database.tambah_siswa(kon, "Uji Palang")
         database.buat_sesi(kon, sid, seed=999, topik="statistika")
         html = student_pages.halaman_daftar_sesi_baru(kon, sid, "Uji Palang").decode()
-    assert "pembahasan" not in html.lower()
+    # Stylesheet bersama boleh menyebut selector halaman guru; yang dilarang
+    # ialah pembahasan masuk ke markup/konten beranda anak.
+    badan = re.sub(r"<style\b[^>]*>.*?</style>", "", html, flags=re.S | re.I)
+    assert "pembahasan" not in badan.lower()
     assert "Langkah:" not in html

@@ -18,8 +18,10 @@ permukaan.
 
 import design_tokens as T
 from presentation_style import GAYA_PENYAJIAN
+from print_style import GAYA_CETAK
 
 GAYA_LAYAR = f"""
+@media screen {{
 {GAYA_PENYAJIAN}
 * {{ box-sizing: border-box; }}
 html {{ -webkit-text-size-adjust: 100%; }}
@@ -153,13 +155,47 @@ svg {{ display: block; margin: 0.6rem 0; max-width: 100%; height: auto; }}
 .catatan-guru {{ font-size: 0.9rem; color: {T.TEKS_SUBTLE}; font-style: italic; }}
 .meta-template {{ font-size: 0.8rem; color: {T.TEKS_SUBTLE}; }}
 
+/* Editorial lembar: gaya layar saja, isi dan ruang tulis tetap. */
+@media screen {{
+  .lembar-editorial .wrap {{ padding-top: {T.SP_5}; overflow-wrap: anywhere; }}
+  .lembar-editorial h1 {{
+    color: {T.TEKS_JUDUL}; font-size: clamp(1.6rem, 5vw, 2.2rem);
+    letter-spacing: -.035em; line-height: 1.25; margin: {T.SP_5} 0;
+  }}
+  .lembar-editorial .mesin-banner {{
+    background: transparent; border: 0; border-bottom: 1px solid {T.BORDER_VARIAN};
+    border-radius: 0; padding: 0 0 {T.SP_3}; flex-wrap: wrap; gap: {T.SP_2};
+  }}
+  .lembar-editorial .kunci-headline {{
+    background: transparent; color: {T.AKSEN_KORAL_TUA}; border: 1px solid {T.BORDER_VARIAN};
+    border-left: 3px solid {T.AKSEN_KORAL_TUA}; border-radius: 0; text-align: left;
+    font-size: 1rem; letter-spacing: 0;
+  }}
+  .lembar-editorial .identitas {{
+    background: transparent; border: 0; border-block: 1px solid {T.BORDER_VARIAN};
+    border-radius: 0; padding: {T.SP_3} 0;
+  }}
+  .lembar-editorial .petunjuk {{
+    background: {T.LATAR_CATATAN}; border: 0; border-left: 3px solid {T.BORDER_CATATAN};
+    border-radius: 0; font-size: .9rem;
+  }}
+  .lembar-editorial .nomor {{ background: {T.AKSEN_TEAL_TUA}; color: {T.TEKS_PUTIH}; }}
+  .lembar-editorial .bagian {{ color: {T.AKSEN_TEAL_TUA}; border-bottom: 1px solid {T.BORDER_VARIAN}; }}
+  .lembar-editorial .soal {{ border-radius: {T.RADIUS_KECIL}; }}
+  .lembar-editorial .cara {{ background: {T.LATAR_KARTU}; border-color: {T.BORDER_VARIAN}; }}
+  .lembar-editorial .meta-template {{ overflow-wrap: anywhere; }}
+  .lembar-editorial :is(.kunci-tabel, .rekap) {{ table-layout: fixed; overflow-wrap: anywhere; }}
+  .lembar-editorial :is(.kunci-tabel, .rekap) th {{ background: {T.LATAR_SEKUNDER_LEMBUT}; }}
+  .lembar-editorial :is(.kunci-tabel, .rekap) :is(th, td) {{ padding: .4rem .3rem; font-size: .8rem; }}
+  .lembar-editorial .kunci-tabel :is(th, td):first-child {{ width: 3rem; }}
+  .lembar-editorial .rekap :is(th, td):first-child {{ width: 2.3rem; }}
+  .lembar-editorial .akhir {{ background: transparent; border-top: 1px solid {T.BORDER_VARIAN}; }}
+}}
+
+}}
+/* Cetak dari browser memakai sumber gaya kertas yang sama, tanpa
+   mewarisi padding/min-height layar yang menambah halaman cetak. */
 @media print {{
-  /* Kalau user mencetak dari tampilan layar, jatuhkan ke perilaku cetak:
-     satu sumber tetap menghasilkan kertas yang layak. */
-  body {{ background: #fff; font-size: {T.UKURAN_BADAN_CETAK}; }}
-  .wrap {{ max-width: none; padding: 0; }}
-  .soal, .identitas, .petunjuk {{ border-color: #000; border-radius: 0; }}
-  .soal {{ break-inside: avoid; }}
-  .bagian {{ break-after: avoid; }}
+  {GAYA_CETAK}
 }}
 """
