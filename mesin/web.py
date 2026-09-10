@@ -859,7 +859,7 @@ class Penangan(BaseHTTPRequestHandler):
       <p class="masuk-pesan-st">Mulai lagi,<br><span>dengan caramu.</span></p>
       <div class="masuk-buku-st">
         <span class="masuk-coret-st">✳</span>
-        <img class="masuk-maskot-st" src="/aset/maskot-menyapa-v2-240.png"
+        <img class="masuk-maskot-st" src="/aset/maskot-menyapa-v3-240.png"
              width="240" height="240" alt="">
         <span class="masuk-catatan-kecil-st">Satu langkah dulu.</span>
       </div>

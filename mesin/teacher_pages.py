@@ -495,7 +495,7 @@ def halaman_utama_stitch(
         'Mulai dari ruang belajar anak di bawah ini.</p></div>'
         '<div class="guru-catatan-st" aria-hidden="true">'
         '<span class="guru-coret-st">✳</span>'
-        '<img src="/aset/maskot-membaca-v2-240.png" width="240" height="240" alt="">'
+        '<img src="/aset/maskot-membaca-v3-240.png" width="240" height="240" alt="">'
         '<span>Satu langkah yang berarti.</span></div></header>'
         f'{kabar}<section aria-labelledby="daftar-anak">{isi_utama}</section>'
         '<footer class="guru-kaki-st"><span aria-hidden="true">✳</span> '

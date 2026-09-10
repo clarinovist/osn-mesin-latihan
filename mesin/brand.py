@@ -54,7 +54,7 @@ ASET: dict[str, str] = {
     "pwa-512.png": "image/png",
     "og-image.png": "image/png",
     # Aset maskot lama tetap terlayani untuk halaman yang masih di cache.
-    # Isi URL immutable tidak diganti; halaman baru memakai versi v2.
+    # Isi URL immutable tidak diganti; halaman baru memakai versi v3.
     "maskot-netral-240.png": "image/png",
     "maskot-netral-96.png": "image/png",
     "maskot-merayakan-240.png": "image/png",
@@ -67,8 +67,8 @@ ASET: dict[str, str] = {
 # Nama berkas berversi agar cache immutable tidak menampilkan maskot lama.
 POSE_MASKOT = ("menyapa", "menunjuk", "berpikir", "membaca", "menulis", "merayakan")
 ASET.update({
-    f"maskot-{pose}-v2-{px}.png": "image/png"
-    for pose in POSE_MASKOT for px in (240, 96)
+    f"maskot-{pose}-{versi}-{px}.png": "image/png"
+    for pose in POSE_MASKOT for versi in ("v2", "v3") for px in (240, 96)
 })
 
 NAMA_MANIFEST = "manifest.json"
@@ -245,7 +245,7 @@ def maskot(pose: str = "menyapa", px: int = 240, alt: str = "", kelas: str = "")
         raise ValueError(f"pose maskot tidak dikenal: {pose!r}")
     if px not in (240, 96):
         raise ValueError(f"ukuran maskot tidak tersedia: {px}")
-    berkas_maskot = f"maskot-{pose}-v2-{px}.png"
+    berkas_maskot = f"maskot-{pose}-v3-{px}.png"
     atribut_kelas = f' class="{kelas}"' if kelas else ""
     return (
         f'<img src="/aset/{berkas_maskot}" alt="{_esc(alt)}"{atribut_kelas} '

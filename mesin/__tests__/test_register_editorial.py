@@ -89,7 +89,7 @@ def test_maskot_existing_dekoratif():
     m = Markup(landing.halaman_daftar().decode())
     gambar = [a for a in m.cari('img') if a.get('class') == 'daftar-maskot-st']
     assert len(gambar) == 1
-    assert gambar[0]['src'] == '/aset/maskot-menyapa-v2-240.png'
+    assert gambar[0]['src'] == '/aset/maskot-menyapa-v3-240.png'
     assert gambar[0]['alt'] == ''
     assert gambar[0]['width'] == gambar[0]['height'] == '240'
 
