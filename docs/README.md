@@ -9,6 +9,8 @@ codebase. Kode dan tes di `../mesin/` membuktikan perilaku yang tersedia;
 - [Siklus belajar terpandu](siklus-belajar-terpandu.md): kontrak alur belajar,
   bukti terkonfirmasi, fokus, intervensi, evaluasi, dan checkpoint.
 - [Design system](design-system.md): dokumentasi token dan gaya aplikasi.
+- [Referensi workflow](workflow-reference.md): prosedur soal/malrule, test/mutation,
+  preview sintetis, dan batas klaim produk; jalur risiko/gate tetap di `../CLAUDE.md`.
 - [Verifikasi siklus belajar](verifikasi-siklus-belajar.md).
 - [Verifikasi penyajian soal](verifikasi-penyajian-soal.md).
 - [Verifikasi soal visual](verifikasi-soal-visual.md).

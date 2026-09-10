@@ -193,8 +193,12 @@ hanya beda satu ruas URL — dijaga `__tests__/test_web_worksheet.py`.
 
 ## Workflow: halaman baru
 
-1. Generate mockup via gpt-image-2 (lihat `../../osn-referensi/desain-ui/gen_guru.py`).
+1. Tentukan jalur risiko menurut `../CLAUDE.md`; halaman/alur baru minimal Normal,
+   perubahan akses/data tetap Kritis. Mockup baru hanya bila desainnya membutuhkan
+   keputusan visual, bukan syarat setiap typo atau perubahan gaya lokal.
 2. Ekstrak nilai visual baru ke `design_tokens.py` (jika ada).
 3. Implementasi HTML/CSS di file yang sesuai, rujuk tokens.
-4. Tambahkan ke tabel mockup reference di dokumen ini.
-5. Jalankan tests: `./.venv/bin/python -m pytest __tests__/ -q`.
+4. Perbarui referensi desain bila relevan; mockup tetap lokal di `osn-referensi`.
+5. Render dan cek visual dengan data/profil sintetis sesuai `workflow-reference.md`.
+   Jalankan scoped test markup/style dan gate jalur di `../CLAUDE.md`; full suite
+   mengikuti risiko/trigger, bukan otomatis untuk semua perubahan tampilan.

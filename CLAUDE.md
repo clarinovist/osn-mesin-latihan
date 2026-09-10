@@ -1,375 +1,193 @@
 # CLAUDE.md — OSN Mesin Latihan
 
-Panduan kerja untuk Claude Code di repo ini. Baca sampai habis sebelum
-menyentuh kode: sebagian aturan di sini lahir dari insiden nyata (data anak,
-deploy gagal, commit nyasar ke repo hantu).
+Panduan utama agent untuk repo ini. **Verifikasi mengikuti risiko, bukan jumlah
+file/baris.** Aturan inti di sini; baca detail domain hanya saat relevan di
+[`docs/workflow-reference.md`](docs/workflow-reference.md).
 
-Bahasa: tulis jawaban, commit message, docstring, dan string UI dalam
-**Bahasa Indonesia** — santai tapi akurat. Nama berkas modul bahasa Inggris,
-nama fungsi/variabel tetap Indonesia (keputusan eksplisit 31 Agu 2026).
+Bahasa: jawaban, commit message, docstring, dan string UI dalam **Bahasa Indonesia**,
+santai tapi akurat. Nama berkas modul bahasa Inggris; fungsi/variabel tetap Indonesia.
 
-## 1. Apa ini
+## 1. Konteks & batas arsitektur
 
-Aplikasi web untuk orang tua (peran "guru") melatih anak SD mengerjakan soal
-gaya OSN/SASMO: generator soal berparameter, diagnosis kesalahan otomatis
-(kode B/K/H/E/T/N), lembar cetak, dan laporan per anak.
+Aplikasi orang tua (peran guru) untuk latihan OSN/SASMO anak SD: generator soal
+berparameter, diagnosis B/K/H/E/T/N, lembar cetak, dan laporan per anak.
 
-- **Pure Python stdlib. Tanpa framework, tanpa dependensi pihak ketiga.**
-  Satu-satunya dev dependency: `pytest` + `pytest-xdist`. Jangan pernah
-  menambah paket (Flask, Jinja, requests, pydantic) — ini keputusan sadar:
-  satu pengguna, sedikit query, tiap dependensi = satu hal lagi yang bisa
-  gagal saat deploy. Ajukan dulu ke user kalau merasa butuh.
-- **Zero-JS by default.** Menu pakai `<details>` CSS-only, navigasi pakai
-  `?section=` server-side. Pengecualian yang sudah disetujui: toggle mata
-  sandi dan `confirm()` untuk tombol destruktif.
-- Live di `https://osn.lesprivate.id` (Caddy → 127.0.0.1:8724).
+- **Pure Python stdlib**, tanpa framework/dependensi pihak ketiga. Dev dependency hanya
+  `pytest` + `pytest-xdist`. Paket tambahan harus diajukan ke user dulu.
+- **Zero-JS default**: menu `<details>`, navigasi `?section=` server-side. Pengecualian
+  disetujui: toggle mata sandi dan `confirm()` aksi destruktif; perlu approval untuk tambahan.
+- `mesin/`: aplikasi, `__tests__/`, aset, Dockerfile, cadangan. `scripts/`: otomasi/palang.
+  `docs/`: spesifikasi teknis; `docs/plan/` lokal/gitignored. `.github/`: CI/deploy.
+- Riset/materi/kurikulum/mockup/bisnis/eksperimen berada di `../osn-referensi/` lokal,
+  bukan dependensi aplikasi/test/build. Jangan masukkan kembali ke Git.
+- Alur: `topics` → `generator` → `templates` → `render`/`worksheets` → `database` →
+  `diagnosis` → `reports`. Router/palang di `web.py`; data anak di `students.py`;
+  auth/sesi di `auth.py`/`sessions.py`; SQLite di `database.py`/`schema.py`.
+- `llm.py` hanya memparafrase kalimat soal (B2), bukan menentukan kunci/diagnosis.
+  Detail modul, soal, pengujian, visual, dan batas klaim produk ada di referensi workflow.
 
-## 2. Peta repo
+## 2. Jalur kerja — Ringan / Normal / Kritis
 
-| Path | Isi |
-|---|---|
-| `mesin/` | **Aplikasi.** Kode Python, `__tests__/`, aset runtime, Dockerfile, dan skrip cadangan |
-| `docs/` | Spesifikasi dan dokumentasi teknis aktif; `docs/plan/` **gitignored** (lokal saja) |
-| `scripts/` | Otomasi pengembangan dan palang codebase/privasi CI |
-| `.github/` | Workflow test, build, dan deploy |
+Sebelum edit, sebut **jalur + alasan + acceptance criteria + verifikasi** secara singkat.
+Risiko belum jelas → investigasi dulu. Jika scope/risiko bertambah, naikkan jalur dan
+perbarui plan sebelum melanjutkan; jangan menurunkan jalur demi cepat/hijau.
 
-Repo hanya memuat codebase beserta pendukung teknisnya. Riset pasar, materi,
-kurikulum, mockup, dokumen bisnis, dan eksperimen lama dipisahkan ke folder
-saudara lokal `../osn-referensi/`; bukan dependensi aplikasi/tes/build.
-Jangan masukkan kembali materi tersebut ke Git. Data lokal terproteksi yang
-masih berada di direktori ignored tetap tidak boleh dilacak.
+| Jalur | Kriteria | Plan | Gate lokal sebelum commit |
+| --- | --- | --- | --- |
+| **Ringan** | Dokumen, typo non-substantif, styling lokal tanpa mengubah perilaku/akses/makna soal | Cukup di chat | Review diff + palang repo; dokumen: link/konsistensi; UI: render sintetis + test markup/style yang terdampak, kompilasi bila Python berubah. Tidak wajib full suite/mutation/build. |
+| **Normal** | Bug logika terbatas atau UI/alur nonkritis dengan dampak yang dipahami | Ringkas di `docs/plan/YYYY-MM-DD-slug.md`: masalah/dugaan sebab, scope, acceptance criteria, test | Palang repo + scoped regression test + kompilasi Python terkait; visual bila UI berubah. Full suite bila trigger di bawah. |
+| **Kritis** | Privasi/data anak, auth/sesi/kepemilikan, palang murid, schema/migration, penghapusan data, kunci/malrule/diagnosis, bukti/reducer siklus belajar, runtime/dependency/build/deploy | Plan lengkap: sebab, scope, kriteria, failure path, verifikasi, rollback/recovery | Preset lengkap `.project-gate.json` (palang, full pytest dengan warning error, kompilasi) + test domain/negatif/mutation yang relevan. Build produksi tetap gate CI. |
 
-## 3. Aturan git yang WAJIB — repo hantu
+Satu baris palang kepemilikan tetap Kritis. Typo yang mengubah angka, satuan, jawaban,
+atau arti soal bukan Ringan. Refactor shared/cross-module minimal Normal; Kritis jika
+menyentuh invariant kritis. Perubahan interaksi UI minimal Normal.
 
-`mesin/.git` adalah **repo bekas yang basi** (HEAD `96dbc5b`, commit
-terakhirnya menghapus semua berkas). Repo yang benar adalah repo LUAR
-`/Users/nugroho/Documents/osn` (remote `origin` →
-`clarinovist/osn-mesin-latihan`, branch `main`).
+### Plan → Fix → Review Gap → Verify
 
-- **Setiap perintah git pakai `-C`:**
-  `git -C /Users/nugroho/Documents/osn <cmd>`
-- Jangan pernah menjalankan git dengan cwd di dalam `mesin/`. Sudah terbukti
-  3x menelan commit, `git mv`, dan `git stash` diam-diam — dan `git diff`
-  dari sana **berbohong** (pernah menampilkan diff penghapusan 21,5k baris).
-- Kalau commit terlanjur masuk repo hantu: `reset --mixed` balik ke
-  `96dbc5b`, lalu commit ulang dari repo luar (berkas di disk aman).
-- `git checkout -- <file>` menghapus juga WIP yang belum di-commit di file
-  itu. Sebelum eksperimen/mutasi, `cp` file ke `/tmp` dan pulihkan dengan
-  `cp`, bukan `git checkout`.
+- Permintaan eksplisit “perbaiki/implementasikan” sudah mengizinkan edit sesuai scope:
+  tidak perlu berhenti meminta pilihan lagi untuk fix yang jelas. Pertanyaan/“cek dulu”
+  berarti investigasi dan laporkan temuan dengan `file:line`, bukan otomatis izin edit.
+- Minta keputusan bila opsi mengubah scope/produk/kurikulum, menambah dependency/JS,
+  atau memerlukan operasi berisiko di luar izin. Tawarkan A/B hanya bila trade-off nyata.
+- Plan Normal/Kritis harus ada sebelum fix; dugaan root cause ditandai, bukan dianggap fakta.
+  Plan lokal jangan di-stage; contoh isi ringkas ada di referensi workflow.
+- Bug logika perlu regression test yang membuktikan bug tertangkap (merah pada kondisi
+  rusak, hijau setelah fix). Tidak wajib TDD/mutation untuk typo atau styling murni.
+- **Mutation wajib untuk guard baru keamanan, privasi/integritas data, atau kebenaran
+  pedagogis**: buktikan test merah saat bug diaktifkan lewat jalur yang sama, lalu pulihkan
+  dan hijau. Jangan mutasi workspace sesi lain/DB nyata; prosedur aman di referensi.
+- Review diff aktual dan acceptance criteria. **Residual Gap: 0** hanya terhadap scope
+  patch ini. Temuan lain dicatat follow-up; menjadi blocker bila memengaruhi keamanan/
+  kebenaran patch. Ringan cukup catatan chat, lainnya checklist plan.
+- Setelah gap implementasi 0, jalankan gate jalur. Gagal → fix → review → ulangi gate
+  terdampak. Hasil boleh dipakai ulang jika input source/config/runtime/data sintetis
+  relevan identik dan command/output/exit status tersedia; jangan ulang hanya karena pindah agent.
+- Normal wajib full suite bila mengubah utilitas bersama/kontrak lintas modul, caller belum
+  terpetakan, atau memperbaiki kegagalan CI yang scope-nya belum jelas. Test domain khusus
+  tidak boleh dilewati hanya karena jalur lebih ringan.
+- Ringkasan akhir menyebut yang lolos/gagal/tidak dijalankan beserta alasan. Gate wajib
+  terblokir berarti belum terverifikasi; jangan silent skip atau menganggap baseline gagal aman.
 
-## 4. Menjalankan & menguji
+## 3. Runtime & perintah verifikasi
 
-```bash
-cd /Users/nugroho/Documents/osn/mesin && ./.venv/bin/python -m pytest __tests__/ -q
-# lebih cepat:
-cd /Users/nugroho/Documents/osn/mesin && ./.venv/bin/python -m pytest __tests__/ -q -n auto
-```
+- Pakai **`mesin/.venv/bin/python` (Python 3.9.6 lokal)**; `python3` polos bukan pengganti.
+  CI/container memakai **3.12**, tetapi kode tetap kompatibel 3.9. Jangan pakai sintaks
+  khusus 3.12 (contoh: kutip bersarang f-string); cek interpreter aktual bila environment berubah.
+- Cwd shell tidak boleh diasumsikan bertahan; awali `cd /Users/nugroho/Documents/osn && ...`.
+- Palang repo: `mesin/.venv/bin/python scripts/check_repo.py` — membaca **index Git**,
+  bukan data anak. Jalankan setelah stage scope yang sudah direview.
+- Scoped test: `mesin/.venv/bin/python -m pytest mesin/__tests__/test_<area>.py -q -W error -p no:cacheprovider`.
+  Test aplikasi berada di `mesin/__tests__/`, bukan plan/spike/salinan repo lama.
+- Full test: `mesin/.venv/bin/python -m pytest mesin/__tests__/ -q -n auto -W error -p no:cacheprovider`.
+  `-n auto` hanya bila resource cukup; jangan menjalankan suite berat ganda.
+- Kompilasi file terkait dengan `compile()` tanpa import/menjalankan aplikasi, lihat referensi.
+  Repo ini **tidak** punya gate npm/lint/coverage seperti Polyflow; jangan menambah dependency
+  atau mengklaim coverage global diperiksa CI. Trace/mutation domain mengikuti scope.
+- `.project-gate.json` adalah preset lengkap untuk Kritis/audit penuh, bukan ritual manual
+  setiap edit Ringan/Normal. Jika harness mewajibkan preset, **jangan bypass**; laporkan jika
+  ada konflik. Perubahan preset/harness perlu scope dan approval tersendiri.
+- Build Docker lokal tidak wajib untuk setiap commit. Perubahan packaging harus diverifikasi
+  via test image/aset dan build CI sebelum deploy. **Jangan build di VPS** atau memakai
+  Docker/DB lokal nyata untuk eksperimen. Terminal aktif bukan otomatis blocker: cek resource,
+  port, DB, dan file yang bentrok; jangan hentikan proses sesi lain tanpa izin.
 
-- **Pakai venv-nya sendiri** (`mesin/.venv/bin/python`, Python 3.9.6). `python3`
-  polos gagal di mesin ini.
-- **cwd tiap perintah shell reset ke root repo** — selalu awali
-  `cd /Users/nugroho/Documents/osn/mesin && ...` atau pakai path absolut.
-- Baseline saat ini: **5334 test, ±85 detik** (±25 detik dengan `-n auto`).
-  Kalau ada yang merah sebelum kamu mengubah apa pun, itu bukan regresi kamu —
-  cek `git log` file test-nya dulu.
-- Server lokal: `cd mesin && ./.venv/bin/python serve.py` (port 8724). Jangan
-  pakai ini untuk uji visual berdata — lihat §10.
+## 4. Git & shared workspace — selalu repo luar
 
-**Python 3.9, bukan 3.12.** Container pakai 3.12, tapi venv lokal 3.9 —
-sintaks yang hanya legal di 3.12 (mis. kutip bersarang di f-string
-`f"{"a" if x else "b"}"`) lolos di CI tapi meledak di lokal. Hitung ke
-variabel dulu.
+Repo benar `/Users/nugroho/Documents/osn` (origin `clarinovist/osn-mesin-latihan`, `main`).
+`mesin/.git` adalah repo lama/basi; git di sana bisa menelan commit atau menampilkan diff palsu.
 
-## 5. Arsitektur
+- **Setiap git pakai `git -C /Users/nugroho/Documents/osn ...`**, tidak dari dalam `mesin/`.
+- Cek status sebelum mulai. Jangan menimpa/revert/stash perubahan sesi lain. Satu writer
+  per file; overlap perlu workspace terisolasi/koordinasi, bukan overwrite.
+- Setelah edit massal 5+ file atau rewrite komponen, cek status + diff stat; review diff
+  aktual. Stage hanya file/hunk sendiri sebagai checkpoint, bukan seluruh workspace.
+- Jangan otomatis `reset`, `checkout --`, atau memulihkan versi lama untuk “repo hantu”.
+  Investigasi repo/HEAD dan simpan WIP dulu. Mutasi/eksperimen di salinan temp terisolasi;
+  jika backup file dipakai, pemulihan tidak boleh menimpa edit baru sesi lain.
+- Commit setelah gap 0 + gate lokal sesuai jalur lolos. Kode + test yang saling bergantung
+  harus atomik; tidak wajib satu commit setiap langkah TDD. Jangan campur WIP sesi lain.
+- Format conventional commit Bahasa Indonesia (`fix(murid):`, `feat(soal):`, `docs(mesin):`).
+  Pesan multi-baris lewat berkas temp unik dan `git ... commit -F <berkas>`.
+  Bila index berisi sesi lain, gunakan pathspec scope sendiri; file campuran harus dipisahkan
+  dahulu karena commit pathspec mengambil isi working tree, bukan hanya hunk staged.
+- **Jangan push tanpa perintah eksplisit** (“push”, “commit dan push”). “Commit dulu” bukan
+  izin push. Push `main` memicu deploy produksi otomatis; jelaskan dampaknya saat minta approval.
 
-Alur data: `topics` (paket topik) → `generator` (parameter per level) →
-`templates` (Soal + malrule) → `render`/`worksheets` (HTML) →
-`database` (simpan) → `diagnosis` (jawaban → kode) → `reports`.
+## 5. Palang domain yang tidak boleh dilemahkan
 
-| Modul | Peran |
-|---|---|
-| `templates.py` | `Soal`, `Malrule`, `saring_malrule`, `LEVEL` (P3–P6) |
-| `topics.py` | dataclass `Topik` + registry `PAKET`; `gabungan()` untuk paket ad-hoc |
-| `topic_*.py` | Satu paket topik per berkas (pola-bilangan, geometri, kombinatorik, teori-bilangan, aritmatika dasar/lanjut, geometri-ruang, statistika, logika, pengukuran) |
-| `generator.py` | `buat_lembar`, `PROFIL_LEVEL`, konstruksi pola |
-| `render.py` / `worksheets.py` | Struktur HTML lembar (tanpa CSS) |
-| `screen_style.py`, `print_style.py`, `teacher_style.py`, `style_stitch.py` | CSS terpisah dari struktur |
-| `design_tokens.py` | **Sumber tunggal nilai visual** — tidak ada hex hardcoded di modul lain |
-| `web.py` | Router `Penangan(BaseHTTPRequestHandler)` + palang peran/kepemilikan |
-| `teacher_pages.py`, `student_pages.py`, `account_pages.py`, `reports.py`, `landing.py` | Halaman per permukaan |
-| `students.py` | Lapisan data sisi anak |
-| `auth.py`, `sessions.py` | Login PBKDF2, sesi token JSON |
-| `database.py`, `schema.py` | SQLite |
-| `diagnosis.py` | Jawaban → kode B/K/H/E/T/N |
-| `llm.py` | DeepSeek — HANYA memparafrase kalimat soal (opsi B2) |
-| `rumus.py` | Kartu rumus per konsep |
-| `attachments.py` | Foto lembar anak → AI vision → konfirmasi guru |
-| `learning_cycle.py` | **Direncanakan:** reducer murni siklus belajar dan rekomendasi tunggal |
-| `interventions.py` | **Direncanakan:** tindakan B/K/H/E/N/T dan contoh terbimbing |
+- **Privasi anak:** DB, sandi/sesi, lembar terisi, cache, turunan, kejadian, cadangan tetap
+  ignored/lokal. Jangan `git add -f` atau mengirim data/credential ke repo, prompt, log,
+  screenshot, layanan AI, atau fixture. Uji menggunakan data sintetis; jangan memperluas
+  akses/pengiriman data di luar alur produk yang telah disetujui.
+- Tidak menyimpan email/telepon siapa pun; jangan usulkan fitur yang membutuhkan kontak.
+- **Palang murid:** sisi anak tidak boleh membaca kunci/malrule/diagnosis/laporan. Fixture
+  `db` guru dan `db_terjaga` harus terpisah; stamp `pemilik="guru"` bila perlu, bukan kendurkan
+  guard. Rute MURID sebelum `_lolos_sandi`; fungsi berkunci di permukaan terpisah (misalnya
+  `diagnosa_murid` di `web.py`, bukan `students.py`). CSS murid di `GAYA_STITCH`, bukan `CSS_SESI`.
+- **Kepemilikan:** guru hanya datanya sendiri; resource bukan miliknya → **404** dengan body
+  identik, bukan 403. Test juga membuktikan tidak ada efek samping, bukan status saja.
+- Admin boleh membaca/menulis data murid semua keluarga melalui permukaan pengelola
+  (sesi, jawaban, koreksi, lampiran, akun murid), serta membuat/reset/hapus akun orang tua.
+  Admin **tidak boleh** mengubah akun/sandi sesama pengelola.
+- **Soal/diagnosis:** perubahan modul topik wajib uji lintas seed × level, jalur malrule,
+  determinisme, kartu rumus, dan pembahasan. Baca bagian Soal di referensi **sebelum edit**.
+  Jangan `hash()` untuk randomisasi. Jenis soal/kurikulum baru harus dipilih user.
+- Refactor “dipindah, bukan diubah” harus menjaga golden signature byte-per-byte;
+  jika merah cari perubahan perilaku, jangan update golden agar hijau.
 
-Deploy: push `main` → GitHub Actions (test → build GHCR → deploy by digest
-via forced-command SSH `/usr/local/bin/osn-deploy` di VPS) → swap container,
-auto-rollback kalau healthcheck gagal.
+**Siklus belajar:** sumber produk `docs/siklus-belajar-terpandu.md`; baca ketika menyentuh
+alur/bukti/rekomendasi. Jangan ringkas menjadi diagnosis → lebih banyak soal. Kontrak inti:
 
-## 6. Palang yang tidak boleh dilemahkan
+- pemetaan → fokus → intervensi/contoh → penguatan → evaluasi berjeda → checkpoint → maju/eskalasi;
+- bukti hanya snapshot outcome append-only dikonfirmasi eksplisit; `direview`/`kode_final`
+  mutable bukan bukti sendiri. Sesi berbukti tidak di-hard-delete; jaga provenance;
+- `learning_cycle.py` sumber tunggal status/rekomendasi, reducer murni tanpa tulis DB;
+- fokus kanonis `(template_id, kode_intervensi, malrule_id)`, maksimal dua per putaran;
+  terbimbing/penguatan tidak menambah kelemahan;
+- B/K/H/E/N/T punya tindakan masing-masing; T lewat pengenalan lalu probe; jawaban benar
+  belum lulus tanpa bisa menjelaskan. Evaluasi ≥4 probe/fokus; checkpoint tiap 28 hari
+  ≥3 probe/fokus; gagal kedua/tidak ada pendekatan lain → eskalasi;
+- sesi manual/stale/beda level tidak memblokir CTA utama; anak hanya tahap netral, bukan
+  kode diagnosis, label kelemahan, kunci, malrule, atau alasan internal.
 
-**Privasi data anak.** Tidak ada data anak yang boleh masuk repo: `*.db`,
-`sandi.json`, `sesi.json`, lembar terisi, `cache_llm/`, `turunan/`,
-`kejadian/` semuanya di-gitignore. CI punya job yang menolak build kalau
-berkas semacam itu ter-commit. Jangan pernah `git add -f` untuk melewatinya.
-Aplikasi juga **tidak menyimpan email/telepon siapa pun** — jadi jangan
-usulkan fitur yang butuh kontak (reset sandi via email, notifikasi email).
+## 6. UI & uji visual
 
-**Palang murid.** Rute dan fungsi sisi anak tidak boleh menyentuh
-`kunci`/`malrule`/`diagnosis`/`laporan`. Ditegakkan `__tests__/test_students.py`
-lewat `sqlite3.Row` yang di-monkeypatch supaya meledak saat kolom di
-`KOLOM_TERLARANG` (`kunci`, `malrule_id`, `kode_usulan`, `kode_final`,
-`alasan`) dibaca. Fixture penting: `db` biasa (perspektif guru) vs
-`db_terjaga` (palang aktif) — jangan gabungkan.
+- Nilai visual melalui `design_tokens.py` (`T.*`), tidak ada hex hardcoded di modul lain.
+  Satu aksi satu entry point; CTA/form ganda bug. Input sandi punya toggle mata;
+  tombol destruktif `confirm()` menyebut konsekuensi persis. Handler POST tetap menegakkan invariant.
+- Alat perbaikan jalur-langka hanya tampil saat relevan, bukan memenuhi halaman normal.
+- Keluhan visual **wajib render dan lihat**, bukan menebak CSS. Jangan `serve.py` untuk
+  preview berdata: itu memakai DB/sandi asli. Server preview memakai DB/sandi temp + data
+  sintetis; profil browser terisolasi. Matikan setelah selesai. Detail ada di referensi.
 
-- Rute MURID harus didaftarkan **sebelum** palang guru `_lolos_sandi`.
-- Fungsi yang menyentuh kunci harus di permukaan terpisah (mis.
-  `diagnosa_murid` tinggal di `web.py`, bukan `students.py`).
-- CSS halaman murid wajib di `GAYA_STITCH`, bukan `CSS_SESI` (kena 2x).
+## 7. Produksi & deploy
 
-**Kepemilikan.** Guru hanya boleh menyentuh datanya sendiri; id yang bukan
-miliknya dijawab **404** (bukan 403) dengan body identik, supaya keberadaan
-resource tidak bisa diprobe. Admin boleh membaca dan menulis data murid semua
-keluarga melalui permukaan pengelola—termasuk sesi, jawaban, koreksi, lampiran,
-dan akun login murid. Admin juga boleh membuat, menyetel ulang sandi, dan
-menghapus akun orang tua, tetapi tidak boleh mengubah akun/sandi sesama
-pengelola.
+- Pipeline `.github/workflows/deploy.yml` tetap **`uji` → `bangun` → `pasang`**: palang
+  privasi + seluruh test sebelum build GHCR, deploy **digest output build yang sama**,
+  forced-command SSH, swap container, auto-rollback jika healthcheck gagal.
+- Operasi produksi hanya setelah approval eksplisit. Server lewat SSH alias
+  `biznet-sekolahdesain`; perintah Docker produksi diawali `ssh biznet-sekolahdesain '...'`,
+  jangan sampai mengenai Docker lokal. Tidak build di VPS atau menghapus container sebelum image siap.
+- Setelah push diminta, pantau run untuk commit yang benar sampai selesai:
+  `gh run list --repo clarinovist/osn-mesin-latihan --branch main`, lalu
+  `gh run watch <id> --repo clarinovist/osn-mesin-latihan --exit-status`.
+  Verifikasi publik `https://osn.lesprivate.id`: `/` 200, `/akun` anonim 401,
+  `/murid/` 303 ke `/masuk`. **Jangan menyentuh data anak** untuk smoke test.
+- “Ada di source”, “ter-deploy”, dan “berfungsi” tiga klaim berbeda. Untuk keadaan live,
+  cek container berjalan secara read-only dengan izin; jangan menganggap checkout sama
+  dengan produksi. `llm.py` fail-dry: konfigurasi hilang bisa mematikan fitur tanpa error.
+- Migrasi produksi: approval + backup `cadangkan.sh`, uji idempotensi dan
+  `PRAGMA foreign_key_check`, recovery siap. Laporkan agregat saja, tidak nama anak.
+- Investigasi data kosong yang diizinkan: backup terbaru di `mesin/cadangan/` read-only
+  (`sqlite3 "file:...?mode=ro"`), bukan DB lokal kosong. Jangan tampilkan rekaman pribadi.
+- `Dockerfile` memakai `COPY *.py` (guard `test_image.py`); aset non-Python punya COPY/guard
+  tersendiri. Jangan kembali ke daftar modul manual.
+- `/usr/local/bin/osn-deploy` tidak tracked; bila perubahannya disetujui, periksa kedua
+  jalur `docker run` (utama **dan rollback**) agar konfigurasi tidak hilang saat recovery.
 
-**Fixture yang kena palang baru distempel eksplisit** (`pemilik="guru"`),
-bukan palangnya yang dikendurkan.
+## 8. Pelaporan
 
-**Siklus belajar terpandu.** Sumber kebenaran produk adalah
-`docs/siklus-belajar-terpandu.md`; rincian implementasi ada di
-`docs/plan/2026-09-06-siklus-belajar-terpandu.md` (gitignored). Jangan
-menyederhanakannya menjadi diagnosis → lebih banyak soal. Kontrak wajib:
-
-- alur utama: pemetaan → fokus → intervensi/contoh terbimbing → penguatan
-  mandiri → evaluasi berjeda → checkpoint → maju atau eskalasi;
-- bukti pedagogis hanya dari snapshot outcome append-only yang dikonfirmasi
-  eksplisit; `direview` dan `kode_final` mutable bukan bukti sendiri;
-- reducer `learning_cycle.py` menjadi sumber tunggal status/rekomendasi profil
-  dan laporan, tetap murni tanpa penulisan DB;
-- kunci fokus kanonis `(template_id, kode_intervensi, malrule_id)`, maksimal
-  dua per putaran; latihan terbimbing/penguatan tidak menambah kelemahan;
-- B/K/H/E/N/T masing-masing berujung tindakan; materi T wajib melewati
-  pengenalan lalu probe, dan jawaban benar belum lulus tanpa “bisa menjelaskan”;
-- evaluasi minimal 4 probe per fokus; checkpoint per fokus berulang 28 hari
-  dan minimal 3 probe; gagal kedua atau ketiadaan pendekatan lain → eskalasi;
-- sesi manual/stale/beda level tidak boleh memblokir CTA utama; sesi berbukti
-  tidak boleh di-hard-delete—gunakan pembatalan/arsip dan pertahankan provenance;
-- permukaan anak hanya menampilkan tahap netral, tidak pernah kode diagnosis,
-  label kelemahan, kunci, malrule, atau alasan internal.
-
-## 7. Menambah/mengubah soal — bug class yang selalu balik
-
-**Malrule yang runtuh diam-diam.** `saring_malrule` membuang malrule yang
-nilainya sama dengan kunci atau dengan malrule lain — soal jadi kehilangan
-jalur diagnosis K, tapi **semua test tetap hijau**. Gejala tidak terlihat
-dari membaca kode.
-
-Aturan yang terbukti:
-
-1. Urutan daftar malrule menentukan siapa yang selamat (yang PERTAMA
-   disimpan). Kalau K bisa menyamai H, taruh **H dulu**.
-2. Bentrok karena identitas aritmetika (`N//d == N%d`, `d == 2*sisa`,
-   `a^b` dengan siklus satuan 1) diperbaiki di `_parameter` dengan
-   while-loop reject, bukan sekadar urutan.
-3. Nudge pakai **while**, bukan `if` sekali:
-   `while str(h) in (kunci, k1, k2): h += 1`.
-4. Kunci desimal (π=3,14): kunci dan semua malrule diformat sama
-   (koma desimal). H desimal = kunci−0,1, bukan kunci−1.
-5. Satu nama variabel malrule per branch (`k1`/`k2`/`h` di SEMUA branch) —
-   nama beda per varian → `UnboundLocalError` di branch yang tak
-   mendefinisikannya.
-6. Key dict `_parameter` **wajib sama** dengan nama argumen fungsi template.
-   `TypeError: unexpected keyword argument` = cek key dict dulu.
-7. Kalau `_parameter` sudah menghitung jawabannya, template **baca saja**,
-   jangan hitung ulang.
-8. **JANGAN pakai `hash()` untuk mengacak apa pun.** `PYTHONHASHSEED` acak
-   per proses → seed sama menghasilkan soal berbeda di proses berbeda,
-   dan test determinisme satu-proses tidak menangkapnya. Hitung dengan
-   `rng` di `_parameter`, jadikan parameter eksplisit.
-
-Guard terkait: `__tests__/test_level.py` (≤2% soal tanpa jalur K per
-template) dan `__tests__/test_parameter_variants.py` (500 seed; template di
-luar 19 template asli wajib ≥200 kombinasi parameter unik).
-
-**Verifikasi wajib setelah menyentuh modul topik apa pun** — jalankan
-generator lintas seed × level, jangan cuma membaca kode. `NameError`,
-`KeyError`, dan `SyntaxError` di cabang jarang hanya muncul saat render:
-
-```python
-for t in topics.daftar_topik():
-    for lv, urut in topics.ambil(t).komposisi.items():
-        for tid in set(urut):
-            for sd in range(25):
-                REGISTRI[tid](**paket.parameter_untuk(tid, random.Random(sd), lv))
-```
-
-**Guard yang sengaja merah saat menambah template:**
-`test_rumus.py::test_semua_template_punya_kartu` dan
-`test_pembahasan_semua.py::test_pembahasan_tidak_generik` menyapu SEMUA
-template. Template baru wajib ikut memikirkan kartu rumus dan pembahasan
-yang dibaca anak — jangan dikendurkan, lengkapi kontennya.
-
-**Test kontrak registry harus superset**, bukan daftar tertutup: pakai
-`in` / `<=` / `>=`, jangan `== [...]` atau `== 19`. Daftar tertutup pecah
-setiap kali paket baru masuk.
-
-**Pembahasan dibaca ANAK.** Bahasa guru (malrule, kode diagnosis, istilah
-teknis) tidak boleh bocor ke sana. Fakta di pembahasan harus benar — 7 cacat
-(fakta salah, latar mustahil, frasa janggal) pernah lolos semua test dan
-baru ketahuan saat soal + kunci + pembahasan **dicetak dan dibaca**.
-
-**Pemilihan jenis soal = keputusan kurikulum. Tanya user dulu**, jangan
-diputuskan sendiri.
-
-## 8. Menulis test di sini
-
-- **Guard baru wajib dibuktikan menggigit lewat mutation testing:** hidupkan
-  ulang bug-nya (atau hapus fix-nya), jalankan test itu, pastikan **MERAH**,
-  pulihkan, pastikan hijau. Test hijau yang baru lahir tidak membuktikan apa
-  pun. Mutasinya harus lewat jalur yang SAMA dengan yang test panggil —
-  pernah kejadian mutasi lolos karena test tak pernah menyentuh jalur itu.
-- Sebelum mutasi: `cp` file ke `/tmp`, pulihkan dengan `cp` (bukan
-  `git checkout`, lihat §3).
-- **404 saja bukan assertion yang cukup** — buktikan juga efek sampingnya
-  tidak terjadi.
-- **Fixture `db` / `db_terjaga` TIDAK ada di conftest** — didefinisikan lokal
-  per berkas test. Berkas test baru harus menyalin definisinya sendiri
-  (`fixture 'db' not found` = ini penyebabnya). `conftest.py` hanya menurunkan
-  iterasi PBKDF2 lewat `OSN_PBKDF2_ITERASI`.
-- **Test yang meng-assert markup persis gampang pecah.** Sebelum menambah
-  `class=` ke tag mana pun:
-  `grep -rn '<h1\|class=' __tests__/ | grep assert`. Pola yang disetujui saat
-  refresh desain: **pertahankan marker HTML lama sebagai elemen anak**, lalu
-  matikan tampilan lamanya lewat CSS override. Hilangkan tampilan via CSS,
-  jangan hilangkan marker via HTML.
-- Marker CSS bisa bikin `assert "X not in html"` false-positive — assert pada
-  marker BENAR/kode, bukan pada nilai kunci (halaman murid memantulkan
-  jawaban anak ke `<input value=...>`).
-- Refactor "dipindah, bukan diubah": kunci perilaku dulu dengan golden
-  signature (`test_golden_identity.py`), lalu wajib identik byte-per-byte
-  sesudahnya. Kalau merah, **cari perubahan perilakunya — jangan update
-  angka goldennya.**
-
-## 9. Alur kerja & commit
-
-1. **Pahami dulu, lapor, baru eksekusi.** Untuk bug/pertanyaan: telusuri
-   kodenya, laporkan root cause dengan `file:line`, tawarkan opsi + trade-off.
-   Baru kerjakan setelah user memilih. "Coba kamu cek ya" = investigasi
-   sendiri sampai ketemu akarnya, bukan balik bertanya duluan.
-2. **Perubahan non-trivial: tulis plan dulu** ke
-   `docs/plan/YYYY-MM-DD-slug.md`. Folder itu **gitignored** — jangan
-   di-commit (`git add` akan gagal "paths ignored").
-3. TDD per task: test merah dulu → implementasi minimal → hijau → satu commit
-   lokal per task.
-4. **Commit lokal saja. JANGAN push tanpa perintah eksplisit.** "commit dulu"
-   = commit saja. "push" / "commit dan push ya" = baru boleh push ke `main`.
-5. Format commit: conventional commit Bahasa Indonesia dengan scope —
-   `feat(soal):`, `fix(murid):`, `docs(mesin):`, `test(guru):`,
-   `refactor(soal):`.
-6. **Pesan commit multi-baris SELALU lewat berkas**: tulis ke `/tmp/msg.txt`
-   lalu `git commit -F /tmp/msg.txt`. Karakter `>`, `$`, backtick, `!` di
-   `-m` dipecah shell dan bikin error "pathspec did not match".
-7. **Jangan campur WIP sesi sebelumnya ke commit fiturmu.** Cek
-   `git -C /Users/nugroho/Documents/osn status` sebelum mulai; kalau ada
-   perubahan yang bukan punyamu, commit terpisah atau tanya.
-8. **Commit lintas-berkas jangan dipecah sebagian.** Fitur yang menyentuh
-   kode + test harus masuk satu commit — commit parsial bikin CI merah untuk
-   semua orang.
-9. Setelah push (kalau diminta): pantau CI sampai selesai —
-   `gh run list --repo clarinovist/osn-mesin-latihan --branch main` lalu
-   `gh run watch <id> --exit-status`. Hijau = sudah live di produksi. Lalu
-   verifikasi ringan lewat curl ke produksi (halaman publik 200, `/akun`
-   tanpa kredensial 401, `/murid/` 303 ke `/masuk`) — **jangan pernah
-   menyentuh data anak**.
-
-## 10. UI, desain, dan uji visual
-
-- Semua nilai visual lewat `design_tokens.py` (`T.*`) yang dipakai di
-  `teacher_style.py` / `style_stitch.py` — **tidak ada hex hardcoded**.
-- Satu aksi = satu entry point per halaman. CTA/tautan ganda dianggap bug.
-  Form pembuatan yang tumpang tindih antar section juga.
-- Tombol destruktif: `confirm()` yang menyebut konsekuensi persisnya
-  ("Hapus akun ini? Anaknya tetap ada — hanya loginnya yang hilang.").
-- Alat perbaikan jalur-langka dirender kontekstual: sembunyi saat normal
-  (dengan catatan tenang), muncul saat memang ada yang perlu diperbaiki.
-  Handler POST tetap menegakkan invariannya sendiri — POST tidak boleh
-  dipercaya.
-- Semua input sandi punya toggle mata.
-- **Keluhan tampilan tidak boleh didiagnosis dari CSS saja** — render
-  halamannya dan lihat. Untuk halaman berdata, jangan pakai `serve.py`
-  (menempel DB & sandi asli): tulis server sekali-pakai yang mengarahkan
-  `database.BAWAAN` dan berkas sandi ke berkas temp, seed data minimal,
-  screenshot, lalu matikan.
-- Screenshot headless Chrome wajib `--user-data-dir` terisolasi (profil
-  default membawa sesi guru user → `/` malah menampilkan dashboard, bukan
-  landing publik). Halaman ber-auth: `curl -u user:pass` ke berkas, lalu
-  screenshot `file://` — Chrome membuang kredensial di URL.
-- `file://` tidak memuat font CDN, jadi ikon Material Symbols tampil sebagai
-  teks (`login`, `school`). Itu **bukan** bug — cek keberadaan elemennya.
-- Breakpoint pill 2-kolom Stitch: `24rem`, bukan `36rem`.
-- `@import` font harus satu baris utuh, atau pakai `<link>` di `<head>`.
-
-## 11. Produksi & deploy
-
-- Server produksi hanya lewat SSH alias **`biznet-sekolahdesain`**. Setiap
-  `docker ...` harus diawali `ssh biznet-sekolahdesain '...'` — jangan
-  dijalankan lokal.
-- **Pertanyaan "apakah aplikasi punya X?" dijawab dari container yang
-  berjalan, bukan dari checkout lokal.** Repo lokal bisa lebih maju
-  (fase belum di-commit) atau lebih basi (image belum diperbarui).
-- "Kode ter-deploy" dan "fitur berfungsi" adalah dua klaim berbeda —
-  `llm.py` sengaja fail-dry, jadi konfigurasi yang hilang menghasilkan
-  ketiadaan fitur yang **senyap total**, tanpa error di mana pun.
-- Migrasi skema di produksi (ada data anak asli): backup dulu via
-  `cadangkan.sh`, uji idempotensi + `PRAGMA foreign_key_check`, dan laporkan
-  hanya angka agregat — jangan pernah nama anak.
-- Untuk pertanyaan "kenapa data X kosong", kueri backup terbaru di
-  `mesin/cadangan/` secara read-only
-  (`sqlite3 "file:...?mode=ro"`), bukan DB lokal (yang biasanya kosong).
-- `Dockerfile` memakai `COPY *.py` (wildcard) — modul baru otomatis ikut,
-  tidak perlu diedit. Guard `__tests__/test_image.py` menegakkan kontrak itu
-  dan **menolak** kembalinya daftar manual.
-- `/usr/local/bin/osn-deploy` di VPS **tidak tracked di repo**. Kalau
-  disentuh, sunting kedua jalur `docker run` (deploy utama DAN rollback) —
-  lupa yang rollback berarti deploy gagal diam-diam menghidupkan app tanpa
-  konfigurasi.
-
-## 12. Konteks kurikulum & klaim produk
-
-Angka dari audit 1.237 soal OSN asli 2016–2026
-(arsip lokal `../osn-referensi/docs/riset-soal-osn-10-tahun.md`) — pakai ini, bukan tebakan:
-
-- 85 template menutup **74,7%** konsep soal nyata. NAS-eksplorasi cuma
-  **24,4%**.
-- Bobot topik nyata: Aritmatika 24,2% ≈ Geometri 23,2% > Bilangan 21,5% >
-  Statistika-Pengukuran 16,2% > Kombinatorik 14,9%. Dugaan lama "Geometri
-  paling besar" **salah**. Pie 25/25/12/38% di silabus resmi = klip-art
-  dekoratif, bukan bobot — jangan dikutip.
-- Non-rutin naik per tahap: kecamatan 10,6% → OSN-K 26,4% → OSN-P 33,3% →
-  nasional ~47% → eksplorasi 100%.
-- **Batas jujur produk:** klaim yang aman = "fondasi + pola soal OSN-S/K/P".
-  Klaim "siap juara nasional" tidak didukung data — soal eksplorasi minta
-  anak mengkonstruksi, tak punya kunci tunggal, bertentangan dengan
-  arsitektur diagnosa/malrule. Ini bukan gap yang bisa ditutup dengan
-  template.
-- Dua template yang belum pernah muncul (`dua_besaran_selisih`, `piktogram`)
-  **jangan dihapus** — piktogram ada di silabus resmi.
-- P3 tidak lagi dibatasi ke pola-bilangan saja (SASMO memakai band P1–4).
-
-## 13. Kebiasaan yang dihargai user
-
-- Jujur soal batas: "ini belum ada di kode" > overpromise. Klaim "sudah
-  diverifikasi" harus disertai output tool nyata, bukan ingatan.
-- Kalau menemukan bug di luar scope, angkat terbuka — itu dihargai.
-- Review/audit disajikan sebagai tabel + severity (High/Medium/Low), bukan
-  narasi panjang.
-- Tawarkan opsi A/B dengan trade-off, jangan satu rekomendasi tunggal.
-- Ringkas. Tabel > paragraf.
+Ringkas dan jujur: bukti tool aktual untuk klaim “terverifikasi”. Review/audit memakai
+tabel severity High/Medium/Low bila relevan. Temuan di luar scope dilaporkan sebagai
+follow-up, bukan otomatis memperluas pekerjaan. Klaim produk/kurikulum harus memakai
+batas dan sumber di referensi, bukan janji “siap juara nasional”.
