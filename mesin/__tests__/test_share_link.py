@@ -119,7 +119,7 @@ def test_guru_membuat_tautan_absolut_untuk_fallback_tanpa_js(server):
     kode, isi, _, tautan = _buat_tautan(s, sesi_id)
 
     assert kode == 200
-    assert tautan.startswith("https://osn.lesprivate.id/mulai/")
+    assert tautan.startswith("https://jagomat.id/mulai/")
     assert 'id="tautan-sesi"' in isi
 
 
@@ -137,7 +137,7 @@ def test_halaman_anak_menawarkan_bagikan_dan_cabut(server):
 def test_link_membuka_hanya_satu_sesi_tanpa_login(server):
     s, _, sesi_id = server
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
 
     kode, isi, header = s.minta(jalur)
 
@@ -163,7 +163,7 @@ def test_link_membuka_hanya_satu_sesi_tanpa_login(server):
 def test_post_mulai_dari_browser_tautan_mencatat_waktu_tanpa_jawaban(server):
     s, _, sesi_id = server
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
 
     kode, _, header = s.minta(jalur, data={"aksi": "mulai"})
 
@@ -180,7 +180,7 @@ def test_post_mulai_dari_browser_tautan_mencatat_waktu_tanpa_jawaban(server):
 def test_post_tanpa_jawaban_tidak_memulai_timer(server):
     s, _, sesi_id = server
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
 
     kode, _, _ = s.minta(jalur, data={})
 
@@ -204,7 +204,7 @@ def test_post_mengabaikan_id_soal_dari_sesi_lain(server):
         )
         ssid_lain = database.isi_sesi(kon, sesi_lain)[0]["sesi_soal_id"]
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
 
     kode, _, _ = s.minta(jalur, data={f"jwb_{ssid_lain}": "disusupkan"})
 
@@ -216,7 +216,7 @@ def test_post_mengabaikan_id_soal_dari_sesi_lain(server):
 def test_bagikan_sesi_selesai_ditolak_jelas(server):
     s, _, sesi_id = server
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
     with s.buka() as kon:
         soal = database.isi_sesi(kon, sesi_id)
     data = {f"jwb_{b['sesi_soal_id']}": "1" for b in soal}
@@ -244,7 +244,7 @@ def test_post_raksasa_ditolak_413(server):
 
     s, _, sesi_id = server
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
     alamat = urlparse(s.alamat)
 
     # Kirim header dengan Content-Length raksasa TANPA mengirim body:
@@ -267,7 +267,7 @@ def test_post_raksasa_ditolak_413(server):
 def test_link_bisa_menyimpan_lalu_otomatis_mati_setelah_selesai(server):
     s, _, sesi_id = server
     _, _, _, tautan = _buat_tautan(s, sesi_id)
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
     with s.buka() as kon:
         soal = database.isi_sesi(kon, sesi_id)
     data = {f"jwb_{b['sesi_soal_id']}": "1" for b in soal}
@@ -343,6 +343,6 @@ def test_mencabut_tautan_membuatnya_tidak_bisa_dipakai(server):
     with s.buka() as kon:
         assert share_links.aktif(kon, sesi_id) is False
 
-    jalur = tautan.removeprefix("https://osn.lesprivate.id")
+    jalur = tautan.removeprefix("https://jagomat.id")
     kode, _, _ = s.minta(jalur)
     assert kode == 404

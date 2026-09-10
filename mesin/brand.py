@@ -27,10 +27,9 @@ from pathlib import Path
 
 import design_tokens as T
 
-# Domain produksi saat ini. og:image dan og:url butuh URL ABSOLUT — crawler
-# WhatsApp/Facebook menolak path relatif. Saat domain jagomat.id dibeli,
-# ubah satu baris ini saja.
-URL_SITUS = "https://osn.lesprivate.id"
+# Domain kanonis produksi. og:image, og:url, dan tautan sesi butuh URL
+# absolut agar crawler serta fallback berbagi tanpa JS memakai domain resmi.
+URL_SITUS = "https://jagomat.id"
 
 def _esc(teks: str) -> str:
     return html.escape(teks, quote=True)

@@ -328,7 +328,7 @@ def test_endpoint_bagikan_inline_mengembalikan_json_no_store(server):
 
     payload = json.loads(isi)
     assert kode == 200
-    assert payload["tautan"].startswith("https://osn.lesprivate.id/mulai/")
+    assert payload["tautan"].startswith("https://jagomat.id/mulai/")
     assert header["Content-Type"].startswith("application/json")
     assert header["Cache-Control"] == "no-store"
 

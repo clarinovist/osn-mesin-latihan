@@ -43,7 +43,7 @@ def test_fallback_label_landmark_tautan_dan_header_aman(server):
     assert len(bidang) == 1 and 'readonly' in bidang[0]
     assert bidang[0]['aria-describedby'] == 'petunjuk-tautan'
     tautan = bidang[0]['value']
-    assert tautan.startswith('https://osn.lesprivate.id/mulai/')
+    assert tautan.startswith('https://jagomat.id/mulai/')
     assert isi.count(f'href="/anak/{sid}"') == 1
     assert '7 hari' in isi and 'tanpa masuk' in isi
     assert tajuk['Cache-Control'] == 'no-store'
@@ -51,7 +51,7 @@ def test_fallback_label_landmark_tautan_dan_header_aman(server):
     assert tajuk['X-Robots-Tag'] == 'noindex, nofollow'
     # Respons tidak membuat form baru atau entry point salin JS palsu.
     assert [a['action'] for t, a in m.tag if t == 'form'] == ['/keluar']
-    jalur = tautan.removeprefix('https://osn.lesprivate.id')
+    jalur = tautan.removeprefix('https://jagomat.id')
     assert s.minta(jalur)[0] == 200
     with s.buka() as kon:
         assert kon.execute('SELECT COUNT(*) FROM tautan_sesi').fetchone()[0] == 1
@@ -62,7 +62,7 @@ def test_fetch_tetap_json_bukan_halaman(server):
     s, _, sesi = server
     kode, isi, tajuk = s.minta(f'/sesi/{sesi}/bagikan', auth=('guru', SANDI_GURU), data={}, headers={'X-Requested-With': 'fetch'})
     assert kode == 200
-    assert json.loads(isi)['tautan'].startswith('https://osn.lesprivate.id/mulai/')
+    assert json.loads(isi)['tautan'].startswith('https://jagomat.id/mulai/')
     assert 'application/json' in tajuk['Content-Type']
 
 
