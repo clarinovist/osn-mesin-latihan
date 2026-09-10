@@ -709,7 +709,7 @@ MIGRASI: list[tuple[str, str, str]] = [
     # UNIQUE(nama, pemilik) lewat rebuild tabel.
     ("siswa", "pemilik", "ALTER TABLE siswa ADD COLUMN pemilik TEXT NOT NULL DEFAULT ''"),
     # Penanda guru sudah melihat hasil sesi — pelengkap `selesai` untuk
-    # badge status di daftar sesi anak (student_pages.halaman_daftar_sesi).
+    # badge status di daftar sesi anak (student_pages.halaman_daftar_sesi_baru).
     ("sesi", "direview", "ALTER TABLE sesi ADD COLUMN direview TEXT"),
     # Metadata latihan ulang. SQLite mengizinkan REFERENCES pada ADD COLUMN
     # selama nilai bawaan NULL; SET NULL menjaga sesi remedial saat sumber dihapus.

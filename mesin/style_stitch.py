@@ -1,10 +1,9 @@
 """Style Stitch — CSS bersama untuk adopsi desain Stitch (16 halaman).
 
 Semua 16 halaman kini diadopsi ke Stitch (S1-S17 selesai 1 Sep 2026).
-CSS lama (teacher_style.GAYA_GURU, student_pages.CSS_MURID) masih ada di
-kode karena kelas-kelasnya dipakai oleh markup yang belum di-restyle
-penuh (halaman guru memakai GAYA_GURU + GAYA_STITCH bersamaan lewat
-_halaman(stitch=True)), dan beberapa test meng-assert isi GAYA_GURU.
+CSS guru bersama (teacher_style.GAYA_GURU) tetap dipakai markup dan
+bingkai halaman aktif lewat _halaman(stitch=True). Renderer murid lama
+beserta stylesheet khususnya sudah dihapus; murid memakai GAYA_STITCH.
 
 Kelas dipisah dengan suffix "-st" agar tidak tabrakan dengan CSS lama yang
 masih bertugas.
@@ -2334,6 +2333,13 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
   .pendamping-editorial-st:is(.akun-editorial-st, .admin-editorial-st) tr:has(th) {{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); padding: 0; }}
   .pendamping-editorial-st:is(.akun-editorial-st, .admin-editorial-st) td {{ display: block; border: 0; padding: {T.SP_2} 0; text-align: left; white-space: normal; }}
   .pendamping-editorial-st:is(.akun-editorial-st, .admin-editorial-st) td[data-label]::before {{ content: attr(data-label); display: block; font-size: .72rem; font-weight: 700; color: {T.TEKS_VARIAN}; margin-bottom: {T.SP_1}; }}
+}}
+.pendamping-editorial-st.bagikan-editorial-st {{ max-width: 48rem; }}
+.bagikan-editorial-st .bagikan-kartu-st label {{ display: block; font-weight: 700; margin-bottom: {T.SP_2}; }}
+.bagikan-editorial-st #tautan-sesi {{ width: 100%; font-size: .9rem; }}
+.bagikan-editorial-st .bagikan-perhatian-st {{
+  color: {T.TEKS_VARIAN}; background: {T.LATAR_CATATAN}; border-left: 3px solid {T.BORDER_CATATAN};
+  padding: {T.SP_3}; margin-bottom: 0; font-size: .85rem;
 }}
 /* FIN WORKER A editorial scoped */
 """

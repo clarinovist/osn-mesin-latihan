@@ -109,18 +109,17 @@ def test_laporan_memakai_istilah_kelas_secara_konsisten():
     assert "kelas berikutnya" in isi
 
 
-def test_detail_sesi_guru_legacy_dan_cetak_memakai_label_kelas(db):
+def test_detail_sesi_guru_dan_cetak_memakai_label_kelas(db):
     with database.buka(db) as kon:
         siswa_id = database.tambah_siswa(kon, "Alya", "P5")
         sesi_id = database.buat_sesi(
             kon, siswa_id, seed=11, level="P5", topik="statistika",
         )
         halaman = (
-            teacher_pages.halaman_utama(kon, pemilik=None, peran="guru"),
+            teacher_pages.halaman_utama_stitch(kon, pemilik=None, peran="guru"),
             teacher_pages.halaman_konfirmasi_hapus(kon, sesi_id),
             teacher_pages.halaman_sesi_cetak(kon, sesi_id),
             teacher_pages.halaman_sesi_lampiran(kon, sesi_id),
-            teacher_pages.halaman_sesi(kon, sesi_id),
             teacher_pages.halaman_sesi_stitch(kon, sesi_id),
         )
 

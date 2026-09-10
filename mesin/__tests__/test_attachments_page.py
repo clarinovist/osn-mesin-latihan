@@ -27,7 +27,7 @@ def test_halaman_sesi_tidak_lagi_memuat_form_upload(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "AnakUp")
         sesi_id = database.buat_sesi(kon, sid, seed=7)
-        html = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        html = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
     assert 'action="/lampiran/' not in html
     assert 'name="foto"' not in html
 

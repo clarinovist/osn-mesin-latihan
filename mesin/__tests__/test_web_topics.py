@@ -116,12 +116,18 @@ def test_post_sesi_baru_topik_tak_dikenal_ditolak_400(server):
 # ── UI guru: pilihan topik + tampilan ───────────────────────────────────
 
 
-def test_halaman_utama_menyediakan_pilihan_topik_dari_registry(db):
+def _profil_anak(kon):
+    """Pilihan topik/riwayat berada di profil, bukan kartu beranda."""
+    siswa = kon.execute("SELECT * FROM siswa ORDER BY id DESC LIMIT 1").fetchone()
+    return teacher_pages.halaman_anak(kon, siswa, pengguna="guru")
+
+
+def test_profil_menyediakan_pilihan_topik_dari_registry(db):
     """Dropdown lahir dari registry — Fase B tinggal daftar, UI ikut."""
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "Pilih Topik")
-        isi = teacher_pages.halaman_utama(kon).decode()
-    assert '<select name="topik"' in isi
+        isi = _profil_anak(kon).decode()
+    assert 'name="topik"' in isi
     assert 'value="pola-bilangan"' in isi
 
 
@@ -129,7 +135,7 @@ def test_dropdown_menampilkan_nama_paket_bukan_id(db):
     """Task 1.6: opsi berlabel Paket.nama, value tetap id paket."""
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "Pilih Nama Paket", "P5")
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     # label = nama paket, value = id paket
     assert '<option value="geometri-datar">Geometri Datar</option>' in isi
     assert '<option value="pola-bilangan">Pola Bilangan</option>' in isi
@@ -143,7 +149,7 @@ def test_siswa_p3_tidak_ditawari_dan_tidak_bisa_memilih_aritmetika(server):
     """Topik P5/P6 tidak boleh memicu error server untuk siswa P3."""
     with server.buka() as kon:
         siswa_id = database.tambah_siswa(kon, "Topik P3", "P3", pemilik="guru")
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     assert 'value="aritmetika-dasar"' not in isi
 
     kode, isi, _ = server.minta(
@@ -159,7 +165,7 @@ def test_siswa_level_teks_lama_tetap_ditawari_dan_bisa_membuat_sesi(server):
     """Kolom tingkat lama yang bebas teks tetap mendapat fallback pola P3."""
     with server.buka() as kon:
         siswa_id = database.tambah_siswa(kon, "Topik Level Lama", "tingkat-lama", pemilik="guru")
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     assert 'value="pola-bilangan"' in isi
     assert 'value="aritmetika-dasar"' not in isi
 
@@ -178,11 +184,11 @@ def test_siswa_level_teks_lama_tetap_ditawari_dan_bisa_membuat_sesi(server):
     assert level == "P3"
 
 
-def test_halaman_utama_daftar_sesi_memuat_kolom_topik(db):
+def test_profil_daftar_sesi_memuat_topik(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Daftar Bertopik")
         database.buat_sesi(kon, sid, seed=77)
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     assert "Topik" in isi
     assert "pola-bilangan" in isi
 
@@ -191,7 +197,7 @@ def test_halaman_sesi_menampilkan_topik(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Sesi Bertopik")
         sesi_id = database.buat_sesi(kon, sid, seed=78)
-        isi = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        isi = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
     assert "pola-bilangan" in isi
 
 
@@ -290,7 +296,7 @@ def test_halaman_kerja_murid_judul_dari_paket(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Murid Judul")
         sesi_id = database.buat_sesi(kon, sid, seed=80)
-        isi = student_pages.halaman_kerja(kon, sid, sesi_id)
+        isi = student_pages.halaman_kerja_baru(kon, sid, sesi_id)
     assert isi is not None, "halaman kerja tidak terbangkit"
     # Judul kini berpola tunggal "<Halaman> · Jagomat" (brand.judul) —
     # yang dijaga test ini tetap sama: judulnya ikut PAKET TOPIK sesi.
@@ -313,9 +319,9 @@ def test_murid_daftar_sesi_memuat_topik(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Murid Daftar")
         database.buat_sesi(kon, sid, seed=82)
-        isi = student_pages.halaman_daftar_sesi(kon, sid, "Murid Daftar").decode()
+        isi = student_pages.halaman_daftar_sesi_baru(kon, sid, "Murid Daftar").decode()
     teks = re.sub(r"<[^>]+>", " ", isi)
-    assert "pola-bilangan" in teks
+    assert "Pola bilangan" in teks
 
 
 # ── Alur penuh: guru buat → murid jawab → laporan guru ──────────────────
@@ -364,7 +370,7 @@ def test_siswa_p5_melihat_geometri_datar_di_dropdown(server):
     """P5 melihat opsi Geometri Datar di dropdown."""
     with server.buka() as kon:
         database.tambah_siswa(kon, "P5 Geo", "P5")
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     assert 'value="geometri-datar"' in isi
     assert "Geometri Datar" in isi
 
@@ -380,7 +386,7 @@ def test_siswa_p3_melihat_geometri_datar_di_dropdown(server):
     """
     with server.buka() as kon:
         database.tambah_siswa(kon, "P3 Geo", "P3")
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     for topik in ("pola-bilangan", "geometri-datar", "statistika", "logika"):
         assert f'value="{topik}"' in isi
     for topik in (
@@ -425,7 +431,7 @@ def test_alur_geometri_datar_guru_murid_laporan(server):
 
     # dropdown memuat geometri-datar untuk P5
     with server.buka() as kon:
-        isi = teacher_pages.halaman_utama(kon).decode()
+        isi = _profil_anak(kon).decode()
     assert 'value="geometri-datar"' in isi
 
     # buat sesi geometri

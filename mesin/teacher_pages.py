@@ -336,12 +336,6 @@ def _topbar(pengguna: str, peran: str) -> str:
         f"</form></div></details></nav></div>"
     )
 
-def _badge_mode_stitch(baris) -> str:
-    """Badge 'Latihan Cepat' untuk sesi drill di dashboard Stitch."""
-    if _ambil(baris, "mode", "diagnostik") == "drill":
-        return '<span class="st-badge latihan">Latihan Cepat</span>'
-    return ""
-
 
 def _topbar_stitch(pengguna: str, peran: str) -> str:
     """Topbar versi Stitch — pakai .st-topbar supaya CSS lama tidak dicampur.
@@ -496,7 +490,6 @@ def halaman_utama_stitch(
         ident=(pemilik if pemilik else "guru", peran),
         kelas_bungkus="guru-beranda-st",
     )
-
 
 
 def _kontrol_mode_sesi() -> str:
@@ -834,119 +827,6 @@ def halaman_anak(
         kelas_bungkus="lebar pendamping-editorial-st profil-editorial-st",
     )
 
-def halaman_utama(
-    kon,
-    pesan: str = "",
-    pemilik: str | None = None,
-    peran: str = "guru",
-    sorot: int | None = None,
-) -> bytes:
-    """Dashboard pengelola."""
-    baris = []
-    for s in database.daftar_siswa(kon, pemilik):
-        opsi_topik = "".join(
-            f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
-            for t in _topik_untuk_level(s["tingkat"])
-        )
-        sesi = kon.execute(
-            """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode,
-                      s.mulai, s.selesai, s.direview,
-                      (SELECT MIN(j.dicatat) FROM sesi_soal ss
-                       JOIN jawaban j ON j.sesi_soal_id = ss.id
-                       WHERE ss.sesi_id = s.id) AS dicatat_awal,
-                      (SELECT MAX(j.dicatat) FROM sesi_soal ss
-                       JOIN jawaban j ON j.sesi_soal_id = ss.id
-                       WHERE ss.sesi_id = s.id) AS dicatat_akhir,
-                      (SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = s.id) AS n,
-                      (SELECT COUNT(*) FROM sesi_soal ss
-                       JOIN jawaban j ON j.sesi_soal_id = ss.id
-                       WHERE ss.sesi_id = s.id) AS terisi,
-                      (SELECT COUNT(*) FROM sesi_soal ss
-                       JOIN jawaban j ON j.sesi_soal_id = ss.id
-                       JOIN diagnosis d ON d.jawaban_id = j.id
-                       WHERE ss.sesi_id = s.id AND d.benar = 1) AS benar
-               FROM sesi s WHERE s.siswa_id = ?
-               ORDER BY s.tanggal DESC, s.id DESC""",
-            (s["id"],),
-        ).fetchall()
-
-        def _kelas_sorot(rid):
-            return "sorot-baru" if sorot is not None and rid == sorot else ""
-        item = "".join(
-            f'<tr class="{_kelas_sorot(r["id"])}"><td class="kolom-sesi"><a href="/sesi/{r["id"]}">Sesi #{r["id"]}</a>'
-            f'{_badge_mode(r)}</td>'
-            f'<td class="kolom-tanggal">{r["tanggal"]}</td>'
-            f'<td class="tipe">{html.escape(label_kelas(_ambil(r, "level", LEVEL_BAWAAN)))}</td>'
-            f'<td class="tipe" style="white-space:nowrap">{_ambil(r, "topik", TOPIK_BAWAAN)}</td>'
-            f'<td class="angka">{r["terisi"]}/{r["n"]}</td>'
-            f'<td class="angka">{r["benar"]}/{r["n"]}</td>'
-            f'<td class="angka">{_fmt_durasi(_ambil(r, "mulai", None), _ambil(r, "selesai", None), _ambil(r, "dicatat_awal", None), _ambil(r, "dicatat_akhir", None))}</td>'
-            f'<td class="kolom-status">{_badge_review_status(r)}</td></tr>'
-            for r in sesi
-        ) or '<tr><td colspan="8" class="kosong">belum ada sesi</td></tr>'
-
-        label_keluarga = ""
-        if peran == "admin":
-            siapa = s["pemilik"] or "warisan"
-            label_keluarga = (
-                f'<span class="badge-keluarga">keluarga: {html.escape(siapa)}</span>'
-            )
-
-        strip_sesi = (
-            f'<form method="post" action="/sesi-baru/{s["id"]}" class="strip-sesi">'
-            f'<div class="strip-kolom"><label>Topik</label>'
-            f'<select name="topik">{opsi_topik}</select></div>'
-            f'<div class="strip-kolom"><label>Jumlah Soal (estimasi ±3 mnt/soal)</label>'
-            f'<select name="jumlah_soal">'
-            f'<option value="" selected>Default (sesuai topik)</option>'
-            f'<option value="10">10 soal (± 30 mnt)</option>'
-            f'<option value="15">15 soal (± 45 mnt)</option>'
-            f'<option value="20">20 soal (± 60 mnt)</option>'
-            f'<option value="25">25 soal (± 75 mnt)</option>'
-            f'<option value="30">30 soal (± 90 mnt)</option>'
-            f'</select></div>'
-            f'{_kontrol_mode_sesi()}'
-            f'<button type="submit" class="tombol-coral">Buat sesi baru</button>'
-            f'</form>'
-        )
-        baris.append(
-            f'<div class="kartu kartu-siswa">'
-            f'<div class="siswa-kepala">'
-            f"<h2>{html.escape(s['nama'])}"
-            f'<span class="badge-tingkat">({html.escape(label_kelas(str(s["tingkat"])))})</span>'
-            f"{label_keluarga}"
-            f"</h2>"
-            f'<a class="btn" href="/laporan/{s["id"]}">Lihat laporan &rarr;</a>'
-            f"</div>"
-            f'<div class="tabel-wrap"><table><tr><th>Sesi</th><th>Tanggal</th>'
-            f"<th>Kelas</th><th>Topik</th><th>Terisi</th><th>Benar</th>"
-            f"<th>Waktu</th><th>Status Review</th></tr>"
-            f"{item}</table></div>"
-            f"{strip_sesi}"
-            f"</div>"
-        )
-
-    isi_utama = "".join(baris) or (
-        '<div class="kartu kosong-hint-guru"><p style="margin:0 0 .6rem">'
-        "<b>Langkah 1 dari 3 selesai ✓</b> — akunmu sudah jadi.</p>"
-        '<p style="margin:0 0 .6rem"><b>Langkah 2:</b> '
-        '<a href="/akun?section=siswa">Tambah anak</a> '
-        "(nama panggilan + kata sandi untuk anak).</p>"
-        '<p class="sub" style="margin:0">Langkah 3: klik nama anak di sini, '
-        "lalu tekan “Buat sesi baru”.</p></div>"
-    )
-
-    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
-
-    return _halaman(
-        T.NAMA_PRODUK,
-        f"<h1>{T.NAMA_PRODUK} — Latihan Matematika SD</h1>"
-        f'<p class="sub">Pilih sesi untuk memasukkan hasil, atau buka laporan '
-        f"untuk melihat tren.</p>"
-        f"{kabar}"
-        f'<div class="daftar-anak">{isi_utama}</div>',
-        ident=(pemilik if pemilik else "guru", peran),
-    )
 
 def _tombol_cerita(kon, sesi_id: int) -> str:
     """Tombol "variasi cerita" (LLM B2). Manual, bukan otomatis.
@@ -1002,6 +882,29 @@ def _tombol_cerita(kon, sesi_id: int) -> str:
         f'<div class="kartu kartu-variasi"><h2>Variasi cerita ✨</h2>'
         f'<p class="sub">{catatan}</p>{tombol}</div>'
     )
+
+def halaman_bagikan_sesi(sesi_id: int, siswa_id: int, tautan: str, pengguna: str, peran: str) -> bytes:
+    """Salin tautan secara manual; hanya presentasi, tanpa membaca/membuat token."""
+    return _halaman(
+        f"Bagikan sesi #{sesi_id}",
+        f'<div class="jejak"><a href="/anak/{siswa_id}">&larr; Kembali ke profil anak</a></div>'
+        '<header class="editorial-kepala-st"><p class="editorial-alis-st">BELAJAR LEWAT TAUTAN</p>'
+        f'<h1 id="judul-bagikan">Bagikan sesi #{sesi_id}</h1>'
+        '<p class="sub">Salin tautan ini dan berikan kepada anak yang mengerjakan sesi ini.</p></header>'
+        '<section class="kartu bagikan-kartu-st" aria-labelledby="label-tautan">'
+        '<label id="label-tautan" for="tautan-sesi">Tautan latihan anak</label>'
+        f'<input id="tautan-sesi" type="text" readonly value="{html.escape(tautan, quote=True)}" '
+        'aria-describedby="petunjuk-tautan" spellcheck="false">'
+        '<p id="petunjuk-tautan" class="sub">Pilih seluruh isi kotak, lalu salin. '
+        'Tautan berlaku 7 hari, atau sampai sesi selesai maupun tautan dicabut.</p>'
+        '<p class="bagikan-perhatian-st">Siapa pun yang memegang tautan dapat mengerjakan '
+        'sesi ini tanpa masuk. Bagikan hanya kepada anak yang dituju, bukan di tempat umum.</p>'
+        '</section>',
+        ident=(pengguna, peran), stitch=True,
+        kelas_bungkus="pendamping-editorial-st bagikan-editorial-st",
+        id_utama="judul-bagikan",
+    )
+
 
 def halaman_konfirmasi_hapus(
     kon, sesi_id: int, pengguna: str = "", peran: str = "guru"
@@ -1180,142 +1083,6 @@ def halaman_sesi_lampiran(
         ident=(pengguna, peran) if pengguna else None,
         stitch=True, kelas_bungkus="pendamping-editorial-st lampiran-editorial-st",
         id_utama="judul-lampiran",
-    )
-
-
-def halaman_sesi(
-    kon, sesi_id: int, pesan: str = "", peran: str = "guru",
-    pengguna: str = "",
-) -> bytes:
-    """Detail satu sesi — HANYA koreksi (opsi 3: alat pindah ke /cetak & /lampiran)."""
-    info = kon.execute(
-        """SELECT s.id, s.tanggal, s.seed, s.level, s.topik, s.mode, s.direview,
-                   w.nama, w.id AS siswa_id
-           FROM sesi s JOIN siswa w ON w.id = s.siswa_id WHERE s.id = ?""",
-        (sesi_id,),
-    ).fetchone()
-    if not info:
-        return _halaman("Tidak ada", "<h1>Sesi tidak ditemukan</h1>")
-
-    kartu = []
-    for b in database.isi_sesi(kon, sesi_id):
-        soal = _soal_dari_baris(b)
-        sudah = b["jawaban_id"] is not None
-        kode = b["kode_final"]
-        benar = b["benar"]
-
-        if sudah and (benar or kode):
-            kelas, lencana = "sudah", (
-                '<span class="kode benar">BENAR</span>' if benar
-                else f'<span class="kode {kode}">{kode}</span>'
-            )
-        elif sudah:
-            kelas, lencana = "perlu", '<span class="kode N">?</span>'
-        else:
-            kelas, lencana = "", ""
-
-        usulan = ""
-        if sudah and b["alasan"]:
-            ragu = "" if (benar or kode) else " ragu"
-            usulan = (
-                f'<div class="usulan{ragu}"><b>Mesin:</b> '
-                f'{html.escape(b["alasan"])}</div>'
-            )
-
-        restate = ""
-        if soal.minta_restatement:
-            restate = (
-                f'<label>Kotak "mintanya apa" — tulis ulang apa yang anak isi</label>'
-                f'<input type="text" name="restate_{b["sesi_soal_id"]}" '
-                f'value="{html.escape(b["restatement"] or "")}">'
-            )
-
-        pilih = "".join(
-            f'<option value="{v}"{" selected" if (v == kode or (v == "benar" and benar)) else ""}>'
-            f"{html.escape(t)}</option>"
-            for v, t in KODE_PILIHAN
-        )
-
-        pembahasan_html = ""
-        if getattr(soal, "pembahasan", ""):
-            pembahasan_html = (
-                f'<div class="pembahasan-soal" style="margin-top:0.35rem;font-size:0.88rem;'
-                f'background:#f0f7ff;border-left:3px solid #3182ce;padding:0.4rem 0.6rem;border-radius:4px;'
-                f'color:#2b6cb0;">'
-                f'<b>Perhitungan/Langkah:</b> {html.escape(soal.pembahasan)}'
-                f'</div>'
-            )
-
-        kartu.append(f"""
-<div class="kartu soal-kartu {kelas}">
-  <div class="kartu-kepala">
-    <span class="nomor">{b["nomor"]}</span>{lencana}
-    <span class="tipe">{b["template_id"]}</span>
-  </div>
-  <div class="teks-soal">{visual_renderer.render_pertanyaan(question_views.penyajian_dari_baris(b), gaya="guru", namespace=str(b["nomor"]))}</div>
-  <div>Kunci: <span class="kunci">{html.escape(b["kunci"])}</span></div>
-  {pembahasan_html}
-  {restate}
-  <div class="baris">
-    <div><label>Jawaban anak</label>
-      <input type="text" name="jwb_{b["sesi_soal_id"]}"
-             value="{html.escape(b["jawaban"] or "")}"></div>
-    <div><label>Kode (kosongkan = pakai usulan mesin)</label>
-      <select name="kode_{b["sesi_soal_id"]}">{pilih}</select></div>
-  </div>
-  <label>Isi kotak "Caraku" — ringkas saja, cukup yang menunjukkan caranya</label>
-  <textarea name="cara_{b["sesi_soal_id"]}">{html.escape(b["cara"] or "")}</textarea>
-  <div class="centang">
-    <input type="checkbox" id="bp{b["sesi_soal_id"]}"
-           name="belum_{b["sesi_soal_id"]}"
-           {"checked" if b["belum_pernah"] else ""}>
-    <label for="bp{b["sesi_soal_id"]}" style="margin:0">
-      anak mencentang "belum pernah lihat soal seperti ini"</label>
-  </div>
-  {usulan}
-</div>""")
-
-    kabar = f'<div class="pesan">{html.escape(pesan)}</div>' if pesan else ""
-
-    # Badge mode sesi (Latihan Cepat / drill)
-    badge_mode = _badge_mode(info)
-    badge_review_hdr = (
-        '<span class="badge-direview sudah" style="background:#d4edda;color:#155724;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.85rem;font-weight:bold;margin-left:0.5rem">✓ Sudah Direview</span>'
-        if _ambil(info, "direview", None)
-        else '<span class="badge-direview perlu" style="background:#fff3cd;color:#856404;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.85rem;font-weight:bold;margin-left:0.5rem">⏳ Belum Direview</span>'
-    )
-
-    pil = _pil_sesi(kon, sesi_id, "koreksi")
-
-    tombol_hapus = (
-        f'<form method="get" action="/sesi/{sesi_id}/hapus" '
-        f'style="margin:.4rem 0">'
-        f'<button type="submit" class="tombol-kecil tombol-hapus">'
-        f"Hapus sesi</button></form>"
-    )
-    blok_isi = (
-        f'<form method="post" action="/sesi/{sesi_id}">'
-        f'{"".join(kartu)}'
-        f'<div class="simpan-strip"><button type="submit">'
-        f"Simpan &amp; diagnosis</button></div></form>"
-    )
-
-    return _halaman(
-        f"Sesi #{sesi_id}",
-        f'<div class="jejak"><a href="/anak/{info["siswa_id"]}">&larr; '
-        f'Semua sesi {html.escape(info["nama"])}</a></div>'
-        f'<h1>{html.escape(info["nama"])} — Sesi #{sesi_id} {badge_review_hdr}</h1>'
-        f'<p class="sub">{info["tanggal"]} &middot; '
-        f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
-        f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
-        f'seed {info["seed"]} {badge_mode}</p>'
-        f"{kabar}"
-        f"{pil}"
-        f"{blok_isi}"
-        f'<div class="danger-zone" style="margin-top:1.2rem;border-top:1px solid #e5c3c3;padding-top:.7rem">'
-        f'<p class="sub" style="margin:0 0 .4rem">Zona bahaya — hapus tidak bisa dibatalkan.</p>'
-        f"{tombol_hapus}</div>",
-        ident=(pengguna, peran) if pengguna else None,
     )
 
 

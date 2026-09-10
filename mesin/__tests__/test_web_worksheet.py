@@ -264,11 +264,13 @@ def test_halaman_utama_tautan_lembar_pindah_ke_halaman_cetak(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Tautan")
         sesi_id = database.buat_sesi(kon, sid, seed=42)
-        h = teacher_pages.halaman_utama(kon).decode()
-        hs = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        h = teacher_pages.halaman_utama_stitch(kon).decode()
+        hs = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
         hc_raw = teacher_pages.halaman_sesi_cetak(kon, sesi_id)
         assert hc_raw is not None
         hc = hc_raw.decode()
+        siswa = kon.execute("SELECT * FROM siswa WHERE id=?", (sid,)).fetchone()
+        profil = teacher_pages.halaman_anak(kon, siswa).decode()
 
     assert f'href="/lembar/{sesi_id}"' not in h
     assert f'href="/lembar/{sesi_id}/penilaian"' not in h
@@ -276,7 +278,8 @@ def test_halaman_utama_tautan_lembar_pindah_ke_halaman_cetak(db):
     assert f'href="/lembar/{sesi_id}/penilaian"' not in hs
     assert f'href="/lembar/{sesi_id}"' in hc
     assert f'href="/lembar/{sesi_id}/penilaian"' in hc
-    assert f'action="/sesi-baru/{sid}"' in h
+    assert f'action="/sesi-baru/{sid}"' not in h
+    assert f'action="/sesi-baru/{sid}"' in profil
 
 
 def test_navigasi_sesi_kembali_ke_semua_sesi_anak(db):

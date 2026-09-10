@@ -252,7 +252,7 @@ def test_halaman_utama_menampilkan_siswa(db):
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "Andi")
         database.tambah_siswa(kon, "Bila")
-        h = teacher_pages.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama_stitch(kon).decode()
     assert "Andi" in h
     assert "Bila" in h
 
@@ -263,7 +263,7 @@ def test_halaman_sesi_menampilkan_kunci_untuk_guru(db):
         sid = database.tambah_siswa(kon, "Lihat")
         sesi_id = database.buat_sesi(kon, sid, seed=13)
         isi = database.isi_sesi(kon, sesi_id)
-        h = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        h = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
     for b in isi:
         assert b["kunci"] in h
 
@@ -290,20 +290,21 @@ def test_nama_siswa_di_html_di_escape(db):
     """Nama anak masuk HTML; karakter khusus tidak boleh merusak halaman."""
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "A<script>x</script>")
-        h = teacher_pages.halaman_utama(kon).decode()
+        h = teacher_pages.halaman_utama_stitch(kon).decode()
     assert "<script>x</script>" not in h
     assert "&lt;script&gt;" in h
 
 
-# ── Dashboard: skor, mode, durasi, tanpa kolom lembar ───────────────────
+# ── Profil: skor, mode, durasi; beranda tanpa kolom lembar ──────────────
 
 
-def test_dashboard_menampilkan_skor_benar(db):
-    """Kolom Benar = jumlah soal terdiagnosis benar / total soal sesi.
+def _profil_anak(kon, siswa_id):
+    siswa = kon.execute("SELECT * FROM siswa WHERE id=?", (siswa_id,)).fetchone()
+    return teacher_pages.halaman_anak(kon, siswa, pengguna="guru")
 
-    Skenarionya sengaja dibuat beda dari kolom Terisi (3 terisi, 2 benar)
-    supaya angka yang ditemukan benar-benar kolom Benar, bukan Terisi.
-    """
+
+def test_profil_menampilkan_terisi_lalu_skor_saat_selesai(db):
+    """Progres 3 terisi berubah ke 2 benar setelah sesi dikirim."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Skor")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
@@ -314,9 +315,12 @@ def test_dashboard_menampilkan_skor_benar(db):
             {3: {"kode": "H"}},  # guru paksa salah hitung
         )
         teacher_pages.simpan_sesi(kon, sesi_id, data)
-        h = teacher_pages.halaman_utama(kon).decode()
-    assert ">3/12<" in h, "Terisi harus 3/12"
-    assert ">2/12<" in h, "Benar harus 2/12"
+        h = _profil_anak(kon, sid).decode()
+        database.tandai_selesai(kon, sesi_id)
+        selesai = _profil_anak(kon, sid).decode()
+    assert "3 dari 12 terisi" in h
+    assert "2 dari 12 benar" in selesai
+    assert "2 dari 12 benar" not in h
 
 
 def test_dashboard_tanpa_kolom_lembar(db):
@@ -325,8 +329,8 @@ def test_dashboard_tanpa_kolom_lembar(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Lembar")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
-        h = teacher_pages.halaman_utama(kon).decode()
-        hs = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        h = teacher_pages.halaman_utama_stitch(kon).decode()
+        hs = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
         hc_raw = teacher_pages.halaman_sesi_cetak(kon, sesi_id)
         assert hc_raw is not None
         hc = hc_raw.decode()
@@ -335,31 +339,33 @@ def test_dashboard_tanpa_kolom_lembar(db):
     assert 'href="/lembar/' in hc
 
 
-def test_dashboard_badge_mode_hanya_untuk_drill(db):
+def test_profil_badge_mode_hanya_untuk_drill(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "ModeDrill")
         database.buat_sesi(kon, sid, seed=5, mode="drill")
         database.buat_sesi(kon, sid, seed=6)  # diagnostik
-        h = teacher_pages.halaman_utama(kon).decode()
-    assert h.count('class="badge-mode"') == 1
+        h = _profil_anak(kon, sid).decode()
+    assert h.count('<span>Latihan Cepat</span>') == 1
 
 
-def test_dashboard_menampilkan_durasi_sesi_selesai(db):
+def test_profil_menampilkan_durasi_sesi_selesai(db):
     """Waktu = selesai − mulai (mm:ss), hanya bila keduanya tercatat."""
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Durasi")
-        database.buat_sesi(kon, sid, seed=5)
+        sesi_id = database.buat_sesi(kon, sid, seed=5)
         kon.execute(
             "UPDATE sesi SET mulai = '2026-08-30 10:00:00', "
             "selesai = '2026-08-30 10:12:30'"
         )
-        h = teacher_pages.halaman_utama(kon).decode()
+        butir = database.isi_sesi(kon, sesi_id)[0]
+        database.simpan_jawaban(kon, butir["sesi_soal_id"], "1")
+        h = _profil_anak(kon, sid).decode()
     assert "12:30" in h
 
 
-def test_dashboard_tanpa_waktu_menampilkan_strip(db):
+def test_profil_tanpa_waktu_tidak_mengarang_durasi(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "TanpaWaktu")
         database.buat_sesi(kon, sid, seed=5)
-        h = teacher_pages.halaman_utama(kon).decode()
-    assert ">12:30<" not in h
+        h = _profil_anak(kon, sid).decode()
+    assert "Waktu 12:30" not in h

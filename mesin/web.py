@@ -39,7 +39,7 @@ from generator import LEVEL_BAWAAN
 from reports import diagnosa_murid, halaman_laporan
 from support_pages import halaman_pesan as _halaman
 from teacher_pages import (
-    _halaman as _halaman_guru,
+    halaman_bagikan_sesi,
     _soal_dari_baris,
     _topik_untuk_level,
     _nama_template,
@@ -47,11 +47,9 @@ from teacher_pages import (
     halaman_konfirmasi_hapus,
     halaman_anak,
     halaman_lembar,
-    halaman_sesi,
     halaman_sesi_cetak,
     halaman_sesi_lampiran,
     halaman_sesi_stitch,
-    halaman_utama,
     halaman_utama_stitch,
     simpan_sesi,
 )
@@ -1183,12 +1181,8 @@ class Penangan(BaseHTTPRequestHandler):
                         return self._kirim_json({"tautan": tautan})
                     # Fallback tanpa JavaScript: respons sederhana tetap
                     # memungkinkan tautan dipilih dan disalin manual.
-                    isi = _halaman_guru(
-                        f"Bagikan sesi #{sesi_id}",
-                        f'<h1>Bagikan sesi #{sesi_id}</h1>'
-                        f'<input id="tautan-sesi" type="text" readonly '
-                        f'value="{html.escape(tautan, quote=True)}">',
-                        ident=(ident[0], ident[1]), stitch=True,
+                    isi = halaman_bagikan_sesi(
+                        sesi_id, info["siswa_id"], tautan, ident[0], ident[1],
                     )
                     return self._kirim_tautan(isi)
                 share_links.cabut(kon, sesi_id)

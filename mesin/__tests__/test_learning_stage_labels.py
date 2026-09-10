@@ -1,5 +1,9 @@
 """Label tahap netral tanpa membaca bukti internal orang tua."""
 import sqlite3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
@@ -38,18 +42,14 @@ def db_terjaga(db, monkeypatch):
 
 
 @pytest.mark.parametrize("tujuan,label", TAHAP)
-@pytest.mark.parametrize("permukaan", ["daftar", "daftar_baru", "kerja", "kerja_baru", "tautan"])
+@pytest.mark.parametrize("permukaan", ["daftar", "kerja", "tautan"])
 def test_label_tahap_netral_di_semua_permukaan(db_terjaga, tujuan, label, permukaan):
     with database.buka(db_terjaga) as kon:
         siswa = database.tambah_siswa(kon, "Anak Uji", pemilik="guru")
         sesi = database.buat_sesi(kon, siswa, seed=83, jumlah_soal=1)
         kon.execute("UPDATE sesi SET tujuan = ?, jenis = 'remedial' WHERE id = ?", (tujuan, sesi))
         if permukaan == "daftar":
-            isi = student_pages.halaman_daftar_sesi(kon, siswa, "Anak Uji")
-        elif permukaan == "daftar_baru":
             isi = student_pages.halaman_daftar_sesi_baru(kon, siswa, "Anak Uji")
-        elif permukaan == "kerja":
-            isi = student_pages.halaman_kerja(kon, siswa, sesi)
         else:
             isi = student_pages.halaman_kerja_baru(kon, siswa, sesi, akses_tautan=permukaan == "tautan")
     assert isi is not None

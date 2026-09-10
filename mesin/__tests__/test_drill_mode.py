@@ -392,12 +392,12 @@ def test_halaman_kerja_drill_tanpa_caraku(db):
     """Drill: tanpa Caraku, tanpa restate; Jawabanku + centang tetap ada.
 
     Marker dicek di BADAN halaman (label/name), bukan string global —
-    CSS_MURID memuat komentar "Caraku" dan kelas .pilih-cara yang selalu
+    GAYA_STITCH memuat komentar "Caraku" dan kelas pilihan yang selalu
     ada di berkas CSS, jadi cek 'name=...' dan label persis.
     """
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakDrill", 7, mode="drill")
-        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja_baru(kon, sid, sesi_id).decode()
     assert "Caraku — pilih dulu" not in html      # label pill tidak ada
     assert 'name="pilih_' not in html             # radio pill tidak ada
     assert 'name="cara_' not in html              # textarea cara tidak ada
@@ -410,7 +410,7 @@ def test_halaman_kerja_diagnostik_masih_punya_caraku(db):
     """Diagnosa (default): pill Caraku + textarea tetap ada."""
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakDiag", 7)
-        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja_baru(kon, sid, sesi_id).decode()
     assert "Caraku — pilih dulu" in html
     assert 'name="pilih_' in html
     assert 'name="cara_' in html
@@ -423,7 +423,7 @@ def test_halaman_kerja_drill_timer_per_sesi_tampil(db):
             kon, "AnakDrillSesi", 7, mode="drill",
             timer_mode="sesi", durasi_menit=10,
         )
-        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja_baru(kon, sid, sesi_id).decode()
     assert 'id="timer-strip"' in html
     assert "Sisa waktu" in html
     assert "10:00" in html
@@ -436,9 +436,9 @@ def test_halaman_kerja_drill_timer_per_soal_internal(db):
             kon, "AnakDrillSoal", 7, mode="drill",
             timer_mode="soal", durasi_menit=5,
         )
-        html = student_pages.halaman_kerja(kon, sid, sesi_id).decode()
+        html = student_pages.halaman_kerja_baru(kon, sid, sesi_id).decode()
     assert "Sisa waktu" not in html             # internal, tak dimunculkan
-    assert 'class="soal-timer-note"' in html    # penanda per kartu
+    assert 'class="catatan-soal-timer-st"' in html    # penanda per kartu
     assert "setInterval" in html                # ada JS timer
 
 
@@ -515,14 +515,14 @@ def test_halaman_sesi_guru_menampilkan_badge_latihan_cepat(db):
     'Latihan Cepat' di komentar, jadi string global tidak bisa dipakai."""
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakBadge", 7, mode="drill")
-        html = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        html = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
     assert 'class="badge-mode"' in html
 
 
 def test_halaman_sesi_guru_diagnostik_tanpa_badge_drill(db):
     with database.buka(db) as kon:
         sid, sesi_id = _buat(kon, "AnakBadgeDiag", 7)
-        html = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        html = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
     assert 'class="badge-mode"' not in html
 
 
@@ -532,8 +532,8 @@ def test_kartu_sesi_murid_menampilkan_tag_latihan(db):
         nama = kon.execute(
             "SELECT nama FROM siswa WHERE id = ?", (sid,)
         ).fetchone()["nama"]
-        html = student_pages.halaman_daftar_sesi(kon, sid, nama).decode()
-    assert 'class="badge-latihan"' in html
+        html = student_pages.halaman_daftar_sesi_baru(kon, sid, nama).decode()
+    assert '<span class="murid-tahap-st">Latihan Cepat</span>' in html
 
 
 def test_kartu_sesi_murid_diagnostik_tanpa_tag_latihan(db):
@@ -542,8 +542,8 @@ def test_kartu_sesi_murid_diagnostik_tanpa_tag_latihan(db):
         nama = kon.execute(
             "SELECT nama FROM siswa WHERE id = ?", (sid,)
         ).fetchone()["nama"]
-        html = student_pages.halaman_daftar_sesi(kon, sid, nama).decode()
-    assert 'class="badge-latihan"' not in html
+        html = student_pages.halaman_daftar_sesi_baru(kon, sid, nama).decode()
+    assert '<span class="murid-tahap-st">Latihan Cepat</span>' not in html
 
 
 # ── 1.7 E2E HTTP: drill alur penuh ──────────────────────────────────

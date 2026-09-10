@@ -44,8 +44,8 @@ def test_semua_permukaan_memakai_fingerprint_snapshot_yang_sama(db):
         baris = database.isi_sesi(kon, sesi)
         sidik = [b["fingerprint_penyajian"] for b in baris]
         halaman = [
-            student_pages.halaman_kerja(kon, siswa, sesi),
-            teacher_pages.halaman_sesi(kon, sesi),
+            student_pages.halaman_kerja_baru(kon, siswa, sesi),
+            teacher_pages.halaman_sesi_stitch(kon, sesi),
             teacher_pages.halaman_lembar(kon, sesi),
         ]
         kon.execute("UPDATE sesi SET direview = '2026-09-07' WHERE id = ?", (sesi,))
@@ -78,7 +78,7 @@ def test_semua_stylesheet_memuat_svg_proporsional():
     from teacher_style import GAYA_GURU
     from screen_style import GAYA_LAYAR
     from print_style import GAYA_CETAK
-    for css in (GAYA_STITCH, GAYA_GURU, GAYA_LAYAR, GAYA_CETAK, student_pages.CSS_MURID):
+    for css in (GAYA_STITCH, GAYA_GURU, GAYA_LAYAR, GAYA_CETAK):
         assert '[data-fingerprint-penyajian] svg' in css
         blok = css.split('[data-fingerprint-penyajian] svg', 1)[1].split('}', 1)[0]
         assert 'height: auto' in blok

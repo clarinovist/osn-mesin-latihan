@@ -132,7 +132,7 @@ def test_tombol_tidak_muncul_kalau_fitur_mati(db, monkeypatch):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html_sesi = teacher_pages.halaman_sesi(kon, ses).decode()
+        html_sesi = teacher_pages.halaman_sesi_stitch(kon, ses).decode()
         html_cetak_raw = teacher_pages.halaman_sesi_cetak(kon, ses)
         html_cetak = html_cetak_raw.decode() if html_cetak_raw else ""
     assert "Variasi cerita" not in html_sesi
@@ -144,7 +144,7 @@ def test_tombol_muncul_di_cetak_kalau_fitur_hidup(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak")
         ses = database.buat_sesi(kon, sid, seed=42)
-        html_sesi = teacher_pages.halaman_sesi(kon, ses).decode()
+        html_sesi = teacher_pages.halaman_sesi_stitch(kon, ses).decode()
         html_cetak_raw = teacher_pages.halaman_sesi_cetak(kon, ses)
         assert html_cetak_raw is not None
         html_cetak = html_cetak_raw.decode()

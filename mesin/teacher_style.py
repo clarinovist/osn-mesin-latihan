@@ -13,7 +13,7 @@ permukaan. Jangan hardcode hex literal di sini; selalu rujuk T.NAMA_TOKEN.
 Kelas yang didefinisikan di sini harus mencakup SEMUA kelas yang dipakai
 halaman guru di web.py (.kartu, .soal-kartu, .kode, .usulan, table, ...)
 supaya tidak ada gaya patah. Daftar dipetakan dari fungsi halaman_* di
-web.py: halaman_utama, halaman_sesi, halaman_laporan, halaman_akun,
+Bingkai aktif: halaman_utama_stitch, halaman_sesi_stitch, halaman_laporan, halaman_akun,
 _halaman_masuk, _kartu_akun_murid, _tombol_cerita, _halaman.
 """
 

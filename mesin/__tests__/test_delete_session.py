@@ -149,14 +149,14 @@ def test_halaman_sesi_memuat_tombol_hapus(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Tombol")
         sesi_id = database.buat_sesi(kon, sid, seed=5)
-        isi = teacher_pages.halaman_sesi(kon, sesi_id).decode()
+        isi = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
     assert f'action="/sesi/{sesi_id}/hapus"' in isi
 
 
 def test_halaman_utama_menampilkan_pesan_hapus(db):
     with database.buka(db) as kon:
         database.tambah_siswa(kon, "Pesan")
-        isi = teacher_pages.halaman_utama(kon, pesan="Sesi 3 dihapus.").decode()
+        isi = teacher_pages.halaman_utama_stitch(kon, pesan="Sesi 3 dihapus.").decode()
     assert "Sesi 3 dihapus." in isi
 
 

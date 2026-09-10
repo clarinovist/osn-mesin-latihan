@@ -4,7 +4,7 @@ Kontrak yang dijaga:
 1. Identitas produk dari design_tokens (satu sumber) — tidak ada literal
    "Mesin Latihan"/"pola bilangan" di copy deskriptif web.py.
 2. GET / tanpa sesi -> 200 landing publik (bukan 401).
-3. GET / dengan sesi guru -> 200 dashboard (halaman_utama).
+3. GET / dengan sesi guru -> pengalihan /guru, lalu beranda editorial.
 4. Rute guru lain tetap 401 tanpa kredensial (palang tidak melemah).
 5. Landing tidak bocor kata palang (kunci/malrule/diagnosa).
 """

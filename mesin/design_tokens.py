@@ -1,7 +1,7 @@
 """Design tokens — sumber tunggal untuk semua nilai visual aplikasi.
 
 Dipakai oleh screen_style.py, print_style.py, teacher_style.py, dan students.py
-(CSS_MURID). Tujuan: konsistensi antar-viewport (layar sentuh, cetak A4,
+(GAYA_STITCH). Tujuan: konsistensi antar-viewport (layar sentuh, cetak A4,
 dashboard guru) tanpa duplikasi nilai. Ubah di sini, efek ke semua permukaan.
 
 == Palet ==

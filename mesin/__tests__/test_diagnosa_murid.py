@@ -177,7 +177,7 @@ def test_halaman_murid_tetap_bersih_setelah_diagnosis_otomatis(db):
                 {f"jwb_{b['sesi_soal_id']}": b["kunci"],
                  f"cara_{b['sesi_soal_id']}": "yakin"},
             )
-        html = student_pages.halaman_kerja(kon, sid, sesi_id)
+        html = student_pages.halaman_kerja_baru(kon, sid, sesi_id)
         assert html is not None
         html = html.decode()
 

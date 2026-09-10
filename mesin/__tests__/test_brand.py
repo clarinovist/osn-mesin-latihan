@@ -292,8 +292,7 @@ GLYPH_LOGO_LAMA = (">school<", ">pets<")
 def test_tidak_ada_glyph_logo_lama():
     """Glyph Material Symbols tidak boleh lagi dipakai SEBAGAI LOGO.
 
-    icons.OWL sendiri tidak dihapus — masih dipakai halaman murid legacy
-    dan modulnya menyediakan ikon lain (bohlam, chevron, bintang).
+    Semua halaman aktif memakai brand; ikon renderer lama sudah dilepas.
     """
     tersangka: list[str] = []
     for nama in MODUL_HALAMAN:
