@@ -6,13 +6,13 @@ import shlex
 ALUR = Path(__file__).resolve().parents[2] / ".github/workflows/deploy.yml"
 
 
-def test_ci_worksteal_tetap_menjalankan_seluruh_test():
+def test_ci_membatasi_worker_dan_tetap_menjalankan_seluruh_test():
     teks = ALUR.read_text()
     bagian = teks.split("- name: Jalankan seluruh test\n", 1)[1]
     baris = bagian.splitlines()[0].strip()
     assert baris.startswith("run: ")
     assert shlex.split(baris[len("run: "):]) == [
-        "python", "-m", "pytest", "mesin/__tests__/", "-q", "-n", "auto",
+        "python", "-m", "pytest", "mesin/__tests__/", "-q", "-n", "2",
         "--dist=worksteal", "-W", "error",
     ]
 
