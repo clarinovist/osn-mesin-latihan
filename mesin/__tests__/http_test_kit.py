@@ -54,12 +54,19 @@ class ServerUji:
 
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), web.Penangan)
         self.alamat = f"http://127.0.0.1:{self.server.server_address[1]}"
-        self.ulir = threading.Thread(target=self.server.serve_forever, daemon=True)
+        # Interval pendek khusus test agar shutdown tidak menunggu 0,5 detik.
+        self.ulir = threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.01},
+            daemon=True,
+        )
         self.ulir.start()
 
     def berhenti(self) -> None:
+        """Tutup listener dan tunggu ulir pelayan selesai sebelum fixture dibuang."""
         self.server.shutdown()
         self.server.server_close()
+        self.ulir.join()
 
     @contextmanager
     def buka(self):

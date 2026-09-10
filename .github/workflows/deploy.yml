@@ -42,7 +42,7 @@ jobs:
         run: python scripts/check_repo.py
 
       - name: Jalankan seluruh test
-        run: python -m pytest mesin/__tests__/ -q -n auto
+        run: python -m pytest mesin/__tests__/ -q -n auto --dist=worksteal
 
   bangun:
     name: Build & Push
