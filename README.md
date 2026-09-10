@@ -35,7 +35,7 @@ Spesifikasi siklus berada di
 [`docs/siklus-belajar-terpandu.md`](docs/siklus-belajar-terpandu.md).
 
 Riset pasar, mockup, kurikulum, lembar contoh, dokumen bisnis, dan eksperimen
-lama disimpan terpisah di folder lokal `../osn-referensi/`. Folder itu bukan
+lama disimpan terpisah di folder lokal `../osn-resources/referensi/`. Folder itu bukan
 dependensi aplikasi dan tidak diperlukan untuk menjalankan tes atau build.
 Jangan menyalinnya kembali ke repo; `.gitignore` dan palang CI mencegahnya.
 

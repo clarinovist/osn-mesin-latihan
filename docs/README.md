@@ -24,6 +24,6 @@ gitignored. Rincian implementasi siklus ada di
 tersedia pada clone lain. Kontrak permanen tidak boleh hanya tinggal di plan.
 
 Riset kurikulum dan pasar, materi, mockup, serta keputusan bisnis historis
-berada di folder saudara lokal `../../osn-referensi/`, bukan di codebase.
+berada di folder saudara lokal `../../osn-resources/referensi/`, bukan di codebase.
 Arsip tidak diperlukan untuk tes atau build, dan tidak menggantikan
 spesifikasi aktif di folder ini.

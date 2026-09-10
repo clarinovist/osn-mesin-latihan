@@ -156,7 +156,7 @@ hardcoded di modul lain. Halaman murid memakai `GAYA_STITCH`, bukan `CSS_SESI`.
 ## Konteks kurikulum & batas klaim produk
 
 Sumber: audit 1.237 soal OSN asli 2016–2026, arsip lokal
-`../../osn-referensi/docs/riset-soal-osn-10-tahun.md`. Ini angka audit historis, bukan
+`../../osn-resources/referensi/docs/riset-soal-osn-10-tahun.md`. Ini angka audit historis, bukan
 ukuran otomatis cakupan kode terbaru. Jika arsip tidak tersedia, jangan mengarang data baru.
 
 - 85 template menutup **74,7%** konsep soal nyata; NAS-eksplorasi **24,4%**.

@@ -34,7 +34,7 @@ class Usulan:
 def normalisasi(teks: str) -> str:
     """Samakan bentuk penulisan sebelum dibandingkan.
 
-    Utang yang dicatat di arsip lokal ~/Documents/osn-referensi/spike/LANJUTAN.md: anak menulis "6 jam 25menit",
+    Utang yang dicatat di arsip lokal ~/Documents/osn-resources/referensi/spike/LANJUTAN.md: anak menulis "6 jam 25menit",
     kunci "6 jam 25 menit" — benar tapi terhitung salah karena spasi. Kalau
     dibiarkan, angka kecocokan tercemar oleh kesalahan yang bukan kesalahan.
 

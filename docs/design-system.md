@@ -3,7 +3,7 @@
 Sumber tunggal untuk semua nilai visual aplikasi. Implementasi ada di
 `mesin/design_tokens.py`; dokumen ini adalah referensi naratif.
 
-Mockup UI/UX (9 halaman) ada di arsip lokal `../../osn-referensi/desain-ui/`. Generator: `gen_guru.py`
+Mockup UI/UX (9 halaman) ada di arsip lokal `../../osn-resources/referensi/desain-ui/`. Generator: `gen_guru.py`
 (gpt-image-2 via chenzk.top).
 
 ## Satu palet hangat (restyle 29 Agu 2026)
@@ -198,7 +198,7 @@ hanya beda satu ruas URL — dijaga `__tests__/test_web_worksheet.py`.
    keputusan visual, bukan syarat setiap typo atau perubahan gaya lokal.
 2. Ekstrak nilai visual baru ke `design_tokens.py` (jika ada).
 3. Implementasi HTML/CSS di file yang sesuai, rujuk tokens.
-4. Perbarui referensi desain bila relevan; mockup tetap lokal di `osn-referensi`.
+4. Perbarui referensi desain bila relevan; mockup tetap lokal di `osn-resources/referensi`.
 5. Render dan cek visual dengan data/profil sintetis sesuai `workflow-reference.md`.
    Jalankan scoped test markup/style dan gate jalur di `../CLAUDE.md`; full suite
    mengikuti risiko/trigger, bukan otomatis untuk semua perubahan tampilan.

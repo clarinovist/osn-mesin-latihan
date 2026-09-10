@@ -18,7 +18,7 @@ berparameter, diagnosis B/K/H/E/T/N, lembar cetak, dan laporan per anak.
   disetujui: toggle mata sandi dan `confirm()` aksi destruktif; perlu approval untuk tambahan.
 - `mesin/`: aplikasi, `__tests__/`, aset, Dockerfile, cadangan. `scripts/`: otomasi/palang.
   `docs/`: spesifikasi teknis; `docs/plan/` lokal/gitignored. `.github/`: CI/deploy.
-- Riset/materi/kurikulum/mockup/bisnis/eksperimen berada di `../osn-referensi/` lokal,
+- Riset/materi/kurikulum/mockup/bisnis/eksperimen berada di `../osn-resources/referensi/` lokal,
   bukan dependensi aplikasi/test/build. Jangan masukkan kembali ke Git.
 - Alur: `topics` → `generator` → `templates` → `render`/`worksheets` → `database` →
   `diagnosis` → `reports`. Router/palang di `web.py`; data anak di `students.py`;

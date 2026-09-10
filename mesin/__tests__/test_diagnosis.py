@@ -24,7 +24,7 @@ MAL_ARITMETIKA = [
 ]
 
 
-# ── Normalisasi: utang dalam arsip lokal osn-referensi/spike/LANJUTAN.md ─────────────────
+# ── Normalisasi: utang dalam arsip lokal osn-resources/referensi/spike/LANJUTAN.md ─────────────────
 
 
 def test_spasi_antara_angka_dan_huruf_tidak_dianggap_salah():
