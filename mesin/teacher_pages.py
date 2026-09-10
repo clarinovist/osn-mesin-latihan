@@ -62,6 +62,41 @@ def _nama_template(template_id: str) -> str:
     return NAMA_TEMPLATE.get(template_id, template_id.replace("_", " ").capitalize())
 
 
+def _blok_latihan_serupa(kon, sesi_id: int) -> str:
+    """CTA manual per tipe T, terpisah dari form koreksi hasil."""
+    from similar_practice import kandidat_sesi
+
+    kandidat = kandidat_sesi(kon, sesi_id)
+    if not kandidat:
+        return ""
+    aksi = []
+    for item in kandidat:
+        nomor = ", ".join(str(n) for n in item["nomor"])
+        nama = _nama_template(str(item["template_id"]))
+        aksi.append(
+            '<article class="pilihan-remedial-st">'
+            '<span class="isi-pilihan-remedial-st">'
+            f'<b>{html.escape(nama)}</b>'
+            f'<span class="meta-remedial-st">Lihat pembahasan soal nomor {html.escape(nomor)}</span>'
+            '</span>'
+            f'<form method="post" action="/sesi/{sesi_id}/latihan-serupa">'
+            f'<input type="hidden" name="sesi_soal_id" value="{int(item["sesi_soal_id"])}">'
+            '<button type="submit" class="st-tombol-coral">Latih tipe soal ini</button>'
+            '</form></article>'
+        )
+    return (
+        '<section class="remedial-st latihan-serupa-st" aria-labelledby="judul-latihan-serupa">'
+        '<h2 id="judul-latihan-serupa">Setelah materi baru dikenalkan</h2>'
+        '<p>Kenalkan konsepnya, kerjakan satu contoh dari pembahasan bersama, '
+        'lalu tutup contoh sebelum anak mencoba lima soal baru.</p>'
+        '<p class="sub">Bedakan belum belajar dari bingung membaca atau menghitung. '
+        'Minta anak menjelaskan caranya; jawaban benar saja belum berarti sudah paham.</p>'
+        '<p class="sub"><b>Latihan manual:</b> tidak mengubah progres rencana terpandu '
+        'dan bukan tanda materi sudah dikuasai.</p>'
+        f'<div class="daftar-remedial-st">{"".join(aksi)}</div></section>'
+    )
+
+
 def _form_remedial(
     sasaran,
     siswa_id: int,
@@ -1371,6 +1406,7 @@ def halaman_sesi_stitch(
         pil = pil.replace(">Koreksi</a>", ">Soal &amp; kunci</a>")
 
     blok_remedial = ""
+    blok_latihan_serupa = ""
     if sudah_dikirim and info["direview"]:
         sasaran_sesi = database.sasaran_remedial_sesi(
             kon, int(info["siswa_id"]), sesi_id
@@ -1385,6 +1421,8 @@ def halaman_sesi_stitch(
             ),
             sumber_sesi_id=sesi_id,
         )
+    if sudah_dikirim:
+        blok_latihan_serupa = _blok_latihan_serupa(kon, sesi_id)
 
     if sudah_dikirim:
         sudah_dikonfirmasi = konfirmasi_masih_aktif
@@ -1599,6 +1637,7 @@ def halaman_sesi_stitch(
         f"{status_sesi}"
         f"{aksi_rencana}"
         f"{blok_isi}"
+        f"{blok_latihan_serupa}"
         f"{blok_remedial}"
         f'<div class="danger-zone-st">'
         f'<p class="sub">{keterangan_bahaya}</p>'

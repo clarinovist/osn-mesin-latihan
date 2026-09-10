@@ -1235,6 +1235,82 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                 )
 
+        if jalur.startswith("/sesi/") and jalur.endswith("/latihan-serupa"):
+            bagian = jalur.split("/")
+            if len(bagian) != 4 or bagian[1] != "sesi" or bagian[3] != "latihan-serupa":
+                return self._kirim(
+                    _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                )
+            try:
+                sesi_id = int(bagian[2])
+                if not 0 < sesi_id <= 9_223_372_036_854_775_807:
+                    raise ValueError("ID sesi di luar rentang")
+            except ValueError:
+                return self._kirim(
+                    _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                )
+            # Jangan menahan lock writer saat menunggu body dari jaringan.
+            panjang = int(self.headers.get("Content-Length", 0) or 0)
+            data = urllib.parse.parse_qs(
+                self.rfile.read(panjang).decode("utf-8"),
+                keep_blank_values=True,
+            )
+            ident = self._identitas()
+            with database.buka() as kon:
+                # Kepemilikan dan syarat sumber tetap terkunci sampai sesi tersimpan.
+                kon.execute("BEGIN IMMEDIATE")
+                ada = kon.execute(
+                    "SELECT 1 FROM sesi WHERE id = ?", (sesi_id,)
+                ).fetchone()
+                if not ident or ada is None or not self._bisa_lihat_sesi(kon, sesi_id):
+                    kon.rollback()
+                    return self._kirim(
+                        _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                    )
+                if set(data) != {"sesi_soal_id"} or len(data["sesi_soal_id"]) != 1:
+                    kon.rollback()
+                    return self._kirim(
+                        _halaman(
+                            "Permintaan belum dapat diproses",
+                            "<h1>Permintaan belum dapat diproses</h1>"
+                            "<p>Referensi soal tidak dikenal.</p>",
+                        ),
+                        400,
+                    )
+                try:
+                    sesi_soal_id = int(data["sesi_soal_id"][0])
+                    if not 0 < sesi_soal_id <= 9_223_372_036_854_775_807:
+                        raise ValueError("ID butir di luar rentang")
+                except ValueError:
+                    sesi_soal_id = -1
+                import similar_practice
+
+                try:
+                    sesi_baru = similar_practice.buat_dari_hasil_t(
+                        kon,
+                        sesi_id,
+                        sesi_soal_id,
+                        seed=random.randint(1, 9_999_999),
+                    )
+                except (ValueError, RuntimeError):
+                    kon.rollback()
+                    return self._kirim(
+                        _halaman(
+                            "Latihan belum dapat dibuat",
+                            "<h1>Latihan belum dapat dibuat</h1>"
+                            "<p>Hasil ini tidak lagi memenuhi syarat atau variasi "
+                            "soalnya belum cukup. Muat ulang hasil lalu coba lagi.</p>",
+                        ),
+                        409,
+                    )
+            self.send_response(303)
+            self.send_header("Location", f"/sesi/{sesi_baru}?pesan=" + urllib.parse.quote(
+                "5 soal serupa dibuat. Latihan manual ini tidak mengubah progres rencana terpandu."
+            ))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         if (
             jalur.startswith("/siklus/")
             or (jalur.startswith("/sesi/")
