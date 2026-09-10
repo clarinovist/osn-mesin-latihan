@@ -73,6 +73,9 @@ def test_wrapper_studio_membagi_tugas_pendamping_dan_aksi_dengan_urutan_aman():
     assert isi.index(materi.contoh_terbimbing) < isi.index('class="rencana-cta-utama-st"')
     assert isi.index(materi.instruksi_orang_tua) < isi.index('class="rencana-cta-utama-st"')
     assert isi.index('class="studio-utama-st"') < isi.index('class="studio-pendamping-st"') < isi.index('class="studio-aksi-st"')
+    assert isi.index('class="studio-pendamping-st"') < isi.index('class="alur-rencana-jelas-st"')
+    pendamping = isi.split('class="studio-pendamping-st"', 1)[1].split("</aside>", 1)[0]
+    assert 'class="alur-rencana-jelas-st"' not in pendamping
 
 
 def test_semua_tindakan_renderer_tetap_satu_cta_atau_tanpa_cta_sesuai_domain():
@@ -139,12 +142,19 @@ def test_css_studio_scoped_responsif_dan_fallback_kontrol_manual():
     akhir = sumber.index(".koreksi-editorial-st", mulai)
     blok = sumber[mulai:akhir]
 
-    assert "grid-template-areas" in blok
+    assert 'grid-template-areas: "utama pendamping" "aksi aksi" "alur alur"' in blok
+    assert "grid-template-columns: repeat(6, minmax(0, 1fr))" in blok
+    aksi = blok.split(".profil-editorial-st .studio-aksi-st {{", 1)[1].split("}}", 1)[0]
+    assert "align-self: start" in aksi
+    tombol = blok.split(".profil-editorial-st .rencana-cta-utama-st {{", 1)[1].split("}}", 1)[0]
+    assert "align-self: start" in tombol
+    assert "padding-block: {T.SP_3}" in tombol
     responsif = sumber.split("/* Studio kembali satu kolom", 1)[1].split(
         "@media (max-width: 40rem)", 1
     )[0]
     assert "@media (max-width: 48rem)" in responsif
     assert ".profil-editorial-st .studio-pendamping-st {{ display: contents; }}" in responsif
+    assert ".profil-editorial-st .isi-alur-rencana-st .strip-rencana-st {{ grid-template-columns: minmax(0, 1fr); }}" in responsif
     assert '[data-panel=\"baru\"] > .strip-sesi' in blok
     assert "grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)" in blok
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", blok)

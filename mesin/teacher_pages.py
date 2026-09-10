@@ -1581,10 +1581,10 @@ def halaman_sesi_stitch(
     elif sesi_terpandu or sesi_manual_berbukti:
         tombol_hapus = (
             f'<form method="post" action="/sesi/{sesi_id}/batalkan" '
-            'style="margin:.4rem 0" '
+            'class="form-pembatalan-st" '
             'onsubmit="return confirm(\'Batalkan sesi ini? Sesi dan bukti tetap '
             'tersimpan dalam histori, tetapi tidak lagi aktif dalam siklus belajar.\')">'
-            '<label for="alasan-batal">Alasan pembatalan (opsional)</label>'
+            '<label for="alasan-batal">Alasan pembatalan <span>(opsional)</span></label>'
             '<input id="alasan-batal" type="text" name="alasan" maxlength="300" '
             'placeholder="Tulis alasan">'
             '<button type="submit" class="tombol-kecil-st">'

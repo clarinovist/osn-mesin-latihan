@@ -186,6 +186,11 @@ def test_zona_pembatalan_menjelaskan_histori_dan_meminta_konfirmasi(db):
         halaman = _badan(teacher_pages.halaman_sesi_stitch(kon, sesi_id))
 
     assert "Pembatalan menjaga histori dan bukti sesi." in halaman
+    assert 'class="form-pembatalan-st"' in halaman
+    formulir = halaman.split('class="form-pembatalan-st"', 1)[1].split("</form>", 1)[0]
+    assert formulir.index('for="alasan-batal"') < formulir.index('id="alasan-batal"')
+    assert '<span>(opsional)</span>' in formulir
+    assert "style=" not in formulir
     assert "hapus tidak bisa dibatalkan" not in halaman
     assert (
         "Batalkan sesi ini? Sesi dan bukti tetap tersimpan dalam histori, "
@@ -202,6 +207,20 @@ def test_tombol_koreksi_dan_konfirmasi_punya_jarak_dan_hierarki():
     assert "display: grid" in blok
     assert f"gap: {T.SP_2}" in blok
     assert ".koreksi-simpan-st:has(button[formaction]) button:not([formaction])" in CSS_SESI
+
+
+def test_form_pembatalan_bertumpuk_dengan_input_lebar_dan_tombol_ringkas():
+    from style_stitch import GAYA_STITCH
+    import design_tokens as T
+
+    blok = GAYA_STITCH.split(".koreksi-editorial-st .form-pembatalan-st {", 1)[1].split("}", 1)[0]
+    assert "display: grid" in blok
+    assert "grid-template-columns: minmax(0, 1fr)" in blok
+    input_css = GAYA_STITCH.split(".koreksi-editorial-st .form-pembatalan-st input {", 1)[1].split("}", 1)[0]
+    assert "width: 100%" in input_css
+    assert f"min-height: {T.TARGET_SENTUH}" in input_css
+    tombol = GAYA_STITCH.split(".koreksi-editorial-st .form-pembatalan-st .tombol-kecil-st {", 1)[1].split("}", 1)[0]
+    assert "width: auto" in tombol
 
 
 def test_marker_penjelasan_koreksi_lama_tetap_ada(db):

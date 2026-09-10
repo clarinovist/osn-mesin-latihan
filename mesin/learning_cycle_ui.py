@@ -487,9 +487,10 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
         '<aside class="studio-pendamping-st" aria-label="Posisi dan peran pendamping">'
         f'<p class="progres-rencana-st">{html.escape(_progres(rencana, bukti))}'
         f'{_penanda_progres_lama(rencana)}</p>'
-        f'{tindakan}{_alur_rencana(rencana, bukti)}'
+        f'{tindakan}'
         '</aside>'
         f'<div class="studio-aksi-st">{cta}{petunjuk}</div>'
+        f'{_alur_rencana(rencana, bukti)}'
         '</div>'
         f'{_override(rencana, siswa_id)}'
         "</section>"
