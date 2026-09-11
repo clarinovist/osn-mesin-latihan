@@ -282,11 +282,13 @@ Fitur "variasi cerita" (`llm.py`) membaca kunci API dari env
    maupun rollback.
 3. Tanpa berkas/env itu, fitur mati diam-diam sesuai desain gagal-diam:
    tombol cerita hanya melapor bahwa LLM tidak aktif, aplikasi tetap jalan.
-4. `DEEPSEEK_MODEL=deepseek-v4-flash` diset eksplisit di `osn-deploy`
-   (pola sama dengan kunci: env `docker run`). Alasannya: model default
-   `deepseek-chat` hanyalah alias yang bisa berarah diam-diam — pada
-   28 Aug 2026 alias itu menunjuk `deepseek-v4-flash`, reasoning model
-   yang butuh `max_tokens` besar (sudah diatur `llm.MAX_TOKENS`).
+4. `DEEPSEEK_MODEL=deepseek-flash` dan
+   `DEEPSEEK_VISION_MODEL=deepseek-flash` diset eksplisit di `osn-deploy`
+   (pola sama dengan kunci: env `docker run`). Nama kanonik ini dipakai
+   agar aplikasi tidak bergantung pada alias atau nama eksperimen berversi.
+   Model reasoning tetap membutuhkan `max_tokens` besar (sudah diatur di
+   `llm.MAX_TOKENS` dan `llm.MAX_TOKENS_VISION`). Kedua env harus hadir di
+   jalur deploy utama maupun rollback.
 
 Respons API LLM di-cache per soal (`llm_cache`) — satu soal tidak dibayar
 dua kali. Kunci cache = hash(`template_id` + parameter + latar + versi

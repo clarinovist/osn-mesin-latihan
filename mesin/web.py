@@ -930,7 +930,11 @@ class Penangan(BaseHTTPRequestHandler):
         if galat:
             return self._kirim(halaman_daftar(galat, galat=True, nama=nama))
 
-        token = sessions.buat(nama, "guru")
+        akun = auth.cari_akun(nama)
+        nama_sesi = akun["pengguna"] if akun else nama
+        token = sessions.buat(
+            nama_sesi, "guru", id_akun=akun.get("id_akun") if akun else None
+        )
         self.send_response(303)
         self.send_header("Location", "/guru")
         self.send_header("Set-Cookie", self._set_cookie(token))
@@ -950,7 +954,11 @@ class Penangan(BaseHTTPRequestHandler):
             sessions.catat_gagal(nama, ip)
             return self._kirim(self._halaman_masuk_stitch("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
         sessions.catat_berhasil(nama, ip)
-        token = sessions.buat(nama, peran)
+        akun = auth.cari_akun(nama)
+        nama_sesi = akun["pengguna"] if akun else nama
+        token = sessions.buat(
+            nama_sesi, peran, id_akun=akun.get("id_akun") if akun else None
+        )
         tujuan = "/murid" if peran == "murid" else (
             "/admin" if peran == "admin" else "/guru"
         )

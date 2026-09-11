@@ -45,21 +45,21 @@ ENV_VISION_MODEL = "DEEPSEEK_VISION_MODEL"
 ENV_SALDO_MIN = "DEEPSEEK_SALDO_MIN"
 
 BASE_URL_BAWAAN = "https://api.deepseek.com"
-MODEL_BAWAAN = "deepseek-chat"
-VISION_MODEL_BAWAAN = "deepseek-v4-flash-vision-exp"
+MODEL_BAWAAN = "deepseek-flash"
+VISION_MODEL_BAWAAN = "deepseek-flash"
 
 # Request singkat: soal dibungkus saat lembar disusun, menggantung lebih
 # dari ini lebih baik dibuang daripada membuat murid menunggu.
 BATAS_WAKTU_DETIK = 20
 
-# max_tokens harus menampung reasoning model: deepseek-v4-flash menulis
+# max_tokens harus menampung reasoning model: deepseek-flash menulis
 # reasoning_content SEBELUM konten (terukur: +-825 reasoning token untuk
 # 6 soal). Batas lama 200 membuat konten sering kosong dan fitur gagal
 # diam-diam. Cerita 1 kalimat tetap pendek — kelebihan kuota tidak
 # berarti teks lebih panjang, dan cache membuat biaya dibayar sekali.
 MAX_TOKENS = 2000
 
-# Vision (lampiran foto): deepseek-v4-flash-vision-exp juga reasoning model
+# Vision (lampiran foto): deepseek-flash juga reasoning model
 # — terukur 718 reasoning token untuk 6 soal.
 # Vision membaca lembar utuh: jawaban + caraku untuk sampai puluhan soal.
 # 3000 terbukti kurang di lapangan (2 Sep 2026): sesi 50 soal membuat
@@ -341,7 +341,7 @@ def parse_respons(data: bytes | bytearray | str | dict) -> str | None:
         if not isinstance(konten, str):
             return None
         if not konten.strip():
-            # Reasoning model (v4-flash) yang kehabisan max_tokens di
+            # Reasoning model (deepseek-flash) yang kehabisan max_tokens di
             # reasoning_content mengirim content kosong. Itu kegagalan
             # permintaan, bukan kalimat sah berupa string kosong.
             return None

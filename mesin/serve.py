@@ -41,9 +41,11 @@ def siapkan_admin_dan_pemilik() -> str | None:
     Kalau belum ada akun admin, akun guru PERTAMA dipromosikan (bootstrap
     deterministik — pemilik produk tidak perlu menyunting sandi.json lewat
     tangan), lalu seluruh siswa warisan yang ber-pemilik kosong dibackfill
-    ke nama admin itu: data lama adalah keluarga si pengelola. Tanpa berkas
-    sandi (mode lokal) tidak ada yang diubah.
+    ke nama admin itu: data lama adalah keluarga si pengelola. Akun lama juga
+    mendapat ID generasi stabil sebelum sesi baru dibuat. Tanpa berkas sandi
+    (mode lokal) tidak ada yang diubah.
     """
+    auth.pastikan_id_akun()
     admin = auth.pastikan_admin()
     if admin is None:
         return None

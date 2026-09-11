@@ -13,6 +13,7 @@ import secrets
 import tempfile
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 BERKAS_SESI = Path(
@@ -38,6 +39,16 @@ _BATAS_TUNGGU = 15 * 60
 
 
 # ── sesi token ──────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PrincipalPendamping:
+    """Identitas akun terverifikasi untuk storage privat Pendamping."""
+
+    pengguna: str
+    peran: str
+    id_akun: str
+
 
 def muat(path: Path | None = None) -> dict:
     p = path or BERKAS_SESI
@@ -71,14 +82,21 @@ def _tulis(data: dict, path: Path | None = None) -> None:
 
 
 def buat(pengguna: str, peran: str, path: Path | None = None,
-         sekarang: float | None = None) -> str:
+         sekarang: float | None = None, id_akun: str | None = None) -> str:
     token = secrets.token_urlsafe(32)
     data = muat(path)
-    data[token] = {
+    entri = {
         "pengguna": pengguna,
         "peran": peran,
         "kedaluarsa": (sekarang if sekarang is not None else time.time()) + TTL_DETIK,
     }
+    if id_akun is not None:
+        import auth
+
+        if not auth.id_akun_sah(id_akun):
+            raise ValueError("id_akun sesi tidak sah")
+        entri["id_akun"] = id_akun
+    data[token] = entri
     _tulis(data, path)
     return token
 
@@ -92,6 +110,45 @@ def ambil(token: str | None, path: Path | None = None,
     if not entri or entri.get("kedaluarsa", 0) <= kini:
         return None
     return entri["pengguna"], entri["peran"]
+
+
+def ambil_principal_pendamping(
+    token: str | None,
+    path: Path | None = None,
+    sekarang: float | None = None,
+    path_akun: Path | None = None,
+) -> PrincipalPendamping | None:
+    """Principal guru yang ID generasinya masih cocok dengan berkas akun.
+
+    Sesi lama tanpa ID tetap sah untuk aplikasi lama melalui ``ambil()``, tetapi
+    fail closed di sini. Admin, murid, mode lokal tanpa berkas akun, serta akun
+    yang dihapus/dibuat ulang juga ditolak.
+    """
+    if not token:
+        return None
+    kini = sekarang if sekarang is not None else time.time()
+    entri = muat(path).get(token)
+    if not isinstance(entri, dict) or entri.get("kedaluarsa", 0) <= kini:
+        return None
+    pengguna = entri.get("pengguna")
+    peran = entri.get("peran")
+    id_akun = entri.get("id_akun")
+    if type(pengguna) is not str or peran != "guru" or type(id_akun) is not str:
+        return None
+
+    import auth
+
+    tujuan_akun = path_akun or auth.BERKAS_SANDI
+    if not tujuan_akun.exists() or not auth.id_akun_sah(id_akun):
+        return None
+    akun = auth.cari_akun(pengguna, tujuan_akun)
+    if not akun:
+        return None
+    if akun.get("peran", "guru") != peran or akun.get("id_akun") != id_akun:
+        return None
+    if akun.get("pengguna") != pengguna:
+        return None
+    return PrincipalPendamping(pengguna=pengguna, peran=peran, id_akun=id_akun)
 
 
 def hapus(token: str, path: Path | None = None) -> bool:

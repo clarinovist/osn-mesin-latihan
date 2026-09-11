@@ -63,6 +63,7 @@ def test_startup_idempoten(pasangan):
     akun = auth.muat_akun(berkas)
     assert len(akun) == 1
     assert akun[0]["peran"] == "admin"
+    assert auth.id_akun_sah(akun[0]["id_akun"])
     with database.buka(db) as kon:
         pemilik = [
             r["pemilik"] for r in kon.execute("SELECT pemilik FROM siswa")

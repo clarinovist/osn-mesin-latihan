@@ -199,7 +199,7 @@ def test_parse_respons_rusak_tetap_none():
 
 
 def test_parse_respons_konten_kosong_reasoning_model_tetap_none():
-    """v4-flash adalah reasoning model: kalau max_tokens habis di
+    """deepseek-flash adalah reasoning model: kalau max_tokens habis di
     reasoning_content, content datang kosong. Konten kosong harus dianggap
     gagal (None), bukan kalimat sah berupa string kosong."""
     muatan = {
@@ -235,7 +235,7 @@ def test_parse_respons_reasoning_content_tidak_mengganggu_konten():
 
 
 def test_max_tokens_menampung_reasoning_model(monkeypatch, api_aktif, kon, soal):
-    """Reasoning v4-flash memakan token sebelum konten muncul (terukur:
+    """Reasoning deepseek-flash memakan token sebelum konten muncul (terukur:
     6 soal butuh +-825 reasoning token). max_tokens 200 membuat konten
     sering kosong dan verifikasi gagal diam-diam."""
     panggilan = pasang_api(monkeypatch, muatan=respons_chat("kalimat."))
@@ -428,7 +428,7 @@ def test_konfigurasi_default(monkeypatch):
         monkeypatch.delenv(nama, raising=False)
     cfg = llm.konfigurasi()
     assert cfg["base_url"] == "https://api.deepseek.com"
-    assert cfg["model"] == "deepseek-chat"
+    assert cfg["model"] == "deepseek-flash"
     assert cfg["api_key"] == ""
 
 
@@ -438,6 +438,12 @@ def test_konfigurasi_dari_env(monkeypatch):
     cfg = llm.konfigurasi()
     assert cfg["base_url"] == "https://proxy.example.com"  # slash akhir rapi
     assert cfg["model"] == "deepseek-reasoner"
+
+
+def test_konfigurasi_vision_memakai_nama_kanonik(monkeypatch):
+    monkeypatch.delenv(llm.ENV_VISION_MODEL, raising=False)
+    monkeypatch.setenv(llm.ENV_MODEL, "model-chat-lain")
+    assert llm.konfigurasi_vision()["model"] == "deepseek-flash"
 
 
 def test_request_ke_endpoint_chat_completions(monkeypatch, api_aktif, kon, soal):

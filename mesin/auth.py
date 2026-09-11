@@ -23,6 +23,8 @@ import hmac
 import json
 import os
 import secrets
+import tempfile
+import threading
 from pathlib import Path
 
 BERKAS_SANDI = Path(
@@ -50,6 +52,42 @@ _ITERASI = int(os.environ.get("OSN_PBKDF2_ITERASI", "600000"))
 # Nilai konstan ini membuat PBKDF2 tetap dijalankan walau nama tidak ada.
 _UMPAN_GARAM = bytes.fromhex("aa" * 16)
 _UMPAN_KUNCI = bytes.fromhex("bb" * 32)
+_KUNCI_TULIS = threading.Lock()
+_AWAL_ID_AKUN = "akun_"
+_PANJANG_HEX_ID_AKUN = 32
+
+
+def id_akun_sah(nilai) -> bool:
+    """True hanya untuk ID acak non-bermakna dengan bentuk kanonik."""
+    if type(nilai) is not str or not nilai.startswith(_AWAL_ID_AKUN):
+        return False
+    ekor = nilai[len(_AWAL_ID_AKUN):]
+    return len(ekor) == _PANJANG_HEX_ID_AKUN and all(
+        karakter in "0123456789abcdef" for karakter in ekor
+    )
+
+
+def _buat_id_akun() -> str:
+    return _AWAL_ID_AKUN + secrets.token_hex(_PANJANG_HEX_ID_AKUN // 2)
+
+
+def _tulis_akun_atomik(data: dict, path: Path) -> None:
+    """Tulis JSON privat secara atomik di direktori tujuan."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _KUNCI_TULIS:
+        fd, nama_sementara = tempfile.mkstemp(dir=path.parent, prefix=".sandi-")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as berkas:
+                json.dump(data, berkas, indent=2)
+            os.chmod(nama_sementara, 0o600)
+            os.replace(nama_sementara, path)
+            path.chmod(0o600)
+        except Exception:
+            try:
+                os.unlink(nama_sementara)
+            except FileNotFoundError:
+                pass
+            raise
 
 
 def buat_hash(sandi: str) -> dict:
@@ -79,12 +117,19 @@ def simpan_sandi(sandi: str, pengguna: str = "guru", path: Path | None = None) -
 
     # Berkas belum ada / masih bentuk lama satu-akun untuk pengguna yang sama:
     # pertahankan bentuk lama supaya format tidak berubah tanpa alasan.
-    if not akun or (len(akun) == 1 and akun[0]["pengguna"] == pengguna):
-        p.write_text(
-            json.dumps({"pengguna": pengguna, **buat_hash(sandi)}, indent=2),
-            encoding="utf-8",
+    if not akun:
+        _tulis_akun_atomik(
+            {"pengguna": pengguna, "id_akun": _buat_id_akun(), **buat_hash(sandi)},
+            p,
         )
-        p.chmod(0o600)  # hanya pemilik yang boleh membaca
+        return p
+    if len(akun) == 1 and akun[0]["pengguna"] == pengguna:
+        satu = dict(akun[0])
+        satu.update(buat_hash(sandi))
+        satu.setdefault("id_akun", _buat_id_akun())
+        # Pertahankan bentuk lama satu-akun dan semantik peran implisitnya.
+        satu.pop("peran", None)
+        _tulis_akun_atomik(satu, p)
         return p
 
     ketemu = False
@@ -92,12 +137,17 @@ def simpan_sandi(sandi: str, pengguna: str = "guru", path: Path | None = None) -
         if a["pengguna"].strip().lower() == pengguna.strip().lower():
             a.update(buat_hash(sandi))
             a.setdefault("peran", "guru")
+            a.setdefault("id_akun", _buat_id_akun())
             ketemu = True
     if not ketemu:
-        akun.append({"pengguna": pengguna, "peran": "guru", **buat_hash(sandi)})
+        akun.append({
+            "pengguna": pengguna,
+            "peran": "guru",
+            "id_akun": _buat_id_akun(),
+            **buat_hash(sandi),
+        })
 
-    p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
-    p.chmod(0o600)
+    _tulis_akun_atomik({"akun": akun}, p)
     return p
 
 
@@ -232,6 +282,59 @@ def muat_akun(path: Path | None = None) -> list[dict]:
     return _normalisasi(muat_sandi(path))
 
 
+def pastikan_id_akun(path: Path | None = None) -> bool:
+    """Migrasikan akun lama ke ID generasi stabil secara atomik/idempoten.
+
+    Berkas rusak, bentuk asing, ID cacat, atau ID duplikat gagal tertutup dan
+    tidak ditulis ulang. Nilai hash/peran/siswa serta field lain dipertahankan.
+    """
+    p = path or BERKAS_SANDI
+    if not p.exists():
+        return False
+    try:
+        mentah = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as galat:
+        raise ValueError("berkas akun tidak sah") from galat
+    if not isinstance(mentah, dict):
+        raise ValueError("berkas akun tidak sah")
+    if "akun" in mentah:
+        if not isinstance(mentah["akun"], list) or not all(
+            isinstance(akun, dict) for akun in mentah["akun"]
+        ):
+            raise ValueError("berkas akun tidak sah")
+        akun = [dict(item) for item in mentah["akun"]]
+        bentuk_multi = True
+    elif isinstance(mentah.get("pengguna"), str):
+        akun = [dict(mentah)]
+        bentuk_multi = False
+    else:
+        raise ValueError("berkas akun tidak sah")
+
+    terlihat = set()
+    berubah = False
+    for item in akun:
+        nilai = item.get("id_akun")
+        if nilai is None:
+            nilai = _buat_id_akun()
+            item["id_akun"] = nilai
+            berubah = True
+        elif not id_akun_sah(nilai):
+            raise ValueError("id_akun tidak sah")
+        if nilai in terlihat:
+            raise ValueError("id_akun duplikat")
+        terlihat.add(nilai)
+    if not berubah:
+        return False
+
+    if bentuk_multi:
+        hasil = dict(mentah)
+        hasil["akun"] = akun
+    else:
+        hasil = akun[0]
+    _tulis_akun_atomik(hasil, p)
+    return True
+
+
 def cari_akun(pengguna: str, path: Path | None = None) -> dict | None:
     """Akun dengan nama pengguna itu. Pencarian case-insensitive supaya
     'Feby' dan 'feby' adalah orang yang sama — anak tidak paham bedanya,
@@ -296,13 +399,17 @@ def tambah_akun(
     for a in akun:
         if a["pengguna"].strip().lower() == pengguna.strip().lower():
             raise ValueError(f"nama pengguna sudah dipakai: {pengguna}")
-    baru: dict = {"pengguna": pengguna, "peran": peran, **buat_hash(sandi_baru)}
+    baru: dict = {
+        "pengguna": pengguna,
+        "peran": peran,
+        "id_akun": _buat_id_akun(),
+        **buat_hash(sandi_baru),
+    }
     if siswa_id is not None:
         baru["siswa_id"] = int(siswa_id)
     akun.append(baru)
     p = path or BERKAS_SANDI
-    p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
-    p.chmod(0o600)
+    _tulis_akun_atomik({"akun": akun}, p)
     return p
 
 
@@ -324,8 +431,7 @@ def pastikan_admin(path: Path | None = None) -> str | None:
         if a.get("peran", "guru") == "guru":
             a["peran"] = "admin"
             p = path or BERKAS_SANDI
-            p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
-            p.chmod(0o600)
+            _tulis_akun_atomik({"akun": akun}, p)
             return a["pengguna"]
     return None
 
@@ -354,8 +460,7 @@ def hapus_akun(pengguna: str, path: Path | None = None) -> bool:
     if len(sisa) == len(akun):
         return False
     p = path or BERKAS_SANDI
-    p.write_text(json.dumps({"akun": sisa}, indent=2), encoding="utf-8")
-    p.chmod(0o600)
+    _tulis_akun_atomik({"akun": sisa}, p)
     return True
 
 
@@ -381,8 +486,7 @@ def hapus_akun_guru(pengguna: str, path: Path | None = None) -> bool:
     if len(sisa) == len(akun):
         return False
     p = path or BERKAS_SANDI
-    p.write_text(json.dumps({"akun": sisa}, indent=2), encoding="utf-8")
-    p.chmod(0o600)
+    _tulis_akun_atomik({"akun": sisa}, p)
     return True
 
 
@@ -407,8 +511,7 @@ def setel_sandi_murid(
     if not ubah:
         return False
     p = path or BERKAS_SANDI
-    p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
-    p.chmod(0o600)
+    _tulis_akun_atomik({"akun": akun}, p)
     return True
 
 
@@ -440,6 +543,5 @@ def setel_sandi_guru(
     if not ubah:
         return False
     p = path or BERKAS_SANDI
-    p.write_text(json.dumps({"akun": akun}, indent=2), encoding="utf-8")
-    p.chmod(0o600)
+    _tulis_akun_atomik({"akun": akun}, p)
     return True

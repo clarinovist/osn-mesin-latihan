@@ -42,7 +42,7 @@ def db(tmp_path, monkeypatch):
 def test_parse_menerima_kunci_inggris():
     """number/answer/work = nomor/jawaban/caraku.
 
-    Balasan nyata dari deepseek-v4-flash-vision-exp memakai kunci Inggris
+    Balasan nyata dari model vision DeepSeek memakai kunci Inggris
     meski prompt berbahasa Indonesia — dulu seluruh bacaan dibuang.
     """
     konten = json.dumps(
