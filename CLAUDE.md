@@ -171,8 +171,11 @@ alur/bukti/rekomendasi. Jangan ringkas menjadi diagnosis → lebih banyak soal. 
 - Setelah push diminta, pantau run untuk commit yang benar sampai selesai:
   `gh run list --repo clarinovist/osn-mesin-latihan --branch main`, lalu
   `gh run watch <id> --repo clarinovist/osn-mesin-latihan --exit-status`.
-  Verifikasi publik `https://osn.lesprivate.id`: `/` 200, `/akun` anonim 401,
+  Verifikasi publik di domain produksi kanonis **`https://jagomat.id`**
+  (sesuai `URL_SITUS` di `mesin/brand.py`): `/` 200, `/akun` anonim 401,
   `/murid/` 303 ke `/masuk`. **Jangan menyentuh data anak** untuk smoke test.
+  `https://osn.lesprivate.id` hanya domain lama yang mengalihkan ke `jagomat.id`,
+  bukan target utama smoke test.
 - “Ada di source”, “ter-deploy”, dan “berfungsi” tiga klaim berbeda. Untuk keadaan live,
   cek container berjalan secara read-only dengan izin; jangan menganggap checkout sama
   dengan produksi. `llm.py` fail-dry: konfigurasi hilang bisa mematikan fitur tanpa error.
