@@ -66,6 +66,75 @@ def _pesan_provider(
     ]
 
 
+def _kunci_reservasi(kon):
+    """Serialkan pemeriksaan request dan reservasi; lepaskan sebelum network."""
+    if not kon.in_transaction:
+        kon.execute("BEGIN IMMEDIATE")
+    else:
+        # Pemanggil boleh baru membuat chat dalam transaksi yang sama.
+        kon.execute("UPDATE operasi SET status = status WHERE 0")
+
+
+def _chat_dan_konteks_sah(kon, account_id, chat_id, konteks, validasi_konteks):
+    chat = assistant_store.ambil_chat(kon, account_id, chat_id)
+    if chat is None:
+        raise GalatPendamping("Percakapan tidak tersedia.")
+    if chat.context_kind is None:
+        if konteks is not None:
+            raise GalatPendamping("Konteks tidak cocok dengan percakapan.")
+    elif (
+        konteks is None
+        or konteks.jenis != chat.context_kind
+        or konteks.resource_id != chat.context_id
+        or konteks.versi != chat.context_resource_version
+        or validasi_konteks is None
+        or validasi_konteks() != konteks.versi
+    ):
+        raise GalatPendamping("Konteks belajar berubah. Tinjau sumber lagi.")
+    if konteks is not None and not assistant_store.persetujuan_konteks_aktif(
+        kon, account_id, jenis=chat.context_kind, resource_id=chat.context_id,
+        resource_version=chat.context_resource_version,
+        kategori=konteks.kategori, versi=chat.context_version,
+    ):
+        raise GalatPendamping("Persetujuan konteks berubah. Buka chat baru.")
+    return chat
+
+
+def mulai_chat_dan_kirim(
+    kon, account_id: str, mode_memori: str, teks: str, *, request_id: str,
+    panggil_provider=None, sekarang: int | None = None,
+):
+    """Reservasi chat awal dan request atomik; retry tetap ke chat asal."""
+    aman = assistant_policy.pastikan_teks_aman(teks)
+    if mode_memori not in ("aktif", "tanpa_memori"):
+        raise ValueError("Mode memori tidak sah.")
+    kini = int(time.time()) if sekarang is None else int(sekarang)
+    with kon:
+        _kunci_reservasi(kon)
+        lama = kon.execute(
+            "SELECT chat_id, chat_version FROM operasi WHERE request_id = ? AND account_id = ?",
+            (request_id, account_id),
+        ).fetchone()
+        if lama is not None:
+            chat = assistant_store.ambil_chat(kon, account_id, lama["chat_id"])
+            if (
+                chat is None
+                or chat.mode_memori != mode_memori
+                or chat.context_kind is not None
+                or lama["chat_version"] != 1
+            ):
+                raise GalatPendamping("Permintaan tidak cocok dengan percakapan awal.")
+        else:
+            chat = assistant_store.buat_chat(
+                kon, account_id, mode_memori, sekarang=kini
+            )
+        kirim_pesan(
+            kon, account_id, chat.id, aman, request_id=request_id,
+            panggil_provider=panggil_provider, sekarang=kini,
+        )
+    return assistant_store.ambil_chat(kon, account_id, chat.id)
+
+
 def kirim_pesan(
     kon,
     account_id: str,
@@ -81,40 +150,50 @@ def kirim_pesan(
     """Simpan pesan, panggil provider di luar transaksi, lalu revalidasi versi."""
     kini = int(time.time()) if sekarang is None else int(sekarang)
     aman = assistant_policy.pastikan_teks_aman(teks)
-    if not assistant_store.persetujuan_aktif(
-        kon, account_id, kategori="chat_umum", provider_id=assistant_policy.PROVIDER_ID
-    ):
-        raise GalatPendamping("Persetujuan provider belum diberikan.")
-
-    operasi_lama = kon.execute(
-        "SELECT status FROM operasi WHERE request_id = ? AND account_id = ?",
-        (request_id, account_id),
-    ).fetchone()
-    if operasi_lama:
-        jawaban_lama = assistant_store.pesan_dari_request(
-            kon, account_id, request_id + ":jawaban", peran="asisten"
+    with kon:
+        _kunci_reservasi(kon)
+        if not assistant_store.persetujuan_aktif(
+            kon, account_id, kategori="chat_umum", provider_id=assistant_policy.PROVIDER_ID
+        ):
+            raise GalatPendamping("Persetujuan provider belum diberikan.")
+        chat = _chat_dan_konteks_sah(
+            kon, account_id, chat_id, konteks, validasi_konteks
         )
-        if operasi_lama["status"] == "selesai" and jawaban_lama:
-            return jawaban_lama.teks
-        raise GalatPendamping("Permintaan ini sedang atau sudah gagal diproses.")
+        operasi_lama = kon.execute(
+            "SELECT chat_id, status FROM operasi WHERE request_id = ? AND account_id = ?",
+            (request_id, account_id),
+        ).fetchone()
+        if operasi_lama:
+            if operasi_lama["chat_id"] != chat.id:
+                raise GalatPendamping("Permintaan tidak cocok dengan percakapan.")
+            sumber = assistant_store.pesan_dari_request(
+                kon, account_id, request_id, peran="pengguna"
+            )
+            jawaban_lama = assistant_store.pesan_dari_request(
+                kon, account_id, request_id + ":jawaban", peran="asisten"
+            )
+            if (
+                operasi_lama["status"] == "selesai"
+                and sumber is not None and sumber.chat_id == chat.id
+                and sumber.teks == aman
+                and jawaban_lama is not None and jawaban_lama.chat_id == chat.id
+            ):
+                return jawaban_lama.teks
+            raise GalatPendamping("Permintaan ini sedang atau sudah gagal diproses.")
 
-    consent_version = assistant_store.versi_persetujuan(kon, account_id)
-    memory_version = assistant_store.versi_memori(kon, account_id)
-    context_version = (
-        assistant_store.versi_persetujuan_konteks(kon, account_id)
-        if konteks is not None else 0
-    )
-    operasi = assistant_store.mulai_operasi(
-        kon, account_id, chat_id, request_id,
-        consent_version=consent_version,
-        memory_version=memory_version,
-        context_version=context_version,
-        sekarang=kini,
-    )
-    pesan = _pesan_provider(
-        kon, account_id, chat_id, aman, konteks=konteks
-    )
-    kon.commit()
+        consent_version = assistant_store.versi_persetujuan(kon, account_id)
+        memory_version = assistant_store.versi_memori(kon, account_id)
+        context_version = chat.context_version if konteks is not None else 0
+        operasi = assistant_store.mulai_operasi(
+            kon, account_id, chat_id, request_id,
+            consent_version=consent_version,
+            memory_version=memory_version,
+            context_version=context_version,
+            sekarang=kini,
+        )
+        pesan = _pesan_provider(
+            kon, account_id, chat_id, aman, konteks=konteks
+        )
 
     pemanggil = panggil_provider or panggil_provider_default
     try:
@@ -139,20 +218,20 @@ def kirim_pesan(
 
     try:
         with kon:
+            _kunci_reservasi(kon)
             if not konteks_masih_sah:
                 raise GalatPendamping(
                     "Konteks belajar berubah. Buka chat baru setelah meninjau ulang."
                 )
             if konteks is not None and (
-                assistant_store.versi_persetujuan_konteks(
-                    kon, account_id
-                ) != context_version
-                or not assistant_store.persetujuan_konteks_aktif(
+                not assistant_store.persetujuan_konteks_aktif(
                     kon,
                     account_id,
                     jenis=konteks.jenis,
                     resource_id=konteks.resource_id,
                     resource_version=konteks.versi,
+                    kategori=konteks.kategori,
+                    versi=context_version,
                 )
             ):
                 raise GalatPendamping(

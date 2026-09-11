@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 
 BAWAAN = Path(os.environ.get("PENDAMPING_BERKAS_DB", "/data/pendamping.db"))
-VERSI_SKEMA = 3
+VERSI_SKEMA = 4
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS migrasi_pendamping (
@@ -140,6 +140,16 @@ CREATE TABLE IF NOT EXISTS usulan_latihan (
 );
 CREATE INDEX IF NOT EXISTS idx_usulan_pemilik_chat
     ON usulan_latihan(account_id, chat_id, status, dibuat);
+
+-- Satu tinjauan terbaru per usulan; bukti review menyimpan hash token form.
+-- Purge usulan juga menghapus bukti review, bukan ledger idempotensi DB belajar.
+CREATE TABLE IF NOT EXISTS tinjauan_usulan (
+    usulan_id TEXT PRIMARY KEY REFERENCES usulan_latihan(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE CHECK (length(token_hash) = 64),
+    ikatan_hash TEXT NOT NULL CHECK (length(ikatan_hash) = 64),
+    dibuat INTEGER NOT NULL,
+    kedaluarsa INTEGER NOT NULL CHECK (kedaluarsa > dibuat)
+);
 """
 
 

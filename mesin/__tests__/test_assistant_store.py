@@ -31,13 +31,13 @@ def test_schema_idempoten_fk_integritas_dan_izin_berkas(tmp_path):
     assistant_schema.siapkan(path)
     assistant_schema.siapkan(path)
     with assistant_schema.buka(path) as koneksi:
-        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 4
         assert koneksi.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert koneksi.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert koneksi.execute("PRAGMA foreign_key_check").fetchall() == []
         assert koneksi.execute(
-            "SELECT COUNT(*) FROM migrasi_pendamping WHERE versi IN (1, 2, 3)"
-        ).fetchone()[0] == 3
+            "SELECT COUNT(*) FROM migrasi_pendamping WHERE versi IN (1, 2, 3, 4)"
+        ).fetchone()[0] == 4
     assert oct(path.stat().st_mode)[-3:] == "600"
 
 
@@ -351,6 +351,27 @@ def test_operasi_gagal_dipurge_setelah_tujuh_hari(kon):
     hampir = 101 + assistant_store.RETENSI_OPERASI_GAGAL_DETIK - 1
     assert assistant_store.purge_operasi(kon, sekarang=hampir) == 0
     assert assistant_store.purge_operasi(kon, sekarang=hampir + 1) == 1
+
+
+def test_cabut_izin_konteks_pengganti_tidak_menghidupkan_izin_lama(kon):
+    pertama = assistant_store.beri_persetujuan_konteks(
+        kon, AKUN_A, jenis="anak", resource_id="1", resource_version="v1",
+        kategori="ringkasan_netral", sekarang=100,
+    )
+    kedua = assistant_store.beri_persetujuan_konteks(
+        kon, AKUN_A, jenis="anak", resource_id="1", resource_version="v1",
+        kategori="ringkasan_netral", sekarang=101,
+    )
+    assert assistant_store.cabut_persetujuan_konteks(
+        kon, AKUN_A, kedua.id, versi_diharapkan=kedua.versi, sekarang=102,
+    )
+    assert not assistant_store.persetujuan_konteks_aktif(
+        kon, AKUN_A, jenis="anak", resource_id="1", resource_version="v1",
+        kategori="ringkasan_netral", versi=pertama.versi,
+    )
+    assert not assistant_store.persetujuan_konteks_aktif(
+        kon, AKUN_A, jenis="anak", resource_id="1", resource_version="v1",
+    )
 
 
 def test_operasi_asing_tidak_dapat_diselesaikan(kon):

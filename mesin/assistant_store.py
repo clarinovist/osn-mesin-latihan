@@ -540,7 +540,15 @@ def ubah_memori(
     sekarang: int,
 ) -> bool:
     account_id = _wajib_account_id(account_id)
-    bersih = _teks_aman(isi, batas=500)
+    # POST manual memakai kebijakan isi yang sama dengan draft model. Kembalikan
+    # False sesuai kontrak mutasi agar input invalid tidak memutus HTTP atau
+    # menampilkan isi sensitif lewat exception/halaman galat.
+    from assistant_policy import validasi_isi_memori
+
+    try:
+        bersih = validasi_isi_memori(isi)
+    except ValueError:
+        return False
     hasil = kon.execute(
         """UPDATE memori
            SET isi = ?, versi = versi + 1
@@ -659,13 +667,13 @@ def persetujuan_konteks_aktif(
 ) -> bool:
     account_id = _wajib_account_id(account_id)
     baris = kon.execute(
-        """SELECT resource_version, kategori, versi
+        """SELECT resource_version, kategori, versi, dicabut
            FROM persetujuan_konteks
            WHERE account_id = ? AND jenis = ? AND resource_id = ?
-             AND dicabut IS NULL ORDER BY versi DESC LIMIT 1""",
+           ORDER BY versi DESC, rowid DESC LIMIT 1""",
         (account_id, jenis, resource_id),
     ).fetchone()
-    if baris is None:
+    if baris is None or baris["dicabut"] is not None:
         return False
     return (
         (resource_version is None or baris["resource_version"] == resource_version)

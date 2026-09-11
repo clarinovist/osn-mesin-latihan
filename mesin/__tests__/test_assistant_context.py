@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 from pathlib import Path
 import sqlite3
@@ -13,9 +14,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import assistant_context  # noqa: E402
 import assistant_schema  # noqa: E402
+import assistant_policy  # noqa: E402
+import assistant_service  # noqa: E402
 import assistant_store  # noqa: E402
 import database  # noqa: E402
 import question_views  # noqa: E402
+
+from test_assistant_runtime import ProviderPalsu  # noqa: E402
 
 AKUN = "akun_" + "a" * 32
 
@@ -56,7 +61,7 @@ def test_migrasi_v1_ke_v2_idempoten_dan_menjaga_chat(tmp_path):
     assistant_schema.siapkan(path)
     assistant_schema.siapkan(path)
     with assistant_schema.buka(path) as koneksi:
-        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 4
         assert koneksi.execute("SELECT COUNT(*) FROM chat").fetchone()[0] == 1
         assert "context_resource_version" in {
             baris["name"] for baris in koneksi.execute("PRAGMA table_info(chat)")
@@ -201,3 +206,216 @@ def test_context_asing_tidak_bisa_diikat(privat):
                 context_resource_version="v1",
                 context_category="ringkasan_netral",
             )
+
+
+def _chat_konteks(kon, resource_id="1"):
+    konteks = assistant_context.KonteksPendamping(
+        jenis="anak", resource_id=resource_id, versi="v1",
+        kategori="ringkasan_netral", muatan={"jenis": "ringkasan_anak", "level": "P3"},
+    )
+    izin = assistant_store.beri_persetujuan_konteks(
+        kon, AKUN, jenis=konteks.jenis, resource_id=konteks.resource_id,
+        resource_version=konteks.versi, kategori=konteks.kategori, sekarang=100,
+    )
+    chat = assistant_store.buat_chat(
+        kon, AKUN, "aktif", sekarang=100,
+        context_kind=konteks.jenis, context_id=konteks.resource_id,
+        context_version=izin.versi, context_resource_version=konteks.versi,
+        context_category=konteks.kategori,
+    )
+    return chat, konteks, izin
+
+
+def _izin_provider(kon):
+    assistant_store.beri_persetujuan(
+        kon, AKUN, policy_version=assistant_policy.VERSI_KEBIJAKAN,
+        provider_id=assistant_policy.PROVIDER_ID, kategori="chat_umum", sekarang=100,
+    )
+
+
+@pytest.mark.parametrize("saat_network", [False, True])
+def test_service_dua_konteks_sah_menyimpan_versi_chat_sendiri(privat, saat_network):
+    with assistant_schema.buka(privat) as kon:
+        _izin_provider(kon)
+        pertama = _chat_konteks(kon, "1")
+        kedua = []
+        if not saat_network:
+            kedua.append(_chat_konteks(kon, "2"))
+        kon.commit()
+        provider = ProviderPalsu(respons={
+            "jawaban": "Mari tinjau latihan ini.", "draft_memori": None,
+            "usulan_latihan": {"topik_id": "pola-bilangan",
+                               "template_ids": ["deret_aritmetika"],
+                               "level": "P3", "jumlah_soal": 10},
+            "butuh_klarifikasi": False,
+        })
+
+        def jawab(pesan):
+            assert not kon.in_transaction
+            if saat_network and not kedua:
+                with assistant_schema.buka(privat) as lain:
+                    kedua.append(_chat_konteks(lain, "2"))
+            return provider(pesan)
+
+        chat, konteks, _ = pertama
+        assistant_service.kirim_pesan(
+            kon, AKUN, chat.id, "Buat usulan latihan pertama.",
+            request_id="req_konteks_pertama", panggil_provider=jawab,
+            konteks=konteks, validasi_konteks=lambda: konteks.versi, sekarang=101,
+        )
+        chat_b, konteks_b, _ = kedua[0]
+        assistant_service.kirim_pesan(
+            kon, AKUN, chat_b.id, "Buat usulan latihan kedua.",
+            request_id="req_konteks_kedua", panggil_provider=jawab,
+            konteks=konteks_b, validasi_konteks=lambda: konteks_b.versi, sekarang=102,
+        )
+        assert len(provider.panggilan) == 2
+        for item, sumber, izin in (pertama, kedua[0]):
+            usulan, = assistant_store.daftar_usulan_chat(kon, AKUN, item.id)
+            assert usulan.context_version == item.context_version == izin.versi
+            assert usulan.context_resource_version == sumber.versi
+            operasi = kon.execute(
+                "SELECT * FROM operasi WHERE request_id = ?",
+                (usulan.sumber_request_id,),
+            ).fetchone()
+            assert operasi["context_version"] == izin.versi
+            assert operasi["chat_id"] == item.id
+            assert operasi["status"] == "selesai"
+            assert len(assistant_store.daftar_pesan(kon, AKUN, item.id)) == 2
+
+
+@pytest.mark.parametrize("rusak", ["tanpa", "lain", "jenis", "versi", "kategori", "izin", "validator"])
+def test_service_konteks_harus_terikat_chat_sebelum_network(privat, rusak):
+    with assistant_schema.buka(privat) as kon:
+        _izin_provider(kon)
+        chat, konteks, izin = _chat_konteks(kon)
+        validator = lambda: konteks.versi
+        if rusak == "tanpa":
+            konteks = None
+        elif rusak == "lain":
+            _, konteks, _ = _chat_konteks(kon, "2")
+        elif rusak == "jenis":
+            konteks = replace(konteks, jenis="sesi")
+        elif rusak == "versi":
+            konteks = replace(konteks, versi="v2")
+        elif rusak == "kategori":
+            konteks = replace(konteks, kategori="soal_resmi")
+        elif rusak == "izin":
+            assistant_store.cabut_persetujuan_konteks(
+                kon, AKUN, izin.id, versi_diharapkan=izin.versi, sekarang=101,
+            )
+        else:
+            validator = None
+        kon.commit()
+        sebelum = kon.total_changes
+        provider = ProviderPalsu()
+        with pytest.raises(assistant_service.GalatPendamping):
+            assistant_service.kirim_pesan(
+                kon, AKUN, chat.id, "Jelaskan sumber ini.", request_id="req_sumber_salah",
+                konteks=konteks, validasi_konteks=validator,
+                panggil_provider=provider, sekarang=102,
+            )
+        assert provider.panggilan == []
+        assert kon.total_changes == sebelum
+        assert kon.execute("SELECT COUNT(*) FROM operasi").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("perubahan", ["cabut", "ganti", "resource", "kategori"])
+def test_service_konteks_sendiri_berubah_saat_network_ditolak(privat, perubahan):
+    with assistant_schema.buka(privat) as kon:
+        _izin_provider(kon)
+        chat, konteks, izin = _chat_konteks(kon)
+        _chat_konteks(kon, "2")  # Versi global lebih tinggi: jangan bergantung MAX.
+        kon.commit()
+        versi = [konteks.versi]
+
+        def ubah(_pesan):
+            assert not kon.in_transaction
+            with assistant_schema.buka(privat) as lain:
+                if perubahan == "cabut":
+                    assistant_store.cabut_persetujuan_konteks(
+                        lain, AKUN, izin.id, versi_diharapkan=izin.versi, sekarang=102,
+                    )
+                elif perubahan in ("ganti", "kategori"):
+                    assistant_store.beri_persetujuan_konteks(
+                        lain, AKUN, jenis=konteks.jenis, resource_id=konteks.resource_id,
+                        resource_version=konteks.versi,
+                        kategori="soal_resmi" if perubahan == "kategori" else konteks.kategori,
+                        sekarang=102,
+                    )
+                else:
+                    versi[0] = "v2"
+            return ProviderPalsu().respons
+
+        with pytest.raises(assistant_service.GalatPendamping, match="berubah"):
+            assistant_service.kirim_pesan(
+                kon, AKUN, chat.id, "Jelaskan sumber ini.", request_id="req_sumber_berubah",
+                konteks=konteks, validasi_konteks=lambda: versi[0],
+                panggil_provider=ubah, sekarang=101,
+            )
+        assert assistant_store.daftar_pesan(kon, AKUN, chat.id) == ()
+        assert assistant_store.daftar_usulan_chat(kon, AKUN, chat.id) == ()
+        assert kon.execute("SELECT status FROM operasi").fetchone()[0] == "gagal"
+
+
+@pytest.mark.parametrize("perubahan", ["cabut", "ganti", "resource", "lain", "tanpa"])
+def test_retry_konteks_usang_tidak_replay(privat, perubahan):
+    with assistant_schema.buka(privat) as kon:
+        _izin_provider(kon)
+        chat, konteks, izin = _chat_konteks(kon)
+        provider = ProviderPalsu()
+        versi = [konteks.versi]
+
+        def kirim():
+            return assistant_service.kirim_pesan(
+                kon, AKUN, chat.id, "Jelaskan sumber ini.", request_id="req_retry_konteks",
+                konteks=konteks, validasi_konteks=lambda: versi[0],
+                panggil_provider=provider, sekarang=101,
+            )
+
+        hasil = kirim()
+        assert kirim() == hasil
+        if perubahan == "cabut":
+            assistant_store.cabut_persetujuan_konteks(
+                kon, AKUN, izin.id, versi_diharapkan=izin.versi, sekarang=102,
+            )
+        elif perubahan == "ganti":
+            _chat_konteks(kon)
+        elif perubahan == "resource":
+            versi[0] = "v2"
+        elif perubahan == "lain":
+            _, konteks, _ = _chat_konteks(kon, "2")
+        else:
+            konteks = None
+        kon.commit()
+        sebelum = kon.total_changes
+        with pytest.raises(assistant_service.GalatPendamping):
+            kirim()
+        assert kon.total_changes == sebelum
+        assert len(provider.panggilan) == 1
+        assert len(assistant_store.daftar_pesan(kon, AKUN, chat.id)) == 2
+
+
+def test_validasi_consent_dan_finalisasi_memegang_lock_yang_sama(privat, monkeypatch):
+    with assistant_schema.buka(privat) as kon:
+        _izin_provider(kon)
+        chat, konteks, _ = _chat_konteks(kon)
+        kon.commit()
+        asli = assistant_store.persetujuan_konteks_aktif
+        cek = []
+
+        def periksa(*args, **kwargs):
+            assert kon.in_transaction, "validasi consent harus atomik dengan reservasi/finalisasi"
+            with sqlite3.connect(privat, timeout=0) as lain:
+                with pytest.raises(sqlite3.OperationalError, match="locked"):
+                    lain.execute("UPDATE persetujuan_konteks SET dicabut = 102")
+            cek.append(True)
+            return asli(*args, **kwargs)
+
+        monkeypatch.setattr(assistant_store, "persetujuan_konteks_aktif", periksa)
+        assistant_service.kirim_pesan(
+            kon, AKUN, chat.id, "Jelaskan sumber ini.", request_id="req_lock_konteks",
+            konteks=konteks, validasi_konteks=lambda: konteks.versi,
+            panggil_provider=ProviderPalsu(), sekarang=101,
+        )
+        assert len(cek) == 2

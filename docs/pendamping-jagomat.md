@@ -1,8 +1,12 @@
 # Pendamping Jagomat — spesifikasi versi awal
 
-**Status: rancangan, belum diimplementasikan.** Dicatat 11 September 2026 dari
-kesepakatan diskusi produk. Spesifikasi ini bukan bukti fitur tersedia atau
-persetujuan mengirim data personal ke layanan AI.
+**Status: spesifikasi awal/historis; sebagian sudah tersedia di source.**
+Dicatat 11 September 2026 dari kesepakatan diskusi produk. Pernyataan “belum” di
+bagian historis berikut merekam tahap saat dokumen dibuat, bukan inventaris
+runtime terkini. Lihat [kontrak runtime Pendamping](pendamping-runtime.md) untuk
+perilaku dan batas source yang telah dikerjakan. Penerimaan redesign dan keadaan
+produksi tetap harus dibuktikan terpisah; dokumen ini bukan persetujuan mengirim
+data personal ke layanan AI.
 
 Acuan: [palang proyek](../CLAUDE.md), [siklus belajar](siklus-belajar-terpandu.md),
 [design system](design-system.md), dan [workflow](workflow-reference.md).

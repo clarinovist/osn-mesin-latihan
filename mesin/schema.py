@@ -151,6 +151,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sesi_pendamping_aktif
     ON sesi(kunci_pendamping)
     WHERE kunci_pendamping IS NOT NULL AND dibatalkan IS NULL;
 
+-- Bukti eksekusi Pendamping bertahan setelah sesi/chat dihapus. Kunci opaque
+-- mengikat generasi akun + usulan, tanpa teks chat, nama, atau jawaban anak.
+-- sesi_id sengaja BUKAN FK: penghapusan sesi tidak membuka eksekusi kedua.
+CREATE TABLE IF NOT EXISTS eksekusi_pendamping (
+    kunci TEXT PRIMARY KEY CHECK (length(kunci) = 64),
+    sesi_id INTEGER NOT NULL UNIQUE,
+    token_hash TEXT NOT NULL CHECK (length(token_hash) = 64),
+    ikatan_hash TEXT NOT NULL CHECK (length(ikatan_hash) = 64)
+);
+
 -- CHECK pada CREATE TABLE tidak ditambahkan ke tabel warisan oleh ALTER COLUMN.
 -- Trigger ini memberi aturan identik untuk pemasangan baru dan hasil migrasi.
 CREATE TRIGGER IF NOT EXISTS sesi_validasi_insert

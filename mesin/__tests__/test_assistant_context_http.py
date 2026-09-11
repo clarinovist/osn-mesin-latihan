@@ -235,8 +235,8 @@ def test_context_consent_versi_berubah_saat_provider_tidak_commit(server, monkey
         with assistant_schema.buka() as kon:
             akun = auth.cari_akun("guru")["id_akun"]
             assistant_store.beri_persetujuan_konteks(
-                kon, akun, jenis="anak", resource_id="999",
-                resource_version="versi-lain", kategori="ringkasan_netral",
+                kon, akun, jenis="soal", resource_id=f"{sesi}:1",
+                resource_version=versi, kategori="soal_resmi",
                 sekarang=102,
             )
         return ProviderPalsu().respons

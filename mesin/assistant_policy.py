@@ -24,7 +24,9 @@ dengan nilai persis dari katalog; ini baru usulan dan belum membuat sesi.
 draft_memori boleh null atau objek
 {"lingkup":"preferensi_orang_tua","isi":"..."}; hanya usulkan preferensi cara
 menjawab orang tua yang stabil, jangan profil anak, diagnosis, kontak,
-credential, atau ringkasan curhatan. Draft belum tersimpan sebagai memori aktif
+credential, atau ringkasan curhatan. Gunakan kalimat preferensi sederhana seperti
+"Jawab singkat dengan satu analogi." atau "Gunakan kalimat pendek." tanpa nama,
+alasan personal, atau tambahan cerita. Draft belum tersimpan sebagai memori aktif
 sebelum orang tua mengonfirmasi.
 """
 
@@ -36,6 +38,39 @@ _CREDENTIAL = re.compile(
     r"\bsk-[A-Za-z0-9_-]{12,})"
 )
 _TAG = re.compile(r"<[^>]*>")
+
+# Memori bukan teks bebas: setiap klausa harus menyatakan cara mendampingi.
+# Blacklist label saja mudah lolos dengan nama/cerita baru. Kosakata dan bentuk
+# di bawah sengaja tertutup; jangan menambah wildcard untuk alasan personal.
+_SIFAT_JAWABAN = r"(?:ringkas|singkat|pendek|sederhana|jelas|runtut|tenang|hangat|santai)"
+_GAYA_JAWABAN = (
+    rf"(?:lebih )?{_SIFAT_JAWABAN}"
+    rf"(?: (?:dan|tetapi|namun) (?:lebih )?{_SIFAT_JAWABAN}){{0,2}}"
+)
+_ALAT_PENJELASAN = (
+    r"(?:(?:satu|1) )?(?:contoh(?: konkret| sederhana)?|analogi(?: sederhana)?|"
+    r"diagram(?: sederhana)?|tabel(?: ringkas)?|gambar(?: sederhana)?)"
+)
+_KLAUSA_PREFERENSI = (
+    rf"(?:(?:tolong|mohon) )?(?:"
+    rf"(?:jawab|jelaskan|tanggapi|berikan penjelasan) "
+    rf"(?:(?:(?:secara|dengan) )?{_GAYA_JAWABAN}(?: dengan {_ALAT_PENJELASAN})?"
+    rf"|dengan {_ALAT_PENJELASAN}|langkah demi langkah|pelan-pelan)"
+    rf"|(?:gunakan|pakai|berikan) (?:{_ALAT_PENJELASAN}(?: bila membantu)?"
+    rf"|kalimat {_GAYA_JAWABAN}|bahasa Indonesia(?: yang)? sederhana|"
+    r"langkah kecil|poin-poin ringkas)"
+    rf"|saya (?:lebih suka|suka|ingin|memilih) (?:jawaban|penjelasan) "
+    rf"{_GAYA_JAWABAN}(?: dengan {_ALAT_PENJELASAN})?"
+    r"|dengarkan dulu sebelum memberi saran"
+    r"|tanyakan satu hal pada satu waktu"
+    r"|bantu saya (?:mendampingi|menjelaskan) dengan (?:tenang|sabar)"
+    r")"
+)
+_POLA_PREFERENSI = re.compile(
+    rf"{_KLAUSA_PREFERENSI}"
+    rf"(?:(?:[.;] |, (?:dan )?| (?:dan|lalu|serta) ){_KLAUSA_PREFERENSI})*[.]?",
+    re.IGNORECASE | re.ASCII,
+)
 
 
 @dataclass(frozen=True)
@@ -66,6 +101,19 @@ def pastikan_teks_aman(teks: str, *, batas: int = 8000) -> str:
     return bersih
 
 
+def validasi_isi_memori(isi: str) -> str:
+    """Terima preferensi terikat bentuk aman; jangan menebak profil dari teks."""
+    bersih = pastikan_teks_aman(isi, batas=500)
+    # Hanya spasi/baris biasa untuk pemisah. Tolak kontrol/karakter tersembunyi,
+    # bukan menghapusnya lalu menyimpan teks asli yang berbeda makna.
+    if any(not (" " <= karakter <= "~" or karakter in "\n\r") for karakter in bersih):
+        raise ValueError("Memori hanya boleh berisi preferensi cara pendampingan.")
+    pencocokan = " ".join(bersih.replace("\r\n", "\n").replace("\r", "\n").split())
+    if not _POLA_PREFERENSI.fullmatch(pencocokan):
+        raise ValueError("Memori hanya boleh berisi preferensi cara pendampingan.")
+    return bersih
+
+
 def validasi_draft_memori(data) -> Optional[DraftMemori]:
     """Validasi draft sebagai preferensi jawaban, bukan profil atau curhatan."""
     if data is None:
@@ -74,15 +122,7 @@ def validasi_draft_memori(data) -> Optional[DraftMemori]:
         raise ValueError("Draft memori tidak sesuai kontrak.")
     if data["lingkup"] != "preferensi_orang_tua":
         raise ValueError("Lingkup memori tidak diizinkan.")
-    isi = pastikan_teks_aman(data["isi"], batas=500)
-    if _TAG.search(isi):
-        raise ValueError("Draft memori memuat markup.")
-    terlarang = (
-        "anak saya", "nama anak", "diagnosis", "diagnosa", "adhd", "autis",
-        "bodoh", "malas", "nakal", "nomor telepon", "alamat rumah",
-    )
-    if any(kata in isi.lower() for kata in terlarang):
-        raise ValueError("Draft memori bukan preferensi orang tua.")
+    isi = validasi_isi_memori(data["isi"])
     return DraftMemori(lingkup=data["lingkup"], isi=isi)
 
 

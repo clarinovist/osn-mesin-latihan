@@ -100,6 +100,19 @@ def _tidak_ada(penangan) -> None:
     )
 
 
+def _usulan_berubah(penangan, galat) -> None:
+    """Gunakan penolakan aman yang sama untuk tinjauan dan konfirmasi."""
+    _kirim_privat(
+        penangan,
+        assistant_pages._bingkai(
+            "Usulan berubah",
+            '<section class="pendamping-panel"><h1 id="judul-pendamping">Usulan perlu ditinjau ulang</h1>'
+            f'<p role="alert">{html.escape(str(galat))}</p></section>',
+        ),
+        409,
+    )
+
+
 def _baca_form(penangan) -> dict[str, str]:
     asal = penangan.headers.get("Origin")
     situs = penangan.headers.get("Sec-Fetch-Site")
@@ -238,6 +251,23 @@ def tangani_get(penangan, jalur: str) -> bool:
             if usulan is None:
                 _tidak_ada(penangan)
                 return True
+            try:
+                sesi_id = assistant_actions.ambil_hasil_usulan(
+                    kon, principal.id_akun, principal.pengguna, usulan.id
+                )
+                if sesi_id is not None:
+                    _redirect(penangan, f"/sesi/{sesi_id}")
+                    return True
+                request_id = assistant_actions.tinjau_usulan(
+                    kon, principal.id_akun, principal.pengguna, usulan.id,
+                    sekarang=int(time.time()),
+                )
+            except LookupError:
+                _tidak_ada(penangan)
+                return True
+            except assistant_actions.GalatTindakan as galat:
+                _usulan_berubah(penangan, galat)
+                return True
             chat = assistant_store.ambil_chat(
                 kon, principal.id_akun, usulan.chat_id
             )
@@ -252,10 +282,7 @@ def tangani_get(penangan, jalur: str) -> bool:
             _kirim_privat(
                 penangan,
                 assistant_pages.halaman_tinjau_usulan(
-                    usulan,
-                    chat,
-                    konteks,
-                    request_id="aksi_" + secrets.token_hex(16),
+                    usulan, chat, konteks, request_id=request_id,
                 ),
             )
             return True
@@ -487,15 +514,7 @@ def tangani_post(penangan, jalur: str) -> bool:
                 _tidak_ada(penangan)
                 return True
             except assistant_actions.GalatTindakan as galat:
-                _kirim_privat(
-                    penangan,
-                    assistant_pages._bingkai(
-                        "Usulan berubah",
-                        '<section class="pendamping-panel"><h1 id="judul-pendamping">Usulan perlu ditinjau ulang</h1>'
-                        f'<p role="alert">{html.escape(str(galat))}</p></section>',
-                    ),
-                    409,
-                )
+                _usulan_berubah(penangan, galat)
                 return True
             _redirect(penangan, f"/sesi/{sesi_id}")
             return True
@@ -520,14 +539,13 @@ def tangani_post(penangan, jalur: str) -> bool:
                 return True
             try:
                 if pesan_awal:
-                    assistant_policy.pastikan_teks_aman(pesan_awal)
-                chat = assistant_store.buat_chat(
-                    kon, principal.id_akun, mode, sekarang=kini
-                )
-                if pesan_awal:
-                    assistant_service.kirim_pesan(
-                        kon, principal.id_akun, chat.id, pesan_awal,
+                    chat = assistant_service.mulai_chat_dan_kirim(
+                        kon, principal.id_akun, mode, pesan_awal,
                         request_id=request_id, sekarang=kini,
+                    )
+                else:
+                    chat = assistant_store.buat_chat(
+                        kon, principal.id_akun, mode, sekarang=kini
                     )
             except (assistant_service.GalatPendamping, ValueError) as galat:
                 _kirim_privat(
