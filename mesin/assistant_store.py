@@ -38,6 +38,10 @@ class Chat:
     diperbarui: int
     dihapus: Optional[int]
     purge_setelah: Optional[int]
+    context_kind: Optional[str] = None
+    context_id: Optional[str] = None
+    context_version: Optional[int] = None
+    context_resource_version: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -91,6 +95,19 @@ class Persetujuan:
     versi: int
 
 
+@dataclass(frozen=True)
+class PersetujuanKonteks:
+    id: str
+    account_id: str
+    jenis: str
+    resource_id: str
+    resource_version: str
+    kategori: str
+    diberikan: int
+    dicabut: Optional[int]
+    versi: int
+
+
 def _id(awalan: str) -> str:
     return awalan + secrets.token_hex(16)
 
@@ -122,6 +139,10 @@ def _chat_dari_baris(baris: sqlite3.Row) -> Chat:
         diperbarui=baris["diperbarui"],
         dihapus=baris["dihapus"],
         purge_setelah=baris["purge_setelah"],
+        context_kind=baris["context_kind"],
+        context_id=baris["context_id"],
+        context_version=baris["context_version"],
+        context_resource_version=baris["context_resource_version"],
     )
 
 
@@ -143,22 +164,61 @@ def _persetujuan_dari_baris(baris: sqlite3.Row) -> Persetujuan:
     return Persetujuan(**dict(baris))
 
 
+def _persetujuan_konteks_dari_baris(
+    baris: sqlite3.Row,
+) -> PersetujuanKonteks:
+    return PersetujuanKonteks(**dict(baris))
+
+
 def buat_chat(
     kon: sqlite3.Connection,
     account_id: str,
     mode_memori: str,
     *,
     sekarang: int,
+    context_kind: Optional[str] = None,
+    context_id: Optional[str] = None,
+    context_version: Optional[int] = None,
+    context_resource_version: Optional[str] = None,
+    context_category: Optional[str] = None,
 ) -> Chat:
     account_id = _wajib_account_id(account_id)
     if mode_memori not in _MODE_MEMORI:
         raise ValueError("mode memori tidak sah")
+    ada_konteks = any(
+        nilai is not None for nilai in (
+            context_kind, context_id, context_version, context_resource_version,
+            context_category,
+        )
+    )
+    if ada_konteks:
+        if (
+            context_kind not in ("anak", "sesi", "soal")
+            or not context_id
+            or type(context_version) is not int
+            or not context_resource_version
+            or context_category not in ("ringkasan_netral", "soal_resmi")
+            or not persetujuan_konteks_aktif(
+                kon,
+                account_id,
+                jenis=context_kind,
+                resource_id=context_id,
+                resource_version=context_resource_version,
+                kategori=context_category,
+                versi=context_version,
+            )
+        ):
+            raise ValueError("persetujuan konteks tidak sah")
     chat_id = _id("chat_")
     kon.execute(
         """INSERT INTO chat(
-               id, account_id, mode_memori, dibuat, diperbarui
-           ) VALUES (?, ?, ?, ?, ?)""",
-        (chat_id, account_id, mode_memori, sekarang, sekarang),
+               id, account_id, mode_memori, context_kind, context_id,
+               context_version, context_resource_version, dibuat, diperbarui
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            chat_id, account_id, mode_memori, context_kind, context_id,
+            context_version, context_resource_version, sekarang, sekarang,
+        ),
     )
     baris = kon.execute(
         "SELECT * FROM chat WHERE id = ? AND account_id = ?",
@@ -188,6 +248,19 @@ def daftar_chat(kon: sqlite3.Connection, account_id: str) -> tuple[Chat, ...]:
         (account_id,),
     ).fetchall()
     return tuple(_chat_dari_baris(item) for item in baris)
+
+
+def ubah_konteks_chat(
+    kon: sqlite3.Connection,
+    account_id: str,
+    chat_id: str,
+    *,
+    context_kind: str,
+    context_id: str,
+) -> None:
+    """Konteks chat immutable; mengganti/melepas konteks wajib chat baru."""
+    _wajib_account_id(account_id)
+    raise ValueError("konteks chat immutable; buka chat baru")
 
 
 def pesan_dari_request(
@@ -496,6 +569,102 @@ def hapus_semua_memori(
     if hasil.rowcount:
         _naikkan_versi_memori(kon, account_id, sekarang)
     return hasil.rowcount
+
+
+def beri_persetujuan_konteks(
+    kon: sqlite3.Connection,
+    account_id: str,
+    *,
+    jenis: str,
+    resource_id: str,
+    resource_version: str,
+    kategori: str,
+    sekarang: int,
+) -> PersetujuanKonteks:
+    account_id = _wajib_account_id(account_id)
+    if jenis not in ("anak", "sesi", "soal"):
+        raise ValueError("jenis konteks tidak sah")
+    if kategori not in ("ringkasan_netral", "soal_resmi"):
+        raise ValueError("kategori konteks tidak sah")
+    if not resource_id or not resource_version:
+        raise ValueError("resource konteks tidak lengkap")
+    versi = int(kon.execute(
+        """SELECT COALESCE(MAX(versi), 0) + 1 FROM persetujuan_konteks
+           WHERE account_id = ?""",
+        (account_id,),
+    ).fetchone()[0])
+    identitas = _id("context_")
+    kon.execute(
+        """INSERT INTO persetujuan_konteks(
+               id, account_id, jenis, resource_id, resource_version,
+               kategori, diberikan, versi
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            identitas, account_id, jenis, resource_id, resource_version,
+            kategori, sekarang, versi,
+        ),
+    )
+    baris = kon.execute(
+        """SELECT * FROM persetujuan_konteks
+           WHERE id = ? AND account_id = ?""",
+        (identitas, account_id),
+    ).fetchone()
+    return _persetujuan_konteks_dari_baris(baris)
+
+
+def versi_persetujuan_konteks(
+    kon: sqlite3.Connection, account_id: str
+) -> int:
+    account_id = _wajib_account_id(account_id)
+    return int(kon.execute(
+        """SELECT COALESCE(MAX(versi), 0) FROM persetujuan_konteks
+           WHERE account_id = ?""",
+        (account_id,),
+    ).fetchone()[0])
+
+
+def persetujuan_konteks_aktif(
+    kon: sqlite3.Connection,
+    account_id: str,
+    *,
+    jenis: str,
+    resource_id: str,
+    resource_version: Optional[str] = None,
+    kategori: Optional[str] = None,
+    versi: Optional[int] = None,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    baris = kon.execute(
+        """SELECT resource_version, kategori, versi
+           FROM persetujuan_konteks
+           WHERE account_id = ? AND jenis = ? AND resource_id = ?
+             AND dicabut IS NULL ORDER BY versi DESC LIMIT 1""",
+        (account_id, jenis, resource_id),
+    ).fetchone()
+    if baris is None:
+        return False
+    return (
+        (resource_version is None or baris["resource_version"] == resource_version)
+        and (kategori is None or baris["kategori"] == kategori)
+        and (versi is None or int(baris["versi"]) == versi)
+    )
+
+
+def cabut_persetujuan_konteks(
+    kon: sqlite3.Connection,
+    account_id: str,
+    persetujuan_id: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    hasil = kon.execute(
+        """UPDATE persetujuan_konteks SET dicabut = ?, versi = versi + 1
+           WHERE id = ? AND account_id = ? AND dicabut IS NULL AND versi = ?""",
+        (sekarang, persetujuan_id, account_id, versi_diharapkan),
+    )
+    return hasil.rowcount == 1
 
 
 def beri_persetujuan(

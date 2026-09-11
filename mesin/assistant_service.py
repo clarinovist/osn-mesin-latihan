@@ -37,7 +37,9 @@ def panggil_provider_default(pesan):
     return assistant_client.kirim(konfigurasi(), pesan)
 
 
-def _pesan_provider(kon, account_id: str, chat_id: str, teks_baru: str):
+def _pesan_provider(
+    kon, account_id: str, chat_id: str, teks_baru: str, *, konteks=None
+):
     katalog = json.loads(
         assistant_catalog.serialisasi_ringkas(assistant_catalog.buat_katalog())
     )
@@ -49,11 +51,14 @@ def _pesan_provider(kon, account_id: str, chat_id: str, teks_baru: str):
         for item in assistant_store.daftar_pesan(kon, account_id, chat_id)
     ]
     percakapan.append({"peran": "pengguna", "teks": teks_baru})
-    muatan = json.dumps({
+    isi = {
         "katalog": katalog,
         "memori": memori,
         "percakapan": percakapan,
-    }, ensure_ascii=False, separators=(",", ":"))
+    }
+    if konteks is not None:
+        isi["konteks"] = konteks.muatan
+    muatan = json.dumps(isi, ensure_ascii=False, separators=(",", ":"))
     return [
         {"role": "system", "content": assistant_policy.PROMPT_SISTEM},
         {"role": "user", "content": muatan},
@@ -69,6 +74,8 @@ def kirim_pesan(
     request_id: str,
     panggil_provider=None,
     sekarang: int | None = None,
+    konteks=None,
+    validasi_konteks=None,
 ) -> str:
     """Simpan pesan, panggil provider di luar transaksi, lalu revalidasi versi."""
     kini = int(time.time()) if sekarang is None else int(sekarang)
@@ -92,20 +99,33 @@ def kirim_pesan(
 
     consent_version = assistant_store.versi_persetujuan(kon, account_id)
     memory_version = assistant_store.versi_memori(kon, account_id)
+    context_version = (
+        assistant_store.versi_persetujuan_konteks(kon, account_id)
+        if konteks is not None else 0
+    )
     operasi = assistant_store.mulai_operasi(
         kon, account_id, chat_id, request_id,
         consent_version=consent_version,
         memory_version=memory_version,
-        context_version=0,
+        context_version=context_version,
         sekarang=kini,
     )
-    pesan = _pesan_provider(kon, account_id, chat_id, aman)
+    pesan = _pesan_provider(
+        kon, account_id, chat_id, aman, konteks=konteks
+    )
     kon.commit()
 
     pemanggil = panggil_provider or panggil_provider_default
     try:
         mentah = pemanggil(pesan)
         respons = assistant_policy.validasi_respons(mentah)
+        konteks_masih_sah = (
+            konteks is None
+            or (
+                validasi_konteks is not None
+                and validasi_konteks() == konteks.versi
+            )
+        )
     except (assistant_client.GalatProvider, ValueError) as galat:
         try:
             with kon:
@@ -118,12 +138,31 @@ def kirim_pesan(
 
     try:
         with kon:
+            if not konteks_masih_sah:
+                raise GalatPendamping(
+                    "Konteks belajar berubah. Buka chat baru setelah meninjau ulang."
+                )
+            if konteks is not None and (
+                assistant_store.versi_persetujuan_konteks(
+                    kon, account_id
+                ) != context_version
+                or not assistant_store.persetujuan_konteks_aktif(
+                    kon,
+                    account_id,
+                    jenis=konteks.jenis,
+                    resource_id=konteks.resource_id,
+                    resource_version=konteks.versi,
+                )
+            ):
+                raise GalatPendamping(
+                    "Persetujuan konteks berubah. Buka chat baru."
+                )
             if not assistant_store.selesaikan_operasi(
                 kon, account_id, request_id,
                 chat_version=operasi.chat_version,
                 consent_version=consent_version,
                 memory_version=memory_version,
-                context_version=0,
+                context_version=context_version,
                 sekarang=kini,
             ):
                 raise GalatPendamping(

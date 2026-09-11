@@ -10,6 +10,7 @@ import threading
 import time
 import urllib.parse
 
+import assistant_context
 import assistant_pages
 import assistant_policy
 import assistant_schema
@@ -23,6 +24,9 @@ _POLA_CHAT = re.compile(r"/pendamping/chat/(chat_[0-9a-f]{32})\Z")
 _POLA_PESAN = re.compile(r"/pendamping/chat/(chat_[0-9a-f]{32})/pesan\Z")
 _POLA_MEMORI = re.compile(
     r"/pendamping/memori/(memori_[0-9a-f]{32})/(konfirmasi|ubah|hapus)\Z"
+)
+_POLA_KONTEKS = re.compile(
+    r"/pendamping/konteks/(anak|sesi|soal)/([0-9]+(?::[0-9]+)?)\Z"
 )
 _riwayat_laju = {}
 _kunci_laju = threading.Lock()
@@ -135,6 +139,32 @@ def _siapkan_db():
     return assistant_schema.buka()
 
 
+def _konteks_chat(chat, pemilik: str):
+    if chat.context_kind is None:
+        return None
+    import database
+
+    with database.buka() as kon:
+        konteks = assistant_context.ambil(
+            kon, chat.context_kind, chat.context_id, pemilik=pemilik
+        )
+    if (
+        konteks is None
+        or konteks.versi != chat.context_resource_version
+    ):
+        return None
+    return konteks
+
+
+def _versi_konteks_chat(chat, pemilik: str):
+    import database
+
+    with database.buka() as kon:
+        return assistant_context.versi_resource(
+            kon, chat.context_kind, chat.context_id, pemilik=pemilik
+        )
+
+
 def tangani_get(penangan, jalur: str) -> bool:
     if not (jalur == "/pendamping" or jalur.startswith("/pendamping/")):
         return False
@@ -147,6 +177,23 @@ def tangani_get(penangan, jalur: str) -> bool:
         return True
     if not assistant_service.tersedia():
         _kirim_privat(penangan, assistant_pages.halaman_tidak_aktif(), 503)
+        return True
+    cocok_konteks = _POLA_KONTEKS.fullmatch(jalur)
+    if cocok_konteks:
+        import database
+
+        jenis, resource_id = cocok_konteks.groups()
+        with database.buka() as kon_data:
+            konteks = assistant_context.ambil(
+                kon_data, jenis, resource_id, pemilik=principal.pengguna
+            )
+        if konteks is None:
+            _tidak_ada(penangan)
+            return True
+        _kirim_privat(
+            penangan,
+            assistant_pages.halaman_pilih_konteks(konteks),
+        )
         return True
     with _siapkan_db() as kon:
         consent = assistant_store.persetujuan_aktif(
@@ -186,6 +233,14 @@ def tangani_get(penangan, jalur: str) -> bool:
         if chat is None:
             _tidak_ada(penangan)
             return True
+        konteks = _konteks_chat(chat, principal.pengguna)
+        if chat.context_kind is not None and konteks is None:
+            _kirim_privat(
+                penangan,
+                assistant_pages.halaman_konteks_berubah(),
+                409,
+            )
+            return True
         pesan = assistant_store.daftar_pesan(kon, principal.id_akun, chat.id)
         draft = tuple(
             item for item in assistant_store.daftar_memori(kon, principal.id_akun)
@@ -195,7 +250,7 @@ def tangani_get(penangan, jalur: str) -> bool:
             penangan,
             assistant_pages.halaman_chat(
                 chat, pesan, chats, request_id="req_" + secrets.token_hex(16),
-                draft=draft,
+                draft=draft, konteks=konteks,
             ),
         )
         return True
@@ -248,6 +303,52 @@ def tangani_post(penangan, jalur: str) -> bool:
             kategori="chat_umum", provider_id=assistant_policy.PROVIDER_ID,
         ):
             _kirim_privat(penangan, assistant_pages.halaman_persetujuan(), 409)
+            return True
+
+        if jalur == "/pendamping/konteks/pilih":
+            wajib = {
+                "jenis", "resource_id", "resource_version", "kategori", "mode"
+            }
+            if set(data) != wajib:
+                _tidak_ada(penangan)
+                return True
+            import database
+
+            with database.buka() as kon_data:
+                konteks = assistant_context.ambil(
+                    kon_data,
+                    data["jenis"],
+                    data["resource_id"],
+                    pemilik=principal.pengguna,
+                )
+            if (
+                konteks is None
+                or konteks.versi != data["resource_version"]
+                or konteks.kategori != data["kategori"]
+            ):
+                _tidak_ada(penangan)
+                return True
+            persetujuan = assistant_store.beri_persetujuan_konteks(
+                kon,
+                principal.id_akun,
+                jenis=konteks.jenis,
+                resource_id=konteks.resource_id,
+                resource_version=konteks.versi,
+                kategori=konteks.kategori,
+                sekarang=kini,
+            )
+            chat = assistant_store.buat_chat(
+                kon,
+                principal.id_akun,
+                data["mode"],
+                sekarang=kini,
+                context_kind=konteks.jenis,
+                context_id=konteks.resource_id,
+                context_version=persetujuan.versi,
+                context_resource_version=konteks.versi,
+                context_category=konteks.kategori,
+            )
+            _redirect(penangan, f"/pendamping/chat/{chat.id}")
             return True
 
         if jalur in (
@@ -389,10 +490,33 @@ def tangani_post(penangan, jalur: str) -> bool:
                 400,
             )
             return True
+        konteks = _konteks_chat(chat, principal.pengguna)
+        if chat.context_kind is not None and konteks is None:
+            _kirim_privat(
+                penangan, assistant_pages.halaman_konteks_berubah(), 409
+            )
+            return True
+        if konteks is not None and not assistant_store.persetujuan_konteks_aktif(
+            kon,
+            principal.id_akun,
+            jenis=konteks.jenis,
+            resource_id=konteks.resource_id,
+            resource_version=konteks.versi,
+            versi=chat.context_version,
+        ):
+            _kirim_privat(
+                penangan, assistant_pages.halaman_konteks_berubah(), 409
+            )
+            return True
         try:
             assistant_service.kirim_pesan(
                 kon, principal.id_akun, chat.id, data["pesan"],
                 request_id=request_id, sekarang=kini,
+                konteks=konteks,
+                validasi_konteks=(
+                    None if konteks is None else
+                    lambda: _versi_konteks_chat(chat, principal.pengguna)
+                ),
             )
         except (assistant_service.GalatPendamping, ValueError) as galat:
             chats = assistant_store.daftar_chat(kon, principal.id_akun)
@@ -407,6 +531,7 @@ def tangani_post(penangan, jalur: str) -> bool:
                 assistant_pages.halaman_chat(
                     chat, pesan, chats, galat=str(galat),
                     request_id="req_" + secrets.token_hex(16), draft=draft,
+                    konteks=konteks,
                 ),
                 503 if isinstance(galat, assistant_service.GalatPendamping) else 400,
             )

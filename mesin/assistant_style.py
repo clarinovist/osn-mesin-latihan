@@ -9,7 +9,8 @@ html, body.pendamping-halaman {{ max-width:100%; overflow-x:hidden; }}
 .pendamping-bungkus {{ box-sizing:border-box; width:100%; max-width:58rem; margin:0 auto; padding:{T.SP_4}; overflow-wrap:anywhere; }}
 .pendamping-kepala {{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:{T.SP_3}; margin-bottom:{T.SP_5}; }}
 .pendamping-kepala a {{ color:{T.AKSEN_TEAL_TUA}; font-weight:700; }}
-.pendamping-panel {{ background:{T.LATAR_KARTU}; border:1px solid {T.BORDER_CATATAN}; border-radius:{T.RADIUS_KARTU}; padding:{T.SP_5}; }}
+.pendamping-panel {{ min-width:0; max-width:100%; overflow-wrap:anywhere; word-break:break-word; background:{T.LATAR_KARTU}; border:1px solid {T.BORDER_CATATAN}; border-radius:{T.RADIUS_KARTU}; padding:{T.SP_5}; }}
+.pendamping-kepala nav {{ display:flex; flex-wrap:wrap; gap:{T.SP_3}; align-items:center; }}
 .pendamping-kosong {{ min-height:55vh; display:grid; place-content:center; text-align:center; }}
 .pendamping-kosong form {{ width:min(100%, 38rem); }}
 .pendamping-label {{ display:block; font-weight:700; margin-bottom:{T.SP_2}; }}

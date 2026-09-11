@@ -835,6 +835,11 @@ def halaman_anak(
         else ""
     )
     kartu_rencana = learning_cycle_ui.kartu_rencana(kon, int(siswa["id"]))
+    konteks_pendamping = (
+        f'<a class="st-tombol-sekunder" href="/pendamping/konteks/anak/{int(siswa["id"])}">'
+        'Bahas rencana ini dengan Pendamping</a>'
+        if peran == "guru" and pengguna else ""
+    )
     latihan_manual = (
         '<details class="atur-latihan-st">'
         '<summary>Atur latihan sendiri</summary>'
@@ -854,7 +859,7 @@ def halaman_anak(
         "</h1>"
         "</header>"
         f"{kabar}"
-        f"{kartu_rencana}"
+        f"{kartu_rencana}{konteks_pendamping}"
         # Struktur lama dipertahankan; CSS data-rencana memindahkan kolom
         # alat manual secara visual ke atas riwayat tanpa entry point ganda.
         '<div class="anak-grid" data-rencana="vertikal">'
@@ -1408,6 +1413,18 @@ def halaman_sesi_stitch(
         if info["jenis"] == "remedial" else ""
     )
     pil = _pil_sesi_stitch(kon, sesi_id, "koreksi")
+    konteks_pendamping = ""
+    if peran == "guru" and pengguna:
+        tautan_soal = "".join(
+            f'<a href="/pendamping/konteks/soal/{sesi_id}:{int(b["nomor"])}">'
+            f'Bahas soal {int(b["nomor"])}</a>'
+            for b in database.isi_sesi(kon, sesi_id)
+        )
+        konteks_pendamping = (
+            '<details class="alat-pendamping-st"><summary>Bahas dengan Pendamping</summary>'
+            f'<a href="/pendamping/konteks/sesi/{sesi_id}">Bahas sesi ini</a>'
+            f'{tautan_soal}</details>'
+        )
     if not sudah_dikirim:
         pil = pil.replace(">Koreksi</a>", ">Soal &amp; kunci</a>")
 
@@ -1639,7 +1656,7 @@ def halaman_sesi_stitch(
         f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
         f'seed {info["seed"]} {badge_mode} {badge_remedial}</p></header>'
         f"{kabar}"
-        f"{pil}"
+        f"{pil}{konteks_pendamping}"
         f"{status_sesi}"
         f"{aksi_rencana}"
         f"{blok_isi}"

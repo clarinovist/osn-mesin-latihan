@@ -30,6 +30,38 @@ def halaman_tidak_aktif() -> bytes:
     )
 
 
+def halaman_konteks_berubah() -> bytes:
+    return _bingkai(
+        "Konteks berubah",
+        '<section class="pendamping-panel"><h1 id="judul-pendamping">Konteks belajar berubah</h1>'
+        '<p>Data yang dipilih sudah berubah atau tidak lagi tersedia. Buka sumber '
+        'belajar lagi, tinjau konteks terbaru, lalu mulai chat baru.</p></section>',
+    )
+
+
+def halaman_pilih_konteks(konteks) -> bytes:
+    label = {
+        "anak": "Ringkasan netral rencana satu anak",
+        "sesi": "Ringkasan netral satu sesi",
+        "soal": f'Soal resmi nomor {konteks.muatan.get("nomor", "")}',
+    }[konteks.jenis]
+    return _bingkai(
+        "Pilih konteks",
+        '<section class="pendamping-panel"><h1 id="judul-pendamping">Pilih konteks</h1>'
+        f'<p><b>{html.escape(label)}</b></p>'
+        '<p>Pendamping hanya menerima data minimum dari sumber ini. Berpindah '
+        'anak atau melepas konteks akan membuka chat baru.</p>'
+        '<form method="post" action="/pendamping/konteks/pilih">'
+        f'<input type="hidden" name="jenis" value="{html.escape(konteks.jenis)}">'
+        f'<input type="hidden" name="resource_id" value="{html.escape(konteks.resource_id)}">'
+        f'<input type="hidden" name="resource_version" value="{html.escape(konteks.versi)}">'
+        f'<input type="hidden" name="kategori" value="{html.escape(konteks.kategori)}">'
+        '<input type="hidden" name="mode" value="aktif">'
+        '<button class="pendamping-tombol" type="submit">Gunakan di chat baru</button>'
+        '</form></section>',
+    )
+
+
 def halaman_persetujuan(galat: str = "") -> bytes:
     pesan = (
         f'<p class="pendamping-galat" role="alert">{html.escape(galat)}</p>'
@@ -147,7 +179,9 @@ def halaman_memori(memori, *, aktif: bool, versi: int, galat: str = "") -> bytes
     )
 
 
-def halaman_chat(chat, pesan, chats, *, galat: str = "", request_id: str, draft=()) -> bytes:
+def halaman_chat(
+    chat, pesan, chats, *, galat: str = "", request_id: str, draft=(), konteks=None
+) -> bytes:
     daftar = "".join(
         '<article class="pendamping-pesan '
         f'{html.escape(item.peran)}"><b>'
@@ -156,6 +190,17 @@ def halaman_chat(chat, pesan, chats, *, galat: str = "", request_id: str, draft=
         for item in pesan
     )
     status = "Chat tanpa memori" if chat.mode_memori == "tanpa_memori" else "Memori aktif bila sudah dikonfirmasi"
+    label_konteks = ""
+    if konteks is not None:
+        label = {
+            "anak": "Ringkasan rencana anak terpilih",
+            "sesi": "Sesi belajar terpilih",
+            "soal": f'Soal resmi nomor {konteks.muatan.get("nomor", "")}',
+        }[konteks.jenis]
+        label_konteks = (
+            '<p class="pendamping-panel pendamping-catatan">Konteks: '
+            f'{html.escape(label)}. <a href="/pendamping">Lepas konteks dan buka chat baru</a></p>'
+        )
     pesan_galat = (
         f'<p class="pendamping-galat" role="alert">{html.escape(galat)}</p>'
         if galat else ""
@@ -176,7 +221,7 @@ def halaman_chat(chat, pesan, chats, *, galat: str = "", request_id: str, draft=
         f'{_riwayat(chats)}<section><h1 id="judul-pendamping">Pendamping</h1>'
         f'<p class="pendamping-catatan">{html.escape(status)} · '
         '<a href="/pendamping/memori">Atur memori</a></p>'
-        f'{pesan_galat}<div aria-live="polite">{daftar}</div>{kartu_draft}'
+        f'{label_konteks}{pesan_galat}<div aria-live="polite">{daftar}</div>{kartu_draft}'
         f'<form class="pendamping-form" method="post" action="/pendamping/chat/{html.escape(chat.id)}/pesan">'
         f'<input type="hidden" name="request_id" value="{html.escape(request_id)}">'
         '<label class="pendamping-label" for="pesan">Pesan untuk Pendamping</label>'

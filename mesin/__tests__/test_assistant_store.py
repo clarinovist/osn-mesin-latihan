@@ -31,13 +31,13 @@ def test_schema_idempoten_fk_integritas_dan_izin_berkas(tmp_path):
     assistant_schema.siapkan(path)
     assistant_schema.siapkan(path)
     with assistant_schema.buka(path) as koneksi:
-        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 2
         assert koneksi.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert koneksi.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert koneksi.execute("PRAGMA foreign_key_check").fetchall() == []
         assert koneksi.execute(
-            "SELECT COUNT(*) FROM migrasi_pendamping WHERE versi = 1"
-        ).fetchone()[0] == 1
+            "SELECT COUNT(*) FROM migrasi_pendamping WHERE versi IN (1, 2)"
+        ).fetchone()[0] == 2
     assert oct(path.stat().st_mode)[-3:] == "600"
 
 

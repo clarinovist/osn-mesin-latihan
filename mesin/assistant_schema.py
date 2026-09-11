@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 
 BAWAAN = Path(os.environ.get("PENDAMPING_BERKAS_DB", "/data/pendamping.db"))
-VERSI_SKEMA = 1
+VERSI_SKEMA = 2
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS migrasi_pendamping (
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS chat (
     context_kind TEXT,
     context_id TEXT,
     context_version INTEGER,
+    context_resource_version TEXT,
     versi INTEGER NOT NULL DEFAULT 1 CHECK (versi >= 1),
     dibuat INTEGER NOT NULL,
     diperbarui INTEGER NOT NULL,
@@ -86,6 +87,20 @@ CREATE TABLE IF NOT EXISTS persetujuan (
 CREATE INDEX IF NOT EXISTS idx_persetujuan_pemilik
     ON persetujuan(account_id, kategori, dicabut);
 
+CREATE TABLE IF NOT EXISTS persetujuan_konteks (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL,
+    jenis TEXT NOT NULL CHECK (jenis IN ('anak', 'sesi', 'soal')),
+    resource_id TEXT NOT NULL,
+    resource_version TEXT NOT NULL,
+    kategori TEXT NOT NULL CHECK (kategori IN ('ringkasan_netral', 'soal_resmi')),
+    diberikan INTEGER NOT NULL,
+    dicabut INTEGER,
+    versi INTEGER NOT NULL DEFAULT 1 CHECK (versi >= 1)
+);
+CREATE INDEX IF NOT EXISTS idx_persetujuan_konteks_pemilik
+    ON persetujuan_konteks(account_id, jenis, resource_id, dicabut);
+
 CREATE TABLE IF NOT EXISTS operasi (
     request_id TEXT PRIMARY KEY,
     chat_id TEXT NOT NULL REFERENCES chat(id) ON DELETE RESTRICT,
@@ -121,9 +136,17 @@ def siapkan(path: Path | str | None = None) -> None:
         if versi > VERSI_SKEMA:
             raise RuntimeError("skema Pendamping lebih baru dari aplikasi")
         kon.executescript(_DDL)
-        kon.execute(
-            "INSERT OR IGNORE INTO migrasi_pendamping(versi) VALUES (?)",
-            (VERSI_SKEMA,),
-        )
+        kolom_chat = {
+            baris["name"] for baris in kon.execute("PRAGMA table_info(chat)")
+        }
+        if "context_resource_version" not in kolom_chat:
+            kon.execute(
+                "ALTER TABLE chat ADD COLUMN context_resource_version TEXT"
+            )
+        for nomor in range(1, VERSI_SKEMA + 1):
+            kon.execute(
+                "INSERT OR IGNORE INTO migrasi_pendamping(versi) VALUES (?)",
+                (nomor,),
+            )
         kon.execute(f"PRAGMA user_version = {VERSI_SKEMA}")
     tujuan.chmod(0o600)
