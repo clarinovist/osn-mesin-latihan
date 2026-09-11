@@ -137,6 +137,27 @@ def kirim_pesan(
                 kon, account_id, chat_id, "asisten", respons.jawaban,
                 request_id=request_id + ":jawaban", sekarang=kini,
             )
+            if respons.draft_memori is not None:
+                chat = assistant_store.ambil_chat(kon, account_id, chat_id)
+                if (
+                    chat is None
+                    or chat.mode_memori == "tanpa_memori"
+                    or not assistant_store.penggunaan_memori_aktif(
+                        kon, account_id
+                    )
+                ):
+                    raise GalatPendamping(
+                        "Penggunaan memori nonaktif untuk chat ini."
+                    )
+                assistant_store.tambah_memori(
+                    kon,
+                    account_id,
+                    respons.draft_memori.isi,
+                    sumber_chat_id=chat_id,
+                    dikonfirmasi=False,
+                    sekarang=kini,
+                    lingkup=respons.draft_memori.lingkup,
+                )
     except GalatPendamping:
         try:
             with kon:

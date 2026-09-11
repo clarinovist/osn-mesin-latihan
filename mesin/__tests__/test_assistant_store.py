@@ -131,11 +131,15 @@ def test_memori_hanya_preferensi_terkonfirmasi_dan_milik_sendiri(kon):
         kon, AKUN_A, "Jelaskan singkat dengan contoh konkret.",
         sumber_chat_id=chat.id, dikonfirmasi=True, sekarang=101,
     )
+    assert assistant_store.memori_untuk_chat(kon, AKUN_A, chat.id) == ()
+    assert assistant_store.atur_penggunaan_memori(
+        kon, AKUN_A, True, versi_diharapkan=1, sekarang=102
+    ) == 2
     assert [item.id for item in assistant_store.memori_untuk_chat(
         kon, AKUN_A, chat.id
     )] == [memori.id]
     assert assistant_store.memori_untuk_chat(kon, AKUN_B, chat.id) == ()
-    assert assistant_store.versi_memori(kon, AKUN_A) == 1
+    assert assistant_store.versi_memori(kon, AKUN_A) == 2
 
     with pytest.raises(ValueError, match="lingkup"):
         assistant_store.tambah_memori(
@@ -161,15 +165,20 @@ def test_nonaktif_dan_hapus_memori_menaikkan_versi(kon):
         dikonfirmasi=True, sekarang=101,
     )
     versi_satu = assistant_store.versi_memori(kon, AKUN_A)
+    assert not assistant_store.penggunaan_memori_aktif(kon, AKUN_A)
+    versi_aktif = assistant_store.atur_penggunaan_memori(
+        kon, AKUN_A, True, versi_diharapkan=versi_satu, sekarang=102
+    )
+    assert assistant_store.penggunaan_memori_aktif(kon, AKUN_A)
 
     assert assistant_store.atur_penggunaan_memori(
-        kon, AKUN_A, False, versi_diharapkan=versi_satu, sekarang=102
-    ) == versi_satu + 1
+        kon, AKUN_A, False, versi_diharapkan=versi_aktif, sekarang=103
+    ) == versi_aktif + 1
     assert assistant_store.memori_untuk_chat(kon, AKUN_A, chat.id) == ()
     assert assistant_store.hapus_memori(
         kon, AKUN_A, memori.id, versi_diharapkan=memori.versi, sekarang=103
     )
-    assert assistant_store.versi_memori(kon, AKUN_A) == versi_satu + 2
+    assert assistant_store.versi_memori(kon, AKUN_A) == versi_satu + 3
     assert not assistant_store.hapus_memori(
         kon, AKUN_B, memori.id, versi_diharapkan=memori.versi, sekarang=104
     )

@@ -14,6 +14,7 @@ html, body.pendamping-halaman {{ max-width:100%; overflow-x:hidden; }}
 .pendamping-kosong form {{ width:min(100%, 38rem); }}
 .pendamping-label {{ display:block; font-weight:700; margin-bottom:{T.SP_2}; }}
 .pendamping-input {{ box-sizing:border-box; width:100%; min-height:7rem; resize:vertical; border:1px solid {T.BORDER_KUAT}; border-radius:{T.RADIUS_SEDANG}; padding:{T.SP_3}; font:inherit; background:{T.LATAR_KARTU}; color:{T.TEKS_JUDUL}; }}
+.pendamping-input-pendek {{ min-height:{T.TARGET_SENTUH}; }}
 .pendamping-tombol {{ min-height:{T.TARGET_SENTUH}; border:0; border-radius:{T.RADIUS_KECIL}; padding:{T.SP_2} {T.SP_4}; background:{T.AKSEN_TEAL_TUA}; color:{T.TEKS_PUTIH}; font:inherit; font-weight:700; cursor:pointer; }}
 .pendamping-tombol:focus-visible, .pendamping-input:focus-visible, .pendamping-halaman a:focus-visible {{ outline:3px solid {T.AKSEN_MURID_AMBER}; outline-offset:2px; }}
 .pendamping-form {{ display:grid; min-width:0; gap:{T.SP_3}; margin-top:{T.SP_4}; }}
@@ -25,7 +26,9 @@ html, body.pendamping-halaman {{ max-width:100%; overflow-x:hidden; }}
 .pendamping-riwayat summary {{ min-height:{T.TARGET_SENTUH}; display:flex; align-items:center; cursor:pointer; font-weight:700; }}
 .pendamping-riwayat a {{ display:block; padding:{T.SP_2}; }}
 .pendamping-galat {{ border-left:4px solid {T.AKSEN_MURID_KORAL}; padding:{T.SP_3}; background:{T.LATAR_KARTU}; }}
-.pendamping-catatan {{ color:{T.TEKS_VARIAN}; font-size:.9rem; }}
+.pendamping-catatan {{ color:{T.TEKS_VARIAN}; font-size:1rem; line-height:1.5; }}
+.pendamping-memori {{ margin:{T.SP_4} 0; display:grid; gap:{T.SP_2}; }}
+.pendamping-memori form {{ display:grid; gap:{T.SP_2}; margin-top:{T.SP_3}; }}
 @media (max-width: 40rem) {{
   .pendamping-bungkus {{ padding:{T.SP_3}; }}
   .pendamping-panel {{ padding:{T.SP_3}; }}

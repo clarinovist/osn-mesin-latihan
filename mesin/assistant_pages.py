@@ -18,7 +18,8 @@ def _bingkai(judul: str, isi: str) -> bytes:
 <style>{GAYA_PENDAMPING}</style></head><body class="pendamping-halaman">
 <main class="pendamping-bungkus" aria-labelledby="judul-pendamping">
 <header class="pendamping-kepala"><a href="/guru">← Kembali ke ruang belajar</a>
-<a href="/pendamping">Chat baru</a></header>{isi}</main></body></html>""".encode()
+<nav aria-label="Navigasi Pendamping"><a href="/pendamping">Chat baru</a> ·
+<a href="/pendamping/memori">Memori</a></nav></header>{isi}</main></body></html>""".encode()
 
 
 def halaman_tidak_aktif() -> bytes:
@@ -91,7 +92,62 @@ def halaman_awal(chats, galat: str = "", request_id: str = "") -> bytes:
     )
 
 
-def halaman_chat(chat, pesan, chats, *, galat: str = "", request_id: str) -> bytes:
+def _daftar_memori(memori) -> str:
+    if not memori:
+        return '<p class="pendamping-catatan">Belum ada preferensi tersimpan.</p>'
+    baris = []
+    for item in memori:
+        status = "Tersimpan" if item.dikonfirmasi else "Menunggu konfirmasi"
+        aksi = (
+            f'<form method="post" action="/pendamping/memori/{html.escape(item.id)}/konfirmasi">'
+            f'<input type="hidden" name="versi" value="{item.versi}">'
+            '<button class="pendamping-tombol" type="submit">Konfirmasi</button></form>'
+            if not item.dikonfirmasi else ""
+        )
+        baris.append(
+            '<article class="pendamping-panel pendamping-memori">'
+            f'<p><b>{html.escape(status)}</b> · Preferensi orang tua</p>'
+            f'<p>{html.escape(item.isi)}</p>{aksi}'
+            f'<form method="post" action="/pendamping/memori/{html.escape(item.id)}/ubah">'
+            f'<input type="hidden" name="versi" value="{item.versi}">'
+            f'<label class="pendamping-label" for="ubah-{html.escape(item.id)}">Koreksi isi</label>'
+            f'<input class="pendamping-input pendamping-input-pendek" id="ubah-{html.escape(item.id)}" name="isi" value="{html.escape(item.isi)}" required>'
+            '<button class="pendamping-tombol" type="submit">Simpan koreksi</button></form>'
+            f'<form method="post" action="/pendamping/memori/{html.escape(item.id)}/hapus">'
+            f'<input type="hidden" name="versi" value="{item.versi}">'
+            '<button class="pendamping-tombol" type="submit">Hapus memori ini</button></form>'
+            '</article>'
+        )
+    return "".join(baris)
+
+
+def halaman_memori(memori, *, aktif: bool, versi: int, galat: str = "") -> bytes:
+    pesan = (
+        f'<p class="pendamping-galat" role="alert">{html.escape(galat)}</p>'
+        if galat else ""
+    )
+    aksi = "nonaktifkan" if aktif else "aktifkan"
+    label = "Nonaktifkan penggunaan" if aktif else "Aktifkan penggunaan"
+    return _bingkai(
+        "Memori Pendamping",
+        '<section><h1 id="judul-pendamping">Memori Pendamping</h1>'
+        '<p>Hanya preferensi cara Pendamping menjawab. Memori tidak menyimpan '
+        'profil, diagnosis, kontak, atau ringkasan curhatan anak.</p>'
+        f'{pesan}<p><b>Status penggunaan:</b> {"aktif" if aktif else "nonaktif"}</p>'
+        '<p class="pendamping-catatan">Menonaktifkan penggunaan tidak menghapus '
+        'catatan; kamu tetap dapat melihat, mengoreksi, atau menghapusnya.</p>'
+        f'<form method="post" action="/pendamping/memori/{aksi}">'
+        f'<input type="hidden" name="versi" value="{versi}">'
+        f'<button class="pendamping-tombol" type="submit">{label}</button></form>'
+        f'{_daftar_memori(memori)}'
+        '<form method="post" action="/pendamping/memori/hapus-semua">'
+        f'<input type="hidden" name="versi" value="{versi}">'
+        '<button class="pendamping-tombol" type="submit">Hapus semua memori</button>'
+        '</form></section>',
+    )
+
+
+def halaman_chat(chat, pesan, chats, *, galat: str = "", request_id: str, draft=()) -> bytes:
     daftar = "".join(
         '<article class="pendamping-pesan '
         f'{html.escape(item.peran)}"><b>'
@@ -104,11 +160,23 @@ def halaman_chat(chat, pesan, chats, *, galat: str = "", request_id: str) -> byt
         f'<p class="pendamping-galat" role="alert">{html.escape(galat)}</p>'
         if galat else ""
     )
+    kartu_draft = "".join(
+        '<aside class="pendamping-panel pendamping-memori">'
+        '<p><b>Simpan preferensi ini?</b></p>'
+        f'<p>{html.escape(item.isi)}</p>'
+        f'<form method="post" action="/pendamping/memori/{html.escape(item.id)}/konfirmasi">'
+        f'<input type="hidden" name="versi" value="{item.versi}">'
+        f'<input type="hidden" name="kembali" value="{html.escape(chat.id)}">'
+        '<button class="pendamping-tombol" type="submit">Konfirmasi memori</button>'
+        '</form></aside>'
+        for item in draft
+    )
     return _bingkai(
         "Chat Pendamping",
         f'{_riwayat(chats)}<section><h1 id="judul-pendamping">Pendamping</h1>'
-        f'<p class="pendamping-catatan">{html.escape(status)}</p>{pesan_galat}'
-        f'<div aria-live="polite">{daftar}</div>'
+        f'<p class="pendamping-catatan">{html.escape(status)} · '
+        '<a href="/pendamping/memori">Atur memori</a></p>'
+        f'{pesan_galat}<div aria-live="polite">{daftar}</div>{kartu_draft}'
         f'<form class="pendamping-form" method="post" action="/pendamping/chat/{html.escape(chat.id)}/pesan">'
         f'<input type="hidden" name="request_id" value="{html.escape(request_id)}">'
         '<label class="pendamping-label" for="pesan">Pesan untuk Pendamping</label>'

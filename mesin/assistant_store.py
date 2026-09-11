@@ -301,6 +301,35 @@ def tambah_memori(
     return _memori_dari_baris(baris)
 
 
+def penggunaan_memori_aktif(
+    kon: sqlite3.Connection, account_id: str
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    baris = kon.execute(
+        "SELECT aktif FROM preferensi_memori WHERE account_id = ?",
+        (account_id,),
+    ).fetchone()
+    return bool(baris["aktif"]) if baris is not None else False
+
+
+def daftar_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    *,
+    termasuk_draft: bool = True,
+) -> tuple[Memori, ...]:
+    account_id = _wajib_account_id(account_id)
+    syarat = "" if termasuk_draft else " AND dikonfirmasi = 1"
+    baris = kon.execute(
+        """SELECT * FROM memori
+           WHERE account_id = ? AND dihapus IS NULL
+             AND lingkup = 'preferensi_orang_tua'""" + syarat +
+        " ORDER BY dibuat, id",
+        (account_id,),
+    ).fetchall()
+    return tuple(_memori_dari_baris(item) for item in baris)
+
+
 def _query_memori(
     kon: sqlite3.Connection, account_id: str
 ) -> tuple[Memori, ...]:
@@ -321,11 +350,7 @@ def memori_untuk_chat(
     chat = ambil_chat(kon, account_id, chat_id)
     if chat is None or chat.mode_memori == "tanpa_memori":
         return ()
-    pengaturan = kon.execute(
-        "SELECT aktif FROM preferensi_memori WHERE account_id = ?",
-        (account_id,),
-    ).fetchone()
-    if pengaturan is not None and not pengaturan["aktif"]:
+    if not penggunaan_memori_aktif(kon, account_id):
         return ()
     return _query_memori(kon, account_id)
 
@@ -346,7 +371,7 @@ def _naikkan_versi_memori(
     if versi == 0:
         kon.execute(
             """INSERT INTO preferensi_memori(account_id, aktif, versi, diperbarui)
-               VALUES (?, 1, 1, ?)""",
+               VALUES (?, 0, 1, ?)""",
             (account_id, sekarang),
         )
         return 1
@@ -386,6 +411,52 @@ def atur_penggunaan_memori(
     return kini + 1
 
 
+def konfirmasi_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    memori_id: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    hasil = kon.execute(
+        """UPDATE memori
+           SET dikonfirmasi = 1, versi = versi + 1
+           WHERE id = ? AND account_id = ? AND dihapus IS NULL
+             AND dikonfirmasi = 0 AND versi = ?""",
+        (memori_id, account_id, versi_diharapkan),
+    )
+    if hasil.rowcount == 1:
+        _naikkan_versi_memori(kon, account_id, sekarang)
+        return True
+    return False
+
+
+def ubah_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    memori_id: str,
+    isi: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    bersih = _teks_aman(isi, batas=500)
+    hasil = kon.execute(
+        """UPDATE memori
+           SET isi = ?, versi = versi + 1
+           WHERE id = ? AND account_id = ? AND dihapus IS NULL
+             AND versi = ? AND lingkup = 'preferensi_orang_tua'""",
+        (bersih, memori_id, account_id, versi_diharapkan),
+    )
+    if hasil.rowcount == 1:
+        _naikkan_versi_memori(kon, account_id, sekarang)
+        return True
+    return False
+
+
 def hapus_memori(
     kon: sqlite3.Connection,
     account_id: str,
@@ -405,6 +476,26 @@ def hapus_memori(
         _naikkan_versi_memori(kon, account_id, sekarang)
         return True
     return False
+
+
+def hapus_semua_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> int:
+    account_id = _wajib_account_id(account_id)
+    if versi_memori(kon, account_id) != versi_diharapkan:
+        raise ValueError("versi memori berubah")
+    hasil = kon.execute(
+        """UPDATE memori SET dihapus = ?, versi = versi + 1
+           WHERE account_id = ? AND dihapus IS NULL""",
+        (sekarang, account_id),
+    )
+    if hasil.rowcount:
+        _naikkan_versi_memori(kon, account_id, sekarang)
+    return hasil.rowcount
 
 
 def beri_persetujuan(

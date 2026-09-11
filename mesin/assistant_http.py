@@ -21,6 +21,9 @@ _BATAS_FORM = 12_000
 _BATAS_PER_MENIT = 30
 _POLA_CHAT = re.compile(r"/pendamping/chat/(chat_[0-9a-f]{32})\Z")
 _POLA_PESAN = re.compile(r"/pendamping/chat/(chat_[0-9a-f]{32})/pesan\Z")
+_POLA_MEMORI = re.compile(
+    r"/pendamping/memori/(memori_[0-9a-f]{32})/(konfirmasi|ubah|hapus)\Z"
+)
 _riwayat_laju = {}
 _kunci_laju = threading.Lock()
 
@@ -154,6 +157,19 @@ def tangani_get(penangan, jalur: str) -> bool:
             _kirim_privat(penangan, assistant_pages.halaman_persetujuan())
             return True
         chats = assistant_store.daftar_chat(kon, principal.id_akun)
+        if jalur == "/pendamping/memori":
+            memori = assistant_store.daftar_memori(kon, principal.id_akun)
+            _kirim_privat(
+                penangan,
+                assistant_pages.halaman_memori(
+                    memori,
+                    aktif=assistant_store.penggunaan_memori_aktif(
+                        kon, principal.id_akun
+                    ),
+                    versi=assistant_store.versi_memori(kon, principal.id_akun),
+                ),
+            )
+            return True
         if jalur == "/pendamping":
             _kirim_privat(
                 penangan,
@@ -171,10 +187,15 @@ def tangani_get(penangan, jalur: str) -> bool:
             _tidak_ada(penangan)
             return True
         pesan = assistant_store.daftar_pesan(kon, principal.id_akun, chat.id)
+        draft = tuple(
+            item for item in assistant_store.daftar_memori(kon, principal.id_akun)
+            if not item.dikonfirmasi and item.sumber_chat_id == chat.id
+        )
         _kirim_privat(
             penangan,
             assistant_pages.halaman_chat(
-                chat, pesan, chats, request_id="req_" + secrets.token_hex(16)
+                chat, pesan, chats, request_id="req_" + secrets.token_hex(16),
+                draft=draft,
             ),
         )
         return True
@@ -227,6 +248,80 @@ def tangani_post(penangan, jalur: str) -> bool:
             kategori="chat_umum", provider_id=assistant_policy.PROVIDER_ID,
         ):
             _kirim_privat(penangan, assistant_pages.halaman_persetujuan(), 409)
+            return True
+
+        if jalur in (
+            "/pendamping/memori/aktifkan",
+            "/pendamping/memori/nonaktifkan",
+            "/pendamping/memori/hapus-semua",
+        ):
+            if set(data) != {"versi"} or not data["versi"].isdigit():
+                _kirim_privat(penangan, assistant_pages.halaman_memori(
+                    assistant_store.daftar_memori(kon, principal.id_akun),
+                    aktif=assistant_store.penggunaan_memori_aktif(kon, principal.id_akun),
+                    versi=assistant_store.versi_memori(kon, principal.id_akun),
+                    galat="Versi memori tidak sah.",
+                ), 400)
+                return True
+            versi = int(data["versi"])
+            try:
+                if jalur.endswith("hapus-semua"):
+                    assistant_store.hapus_semua_memori(
+                        kon, principal.id_akun, versi_diharapkan=versi,
+                        sekarang=kini,
+                    )
+                else:
+                    assistant_store.atur_penggunaan_memori(
+                        kon,
+                        principal.id_akun,
+                        jalur == "/pendamping/memori/aktifkan",
+                        versi_diharapkan=versi,
+                        sekarang=kini,
+                    )
+            except ValueError:
+                _kirim_privat(penangan, assistant_pages.halaman_memori(
+                    assistant_store.daftar_memori(kon, principal.id_akun),
+                    aktif=assistant_store.penggunaan_memori_aktif(kon, principal.id_akun),
+                    versi=assistant_store.versi_memori(kon, principal.id_akun),
+                    galat="Memori berubah. Muat ulang lalu coba lagi.",
+                ), 409)
+                return True
+            _redirect(penangan, "/pendamping/memori")
+            return True
+
+        cocok_memori = _POLA_MEMORI.fullmatch(jalur)
+        if cocok_memori:
+            memori_id, aksi = cocok_memori.groups()
+            field = {"versi", "kembali"} if aksi in ("konfirmasi", "hapus") else {"versi", "isi", "kembali"}
+            if set(data) - field or "versi" not in data or not data["versi"].isdigit():
+                _tidak_ada(penangan)
+                return True
+            versi = int(data["versi"])
+            if aksi == "konfirmasi":
+                berhasil = assistant_store.konfirmasi_memori(
+                    kon, principal.id_akun, memori_id,
+                    versi_diharapkan=versi, sekarang=kini,
+                )
+            elif aksi == "ubah":
+                berhasil = assistant_store.ubah_memori(
+                    kon, principal.id_akun, memori_id, data.get("isi", ""),
+                    versi_diharapkan=versi, sekarang=kini,
+                )
+            else:
+                berhasil = assistant_store.hapus_memori(
+                    kon, principal.id_akun, memori_id,
+                    versi_diharapkan=versi, sekarang=kini,
+                )
+            if not berhasil:
+                _tidak_ada(penangan)
+                return True
+            kembali = data.get("kembali", "")
+            tujuan = (
+                f"/pendamping/chat/{kembali}"
+                if re.fullmatch(r"chat_[0-9a-f]{32}", kembali)
+                else "/pendamping/memori"
+            )
+            _redirect(penangan, tujuan)
             return True
 
         if jalur == "/pendamping/chat-baru":
@@ -302,11 +397,16 @@ def tangani_post(penangan, jalur: str) -> bool:
         except (assistant_service.GalatPendamping, ValueError) as galat:
             chats = assistant_store.daftar_chat(kon, principal.id_akun)
             pesan = assistant_store.daftar_pesan(kon, principal.id_akun, chat.id)
+            draft = tuple(
+                item for item in assistant_store.daftar_memori(
+                    kon, principal.id_akun
+                ) if not item.dikonfirmasi and item.sumber_chat_id == chat.id
+            )
             _kirim_privat(
                 penangan,
                 assistant_pages.halaman_chat(
                     chat, pesan, chats, galat=str(galat),
-                    request_id="req_" + secrets.token_hex(16),
+                    request_id="req_" + secrets.token_hex(16), draft=draft,
                 ),
                 503 if isinstance(galat, assistant_service.GalatPendamping) else 400,
             )
