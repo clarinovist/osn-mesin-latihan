@@ -216,7 +216,7 @@ def test_daftar_migrasi_metadata_remedial_dan_siklus_tidak_duplikat():
     for kolom in (
         "jenis", "sumber_sesi_id", "tujuan", "dikonfirmasi_guru",
         "fingerprint_konfirmasi", "putaran_id", "bagian_checkpoint",
-        "kunci_idempotensi", "dibatalkan",
+        "kunci_idempotensi", "kunci_pendamping", "dibatalkan",
     ):
         assert pasangan.count(("sesi", kolom)) == 1
     for kolom in (

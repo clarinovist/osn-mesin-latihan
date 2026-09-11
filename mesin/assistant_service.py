@@ -6,6 +6,7 @@ import json
 import os
 import time
 
+import assistant_actions
 import assistant_catalog
 import assistant_client
 import assistant_policy
@@ -176,6 +177,32 @@ def kirim_pesan(
                 kon, account_id, chat_id, "asisten", respons.jawaban,
                 request_id=request_id + ":jawaban", sekarang=kini,
             )
+            if respons.usulan_latihan is not None:
+                if konteks is None:
+                    raise GalatPendamping(
+                        "Pilih konteks belajar sebelum meninjau usulan latihan."
+                    )
+                payload = json.dumps(
+                    respons.usulan_latihan.ke_dict(),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                assistant_store.simpan_usulan(
+                    kon,
+                    account_id,
+                    chat_id,
+                    request_id,
+                    payload_json=payload,
+                    hash_usulan=assistant_actions.hash_usulan(
+                        respons.usulan_latihan
+                    ),
+                    chat_version=operasi.chat_version + 2,
+                    consent_version=consent_version,
+                    context_version=context_version,
+                    context_resource_version=konteks.versi,
+                    sekarang=kini,
+                )
             if respons.draft_memori is not None:
                 chat = assistant_store.ambil_chat(kon, account_id, chat_id)
                 if (

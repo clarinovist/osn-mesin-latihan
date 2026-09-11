@@ -179,8 +179,70 @@ def halaman_memori(memori, *, aktif: bool, versi: int, galat: str = "") -> bytes
     )
 
 
+def _kartu_usulan(usulan) -> str:
+    if not usulan:
+        return ""
+    kartu = []
+    for item in usulan:
+        data = __import__("json").loads(item.payload_json)
+        status = (
+            f'Sesi latihan #{item.sesi_id} sudah dibuat.'
+            if item.sesi_id is not None else
+            'Usulan sudah divalidasi mesin. Belum ada sesi yang dibuat.'
+        )
+        aksi = (
+            f'<a class="pendamping-tombol" href="/pendamping/usulan/{html.escape(item.id)}">Tinjau usulan</a>'
+            if item.sesi_id is None else
+            f'<a href="/sesi/{item.sesi_id}">Buka sesi hasil</a>'
+        )
+        kartu.append(
+            '<aside class="pendamping-panel pendamping-usulan">'
+            '<p><b>Usulan latihan</b></p>'
+            f'<p>{html.escape(data["topik_id"])} · {html.escape(data["level"])} · '
+            f'{data["jumlah_soal"]} soal</p><p>{html.escape(status)}</p>{aksi}</aside>'
+        )
+    return "".join(kartu)
+
+
+def halaman_tinjau_usulan(usulan, chat, konteks, *, request_id: str) -> bytes:
+    import json
+
+    data = json.loads(usulan.payload_json)
+    template = ", ".join(data["template_ids"])
+    sumber = {
+        "anak": "ringkasan anak yang dipilih",
+        "sesi": "sesi yang dipilih",
+        "soal": "soal resmi yang dipilih",
+    }.get(chat.context_kind, "konteks belajar")
+    if usulan.sesi_id is not None:
+        isi_aksi = (
+            f'<p role="status">Sesi latihan #{usulan.sesi_id} sudah dibuat.</p>'
+            f'<p><a class="pendamping-tombol" href="/sesi/{usulan.sesi_id}">Buka sesi</a></p>'
+        )
+    else:
+        isi_aksi = (
+            '<p>Konfirmasi berikut membuat satu sesi latihan manual/bebas. '
+            'Sesi ini tidak mengubah bukti atau putaran siklus belajar.</p>'
+            f'<form method="post" action="/pendamping/usulan/{html.escape(usulan.id)}/konfirmasi">'
+            f'<input type="hidden" name="versi" value="{usulan.versi}">'
+            f'<input type="hidden" name="hash" value="{html.escape(usulan.hash_usulan)}">'
+            f'<input type="hidden" name="request_id" value="{html.escape(request_id)}">'
+            '<button class="pendamping-tombol" type="submit">Konfirmasi dan buat sesi</button></form>'
+        )
+    return _bingkai(
+        "Tinjau usulan latihan",
+        '<section class="pendamping-panel"><h1 id="judul-pendamping">Tinjau usulan latihan</h1>'
+        f'<p><b>Sumber permintaan:</b> {html.escape(sumber)}</p>'
+        f'<dl><dt>Topik</dt><dd>{html.escape(data["topik_id"])}</dd>'
+        f'<dt>Template</dt><dd>{html.escape(template)}</dd>'
+        f'<dt>Level</dt><dd>{html.escape(data["level"])}</dd>'
+        f'<dt>Jumlah</dt><dd>{data["jumlah_soal"]} soal</dd></dl>{isi_aksi}</section>',
+    )
+
+
 def halaman_chat(
-    chat, pesan, chats, *, galat: str = "", request_id: str, draft=(), konteks=None
+    chat, pesan, chats, *, galat: str = "", request_id: str, draft=(), konteks=None,
+    usulan=(),
 ) -> bytes:
     daftar = "".join(
         '<article class="pendamping-pesan '
@@ -221,7 +283,7 @@ def halaman_chat(
         f'{_riwayat(chats)}<section><h1 id="judul-pendamping">Pendamping</h1>'
         f'<p class="pendamping-catatan">{html.escape(status)} · '
         '<a href="/pendamping/memori">Atur memori</a></p>'
-        f'{label_konteks}{pesan_galat}<div aria-live="polite">{daftar}</div>{kartu_draft}'
+        f'{label_konteks}{pesan_galat}<div aria-live="polite">{daftar}</div>{kartu_draft}{_kartu_usulan(usulan)}'
         f'<form class="pendamping-form" method="post" action="/pendamping/chat/{html.escape(chat.id)}/pesan">'
         f'<input type="hidden" name="request_id" value="{html.escape(request_id)}">'
         '<label class="pendamping-label" for="pesan">Pesan untuk Pendamping</label>'

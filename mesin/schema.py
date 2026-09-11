@@ -135,6 +135,9 @@ CREATE TABLE IF NOT EXISTS sesi (
     -- Kunci occurrence aktif; NULL untuk sesi manual/warisan. Indeks parsial
     -- di bawah membedakan double-submit dari retry setelah pembatalan.
     kunci_idempotensi TEXT,
+    -- Idempotensi tindakan manual dari Pendamping terpisah dari occurrence
+    -- siklus. Sesi ini tetap tujuan `bebas`, tanpa putaran atau bukti.
+    kunci_pendamping TEXT,
     dibatalkan TEXT,
     catatan   TEXT    NOT NULL DEFAULT '',
     dibuat    TEXT    NOT NULL DEFAULT (datetime('now', '+7 hours'))
@@ -144,6 +147,9 @@ CREATE INDEX IF NOT EXISTS idx_sesi_siswa ON sesi(siswa_id, tanggal);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sesi_siklus_aktif
     ON sesi(kunci_idempotensi)
     WHERE kunci_idempotensi IS NOT NULL AND dibatalkan IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sesi_pendamping_aktif
+    ON sesi(kunci_pendamping)
+    WHERE kunci_pendamping IS NOT NULL AND dibatalkan IS NULL;
 
 -- CHECK pada CREATE TABLE tidak ditambahkan ke tabel warisan oleh ALTER COLUMN.
 -- Trigger ini memberi aturan identik untuk pemasangan baru dan hasil migrasi.
@@ -725,6 +731,7 @@ MIGRASI: list[tuple[str, str, str]] = [
     # Pembekuan eksplisit saat lembar dicetak; nullable untuk semua sesi warisan.
     ("sesi", "penyajian_dibekukan", "ALTER TABLE sesi ADD COLUMN penyajian_dibekukan TEXT"),
     ("sesi", "kunci_idempotensi", "ALTER TABLE sesi ADD COLUMN kunci_idempotensi TEXT"),
+    ("sesi", "kunci_pendamping", "ALTER TABLE sesi ADD COLUMN kunci_pendamping TEXT"),
     ("sesi", "dibatalkan", "ALTER TABLE sesi ADD COLUMN dibatalkan TEXT"),
     ("snapshot_outcome", "target_template_id", "ALTER TABLE snapshot_outcome ADD COLUMN target_template_id TEXT"),
     ("snapshot_outcome", "target_kode_intervensi", "ALTER TABLE snapshot_outcome ADD COLUMN target_kode_intervensi TEXT"),

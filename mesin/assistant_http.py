@@ -10,6 +10,7 @@ import threading
 import time
 import urllib.parse
 
+import assistant_actions
 import assistant_context
 import assistant_pages
 import assistant_policy
@@ -27,6 +28,10 @@ _POLA_MEMORI = re.compile(
 )
 _POLA_KONTEKS = re.compile(
     r"/pendamping/konteks/(anak|sesi|soal)/([0-9]+(?::[0-9]+)?)\Z"
+)
+_POLA_USULAN = re.compile(r"/pendamping/usulan/(usulan_[0-9a-f]{32})\Z")
+_POLA_KONFIRMASI_USULAN = re.compile(
+    r"/pendamping/usulan/(usulan_[0-9a-f]{32})/konfirmasi\Z"
 )
 _riwayat_laju = {}
 _kunci_laju = threading.Lock()
@@ -225,6 +230,35 @@ def tangani_get(penangan, jalur: str) -> bool:
                 ),
             )
             return True
+        cocok_usulan = _POLA_USULAN.fullmatch(jalur)
+        if cocok_usulan:
+            usulan = assistant_store.ambil_usulan(
+                kon, principal.id_akun, cocok_usulan[1]
+            )
+            if usulan is None:
+                _tidak_ada(penangan)
+                return True
+            chat = assistant_store.ambil_chat(
+                kon, principal.id_akun, usulan.chat_id
+            )
+            konteks = None if chat is None else _konteks_chat(
+                chat, principal.pengguna
+            )
+            if chat is None or konteks is None:
+                _kirim_privat(
+                    penangan, assistant_pages.halaman_konteks_berubah(), 409
+                )
+                return True
+            _kirim_privat(
+                penangan,
+                assistant_pages.halaman_tinjau_usulan(
+                    usulan,
+                    chat,
+                    konteks,
+                    request_id="aksi_" + secrets.token_hex(16),
+                ),
+            )
+            return True
         cocok = _POLA_CHAT.fullmatch(jalur)
         if not cocok:
             _tidak_ada(penangan)
@@ -251,6 +285,9 @@ def tangani_get(penangan, jalur: str) -> bool:
             assistant_pages.halaman_chat(
                 chat, pesan, chats, request_id="req_" + secrets.token_hex(16),
                 draft=draft, konteks=konteks,
+                usulan=assistant_store.daftar_usulan_chat(
+                    kon, principal.id_akun, chat.id
+                ),
             ),
         )
         return True
@@ -425,6 +462,44 @@ def tangani_post(penangan, jalur: str) -> bool:
             _redirect(penangan, tujuan)
             return True
 
+        cocok_konfirmasi = _POLA_KONFIRMASI_USULAN.fullmatch(jalur)
+        if cocok_konfirmasi:
+            if (
+                set(data) != {"versi", "hash", "request_id"}
+                or not data["versi"].isdigit()
+                or not re.fullmatch(r"[0-9a-f]{64}", data["hash"])
+                or not re.fullmatch(r"aksi_[0-9a-f]{32}", data["request_id"])
+            ):
+                _tidak_ada(penangan)
+                return True
+            try:
+                sesi_id = assistant_actions.konfirmasi_dan_buat_sesi(
+                    kon,
+                    principal.id_akun,
+                    principal.pengguna,
+                    cocok_konfirmasi[1],
+                    versi=int(data["versi"]),
+                    hash_diharapkan=data["hash"],
+                    request_id=data["request_id"],
+                    sekarang=kini,
+                )
+            except LookupError:
+                _tidak_ada(penangan)
+                return True
+            except assistant_actions.GalatTindakan as galat:
+                _kirim_privat(
+                    penangan,
+                    assistant_pages._bingkai(
+                        "Usulan berubah",
+                        '<section class="pendamping-panel"><h1 id="judul-pendamping">Usulan perlu ditinjau ulang</h1>'
+                        f'<p role="alert">{html.escape(str(galat))}</p></section>',
+                    ),
+                    409,
+                )
+                return True
+            _redirect(penangan, f"/sesi/{sesi_id}")
+            return True
+
         if jalur == "/pendamping/chat-baru":
             if set(data) - {"mode", "pesan_awal", "request_id"}:
                 _tidak_ada(penangan)
@@ -532,6 +607,9 @@ def tangani_post(penangan, jalur: str) -> bool:
                     chat, pesan, chats, galat=str(galat),
                     request_id="req_" + secrets.token_hex(16), draft=draft,
                     konteks=konteks,
+                    usulan=assistant_store.daftar_usulan_chat(
+                        kon, principal.id_akun, chat.id
+                    ),
                 ),
                 503 if isinstance(galat, assistant_service.GalatPendamping) else 400,
             )

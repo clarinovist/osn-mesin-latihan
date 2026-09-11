@@ -56,7 +56,7 @@ def test_migrasi_v1_ke_v2_idempoten_dan_menjaga_chat(tmp_path):
     assistant_schema.siapkan(path)
     assistant_schema.siapkan(path)
     with assistant_schema.buka(path) as koneksi:
-        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert koneksi.execute("PRAGMA user_version").fetchone()[0] == 3
         assert koneksi.execute("SELECT COUNT(*) FROM chat").fetchone()[0] == 1
         assert "context_resource_version" in {
             baris["name"] for baris in koneksi.execute("PRAGMA table_info(chat)")

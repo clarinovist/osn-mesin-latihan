@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 
 BAWAAN = Path(os.environ.get("PENDAMPING_BERKAS_DB", "/data/pendamping.db"))
-VERSI_SKEMA = 2
+VERSI_SKEMA = 3
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS migrasi_pendamping (
@@ -115,6 +115,31 @@ CREATE TABLE IF NOT EXISTS operasi (
 );
 CREATE INDEX IF NOT EXISTS idx_operasi_pemilik_status
     ON operasi(account_id, status, dibuat);
+
+CREATE TABLE IF NOT EXISTS usulan_latihan (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL,
+    chat_id TEXT NOT NULL REFERENCES chat(id) ON DELETE RESTRICT,
+    sumber_request_id TEXT NOT NULL UNIQUE
+        REFERENCES operasi(request_id) ON DELETE RESTRICT,
+    payload_json TEXT NOT NULL,
+    hash_usulan TEXT NOT NULL CHECK (length(hash_usulan) = 64),
+    versi INTEGER NOT NULL DEFAULT 1 CHECK (versi >= 1),
+    chat_version INTEGER NOT NULL,
+    consent_version INTEGER NOT NULL,
+    context_version INTEGER NOT NULL,
+    context_resource_version TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'menunggu'
+        CHECK (status IN ('menunggu', 'selesai')),
+    request_id_konfirmasi TEXT UNIQUE,
+    sesi_id INTEGER,
+    dibuat INTEGER NOT NULL,
+    selesai INTEGER,
+    CHECK ((status = 'menunggu' AND sesi_id IS NULL AND selesai IS NULL) OR
+           (status = 'selesai' AND sesi_id IS NOT NULL AND selesai IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_usulan_pemilik_chat
+    ON usulan_latihan(account_id, chat_id, status, dibuat);
 """
 
 

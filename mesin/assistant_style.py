@@ -3,7 +3,7 @@
 import design_tokens as T
 
 GAYA_PENDAMPING = f"""
-.pendamping-halaman *, .pendamping-halaman *::before, .pendamping-halaman *::after {{ box-sizing:border-box; }}
+.pendamping-halaman, .pendamping-halaman *, .pendamping-halaman *::before, .pendamping-halaman *::after {{ box-sizing:border-box; }}
 html, body.pendamping-halaman {{ max-width:100%; overflow-x:hidden; }}
 .pendamping-halaman {{ min-height:100vh; margin:0; background:{T.LATAR_MURID}; color:{T.TEKS_JUDUL}; }}
 .pendamping-bungkus {{ box-sizing:border-box; width:100%; max-width:58rem; margin:0 auto; padding:{T.SP_4}; overflow-wrap:anywhere; }}
@@ -30,6 +30,11 @@ html, body.pendamping-halaman {{ max-width:100%; overflow-x:hidden; }}
 .pendamping-catatan {{ color:{T.TEKS_VARIAN}; font-size:1rem; line-height:1.5; }}
 .pendamping-memori {{ margin:{T.SP_4} 0; display:grid; gap:{T.SP_2}; }}
 .pendamping-memori form {{ display:grid; gap:{T.SP_2}; margin-top:{T.SP_3}; }}
+.pendamping-usulan {{ margin:{T.SP_4} 0; display:grid; gap:{T.SP_2}; }}
+.pendamping-usulan .pendamping-tombol {{ display:inline-flex; align-items:center; width:fit-content; text-decoration:none; }}
+.pendamping-panel dl {{ display:grid; grid-template-columns:minmax(6rem, auto) 1fr; gap:{T.SP_2} {T.SP_4}; }}
+.pendamping-panel dt {{ font-weight:700; }}
+.pendamping-panel dd {{ margin:0; overflow-wrap:anywhere; }}
 @media (max-width: 40rem) {{
   .pendamping-bungkus {{ padding:{T.SP_3}; }}
   .pendamping-panel {{ padding:{T.SP_3}; }}

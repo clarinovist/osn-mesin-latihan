@@ -108,6 +108,26 @@ class PersetujuanKonteks:
     versi: int
 
 
+@dataclass(frozen=True)
+class CatatanUsulan:
+    id: str
+    account_id: str
+    chat_id: str
+    sumber_request_id: str
+    payload_json: str
+    hash_usulan: str
+    versi: int
+    chat_version: int
+    consent_version: int
+    context_version: int
+    context_resource_version: str
+    status: str
+    request_id_konfirmasi: Optional[str]
+    sesi_id: Optional[int]
+    dibuat: int
+    selesai: Optional[int]
+
+
 def _id(awalan: str) -> str:
     return awalan + secrets.token_hex(16)
 
@@ -168,6 +188,10 @@ def _persetujuan_konteks_dari_baris(
     baris: sqlite3.Row,
 ) -> PersetujuanKonteks:
     return PersetujuanKonteks(**dict(baris))
+
+
+def _usulan_dari_baris(baris: sqlite3.Row) -> CatatanUsulan:
+    return CatatanUsulan(**dict(baris))
 
 
 def buat_chat(
@@ -747,6 +771,124 @@ def cabut_persetujuan(
     return hasil.rowcount == 1
 
 
+def simpan_usulan(
+    kon: sqlite3.Connection,
+    account_id: str,
+    chat_id: str,
+    sumber_request_id: str,
+    *,
+    payload_json: str,
+    hash_usulan: str,
+    chat_version: int,
+    consent_version: int,
+    context_version: int,
+    context_resource_version: str,
+    sekarang: int,
+) -> CatatanUsulan:
+    """Simpan kandidat tervalidasi; owner selalu berasal dari principal."""
+    account_id = _wajib_account_id(account_id)
+    chat = ambil_chat(kon, account_id, chat_id)
+    if (
+        chat is None
+        or chat.context_kind is None
+        or chat.context_version != context_version
+        or chat.context_resource_version != context_resource_version
+        or chat.versi != chat_version
+        or not re.fullmatch(r"[0-9a-f]{64}", hash_usulan)
+    ):
+        raise ValueError("usulan tidak cocok dengan chat dan konteks")
+    lama = kon.execute(
+        """SELECT * FROM usulan_latihan
+           WHERE sumber_request_id = ? AND account_id = ?""",
+        (sumber_request_id, account_id),
+    ).fetchone()
+    if lama is not None:
+        if (
+            lama["chat_id"] != chat_id
+            or lama["payload_json"] != payload_json
+            or lama["hash_usulan"] != hash_usulan
+        ):
+            raise ValueError("request usulan dipakai untuk isi berbeda")
+        return _usulan_dari_baris(lama)
+    usulan_id = _id("usulan_")
+    kon.execute(
+        """INSERT INTO usulan_latihan(
+               id, account_id, chat_id, sumber_request_id, payload_json,
+               hash_usulan, chat_version, consent_version, context_version,
+               context_resource_version, dibuat
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            usulan_id, account_id, chat_id, sumber_request_id, payload_json,
+            hash_usulan, chat_version, consent_version, context_version,
+            context_resource_version, sekarang,
+        ),
+    )
+    return ambil_usulan(kon, account_id, usulan_id)
+
+
+def ambil_usulan(
+    kon: sqlite3.Connection, account_id: str, usulan_id: str
+) -> Optional[CatatanUsulan]:
+    account_id = _wajib_account_id(account_id)
+    baris = kon.execute(
+        "SELECT * FROM usulan_latihan WHERE id = ? AND account_id = ?",
+        (usulan_id, account_id),
+    ).fetchone()
+    return _usulan_dari_baris(baris) if baris is not None else None
+
+
+def daftar_usulan_chat(
+    kon: sqlite3.Connection, account_id: str, chat_id: str
+) -> tuple[CatatanUsulan, ...]:
+    account_id = _wajib_account_id(account_id)
+    if ambil_chat(kon, account_id, chat_id) is None:
+        return ()
+    baris = kon.execute(
+        """SELECT * FROM usulan_latihan
+           WHERE account_id = ? AND chat_id = ?
+           ORDER BY dibuat, id""",
+        (account_id, chat_id),
+    ).fetchall()
+    return tuple(_usulan_dari_baris(item) for item in baris)
+
+
+def selesaikan_usulan(
+    kon: sqlite3.Connection,
+    account_id: str,
+    usulan_id: str,
+    *,
+    versi_diharapkan: int,
+    hash_diharapkan: str,
+    request_id: str,
+    sesi_id: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    hasil = kon.execute(
+        """UPDATE usulan_latihan
+           SET status = 'selesai', request_id_konfirmasi = ?, sesi_id = ?,
+               selesai = ?
+           WHERE id = ? AND account_id = ? AND status = 'menunggu'
+             AND versi = ? AND hash_usulan = ?
+             AND request_id_konfirmasi IS NULL""",
+        (
+            request_id, sesi_id, sekarang, usulan_id, account_id,
+            versi_diharapkan, hash_diharapkan,
+        ),
+    )
+    if hasil.rowcount == 1:
+        return True
+    lama = ambil_usulan(kon, account_id, usulan_id)
+    return bool(
+        lama is not None
+        and lama.status == "selesai"
+        and lama.request_id_konfirmasi == request_id
+        and lama.sesi_id == sesi_id
+        and lama.versi == versi_diharapkan
+        and lama.hash_usulan == hash_diharapkan
+    )
+
+
 def hapus_chat(
     kon: sqlite3.Connection,
     account_id: str,
@@ -785,6 +927,7 @@ def purge(kon: sqlite3.Connection, *, sekarang: int) -> int:
         ).fetchall()
     )
     for chat_id in ids:
+        kon.execute("DELETE FROM usulan_latihan WHERE chat_id = ?", (chat_id,))
         kon.execute("DELETE FROM operasi WHERE chat_id = ?", (chat_id,))
         kon.execute("DELETE FROM memori WHERE sumber_chat_id = ?", (chat_id,))
         kon.execute("DELETE FROM pesan WHERE chat_id = ?", (chat_id,))
