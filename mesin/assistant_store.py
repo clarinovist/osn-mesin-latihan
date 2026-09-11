@@ -24,6 +24,8 @@ _CREDENTIAL = re.compile(
 )
 _MODE_MEMORI = ("aktif", "tanpa_memori")
 _PERAN_PESAN = ("pengguna", "asisten")
+RETENSI_CHAT_DETIK = 180 * 24 * 3600
+RETENSI_OPERASI_GAGAL_DETIK = 7 * 24 * 3600
 
 
 @dataclass(frozen=True)
@@ -272,7 +274,8 @@ def tambah_memori(
             sekarang,
         ),
     )
-    _naikkan_versi_memori(kon, account_id, sekarang)
+    if dikonfirmasi:
+        _naikkan_versi_memori(kon, account_id, sekarang)
     baris = kon.execute("SELECT * FROM memori WHERE id = ?", (memori_id,)).fetchone()
     return _memori_dari_baris(baris)
 
@@ -562,6 +565,34 @@ def mulai_operasi(
         (request_id, account_id),
     ).fetchone()
     return _operasi_dari_baris(baris)
+
+
+def gagalkan_operasi(
+    kon: sqlite3.Connection,
+    account_id: str,
+    request_id: str,
+    *,
+    sekarang: int,
+) -> bool:
+    """Tandai operasi milik akun gagal tanpa menyimpan isi galat/provider."""
+    account_id = _wajib_account_id(account_id)
+    hasil = kon.execute(
+        """UPDATE operasi SET status = 'gagal', selesai = ?
+           WHERE request_id = ? AND account_id = ? AND status = 'pending'""",
+        (sekarang, request_id, account_id),
+    )
+    return hasil.rowcount == 1
+
+
+def purge_operasi(kon: sqlite3.Connection, *, sekarang: int) -> int:
+    """Buang operasi gagal/pending yang telah melewati retensi tujuh hari."""
+    batas = sekarang - RETENSI_OPERASI_GAGAL_DETIK
+    hasil = kon.execute(
+        """DELETE FROM operasi
+           WHERE status IN ('pending', 'gagal') AND dibuat <= ?""",
+        (batas,),
+    )
+    return hasil.rowcount
 
 
 def selesaikan_operasi(

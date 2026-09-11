@@ -144,6 +144,16 @@ def test_memori_hanya_preferensi_terkonfirmasi_dan_milik_sendiri(kon):
         )
 
 
+def test_draft_memori_belum_dikonfirmasi_tidak_mengubah_payload_atau_versi(kon):
+    chat = assistant_store.buat_chat(kon, AKUN_A, "aktif", sekarang=100)
+    assistant_store.tambah_memori(
+        kon, AKUN_A, "Gunakan diagram bila membantu.", sumber_chat_id=chat.id,
+        dikonfirmasi=False, sekarang=101,
+    )
+    assert assistant_store.versi_memori(kon, AKUN_A) == 0
+    assert assistant_store.memori_untuk_chat(kon, AKUN_A, chat.id) == ()
+
+
 def test_nonaktif_dan_hapus_memori_menaikkan_versi(kon):
     chat = assistant_store.buat_chat(kon, AKUN_A, "aktif", sekarang=100)
     memori = assistant_store.tambah_memori(
@@ -288,6 +298,20 @@ def test_operasi_memori_berubah_saat_network_tidak_bisa_commit(kon):
         consent_version=consent_version, memory_version=memory_version,
         context_version=0, sekarang=103,
     )
+
+
+def test_operasi_gagal_dipurge_setelah_tujuh_hari(kon):
+    chat = assistant_store.buat_chat(kon, AKUN_A, "aktif", sekarang=100)
+    operasi = assistant_store.mulai_operasi(
+        kon, AKUN_A, chat.id, "req_gagal", consent_version=0,
+        memory_version=0, context_version=0, sekarang=101,
+    )
+    assert assistant_store.gagalkan_operasi(
+        kon, AKUN_A, operasi.request_id, sekarang=102
+    )
+    hampir = 101 + assistant_store.RETENSI_OPERASI_GAGAL_DETIK - 1
+    assert assistant_store.purge_operasi(kon, sekarang=hampir) == 0
+    assert assistant_store.purge_operasi(kon, sekarang=hampir + 1) == 1
 
 
 def test_operasi_asing_tidak_dapat_diselesaikan(kon):
