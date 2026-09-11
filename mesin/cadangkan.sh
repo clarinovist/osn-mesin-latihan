@@ -33,6 +33,34 @@ ssh -o ConnectTimeout=10 "$INANG" \
 ssh -o ConnectTimeout=10 "$INANG" \
   "sudo -n rm -f /opt/osn/data/cadangan-sementara.db"
 
+# Riwayat Pendamping terpisah dari data belajar. Jika DB-nya sudah terbentuk,
+# tarik salinan konsisten tersendiri agar retensi/recovery tidak tercampur.
+PENDAMPING_ADA="$(ssh -o ConnectTimeout=10 "$INANG" \
+  "sudo -n test -f /opt/osn/data/pendamping.db && echo 1 || echo 0")"
+if [ "$PENDAMPING_ADA" = "1" ]; then
+  ssh -o ConnectTimeout=10 "$INANG" \
+    "sudo -n docker exec osn-mesin python -c \"
+import sqlite3
+sumber = sqlite3.connect('/data/pendamping.db')
+tujuan = sqlite3.connect('/data/cadangan-pendamping-sementara.db')
+sumber.backup(tujuan)
+tujuan.close(); sumber.close()
+print('salinan Pendamping konsisten dibuat')
+\"" >/dev/null
+  ssh -o ConnectTimeout=10 "$INANG" \
+    "sudo -n cat /opt/osn/data/cadangan-pendamping-sementara.db" \
+    > "$TUJUAN/pendamping-$CAP.db"
+  ssh -o ConnectTimeout=10 "$INANG" \
+    "sudo -n rm -f /opt/osn/data/cadangan-pendamping-sementara.db"
+  if ! sqlite3 "$TUJUAN/pendamping-$CAP.db" "PRAGMA integrity_check;" \
+      | grep -q "^ok$"; then
+    echo "GAGAL: cadangan Pendamping rusak, dihapus" >&2
+    rm -f "$TUJUAN/pendamping-$CAP.db"
+    exit 1
+  fi
+  echo "pendamping: $TUJUAN/pendamping-$CAP.db — integritas ok"
+fi
+
 # Cadangan yang tidak bisa dibuka bukan cadangan. Diperiksa tiap kali,
 # bukan hanya saat dibutuhkan — saat dibutuhkan sudah terlambat.
 if ! sqlite3 "$TUJUAN/latihan-$CAP.db" "PRAGMA integrity_check;" | grep -q "^ok$"; then
@@ -49,5 +77,6 @@ UKURAN=$(du -h "$TUJUAN/latihan-$CAP.db" | cut -f1)
 echo "cadangan: $TUJUAN/latihan-$CAP.db ($UKURAN)"
 echo "isi     : $SISWA siswa, $SESI sesi, $JWB jawaban — integritas ok"
 
-find "$TUJUAN" -name "latihan-*.db" -mtime "+$SIMPAN_HARI" -delete 2>/dev/null || true
-echo "tersimpan: $(find "$TUJUAN" -name 'latihan-*.db' | wc -l | tr -d ' ') cadangan"
+find "$TUJUAN" \( -name "latihan-*.db" -o -name "pendamping-*.db" \) \
+  -mtime "+$SIMPAN_HARI" -delete 2>/dev/null || true
+echo "tersimpan: $(find "$TUJUAN" -name 'latihan-*.db' | wc -l | tr -d ' ') cadangan latihan, $(find "$TUJUAN" -name 'pendamping-*.db' | wc -l | tr -d ' ') cadangan Pendamping"

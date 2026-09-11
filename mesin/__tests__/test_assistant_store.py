@@ -207,6 +207,36 @@ def test_persetujuan_milik_sendiri_dan_pencabutan_menaikkan_versi(kon):
     )
 
 
+def test_retensi_otomatis_tombstone_chat_lama_tanpa_menghapus_memori(kon):
+    lama = assistant_store.buat_chat(kon, AKUN_A, "aktif", sekarang=100)
+    baru = assistant_store.buat_chat(kon, AKUN_A, "aktif", sekarang=200)
+    memori = assistant_store.tambah_memori(
+        kon, AKUN_A, "Jawab ringkas.", sumber_chat_id=lama.id,
+        dikonfirmasi=True, sekarang=100,
+    )
+    draft = assistant_store.tambah_memori(
+        kon, AKUN_A, "Gunakan tabel.", sumber_chat_id=lama.id,
+        dikonfirmasi=False, sekarang=100,
+    )
+    sekarang = 100 + assistant_store.RETENSI_CHAT_DETIK
+    assert assistant_store.jadwalkan_retensi_chat(
+        kon, sekarang=sekarang
+    ) == 1
+    assert assistant_store.ambil_chat(kon, AKUN_A, lama.id) is None
+    assert assistant_store.ambil_chat(kon, AKUN_A, baru.id) is not None
+    assert {item.id for item in assistant_store.daftar_memori(kon, AKUN_A)} == {
+        memori.id, draft.id,
+    }
+    assert assistant_store.purge(kon, sekarang=sekarang) == 1
+    tersisa = assistant_store.daftar_memori(kon, AKUN_A)
+    assert [item.id for item in tersisa] == [memori.id]
+    assert tersisa[0].sumber_chat_id is None
+    assert assistant_store.ambil_chat(kon, AKUN_A, lama.id) is None
+    assert kon.execute(
+        "SELECT COUNT(*) FROM memori WHERE id = ?", (draft.id,)
+    ).fetchone()[0] == 0
+
+
 def test_soft_delete_menaikkan_versi_dan_purge_sesuai_waktu(kon):
     chat = assistant_store.buat_chat(kon, AKUN_A, "aktif", sekarang=100)
     assistant_store.tambah_pesan(

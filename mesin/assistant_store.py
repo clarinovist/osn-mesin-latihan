@@ -917,6 +917,20 @@ def hapus_chat(
     return hasil.rowcount == 1
 
 
+def jadwalkan_retensi_chat(
+    kon: sqlite3.Connection, *, sekarang: int
+) -> int:
+    """Tombstone chat tidak aktif 180 hari tanpa menghapus memori akun."""
+    batas = sekarang - RETENSI_CHAT_DETIK
+    hasil = kon.execute(
+        """UPDATE chat
+           SET dihapus = ?, purge_setelah = ?
+           WHERE dihapus IS NULL AND diperbarui <= ?""",
+        (sekarang, sekarang, batas),
+    )
+    return hasil.rowcount
+
+
 def purge(kon: sqlite3.Connection, *, sekarang: int) -> int:
     """Hapus chat jatuh tempo beserta turunan dalam satu transaksi pemanggil."""
     ids = tuple(
@@ -929,7 +943,19 @@ def purge(kon: sqlite3.Connection, *, sekarang: int) -> int:
     for chat_id in ids:
         kon.execute("DELETE FROM usulan_latihan WHERE chat_id = ?", (chat_id,))
         kon.execute("DELETE FROM operasi WHERE chat_id = ?", (chat_id,))
-        kon.execute("DELETE FROM memori WHERE sumber_chat_id = ?", (chat_id,))
+        # Memori terkonfirmasi mengikuti retensi akun, bukan retensi chat.
+        # Putuskan provenance chat yang dipurge; draft yang belum pernah
+        # disetujui tidak mempunyai alasan untuk dipertahankan.
+        kon.execute(
+            """UPDATE memori SET sumber_chat_id = NULL
+               WHERE sumber_chat_id = ? AND dikonfirmasi = 1""",
+            (chat_id,),
+        )
+        kon.execute(
+            """DELETE FROM memori
+               WHERE sumber_chat_id = ? AND dikonfirmasi = 0""",
+            (chat_id,),
+        )
         kon.execute("DELETE FROM pesan WHERE chat_id = ?", (chat_id,))
         kon.execute("DELETE FROM chat WHERE id = ?", (chat_id,))
     return len(ids)

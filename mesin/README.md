@@ -209,7 +209,7 @@ seed, jadi selalu sama persis.
 | `sessions.py` | sesi cookie (berkas JSON atomik, TTL 14 hari, rate-limit) |
 | `auth.py` | palang sandi, akun ber-peran admin/guru/murid |
 | `serve.py` | menjalankan server + bootstrap admin |
-| `cadangkan.sh` | tarik cadangan basis data dari VPS ke Mac |
+| `cadangkan.sh` | tarik cadangan basis data latihan dan Pendamping dari VPS ke Mac |
 | `Dockerfile` | container untuk VPS |
 
 Generator soal per topik: `topics.py` (registrasi) + `topic_*.py`
@@ -223,7 +223,7 @@ parameter) dan `topic_*_svg.py` (renderer visual).
 | Alamat | https://<domain-anda> |
 | Container | `osn-mesin`, restart otomatis |
 | Data | `/opt/osn/data` (basis data, sandi, lembar) |
-| Cadangan | harian 22:00 ke `mesin/cadangan/` di Mac |
+| Cadangan | harian 22:00 ke `mesin/cadangan/` di Mac; DB latihan dan Pendamping dipisah |
 
 ```bash
 ssh <host-vps> "sudo docker ps --filter name=osn-mesin"
