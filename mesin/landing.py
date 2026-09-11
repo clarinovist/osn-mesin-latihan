@@ -190,7 +190,14 @@ bisa memuat tulisan tangan anak. Pengiriman terjadi saat guru atau anak
 sengaja mengunggah foto. Pastikan izin orang tua/wali sudah ada sebelum
 memakai fitur ini; aplikasi belum memiliki gerbang persetujuan khusus pada
 setiap upload. Hasil AI hanya berupa usulan dan harus diperiksa guru.</p>
-<p>Selain penyedia AI untuk dua fitur tersebut dan penyedia font tampilan,
+<p>Fitur <b>Pendamping</b>, bila diaktifkan dan setelah persetujuan terpisah,
+mengirim isi chat ke DeepSeek. Jangan menulis email, nomor telepon, sandi,
+token, atau data pribadi anak. Chat umum tidak membaca data anak. Riwayat chat
+disimpan sampai 180 hari sejak aktivitas terakhir; operasi gagal disimpan paling
+lama 7 hari. Penghapusan data aktif dilakukan segera, sedangkan salinan cadangan
+dapat bertahan paling lama 30 hari. Admin tidak dapat membuka isi chat atau
+memori keluarga.</p>
+<p>Selain penyedia AI untuk fitur tersebut dan penyedia font tampilan,
 tidak ada pihak ketiga untuk iklan, pelacakan, atau analitik.</p>
 
 <h2>Siapa yang bisa melihat</h2>

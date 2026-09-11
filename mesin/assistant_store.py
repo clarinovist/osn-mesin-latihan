@@ -190,6 +190,27 @@ def daftar_chat(kon: sqlite3.Connection, account_id: str) -> tuple[Chat, ...]:
     return tuple(_chat_dari_baris(item) for item in baris)
 
 
+def pesan_dari_request(
+    kon: sqlite3.Connection,
+    account_id: str,
+    request_id: str,
+    *,
+    peran: Optional[str] = None,
+) -> Optional[Pesan]:
+    account_id = _wajib_account_id(account_id)
+    syarat_peran = " AND pesan.peran = ?" if peran is not None else ""
+    parameter = (request_id, account_id, peran) if peran is not None else (
+        request_id, account_id
+    )
+    baris = kon.execute(
+        """SELECT pesan.* FROM pesan
+           JOIN chat ON chat.id = pesan.chat_id
+           WHERE pesan.request_id = ? AND chat.account_id = ?""" + syarat_peran,
+        parameter,
+    ).fetchone()
+    return _pesan_dari_baris(baris) if baris else None
+
+
 def tambah_pesan(
     kon: sqlite3.Connection,
     account_id: str,

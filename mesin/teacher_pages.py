@@ -357,7 +357,10 @@ def _topbar(pengguna: str, peran: str) -> str:
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand_href, item = "/guru", '<a href="/akun">Akun &amp; Siswa</a>'
+        brand_href, item = "/guru", (
+            '<a href="/pendamping">Pendamping</a>'
+            '<a href="/akun">Akun &amp; Siswa</a>'
+        )
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         f'<div class="topbar">'
@@ -386,7 +389,10 @@ def _topbar_stitch(pengguna: str, peran: str) -> str:
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand_href, item = "/guru", '<a href="/akun">Akun &amp; Siswa</a>'
+        brand_href, item = "/guru", (
+            '<a href="/pendamping">Pendamping</a>'
+            '<a href="/akun">Akun &amp; Siswa</a>'
+        )
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         '<div class="st-topbar">'
