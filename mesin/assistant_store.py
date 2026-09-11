@@ -1,0 +1,606 @@
+"""Penyimpanan privat Pendamping dengan kepemilikan wajib.
+
+Semua operasi resource menerima ``account_id`` dari principal terverifikasi.
+Tidak ada parameter peran atau bypass admin. Modul ini juga menolak kontak dan
+credential sebelum teks masuk ke SQLite.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+import re
+import secrets
+import sqlite3
+from typing import Optional
+
+
+_ID_AKUN = re.compile(r"akun_[0-9a-f]{32}\Z")
+_EMAIL = re.compile(r"(?i)(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_TELEPON = re.compile(r"(?<!\d)(?:\+?62[\s().-]*|0)8(?:[\s().-]*\d){8,12}(?!\d)")
+_CREDENTIAL = re.compile(
+    r"(?i)(?:authorization\s*:\s*bearer\s+\S{8,}|"
+    r"(?:api[_ -]?key|access[_ -]?token|secret)\s*[:=]\s*\S{8,}|"
+    r"\bsk-[A-Za-z0-9_-]{12,})"
+)
+_MODE_MEMORI = ("aktif", "tanpa_memori")
+_PERAN_PESAN = ("pengguna", "asisten")
+
+
+@dataclass(frozen=True)
+class Chat:
+    id: str
+    account_id: str
+    mode_memori: str
+    versi: int
+    dibuat: int
+    diperbarui: int
+    dihapus: Optional[int]
+    purge_setelah: Optional[int]
+
+
+@dataclass(frozen=True)
+class Pesan:
+    id: str
+    chat_id: str
+    urut: int
+    peran: str
+    teks: str
+    status: str
+    request_id: Optional[str]
+    dibuat: int
+
+
+@dataclass(frozen=True)
+class Memori:
+    id: str
+    account_id: str
+    lingkup: str
+    isi: str
+    versi: int
+    sumber_chat_id: Optional[str]
+    dikonfirmasi: bool
+    dibuat: int
+    dihapus: Optional[int]
+
+
+@dataclass(frozen=True)
+class Operasi:
+    request_id: str
+    chat_id: str
+    account_id: str
+    status: str
+    chat_version: int
+    consent_version: int
+    memory_version: int
+    context_version: int
+    dibuat: int
+    selesai: Optional[int]
+
+
+@dataclass(frozen=True)
+class Persetujuan:
+    id: str
+    account_id: str
+    policy_version: str
+    provider_id: str
+    kategori: str
+    diberikan: int
+    dicabut: Optional[int]
+    versi: int
+
+
+def _id(awalan: str) -> str:
+    return awalan + secrets.token_hex(16)
+
+
+def _wajib_account_id(account_id: str) -> str:
+    if type(account_id) is not str or not _ID_AKUN.fullmatch(account_id):
+        raise ValueError("account_id wajib ID akun kanonik")
+    return account_id
+
+
+def _teks_aman(teks: str, *, batas: int) -> str:
+    if type(teks) is not str:
+        raise ValueError("teks wajib string")
+    bersih = teks.strip()
+    if not bersih or len(bersih) > batas:
+        raise ValueError("panjang teks tidak sah")
+    if _EMAIL.search(bersih) or _TELEPON.search(bersih) or _CREDENTIAL.search(bersih):
+        raise ValueError("teks memuat kontak atau credential")
+    return bersih
+
+
+def _chat_dari_baris(baris: sqlite3.Row) -> Chat:
+    return Chat(
+        id=baris["id"],
+        account_id=baris["account_id"],
+        mode_memori=baris["mode_memori"],
+        versi=baris["versi"],
+        dibuat=baris["dibuat"],
+        diperbarui=baris["diperbarui"],
+        dihapus=baris["dihapus"],
+        purge_setelah=baris["purge_setelah"],
+    )
+
+
+def _pesan_dari_baris(baris: sqlite3.Row) -> Pesan:
+    return Pesan(**dict(baris))
+
+
+def _memori_dari_baris(baris: sqlite3.Row) -> Memori:
+    data = dict(baris)
+    data["dikonfirmasi"] = bool(data["dikonfirmasi"])
+    return Memori(**data)
+
+
+def _operasi_dari_baris(baris: sqlite3.Row) -> Operasi:
+    return Operasi(**dict(baris))
+
+
+def _persetujuan_dari_baris(baris: sqlite3.Row) -> Persetujuan:
+    return Persetujuan(**dict(baris))
+
+
+def buat_chat(
+    kon: sqlite3.Connection,
+    account_id: str,
+    mode_memori: str,
+    *,
+    sekarang: int,
+) -> Chat:
+    account_id = _wajib_account_id(account_id)
+    if mode_memori not in _MODE_MEMORI:
+        raise ValueError("mode memori tidak sah")
+    chat_id = _id("chat_")
+    kon.execute(
+        """INSERT INTO chat(
+               id, account_id, mode_memori, dibuat, diperbarui
+           ) VALUES (?, ?, ?, ?, ?)""",
+        (chat_id, account_id, mode_memori, sekarang, sekarang),
+    )
+    baris = kon.execute(
+        "SELECT * FROM chat WHERE id = ? AND account_id = ?",
+        (chat_id, account_id),
+    ).fetchone()
+    return _chat_dari_baris(baris)
+
+
+def ambil_chat(
+    kon: sqlite3.Connection, account_id: str, chat_id: str
+) -> Optional[Chat]:
+    account_id = _wajib_account_id(account_id)
+    baris = kon.execute(
+        """SELECT * FROM chat
+           WHERE id = ? AND account_id = ? AND dihapus IS NULL""",
+        (chat_id, account_id),
+    ).fetchone()
+    return _chat_dari_baris(baris) if baris else None
+
+
+def daftar_chat(kon: sqlite3.Connection, account_id: str) -> tuple[Chat, ...]:
+    account_id = _wajib_account_id(account_id)
+    baris = kon.execute(
+        """SELECT * FROM chat
+           WHERE account_id = ? AND dihapus IS NULL
+           ORDER BY diperbarui DESC, id DESC""",
+        (account_id,),
+    ).fetchall()
+    return tuple(_chat_dari_baris(item) for item in baris)
+
+
+def tambah_pesan(
+    kon: sqlite3.Connection,
+    account_id: str,
+    chat_id: str,
+    peran: str,
+    teks: str,
+    *,
+    request_id: Optional[str],
+    sekarang: int,
+    status: str = "final",
+) -> Pesan:
+    account_id = _wajib_account_id(account_id)
+    if peran not in _PERAN_PESAN:
+        raise ValueError("peran pesan tidak sah")
+    if status not in ("final", "gagal"):
+        raise ValueError("status pesan tidak sah")
+    bersih = _teks_aman(teks, batas=8000)
+    chat = ambil_chat(kon, account_id, chat_id)
+    if chat is None:
+        raise LookupError("chat tidak ditemukan")
+    urut = kon.execute(
+        "SELECT COALESCE(MAX(urut), 0) + 1 FROM pesan WHERE chat_id = ?",
+        (chat_id,),
+    ).fetchone()[0]
+    pesan_id = _id("pesan_")
+    kon.execute(
+        """INSERT INTO pesan(
+               id, chat_id, urut, peran, teks, status, request_id, dibuat
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (pesan_id, chat_id, urut, peran, bersih, status, request_id, sekarang),
+    )
+    kon.execute(
+        """UPDATE chat SET diperbarui = ?, versi = versi + 1
+           WHERE id = ? AND account_id = ? AND dihapus IS NULL""",
+        (sekarang, chat_id, account_id),
+    )
+    baris = kon.execute("SELECT * FROM pesan WHERE id = ?", (pesan_id,)).fetchone()
+    return _pesan_dari_baris(baris)
+
+
+def daftar_pesan(
+    kon: sqlite3.Connection, account_id: str, chat_id: str
+) -> tuple[Pesan, ...]:
+    account_id = _wajib_account_id(account_id)
+    if ambil_chat(kon, account_id, chat_id) is None:
+        return ()
+    baris = kon.execute(
+        "SELECT * FROM pesan WHERE chat_id = ? ORDER BY urut", (chat_id,)
+    ).fetchall()
+    return tuple(_pesan_dari_baris(item) for item in baris)
+
+
+def tambah_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    isi: str,
+    *,
+    sumber_chat_id: Optional[str],
+    dikonfirmasi: bool,
+    sekarang: int,
+    lingkup: str = "preferensi_orang_tua",
+) -> Memori:
+    account_id = _wajib_account_id(account_id)
+    if lingkup != "preferensi_orang_tua":
+        raise ValueError("lingkup memori tidak sah")
+    bersih = _teks_aman(isi, batas=500)
+    if sumber_chat_id is not None and ambil_chat(kon, account_id, sumber_chat_id) is None:
+        raise LookupError("chat sumber tidak ditemukan")
+    memori_id = _id("memori_")
+    kon.execute(
+        """INSERT INTO memori(
+               id, account_id, lingkup, isi, sumber_chat_id,
+               dikonfirmasi, dibuat
+           ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            memori_id,
+            account_id,
+            lingkup,
+            bersih,
+            sumber_chat_id,
+            1 if dikonfirmasi else 0,
+            sekarang,
+        ),
+    )
+    _naikkan_versi_memori(kon, account_id, sekarang)
+    baris = kon.execute("SELECT * FROM memori WHERE id = ?", (memori_id,)).fetchone()
+    return _memori_dari_baris(baris)
+
+
+def _query_memori(
+    kon: sqlite3.Connection, account_id: str
+) -> tuple[Memori, ...]:
+    baris = kon.execute(
+        """SELECT * FROM memori
+           WHERE account_id = ? AND dikonfirmasi = 1 AND dihapus IS NULL
+             AND lingkup = 'preferensi_orang_tua'
+           ORDER BY dibuat, id""",
+        (account_id,),
+    ).fetchall()
+    return tuple(_memori_dari_baris(item) for item in baris)
+
+
+def memori_untuk_chat(
+    kon: sqlite3.Connection, account_id: str, chat_id: str
+) -> tuple[Memori, ...]:
+    account_id = _wajib_account_id(account_id)
+    chat = ambil_chat(kon, account_id, chat_id)
+    if chat is None or chat.mode_memori == "tanpa_memori":
+        return ()
+    pengaturan = kon.execute(
+        "SELECT aktif FROM preferensi_memori WHERE account_id = ?",
+        (account_id,),
+    ).fetchone()
+    if pengaturan is not None and not pengaturan["aktif"]:
+        return ()
+    return _query_memori(kon, account_id)
+
+
+def versi_memori(kon: sqlite3.Connection, account_id: str) -> int:
+    account_id = _wajib_account_id(account_id)
+    baris = kon.execute(
+        "SELECT versi FROM preferensi_memori WHERE account_id = ?",
+        (account_id,),
+    ).fetchone()
+    return int(baris["versi"]) if baris else 0
+
+
+def _naikkan_versi_memori(
+    kon: sqlite3.Connection, account_id: str, sekarang: int
+) -> int:
+    versi = versi_memori(kon, account_id)
+    if versi == 0:
+        kon.execute(
+            """INSERT INTO preferensi_memori(account_id, aktif, versi, diperbarui)
+               VALUES (?, 1, 1, ?)""",
+            (account_id, sekarang),
+        )
+        return 1
+    kon.execute(
+        """UPDATE preferensi_memori
+           SET versi = versi + 1, diperbarui = ? WHERE account_id = ?""",
+        (sekarang, account_id),
+    )
+    return versi + 1
+
+
+def atur_penggunaan_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    aktif: bool,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> int:
+    account_id = _wajib_account_id(account_id)
+    kini = versi_memori(kon, account_id)
+    if kini != versi_diharapkan:
+        raise ValueError("versi memori berubah")
+    if kini == 0:
+        kon.execute(
+            """INSERT INTO preferensi_memori(account_id, aktif, versi, diperbarui)
+               VALUES (?, ?, 1, ?)""",
+            (account_id, 1 if aktif else 0, sekarang),
+        )
+        return 1
+    kon.execute(
+        """UPDATE preferensi_memori
+           SET aktif = ?, versi = versi + 1, diperbarui = ?
+           WHERE account_id = ? AND versi = ?""",
+        (1 if aktif else 0, sekarang, account_id, versi_diharapkan),
+    )
+    return kini + 1
+
+
+def hapus_memori(
+    kon: sqlite3.Connection,
+    account_id: str,
+    memori_id: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    hasil = kon.execute(
+        """UPDATE memori
+           SET dihapus = ?, versi = versi + 1
+           WHERE id = ? AND account_id = ? AND dihapus IS NULL AND versi = ?""",
+        (sekarang, memori_id, account_id, versi_diharapkan),
+    )
+    if hasil.rowcount == 1:
+        _naikkan_versi_memori(kon, account_id, sekarang)
+        return True
+    return False
+
+
+def beri_persetujuan(
+    kon: sqlite3.Connection,
+    account_id: str,
+    *,
+    policy_version: str,
+    provider_id: str,
+    kategori: str,
+    sekarang: int,
+) -> Persetujuan:
+    account_id = _wajib_account_id(account_id)
+    if not policy_version or not provider_id or not kategori:
+        raise ValueError("persetujuan tidak lengkap")
+    persetujuan_id = _id("consent_")
+    versi = versi_persetujuan(kon, account_id) + 1
+    kon.execute(
+        """INSERT INTO persetujuan(
+               id, account_id, policy_version, provider_id, kategori,
+               diberikan, versi
+           ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            persetujuan_id,
+            account_id,
+            policy_version,
+            provider_id,
+            kategori,
+            sekarang,
+            versi,
+        ),
+    )
+    baris = kon.execute(
+        "SELECT * FROM persetujuan WHERE id = ? AND account_id = ?",
+        (persetujuan_id, account_id),
+    ).fetchone()
+    return _persetujuan_dari_baris(baris)
+
+
+def versi_persetujuan(kon: sqlite3.Connection, account_id: str) -> int:
+    account_id = _wajib_account_id(account_id)
+    return int(kon.execute(
+        "SELECT COALESCE(MAX(versi), 0) FROM persetujuan WHERE account_id = ?",
+        (account_id,),
+    ).fetchone()[0])
+
+
+def persetujuan_aktif(
+    kon: sqlite3.Connection,
+    account_id: str,
+    *,
+    kategori: str,
+    provider_id: str,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    return kon.execute(
+        """SELECT 1 FROM persetujuan
+           WHERE account_id = ? AND kategori = ? AND provider_id = ?
+             AND dicabut IS NULL
+           LIMIT 1""",
+        (account_id, kategori, provider_id),
+    ).fetchone() is not None
+
+
+def cabut_persetujuan(
+    kon: sqlite3.Connection,
+    account_id: str,
+    persetujuan_id: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    versi_baru = versi_persetujuan(kon, account_id) + 1
+    hasil = kon.execute(
+        """UPDATE persetujuan
+           SET dicabut = ?, versi = ?
+           WHERE id = ? AND account_id = ? AND dicabut IS NULL AND versi = ?""",
+        (sekarang, versi_baru, persetujuan_id, account_id, versi_diharapkan),
+    )
+    return hasil.rowcount == 1
+
+
+def hapus_chat(
+    kon: sqlite3.Connection,
+    account_id: str,
+    chat_id: str,
+    *,
+    versi_diharapkan: int,
+    sekarang: int,
+    retensi_detik: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    if retensi_detik < 0:
+        raise ValueError("retensi tidak boleh negatif")
+    hasil = kon.execute(
+        """UPDATE chat
+           SET dihapus = ?, purge_setelah = ?, diperbarui = ?
+           WHERE id = ? AND account_id = ? AND dihapus IS NULL AND versi = ?""",
+        (
+            sekarang,
+            sekarang + retensi_detik,
+            sekarang,
+            chat_id,
+            account_id,
+            versi_diharapkan,
+        ),
+    )
+    return hasil.rowcount == 1
+
+
+def purge(kon: sqlite3.Connection, *, sekarang: int) -> int:
+    """Hapus chat jatuh tempo beserta turunan dalam satu transaksi pemanggil."""
+    ids = tuple(
+        baris["id"]
+        for baris in kon.execute(
+            "SELECT id FROM chat WHERE purge_setelah IS NOT NULL AND purge_setelah <= ?",
+            (sekarang,),
+        ).fetchall()
+    )
+    for chat_id in ids:
+        kon.execute("DELETE FROM operasi WHERE chat_id = ?", (chat_id,))
+        kon.execute("DELETE FROM memori WHERE sumber_chat_id = ?", (chat_id,))
+        kon.execute("DELETE FROM pesan WHERE chat_id = ?", (chat_id,))
+        kon.execute("DELETE FROM chat WHERE id = ?", (chat_id,))
+    return len(ids)
+
+
+def mulai_operasi(
+    kon: sqlite3.Connection,
+    account_id: str,
+    chat_id: str,
+    request_id: str,
+    *,
+    consent_version: int,
+    memory_version: int,
+    context_version: int,
+    sekarang: int,
+) -> Operasi:
+    account_id = _wajib_account_id(account_id)
+    lama = kon.execute(
+        "SELECT * FROM operasi WHERE request_id = ? AND account_id = ?",
+        (request_id, account_id),
+    ).fetchone()
+    if lama:
+        operasi = _operasi_dari_baris(lama)
+        if (
+            operasi.chat_id != chat_id
+            or operasi.consent_version != consent_version
+            or operasi.memory_version != memory_version
+            or operasi.context_version != context_version
+        ):
+            raise ValueError("request_id dipakai untuk operasi berbeda")
+        return operasi
+    chat = ambil_chat(kon, account_id, chat_id)
+    if chat is None:
+        raise LookupError("chat tidak ditemukan")
+    try:
+        kon.execute(
+            """INSERT INTO operasi(
+                   request_id, chat_id, account_id, status, chat_version,
+                   consent_version, memory_version, context_version, dibuat
+               ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?)""",
+            (
+                request_id,
+                chat_id,
+                account_id,
+                chat.versi,
+                consent_version,
+                memory_version,
+                context_version,
+                sekarang,
+            ),
+        )
+    except sqlite3.IntegrityError:
+        # Request ID milik akun lain tidak dibocorkan sebagai hasil idempoten.
+        raise ValueError("request_id tidak tersedia") from None
+    baris = kon.execute(
+        "SELECT * FROM operasi WHERE request_id = ? AND account_id = ?",
+        (request_id, account_id),
+    ).fetchone()
+    return _operasi_dari_baris(baris)
+
+
+def selesaikan_operasi(
+    kon: sqlite3.Connection,
+    account_id: str,
+    request_id: str,
+    *,
+    chat_version: int,
+    consent_version: int,
+    memory_version: int,
+    context_version: int,
+    sekarang: int,
+) -> bool:
+    account_id = _wajib_account_id(account_id)
+    if versi_persetujuan(kon, account_id) != consent_version:
+        return False
+    if versi_memori(kon, account_id) != memory_version:
+        return False
+    hasil = kon.execute(
+        """UPDATE operasi
+           SET status = 'selesai', selesai = ?
+           WHERE request_id = ? AND account_id = ? AND status = 'pending'
+             AND chat_version = ? AND consent_version = ?
+             AND memory_version = ? AND context_version = ?
+             AND EXISTS (
+                 SELECT 1 FROM chat
+                 WHERE chat.id = operasi.chat_id
+                   AND chat.account_id = operasi.account_id
+                   AND chat.dihapus IS NULL
+                   AND chat.versi = operasi.chat_version
+             )""",
+        (
+            sekarang,
+            request_id,
+            account_id,
+            chat_version,
+            consent_version,
+            memory_version,
+            context_version,
+        ),
+    )
+    return hasil.rowcount == 1
