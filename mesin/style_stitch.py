@@ -2492,6 +2492,42 @@ a.tombol-coral:hover {{ filter: brightness(1.06); }}
   padding: {T.SP_3}; margin-bottom: 0; font-size: .85rem;
 }}
 /* FIN WORKER A editorial scoped */
+
+/* Pendamping inline dipakai lintas host yang hanya memuat GAYA_STITCH. */
+.pendamping-inline {{ margin-top: {T.SP_5}; padding-top: {T.SP_4}; border-top: 1px solid {T.BORDER_VARIAN}; min-width: 0; }}
+.pendamping-inline > details > summary {{ min-height: {T.TARGET_SENTUH}; color: {T.AKSEN_TEAL_TUA}; font-weight: 700; cursor: pointer; }}
+.pendamping-inline-isi {{ padding: {T.SP_3} 0 0; min-width: 0; }}
+.pendamping-inline-isi h3 {{ margin: 0 0 {T.SP_2}; color: {T.TEKS_JUDUL}; }}
+.pendamping-inline .pendamping-sumber, .pendamping-inline .pendamping-catatan {{ color: {T.TEKS_VARIAN}; font-size: .875rem; }}
+.pendamping-inline textarea {{ display: block; width: 100%; min-height: 5.5rem; margin: {T.SP_2} 0; padding: {T.SP_3}; border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG}; font: inherit; resize: vertical; }}
+.pendamping-inline button, .pendamping-inline a {{ min-height: {T.TARGET_SENTUH}; }}
+.pendamping-inline .pendamping-tombol {{ display: inline-flex; align-items: center; justify-content: center; padding: {T.SP_2} {T.SP_4}; border: 1px solid {T.AKSEN_TEAL_TUA}; border-radius: {T.RADIUS_SEDANG}; background: {T.AKSEN_TEAL_TUA}; color: {T.TEKS_PUTIH}; font: inherit; font-weight: 700; cursor: pointer; }}
+.pendamping-inline .pendamping-sekunder {{ background: transparent; color: {T.AKSEN_TEAL_TUA}; }}
+.pendamping-inline .pendamping-tautan {{ display: inline-flex; align-items: center; padding: {T.SP_2}; border: 0; background: transparent; color: {T.AKSEN_TEAL_TUA}; font: inherit; text-decoration: underline; cursor: pointer; }}
+.pendamping-inline .pendamping-cek {{ display: flex; align-items: flex-start; gap: {T.SP_2}; width: 100%; min-height: {T.TARGET_SENTUH}; margin: {T.SP_3} 0; padding-block: {T.SP_2}; }}
+.pendamping-inline .pendamping-cek input {{ width: 1.25rem; height: 1.25rem; flex: none; margin-top: .15rem; }}
+.pendamping-inline-isi > form > .pendamping-tombol {{ display: flex; width: fit-content; margin-top: {T.SP_4}; clear: both; }}
+.pendamping-inline-isi > form + form {{ margin-top: {T.SP_3}; }}
+.pendamping-inline .pendamping-aksi {{ display: flex; flex-wrap: wrap; gap: {T.SP_2}; margin-top: {T.SP_3}; clear: both; }}
+.pendamping-inline .pendamping-info, .pendamping-inline .pendamping-galat {{ padding: {T.SP_3}; border-inline-start: 3px solid {T.AKSEN_TEAL_TUA}; background: {T.LATAR_SEKUNDER_LEMBUT}; }}
+.pendamping-inline .pendamping-galat {{ border-color: {T.TEKS_GALAT}; color: {T.TEKS_GALAT}; }}
+.pendamping-inline .pendamping-pesan {{ margin: {T.SP_4} 0; }}
+.pendamping-inline .pendamping-pesan.pengguna {{ margin-inline-start: auto; max-width: 88%; padding: {T.SP_3}; border-radius: {T.RADIUS_SEDANG}; background: {T.LATAR_SEKUNDER_LEMBUT}; }}
+.pendamping-inline .pendamping-peran {{ margin: 0 0 {T.SP_1}; font-size: .8125rem; color: {T.TEKS_VARIAN}; }}
+.pendamping-inline .pendamping-teks {{ white-space: pre-wrap; overflow-wrap: anywhere; }}
+.pendamping-inline .pendamping-transkrip, .pendamping-inline .pendamping-composer {{ width: 100%; max-width: {T.LEBAR_KONTEN}; }}
+.pendamping-inline .pendamping-riwayat nav {{ display: grid; gap: {T.SP_1}; }}
+.pendamping-inline .pendamping-riwayat button, .pendamping-inline .pendamping-riwayat a {{ padding: {T.SP_2}; border: 0; border-bottom: 1px solid {T.BORDER_VARIAN}; background: transparent; color: {T.AKSEN_TEAL_TUA}; text-align: left; font: inherit; }}
+.pendamping-inline .pendamping-composer {{ display: grid; grid-template-columns: minmax(0, 1fr); gap: {T.SP_4}; min-width: 0; }}
+.pendamping-inline .pendamping-composer textarea {{ min-height: 7.5rem; margin: 0; }}
+.pendamping-inline .pendamping-composer .pendamping-tombol {{ width: fit-content; margin: 0 0 0 {T.SP_1}; }}
+.pendamping-inline .pendamping-memori {{ margin-top: {T.SP_4}; }}
+.pendamping-inline .pendamping-memori > summary {{ display: list-item; width: fit-content; min-height: {T.TARGET_SENTUH}; padding: {T.SP_1} 0; color: {T.AKSEN_TEAL_TUA}; background: transparent; border: 0; font-size: .875rem; font-weight: 600; cursor: pointer; }}
+.pendamping-inline .pendamping-memori > summary::marker {{ color: {T.AKSEN_TEAL_TUA}; }}
+.pendamping-inline .pendamping-memori > summary:focus-visible {{ outline: 2px solid {T.FOKUS_AKSEN}; outline-offset: 3px; }}
+.profil-editorial-st .atur-latihan-st .pendamping-inline .pendamping-memori > summary {{ display: list-item; min-height: {T.TARGET_SENTUH}; }}
+.profil-editorial-st .atur-latihan-st .pendamping-inline .pendamping-memori > summary::before {{ content: none; }}
+@media (max-width: 24rem) {{ .pendamping-inline .pendamping-pesan.pengguna {{ max-width: 96%; }} }}
 """
 # diimpor utuh; dipanggil oleh halaman_sesi_stitch lewat gaya_stitch() + blok
 # tambahan ini.
@@ -2794,31 +2830,6 @@ CSS_SESI = f"""
   .koreksi-status-st {{ border: 0; }}
 }}
 
-/* Pendamping inline — satu outline di dalam host, tanpa kartu ganda. */
-.pendamping-inline {{ margin-top: {T.SP_5}; padding-top: {T.SP_4}; border-top: 1px solid {T.BORDER_VARIAN}; }}
-.pendamping-inline > details > summary {{ min-height: {T.TARGET_SENTUH}; color: {T.AKSEN_TEAL_TUA}; font-weight: 700; cursor: pointer; }}
-.pendamping-inline-isi {{ padding: {T.SP_3} 0 0; min-width: 0; }}
-.pendamping-inline-isi h3 {{ margin: 0 0 {T.SP_2}; color: {T.TEKS_JUDUL}; }}
-.pendamping-inline .pendamping-sumber, .pendamping-inline .pendamping-catatan {{ color: {T.TEKS_VARIAN}; font-size: .875rem; }}
-.pendamping-inline textarea {{ display: block; width: 100%; min-height: 5.5rem; margin: {T.SP_2} 0; padding: {T.SP_3}; border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_SEDANG}; font: inherit; resize: vertical; }}
-.pendamping-inline button, .pendamping-inline a {{ min-height: {T.TARGET_SENTUH}; }}
-.pendamping-inline .pendamping-tombol {{ display: inline-flex; align-items: center; justify-content: center; padding: {T.SP_2} {T.SP_4}; border: 1px solid {T.AKSEN_TEAL_TUA}; border-radius: {T.RADIUS_SEDANG}; background: {T.AKSEN_TEAL_TUA}; color: {T.TEKS_PUTIH}; font: inherit; font-weight: 700; cursor: pointer; }}
-.pendamping-inline .pendamping-sekunder {{ background: transparent; color: {T.AKSEN_TEAL_TUA}; }}
-.pendamping-inline .pendamping-tautan {{ display: inline-flex; align-items: center; padding: {T.SP_2}; border: 0; background: transparent; color: {T.AKSEN_TEAL_TUA}; font: inherit; text-decoration: underline; cursor: pointer; }}
-.pendamping-inline .pendamping-cek {{ display: flex; align-items: flex-start; gap: {T.SP_2}; width: 100%; min-height: {T.TARGET_SENTUH}; margin: {T.SP_3} 0; padding-block: {T.SP_2}; }}
-.pendamping-inline .pendamping-cek input {{ width: 1.25rem; height: 1.25rem; flex: none; margin-top: .15rem; }}
-.pendamping-inline-isi > form > .pendamping-tombol {{ display: flex; width: fit-content; margin-top: {T.SP_4}; clear: both; }}
-.pendamping-inline-isi > form + form {{ margin-top: {T.SP_3}; }}
-.pendamping-inline .pendamping-aksi {{ display: flex; flex-wrap: wrap; gap: {T.SP_2}; margin-top: {T.SP_3}; clear: both; }}
-.pendamping-inline .pendamping-info, .pendamping-inline .pendamping-galat {{ padding: {T.SP_3}; border-inline-start: 3px solid {T.AKSEN_TEAL_TUA}; background: {T.LATAR_SEKUNDER_LEMBUT}; }}
-.pendamping-inline .pendamping-galat {{ border-color: {T.TEKS_GALAT}; color: {T.TEKS_GALAT}; }}
-.pendamping-inline .pendamping-pesan {{ margin: {T.SP_4} 0; }}
-.pendamping-inline .pendamping-pesan.pengguna {{ margin-inline-start: auto; max-width: 88%; padding: {T.SP_3}; border-radius: {T.RADIUS_SEDANG}; background: {T.LATAR_SEKUNDER_LEMBUT}; }}
-.pendamping-inline .pendamping-peran {{ margin: 0 0 {T.SP_1}; font-size: .8125rem; color: {T.TEKS_VARIAN}; }}
-.pendamping-inline .pendamping-teks {{ white-space: pre-wrap; overflow-wrap: anywhere; }}
-.pendamping-inline .pendamping-riwayat nav {{ display: grid; gap: {T.SP_1}; }}
-.pendamping-inline .pendamping-riwayat button, .pendamping-inline .pendamping-riwayat a {{ padding: {T.SP_2}; border: 0; border-bottom: 1px solid {T.BORDER_VARIAN}; background: transparent; color: {T.AKSEN_TEAL_TUA}; text-align: left; font: inherit; }}
-@media (max-width: 24rem) {{ .pendamping-inline .pendamping-pesan.pengguna {{ max-width: 96%; }} }}
 """
 
 

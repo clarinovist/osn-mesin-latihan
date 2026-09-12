@@ -1749,10 +1749,9 @@ def halaman_sesi_stitch(
         f'{jejak}'
         f'<header class="editorial-kepala-st"><p class="editorial-alis-st">{html.escape(tahap_ramah)} · {orientasi_peran}</p>'
         f'<h1 class="sesi-judul-st" id="judul-koreksi">{html.escape(info["nama"])} — Sesi #{sesi_id}</h1>'
-        f'<p class="sesi-sub-st">{info["tanggal"]} &middot; '
+        f'<p class="sesi-sub-st">{_tanggal_ringkas(info["tanggal"])} &middot; '
         f'{html.escape(label_kelas(_ambil(info, "level", LEVEL_BAWAAN)))} &middot; '
-        f'{_ambil(info, "topik", TOPIK_BAWAAN)} &middot; '
-        f'seed {info["seed"]} {badge_mode} {badge_remedial}</p></header>'
+        f'{int(info["jumlah_soal"])} soal {badge_mode} {badge_remedial}</p></header>'
         f"{kabar}"
         f"{pil}{konteks_pendamping}"
         f"{status_sesi}"

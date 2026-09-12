@@ -167,9 +167,8 @@ def _kontrol_memori(target, chat, memori, *, status_memori: str, versi_memori: i
         daftar_baris.append('<article class="pendamping-memori">' + kontrol + '</article>')
     daftar = "".join(daftar_baris)
     return (
-        '<details class="pendamping-memori"><summary>Preferensi Pendamping</summary>'
-        f'<p>{_esc(status_memori)}</p><p class="pendamping-catatan">Preferensi berlaku lintas percakapan orang tua. '
-        'Chat tanpa memori tetap tersimpan sebagai riwayat.</p>' + tombol + daftar + '</details>'
+        '<details class="pendamping-memori"><summary>Preferensi</summary>'
+        f'<p>{_esc(status_memori)}</p>' + tombol + daftar + '</details>'
     )
 
 
@@ -238,10 +237,11 @@ def panel_chat(target, chat, pesan, riwayat, *, sumber, dalam_form: bool = False
         isi = (
             ("" if dalam_form else _identitas_target(target) + _hidden("chat", chat.id))
             + _hidden("request_id", "req_" + secrets.token_hex(16))
-            + '<label class="pendamping-label" for="pesan-inline">Pesan untuk Pendamping</label>'
-              '<textarea id="pesan-inline" name="pesan" rows="3" maxlength="8000"></textarea>'
-              '<button class="pendamping-tombol" type="submit" formaction="/pendamping/inline/pesan">Kirim pesan</button>'
-              '<p class="pendamping-catatan">Enter membuat baris baru. Hanya tombol kirim yang mengirim pesan.</p>'
+            + '<div class="pendamping-composer">'
+              '<label class="pendamping-label" for="pesan-inline">Pesan untuk Pendamping</label>'
+              '<textarea id="pesan-inline" name="pesan" rows="5" maxlength="8000"></textarea>'
+              '<button class="pendamping-tombol" type="submit" formaction="/pendamping/inline/pesan">Kirim</button>'
+              '</div>'
         )
         composer = _wadah_form(isi, "/pendamping/inline/pesan", dalam_form=dalam_form)
     kontrol_memori = _kontrol_memori(
@@ -255,7 +255,7 @@ def panel_chat(target, chat, pesan, riwayat, *, sumber, dalam_form: bool = False
         target, "Bantuan terkait", identitas_form + status + histori
         + f'<div class="pendamping-transkrip">{transkrip}</div>'
         + _kartu_usulan_inline(target, chat, usulan, dalam_form=dalam_form)
-        + draft_memori_html + kontrol_memori + composer,
+        + draft_memori_html + composer + kontrol_memori,
         sumber=sumber, dalam_form=dalam_form,
     )
 

@@ -1,6 +1,7 @@
 """Kontrak editorial pendamping: landmark, formulir, dan aksesibilitas."""
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
 import re
 import sys
 
@@ -9,6 +10,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import account_pages
+import assistant_components
+import assistant_inline
 import attachments
 import auth
 import database
@@ -54,6 +57,7 @@ def db(tmp_path, monkeypatch):
         database.tambah_siswa(kon, "Belum terhubung", pemilik="pendamping-uji")
         akun.append({"pengguna": "tunas-uji", "peran": "murid", "siswa_id": sid})
         sesi = database.buat_sesi(kon, sid, seed=7, jumlah_soal=10)
+        kon.execute("UPDATE sesi SET tanggal = '2026-09-13' WHERE id = ?", (sesi,))
         lamp = database.simpan_lampiran(kon, sesi, "foto-sintetis.png")
         yield kon, sid, sesi, lamp
 
@@ -114,6 +118,65 @@ def test_navigasi_section_dan_sesi_menandai_halaman_aktif(db):
         aktif = [a for a in markup.pilih("a") if a.get("aria-current") == "page"]
         assert len(aktif) == 1, nama
         assert any("aria-label" in a for a in markup.pilih("nav")), nama
+
+
+def test_header_sesi_memakai_tanggal_ramah_kelas_dan_jumlah_aktual(db):
+    halaman = _halaman(db)["koreksi"].decode()
+    kepala = halaman.split('<header class="editorial-kepala-st">', 1)[1].split("</header>", 1)[0]
+    assert '<time datetime="2026-09-13">13 Sep 2026</time>' in kepala
+    assert "Kelas 3" in kepala
+    jumlah = db[0].execute(
+        "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (db[2],)
+    ).fetchone()[0]
+    assert f"{jumlah} soal" in kepala
+    assert "seed 7" not in kepala
+    assert "campuran" not in kepala
+
+
+def test_empat_host_merender_style_dan_markup_composer_shared(db):
+    kon, sid, sesi, _ = db
+    siswa = kon.execute("SELECT * FROM siswa WHERE id = ?", (sid,)).fetchone()
+    chat = SimpleNamespace(id="chat_" + "a" * 32, mode_memori="aktif", dibuat=0)
+
+    def panel(target, dalam_form=False):
+        return assistant_components.panel_chat(
+            target, chat, (), (chat,),
+            sumber={"label": "Sumber sintetis", "level": "P3"},
+            dalam_form=dalam_form,
+            status_memori="Memori aktif · belum ada catatan",
+        )
+
+    halaman = {
+        "rencana": teacher_pages.halaman_anak(
+            kon, siswa, pengguna="pendamping-uji",
+            bantuan_rencana=panel(assistant_inline.tujuan_anak(sid, chat_id=chat.id)),
+        ).decode(),
+        "latihan": teacher_pages.halaman_anak(
+            kon, siswa, pengguna="pendamping-uji",
+            bantuan_latihan=panel(
+                assistant_inline.tujuan_anak(sid, "latihan", chat_id=chat.id), True
+            ),
+        ).decode(),
+        "sesi": teacher_pages.halaman_sesi_stitch(
+            kon, sesi, pengguna="pendamping-uji",
+            bantuan=panel(assistant_inline.tujuan_sesi(sesi, chat_id=chat.id)),
+        ).decode(),
+    }
+    database.tandai_selesai(kon, sesi)
+    halaman["soal"] = teacher_pages.halaman_sesi_stitch(
+        kon, sesi, pengguna="pendamping-uji",
+        bantuan=panel(
+            assistant_inline.tujuan_sesi(sesi, nomor=1, chat_id=chat.id), True
+        ),
+        bantuan_nomor=1,
+    ).decode()
+
+    for nama, isi in halaman.items():
+        assert '<div class="pendamping-composer">' in isi, nama
+        assert '.pendamping-inline .pendamping-transkrip, .pendamping-inline .pendamping-composer {' in isi, nama
+        assert f"max-width: {T.LEBAR_KONTEN}" in isi, nama
+        assert 'formaction="/pendamping/inline/pesan">Kirim</button>' in isi, nama
+        assert '<summary>Preferensi</summary>' in isi, nama
 
 
 def test_form_upload_terapkan_baca_ulang_dan_hapus_tetap_terpisah(db):

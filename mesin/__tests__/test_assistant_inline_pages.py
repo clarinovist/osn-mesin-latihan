@@ -6,11 +6,13 @@ from pathlib import Path
 import sys
 
 import pytest
+import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import assistant_components
 import assistant_inline
+import style_stitch
 
 
 @dataclass
@@ -117,6 +119,65 @@ def test_fragmen_escape_teks_model_dan_hanya_satu_composer():
     assert panel.count('name="pesan"') == 1
     assert panel.count("pendamping-inline") >= 1
     assert f"chat={cid}" in panel
+
+
+@pytest.mark.parametrize("dalam_form", [False, True])
+def test_composer_blok_dan_preferensi_ringkas_setelah_area_kirim(dalam_form):
+    cid = "chat_" + "b" * 32
+    chat = Chat(cid)
+    panel = assistant_components.panel_chat(
+        assistant_inline.tujuan_anak(7, chat_id=cid), chat, (), (chat,),
+        sumber={"label": "Ringkasan anak", "level": "P3"},
+        status_memori="Memori aktif · belum ada catatan", versi_memori=1,
+        dalam_form=dalam_form,
+    )
+    parser = FormParser(('<form id="host">' if dalam_form else "") + panel
+                        + ("</form>" if dalam_form else ""))
+    assert parser.maks == 1
+    assert parser.form == (1 if dalam_form else 3)
+    assert '<div class="pendamping-composer">' in panel
+    assert '<textarea id="pesan-inline" name="pesan" rows="5"' in panel
+    assert 'formaction="/pendamping/inline/pesan">Kirim</button>' in panel
+    assert "Enter membuat baris baru" not in panel
+    assert 'name="pesan"' in panel and "required" not in panel
+    assert '<details class="pendamping-memori"><summary>Preferensi</summary>' in panel
+    assert panel.index('name="pesan"') < panel.index("<summary>Preferensi</summary>")
+    assert "Preferensi berlaku lintas percakapan" not in panel
+
+
+def test_gaya_pendamping_inline_tersedia_di_stylesheet_semua_host():
+    css = style_stitch.GAYA_STITCH
+    composer = re.search(
+        r"^\.pendamping-inline \.pendamping-composer \{([^}]*)\}", css, re.M
+    ).group(1)
+    textarea = re.search(
+        r"\.pendamping-inline \.pendamping-composer textarea \{([^}]*)\}", css
+    ).group(1)
+    preferensi = re.search(
+        r"\.pendamping-inline \.pendamping-memori > summary \{([^}]*)\}", css
+    ).group(1)
+    batas = re.search(
+        r"\.pendamping-inline \.pendamping-transkrip, \.pendamping-inline \.pendamping-composer \{([^}]*)\}", css
+    ).group(1)
+    assert "grid-template-columns: minmax(0, 1fr)" in composer
+    assert "gap: 1rem" in composer and "min-width: 0" in composer
+    assert "width: 100%" in batas and f"max-width: {style_stitch.T.LEBAR_KONTEN}" in batas
+    assert "min-height: 7.5rem" in textarea
+    assert f"min-height: {style_stitch.T.TARGET_SENTUH}" in preferensi
+    assert "display: list-item" in preferensi
+    assert ".pendamping-inline .pendamping-composer" not in style_stitch.CSS_SESI
+
+
+def test_preferensi_host_latihan_mematikan_marker_plus_minus_buatan():
+    css = style_stitch.GAYA_STITCH
+    selektor = ".profil-editorial-st .atur-latihan-st .pendamping-inline .pendamping-memori > summary"
+    blok = re.search(r"^" + re.escape(selektor) + r" \{([^}]*)\}", css, re.M).group(1)
+    before = re.search(
+        r"^" + re.escape(selektor + "::before") + r" \{([^}]*)\}", css, re.M
+    ).group(1)
+    assert "display: list-item" in blok
+    assert f"min-height: {style_stitch.T.TARGET_SENTUH}" in blok
+    assert "content: none" in before
 
 
 def test_riwayat_dalam_form_memakai_post_bukan_tautan_get():

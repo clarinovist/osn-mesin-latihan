@@ -193,12 +193,19 @@ def test_profil_daftar_sesi_memuat_topik(db):
     assert "pola-bilangan" in isi
 
 
-def test_halaman_sesi_menampilkan_topik(db):
+def test_header_halaman_sesi_meringkas_metadata_tanpa_slug(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Sesi Bertopik")
         sesi_id = database.buat_sesi(kon, sid, seed=78)
+        jumlah = kon.execute(
+            "SELECT COUNT(*) FROM sesi_soal WHERE sesi_id = ?", (sesi_id,)
+        ).fetchone()[0]
         isi = teacher_pages.halaman_sesi_stitch(kon, sesi_id).decode()
-    assert "pola-bilangan" in isi
+    kepala = isi.split('<header class="editorial-kepala-st">', 1)[1].split(
+        "</header>", 1
+    )[0]
+    assert "pola-bilangan" not in kepala
+    assert f"{jumlah} soal" in kepala
 
 
 def test_laporan_menampilkan_kolom_topik(db):
