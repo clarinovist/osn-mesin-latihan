@@ -6,7 +6,7 @@ import pytest
 
 AKAR = Path(__file__).resolve().parents[2]
 WORKFLOW = AKAR / '.github/workflows/deploy.yml'
-RECOVERY_SHA = 'be4ab003f926382238ea9e7153f063b9c50e9e75'
+RECOVERY_SHA = 'bc9c973b50eb1fb04edd37df62f71ba0123f29c6'
 
 
 def _job(teks, nama):
@@ -30,6 +30,9 @@ def test_build_candidate_dan_recovery_pakai_digest_yang_sama_untuk_verifikasi():
     teks=WORKFLOW.read_text()
     uji=_job(teks,'uji');bangun=_job(teks,'bangun')
     assert 'needs: uji' in bangun
+    # Checkout yang diuji/dibangun dan revision manifest wajib snapshot sama.
+    assert re.findall(r'^          ref: ([0-9a-f]{40})$', teks, re.M) == [RECOVERY_SHA] * 2
+    assert re.findall(r'^  RECOVERY_SHA: ([0-9a-f]{40})$', teks, re.M) == [RECOVERY_SHA]
     assert RECOVERY_SHA in uji and RECOVERY_SHA in bangun
     assert 'recovery_digest: ${{ steps.recovery.outputs.digest }}' in bangun
     assert 'digest: ${{ steps.dorong.outputs.digest }}' in bangun

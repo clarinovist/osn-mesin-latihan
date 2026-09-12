@@ -18,7 +18,8 @@ permissions:
 env:
   REGISTRI: ghcr.io
   IMAGE: ${{ github.repository }}
-  RECOVERY_SHA: be4ab003f926382238ea9e7153f063b9c50e9e75
+  # Turunan be4ab00: UI sebelumnya/backend v4 + fix penutupan transport HTTP.
+  RECOVERY_SHA: bc9c973b50eb1fb04edd37df62f71ba0123f29c6
 
 jobs:
   uji:
@@ -38,7 +39,7 @@ jobs:
       - name: Checkout recovery backend v4 dengan UI sebelumnya
         uses: actions/checkout@v7
         with:
-          ref: be4ab003f926382238ea9e7153f063b9c50e9e75
+          ref: bc9c973b50eb1fb04edd37df62f71ba0123f29c6
           path: recovery
       - name: Palang dan seluruh test recovery terisolasi
         working-directory: recovery
@@ -69,7 +70,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
         with:
-          ref: be4ab003f926382238ea9e7153f063b9c50e9e75
+          ref: bc9c973b50eb1fb04edd37df62f71ba0123f29c6
           path: recovery
       - uses: docker/setup-buildx-action@v4
       - name: Masuk ke GHCR
