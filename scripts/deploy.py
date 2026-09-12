@@ -1,0 +1,529 @@
+#!/usr/bin/env python3
+"""Artefak forced-command v2; belum merupakan izin memasang/menjalankan di VPS.
+
+Hanya stdlib. Tidak ada shell, restore DB, pelepasan writehold, atau pemilihan
+fallback otomatis. Approval B2 wajib dibuat operator setelah drain dan backup
+pasangan. Pesan sengaja statis: stdout/stderr Docker dan isi berkas privat tidak
+pernah diteruskan ke log. Exit 0 = candidate sehat, 1 = gagal tetapi recovered,
+2 = ditolak atau perlu intervensi manual. Lihat HANDOFF/runbook integrator.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import fcntl
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import secrets
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+
+REGISTRI = "ghcr.io/clarinovist/osn-mesin-latihan"
+DOCKER = "/usr/bin/docker"
+AKAR = Path("/opt/osn")
+DATA = AKAR / "data"
+APPROVAL = AKAR / "rollout-approval.json"
+KUNCI = DATA / "deepseek.key"
+ENVFILES = (AKAR / "visual.conf", AKAR / "pendamping.conf")
+LOCK = AKAR / "deploy.lock"
+DISK_DOCKER = Path("/var/lib/docker")
+KONTAINER = "osn-mesin"
+PROBE = "osn-deploy-probe"
+LABEL_PROBE = "osn.deploy.probe"
+MAKS_TTL_APPROVAL = 900  # detik; lease untuk mulai swap, bukan batas waktu recovery
+DIGEST = r"sha256:[0-9a-f]{64}"
+POLA_PERMINTAAN = re.compile(r"deploy-v2 (" + DIGEST + r") (" + DIGEST + r")")
+LINGKUNGAN = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/root", "LANG": "C.UTF-8"}
+BATAS_HEALTH = 120
+JEDA_HEALTH = 3
+FORMAT_STATE = (
+    "{{.State.Status}}|{{.State.Running}}|"
+    "{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}|{{.Image}}"
+)
+PENGAMAN = ("--user", "10001:10001", "--cap-drop", "ALL", "--security-opt",
+            "no-new-privileges", "--memory", "512m", "--cpus", "1", "--pids-limit", "128")
+ENV_TETAP = (
+    "OSN_BERKAS_SANDI=/data/sandi.json", "OSN_BERKAS_SESI=/data/sesi.json",
+    "OSN_BERKAS_DB=/data/latihan.db", "PENDAMPING_BERKAS_DB=/data/pendamping.db",
+    "OSN_FOLDER_LEMBAR=/data/lembar", "PENDAMPING_AKTIF=1",
+    "DEEPSEEK_MODEL=deepseek-flash", "DEEPSEEK_VISION_MODEL=deepseek-flash",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "PYTHONUNBUFFERED=1",
+)
+
+# Hanya berjalan dalam container synthetic network-none, tanpa mount/secret host.
+PROBE_IMAGE = '''import sqlite3
+from pathlib import Path
+import assistant_schema
+import database
+assert assistant_schema.VERSI_SKEMA == 4
+for _ in range(2):
+    assistant_schema.siapkan(Path('/data/pendamping.db'))
+    database.siapkan(Path('/data/latihan.db'))
+with sqlite3.connect('file:/data/pendamping.db?mode=ro', uri=True) as kon:
+    kon.execute('PRAGMA query_only = ON')
+    assert kon.execute('PRAGMA user_version').fetchone()[0] == 4
+    assert kon.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tinjauan_usulan'").fetchone()
+with sqlite3.connect('file:/data/latihan.db?mode=ro', uri=True) as kon:
+    kon.execute('PRAGMA query_only = ON')
+    assert kon.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='eksekusi_pendamping'").fetchone()
+print('OSN_IMAGE_V4_OK')
+'''
+
+# Tidak mengimpor aplikasi: import/startup tertentu dapat melakukan migrasi.
+# Jangan immutable=1: DB belajar memakai WAL; mode=ro harus melihat WAL juga.
+PROBE_SKEMA = '''import ast
+import sqlite3
+from pathlib import Path
+pohon = ast.parse(Path('/app/assistant_schema.py').read_text())
+versi = [node.value.value for node in pohon.body
+         if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+         and any(isinstance(t, ast.Name) and t.id == 'VERSI_SKEMA' for t in node.targets)]
+assert versi == [4]
+for nama, tabel in [('pendamping.db', 'tinjauan_usulan'), ('latihan.db', 'eksekusi_pendamping')]:
+    kon = sqlite3.connect('file:/data/' + nama + '?mode=ro', uri=True, timeout=2)
+    try:
+        kon.execute('PRAGMA query_only = ON')
+        if nama == 'pendamping.db':
+            assert kon.execute('PRAGMA user_version').fetchone()[0] == 4
+        assert kon.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (tabel,)).fetchone()
+    finally:
+        kon.close()
+print('OSN_SCHEMA_V4_OK')
+'''
+
+
+class Ditolak(Exception):
+    """Kegagalan tertutup; jangan sertakan pesan exception sumber ke log."""
+
+
+def parse_permintaan(teks):
+    """Terima persis dua manifest digest berbeda, tanpa whitespace tambahan."""
+    cocok = POLA_PERMINTAAN.fullmatch(teks) if isinstance(teks, str) else None
+    if cocok is None or cocok[1] == cocok[2]:
+        raise Ditolak()
+    return cocok[1], cocok[2]
+
+
+def _tanpa_duplikat(pasangan):
+    hasil = {}
+    for kunci, nilai in pasangan:
+        if kunci in hasil:
+            raise Ditolak()
+        hasil[kunci] = nilai
+    return hasil
+
+
+def hash_deployer():
+    # B2 memasang artefak ini pada path root-controlled melalui wrapper terpercaya.
+    # Hash byte source yang sedang digunakan, bukan revision/tag atau input SSH.
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+def validasi_approval(mentah, kandidat, pemulihan, sekarang):
+    """Approval hanya attestasi operator, bukan pengganti backup/drain B2."""
+    isi = json.loads(mentah, object_pairs_hook=_tanpa_duplikat)
+    wajib = {"candidate", "recovery", "expires", "backup_pair", "writes_held",
+             "maintenance_paused", "schema_target", "approval_id", "issued",
+             "deployer_sha256"}
+    if not isinstance(isi, dict) or set(isi) != wajib:
+        raise Ditolak()
+    if (isi["candidate"] != kandidat or isi["recovery"] != pemulihan
+            or kandidat == pemulihan
+            or isi["writes_held"] is not True or isi["maintenance_paused"] is not True
+            or type(isi["schema_target"]) is not int or isi["schema_target"] != 4
+            or type(isi["expires"]) is not int or not math.isfinite(sekarang)
+            or isi["expires"] <= sekarang
+            or type(isi["issued"]) is not int or not 0 <= isi["issued"] <= sekarang
+            or not 0 < isi["expires"] - isi["issued"] <= MAKS_TTL_APPROVAL
+            or not isinstance(isi["approval_id"], str)
+            or re.fullmatch(r"[0-9a-f]{32}", isi["approval_id"]) is None
+            or not isinstance(isi["deployer_sha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", isi["deployer_sha256"]) is None
+            or isi["deployer_sha256"] != hash_deployer()
+            or not isinstance(isi["backup_pair"], str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", isi["backup_pair"]) is None):
+        raise Ditolak()
+    return isi
+
+
+def metadata_privat(info, mode=0o600):
+    """Syarat fd: regular root-owned, satu hardlink, izin tepat."""
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_nlink != 1
+            or stat.S_IMODE(info.st_mode) != mode):
+        raise Ditolak()
+
+
+def metadata_kunci(info):
+    """Kunci layanan live: owner aplikasi, grup deployer, mode 0640."""
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 10001
+            or info.st_gid != 10002 or info.st_nlink != 1
+            or stat.S_IMODE(info.st_mode) != 0o640):
+        raise Ditolak()
+
+
+def metadata_config(info):
+    # Config nonsecret live root0644 sah; key/approval/receipt tetap ketat0600.
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_nlink != 1
+            or stat.S_IMODE(info.st_mode) not in (0o600, 0o644)):
+        raise Ditolak()
+
+
+def baca_privat(path, batas=16384, *, config=False, kunci=False):
+    """NOFOLLOW dan fstat menutup symlink/FIFO serta TOCTOU lstat→open."""
+    if config and kunci:
+        raise Ditolak()
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        pemeriksa = metadata_kunci if kunci else metadata_config if config else metadata_privat
+        pemeriksa(os.fstat(fd))
+        with os.fdopen(fd, "rb", closefd=False) as berkas:
+            isi = berkas.read(batas + 1)
+        if len(isi) > batas:
+            raise Ditolak()
+        return isi.decode("utf-8")
+    finally:
+        os.close(fd)
+
+
+class Berkas:
+    """I/O host tetap; test dapat mengganti adapter ini dengan filesystem sintetis."""
+
+    def __init__(self):
+        self._lock_fd = None
+
+    def periksa_host(self):
+        if os.geteuid() != 0:
+            raise Ditolak()
+        # /opt/osn harus dikendalikan root; data memang dimiliki UID aplikasi.
+        for path in (Path("/opt"), AKAR):
+            info = path.lstat()
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
+                    or stat.S_IMODE(info.st_mode) & 0o022):
+                raise Ditolak()
+
+    @contextlib.contextmanager
+    def kunci(self):
+        fd = os.open(LOCK, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+        try:
+            metadata_privat(os.fstat(fd))
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._lock_fd = fd
+            yield
+        finally:
+            # close melepaskan flock; jangan unlink inode lock yang mungkin ditunggu proses lain.
+            if self._lock_fd == fd:
+                self._lock_fd = None
+            os.close(fd)
+
+    def _wajib_lock(self):
+        if self._lock_fd is None:
+            raise Ditolak()
+
+    @staticmethod
+    def receipt(isi):
+        # approval_id tervalidasi; tidak ada path yang berasal dari caller SSH.
+        return AKAR / (".approval-consumed-" + isi["approval_id"] + ".json")
+
+    def approval(self, kandidat, pemulihan, sekarang):
+        self._wajib_lock()
+        isi = validasi_approval(baca_privat(APPROVAL), kandidat, pemulihan, sekarang)
+        try:
+            self.receipt(isi).lstat()
+        except FileNotFoundError:
+            return isi
+        raise Ditolak()  # Termasuk receipt parsial, symlink, atau attempt gagal.
+
+    def konsumsi(self, isi, sekarang):
+        """Receipt durable sebelum stop. Tidak pernah dibersihkan/dipakai ulang."""
+        self._wajib_lock()
+        if self.approval(isi["candidate"], isi["recovery"], sekarang) != isi:
+            raise Ditolak()
+        fd = os.open(self.receipt(isi),
+                     os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        try:
+            metadata_privat(os.fstat(fd))
+            with os.fdopen(fd, "w", encoding="utf-8", closefd=False) as berkas:
+                json.dump({"approval": isi, "consumed": sekarang}, berkas, sort_keys=True)
+                berkas.flush()
+                os.fsync(fd)
+        finally:
+            os.close(fd)
+        folder = os.open(AKAR, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(folder)
+        finally:
+            os.close(folder)
+        # Fsync failure membatalkan swap, tetapi receipt tetap ada (fail closed).
+
+    def ruang(self):
+        info = DATA.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 10001
+                or stat.S_IMODE(info.st_mode) & 0o027
+                or stat.S_IMODE(info.st_mode) & 0o700 != 0o700):
+            raise Ditolak()
+        for path, minimum in ((DATA, 1024 ** 3), (DISK_DOCKER, 2 * 1024 ** 3)):
+            isi = os.statvfs(path)
+            if isi.f_bavail * isi.f_frsize < minimum or isi.f_favail < 8192:
+                raise Ditolak()
+
+    @contextlib.contextmanager
+    def konfigurasi(self):
+        # Snapshot kedua envfile menjamin recovery memakai byte konfigurasi yang sama.
+        isi_env = [baca_privat(path, 65536, config=True) for path in ENVFILES]
+        rahasia = baca_privat(KUNCI, kunci=True).strip()
+        if not rahasia or any(c in rahasia for c in "\r\n\x00"):
+            raise Ditolak()
+        lingkungan = dict(LINGKUNGAN, DEEPSEEK_API_KEY=rahasia)
+        with tempfile.TemporaryDirectory(prefix=".deploy-", dir=AKAR) as folder:
+            paths = []
+            for urut, isi in enumerate(isi_env):
+                path = Path(folder) / (str(urut) + ".env")
+                fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(fd, "w", encoding="utf-8") as berkas:
+                    berkas.write(isi)
+                paths.append(str(path))
+            yield tuple(paths), lingkungan
+
+
+class Docker:
+    """Wrapper argv privat, bukan executor shell atau perintah dari SSH."""
+
+    def __init__(self, runner=subprocess.run):
+        self.runner = runner
+
+    def _panggil(self, argumen, *, batas=30, masukan=None, lingkungan=None):
+        hasil = self.runner(
+            [DOCKER, *argumen], input=masukan, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True, timeout=batas, check=False,
+            shell=False, env=dict(LINGKUNGAN if lingkungan is None else lingkungan),
+        )
+        if hasil.returncode != 0:
+            raise Ditolak()
+        return hasil.stdout.strip()
+
+    def siapkan_image(self, digest):
+        image = REGISTRI + "@" + digest
+        self._panggil(["pull", image], batas=300)
+        identitas = self._panggil(["image", "inspect", "--format", "{{.Id}}", image])
+        if re.fullmatch(DIGEST, identitas) is None:
+            raise Ditolak()
+        daftar = json.loads(self._panggil(
+            ["image", "inspect", "--format", "{{json .RepoDigests}}", image]))
+        if not isinstance(daftar, list) or image not in daftar:
+            raise Ditolak()
+        token = secrets.token_hex(16)
+        nama = PROBE + "-" + token
+        try:
+            jawaban = self._panggil([
+                "run", "--pull", "never", "--rm", "-i", "--name", nama,
+                "--label", LABEL_PROBE + "=" + token,
+                "--network", "none", "--read-only",
+                *PENGAMAN, "--tmpfs", "/data:rw,nosuid,nodev,noexec,uid=10001,gid=10001,mode=0700,size=64m",
+                "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=16m", "--entrypoint", "python",
+                image, "-E", "-B", "-",
+            ], batas=60, masukan=PROBE_IMAGE)
+            if jawaban != "OSN_IMAGE_V4_OK":
+                raise Ditolak()
+        except (Exception, KeyboardInterrupt):
+            # docker CLI timeout tidak berarti container sudah mati; probe tak punya data host.
+            self.bersihkan_probe(nama, token)
+            raise
+        return identitas
+
+    def bersihkan_probe(self, nama, token):
+        # Name conflict bukan bukti ownership. Timeout mungkin sudah create walau
+        # CLI tidak memberi ID. Temukan exact name lalu buktikan label; hapus via ID
+        # agar name reuse di antara inspect/rm tidak menghapus milik invocation lain.
+        identitas = self._panggil([
+            "container", "ls", "--all", "--no-trunc", "--filter", "name=^/" + nama + "$",
+            "--format", "{{.ID}}",
+        ])
+        if not identitas:
+            return
+        if re.fullmatch(r"[0-9a-f]{64}", identitas) is None:
+            raise Ditolak()
+        pemilik = self._panggil([
+            "container", "inspect", "--format",
+            '{{.Name}}|{{index .Config.Labels "' + LABEL_PROBE + '"}}', identitas,
+        ])
+        if pemilik != "/" + nama + "|" + token:
+            raise Ditolak()
+        self._panggil(["rm", "--force", identitas])
+
+    def state(self):
+        jawaban = self._panggil(["container", "inspect", "--format", FORMAT_STATE, KONTAINER])
+        bagian = jawaban.split("|")
+        if len(bagian) != 4 or re.fullmatch(DIGEST, bagian[3]) is None:
+            raise Ditolak()
+        return tuple(bagian)
+
+    def image_saat_ini(self):
+        status, berjalan, _, identitas = self.state()
+        # B2 dapat menahan writer dengan retained container yang sudah distop.
+        if (status, berjalan) not in (("running", "true"), ("exited", "false")):
+            raise Ditolak()
+        hasil = self._panggil(["image", "inspect", "--format", "{{.Id}}", identitas])
+        if hasil != identitas:
+            raise Ditolak()
+        return identitas
+
+    def hentikan(self):
+        self._panggil(["stop", "--time", "30", KONTAINER], batas=45)
+
+    def hapus(self):
+        # Tanpa --force: jangan membunuh writer yang status stop-nya tak pasti.
+        self._panggil(["rm", KONTAINER])
+
+    def bersihkan_gagal(self):
+        # Run dapat gagal sebelum/SESUDAH create. Jangan menafsirkan semua inspect-error
+        # sebagai absent (daemon mati/permission bukan bukti volume bebas writer).
+        daftar = json.loads(self._panggil([
+            "container", "ls", "--all", "--filter", "name=^/osn-mesin$",
+            "--format", "{{json .Names}}",
+        ]) or '""')
+        if daftar == "":
+            return
+        if daftar != KONTAINER:
+            raise Ditolak()
+        self.hentikan()
+        self.hapus()
+
+    def jalankan(self, digest, konfigurasi):
+        paths, lingkungan = konfigurasi
+        argv = ["run", "--pull", "never", "--detach", "--name", KONTAINER,
+                "--restart", "unless-stopped",
+                *PENGAMAN, "--publish", "127.0.0.1:8724:8724",
+                "--mount", "type=bind,src=/opt/osn/data,dst=/data"]
+        for path in paths:
+            argv.extend(["--env-file", path])
+        for nilai in ENV_TETAP:
+            argv.extend(["--env", nilai])
+        # Nilai key tidak masuk argv, output, atau lingkungan pull/probe/inspect.
+        argv.extend(["--env", "DEEPSEEK_API_KEY", REGISTRI + "@" + digest])
+        self._panggil(argv, batas=60, lingkungan=lingkungan)
+
+    def skema_sehat(self):
+        return self._panggil(
+            ["exec", "-i", KONTAINER, "python", "-E", "-B", "-"],
+            batas=10, masukan=PROBE_SKEMA,
+        ) == "OSN_SCHEMA_V4_OK"
+
+
+class _TanpaRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def akun_terjaga():
+    """Loopback tanpa proxy, credential, redirect, atau pembacaan body akun."""
+    pembuka = urllib.request.build_opener(urllib.request.ProxyHandler({}), _TanpaRedirect())
+    try:
+        with pembuka.open("http://127.0.0.1:8724/akun", timeout=3) as hasil:
+            return hasil.status == 401
+    except urllib.error.HTTPError as galat:
+        try:
+            return galat.code == 401
+        finally:
+            galat.close()
+    except (OSError, urllib.error.URLError):
+        return False
+
+
+def tunggu_sehat(docker, identitas, http, monotonic, tidur):
+    akhir = monotonic() + BATAS_HEALTH
+    while monotonic() < akhir:
+        status, berjalan, health, image = docker.state()
+        # Early exit/restarting serta image yang keliru bukan sekadar health starting.
+        if status != "running" or berjalan != "true" or image != identitas:
+            return False
+        if health in ("unhealthy", "missing"):
+            return False
+        if health == "healthy" and http() and docker.skema_sehat():
+            return True
+        tidur(JEDA_HEALTH)
+    return False
+
+
+def deploy(teks, *, docker=None, berkas=None, sekarang=time.time,
+           monotonic=time.monotonic, tidur=time.sleep, http=akun_terjaga, lapor=print):
+    """State machine: semua preflight selesai sebelum stop; recovery bukan rollback DB."""
+    docker = Docker() if docker is None else docker
+    berkas = Berkas() if berkas is None else berkas
+    tahap = "preflight"
+    try:
+        kandidat, pemulihan = parse_permintaan(teks)
+        berkas.periksa_host()
+        with berkas.kunci(), berkas.konfigurasi() as konfigurasi:
+            approval = berkas.approval(kandidat, pemulihan, sekarang())
+            berkas.ruang()
+            id_kandidat = docker.siapkan_image(kandidat)
+            id_pemulihan = docker.siapkan_image(pemulihan)
+            if id_kandidat == id_pemulihan:
+                raise Ditolak()
+            docker.image_saat_ini()  # Bukti image current tersedia; BUKAN fallback schema3.
+            berkas.ruang()  # Pull dapat menghabiskan ruang yang tadi masih tersedia.
+            if berkas.approval(kandidat, pemulihan, sekarang()) != approval:
+                raise Ditolak()
+            berkas.konsumsi(approval, sekarang())  # O_EXCL + fsync, masih di bawah lock
+            # Fsync lambat tidak memperpanjang lease. Receipt tetap hangus jika expired.
+            validasi_approval(json.dumps(approval), kandidat, pemulihan, sekarang())
+            tahap = "stop-awal"
+            docker.hentikan()
+            tahap = "hapus-awal"
+            docker.hapus()
+            tahap = "candidate"
+            try:
+                docker.jalankan(kandidat, konfigurasi)
+                if not tunggu_sehat(docker, id_kandidat, http, monotonic, tidur):
+                    raise Ditolak()
+            except (Exception, KeyboardInterrupt):
+                tahap = "recovery"
+                # Gagal cleanup => jangan menjalankan recovery dengan writer saingan.
+                docker.bersihkan_gagal()
+                docker.jalankan(pemulihan, konfigurasi)
+                if not tunggu_sehat(docker, id_pemulihan, http, monotonic, tidur):
+                    raise Ditolak()
+                lapor("Rilis gagal; recovery sehat. Writehold/maintenance tetap; exit 1.")
+                return 1
+            lapor("Candidate sehat. Writehold/maintenance tetap; exit 0.")
+            return 0
+    except (Exception, KeyboardInterrupt):
+        if tahap == "preflight":
+            lapor("Preflight ditolak; container lama tidak disentuh. Exit 2.")
+        else:
+            lapor("Deploy gagal; perlu intervensi manual. Writehold/maintenance tetap; exit 2.")
+        return 2
+
+
+def main(argv=None, environ=None):
+    """Tidak ada opsi path/envflag CLI; hanya SSH_ORIGINAL_COMMAND yang diparse."""
+    argv = sys.argv[1:] if argv is None else argv
+    environ = os.environ if environ is None else environ
+    if argv:
+        print("Argumen CLI ditolak; gunakan forced-command. Exit 2.")
+        return 2
+    return deploy(environ.get("SSH_ORIGINAL_COMMAND", ""))
+
+
+def _terputus(nomor, frame):
+    # Hindari interupsi kedua ketika sedang memastikan cleanup/recovery.
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    raise InterruptedError()
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, _terputus)
+    signal.signal(signal.SIGHUP, _terputus)
+    sys.exit(main())

@@ -48,8 +48,9 @@ siap; matikan eligibility lagi setelah jendela rilis sesuai izin operator.
 ## Recovery berbeda dari candidate
 
 Recovery dibangun dari pinned commit backend v4
-`be4ab003f926382238ea9e7153f063b9c50e9e75`: UI sebelum redesign, tetapi sudah
-memiliki guard tinjauan server, catatan eksekusi dan idempotensi tahan crash.
+`bc9c973b50eb1fb04edd37df62f71ba0123f29c6`: UI sebelum redesign, guard
+tinjauan server, catatan eksekusi dan idempotensi tahan crash, ditambah perbaikan
+penutupan transport HTTP yang sama dengan kandidat.
 Recovery bukan image produksi lama, bukan perubahan konstanta schema saja,
 dan bukan memilih kembali candidate yang sama ketika gagal.
 
@@ -63,9 +64,11 @@ Lolos probe sintetis bukan pengganti rehearsal backup keluarga saat B2.
 
 ## Artefak deployer v2
 
-Deployer v2 **masih disiapkan sebagai perubahan terpisah**; belum menjadi
-artefak siap instalasi dalam commit pengaman CI ini. Job pasang tetap tertahan.
-Instalasi baru boleh setelah source/test deployer lolos dan approval B2 diberikan.
+Deployer v2 berada di `scripts/deploy.py` dan diuji oleh
+`mesin/__tests__/test_deployer.py`. Keberadaan source tidak otomatis mengizinkan
+instalasi atau eksekusi: artefak yang dipasang harus cocok hash source yang sudah
+lolos gate, lalu approval B2 dibuat untuk tepat satu pasangan digest setelah
+backup dan write hold benar-benar aktif.
 Kontrak yang wajib dipenuhi: forced-command/registry/path terbatas, approval
 root-controlled sekali pakai dan lock sebelum perubahan container, kedua image
 siap sebelum swap, konfigurasi sama pada run utama/recovery, serta health
