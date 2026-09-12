@@ -95,8 +95,45 @@ Guard/recovery diuji pada `test_assistant_review_guards.py`,
 `test_assistant_retry_guards.py`, `test_assistant_memory_scope.py`, serta suite
 existing Pendamping. Pengujian guard tidak menggantikan walkthrough orang tua.
 
-Redesign shell/chat/riwayat/pengaturan, kendali data baru, label sumber, dan alur
-pemulihan visual masih mengikuti gate workflow serta persetujuan prototype.
-Wireframe lokal bersifat opsional, bukan dependensi aplikasi/build/test. Tidak
-ada klaim seluruh UX, aksesibilitas, browser fisik, atau keadaan produksi sudah
-terverifikasi hanya karena test backend lulus.
+## UI runtime server-side
+
+Implementasi UI memakai arah prototype lokal G2 v1 dengan koreksi hasil review
+independen. Source menyediakan:
+
+- Satu composer chat ringan, multiline escaped, menu native `<details>`, tautan
+  kembali ke ruang belajar. `/pendamping/tanpa-memori` membuka composer tanpa
+  menulis chat; submit textarea kosong ditolak. POST mode-only lama tetap
+  kompatibel untuk pembuatan chat kosong eksplisit.
+- Riwayat melalui `/pendamping/riwayat?halaman=N`, maksimal 20 metadata per
+  halaman, bukan seluruh transkrip. Label waktu dibuat WIB dan ID tetap;
+  penanda aktif mengikuti chat yang benar, bukan baris pertama otomatis.
+- Nama sumber tampil hanya pada proyeksi UI berizin, tidak digabung ke payload
+  provider. Sumber soal kembali ke halaman sesi karena anchor input tidak
+  tersedia pada seluruh state sesi. Batal/ganti sumber tidak memindahkan chat.
+- Continuation login hanya allow-list rute Pendamping kanonik, hanya guru;
+  setelah masuk resource tetap diperiksa kepemilikannya. Consent provider
+  kembali ke penawaran sumber, tidak otomatis memberi consent konteks.
+- Histori konteks usang hanya bisa dibaca bila sumber masih dimiliki dan izin
+  baca masih sah; composer/draft/kandidat baru tidak tampil. Hasil yang pernah
+  dibuat tetap bisa ditemukan melalui GET usulan yang memvalidasi pemilik.
+  Consent dicabut atau resource asing bukan izin membuka histori.
+- Pengaturan memori membedakan aktif kosong/berisi, nonaktif dan tanpa memori.
+  Editor/hapus memiliki halaman tersendiri; asal chat dipertahankan melalui
+  tujuan yang diverifikasi server. Koreksi ditolak tidak memantulkan input.
+  Hapus memerlukan persetujuan eksplisit; tidak membutuhkan JS atau CSP longgar.
+- Label usulan dari topik/kartu resmi, parameter readonly, pesan sumber beranchor.
+  GET hasil memakai hasil mesin sebenarnya; POST konfirmasi tetap terikat guard
+  tinjauan dan catatan eksekusi yang sudah dijelaskan di atas.
+- GET status operasi owner-scoped membedakan pending/gagal; pending tidak
+  menawarkan pengiriman ulang otomatis. Status selesai menuju chat yang sama.
+  Tidak ada spinner hidup/streaming/penyimpanan draft browser.
+
+**Belum termasuk:** hapus chat/cabut izin melalui UI baru, pengelolaan saat
+provider tidak dikonfigurasi, picker keluarga langsung, editor parameter,
+streaming atau JS tambahan. Semua tetap paket terpisah, bukan tombol palsu.
+
+Wireframe/prototype lokal opsional, bukan dependensi aplikasi/build/test.
+Walkthrough user, Safari/keyboard HP fisik dan aksesibilitas menyeluruh tetap
+perlu verifikasi terpisah. Source tersedia, ter-deploy, dan berfungsi pada
+produksi bukan tiga klaim yang dapat disamakan. Migrasi v3→v4 dari commit
+prasyarat harus memenuhi backup/recovery kompatibel sebelum push otomatis deploy.

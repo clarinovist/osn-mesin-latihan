@@ -22,6 +22,8 @@ from http_test_kit import ServerUji, SANDI_GURU, SANDI_MURID
 
 @pytest.fixture()
 def server(tmp_path, monkeypatch):
+    # Sesi HTTP tidak boleh memakai berkas default bersama worker xdist lain.
+    monkeypatch.setattr(sessions, 'BERKAS_SESI', tmp_path / 'sesi.json')
     s = ServerUji(tmp_path, monkeypatch)
     auth.tambah_akun("pendamping-lain", "sandi-sintetis-123", "guru")
     auth.tambah_akun("pengelola", "sandi-sintetis-123", "admin")
@@ -63,6 +65,11 @@ def test_login_ke_beranda_peran_dengan_kuki_sah(server, nama, sandi, tujuan):
     assert sessions.ambil(token)[0] == nama
     if tujuan == "/guru":
         assert 'id="judul-guru"' in _minta(server, tujuan, token=token)[1]
+
+
+def test_fixture_sesi_beranda_terisolasi(server, tmp_path):
+    assert sessions.BERKAS_SESI == tmp_path / 'sesi.json'
+    assert sessions.BERKAS_SESI.parent == server.db.parent
 
 
 def test_daftar_langsung_ke_beranda_guru(server):

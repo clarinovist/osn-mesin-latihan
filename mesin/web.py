@@ -28,6 +28,7 @@ import database
 import share_links
 import sessions
 import design_tokens as T
+from assistant_navigation import tujuan_lanjut
 from account_pages import (
     PETA_SECTION_AKUN,
     halaman_admin,
@@ -430,11 +431,15 @@ class Penangan(BaseHTTPRequestHandler):
             return self._rute_tautan_get(token)
         if jalur == "/masuk":
             galat = ""
-            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            q = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query, keep_blank_values=True
+            )
             if q.get("galat"):
                 galat = q["galat"][0]
-            # hilangkan sesi lain di URL supaya tidak membingungkan
-            return self._kirim(self._halaman_masuk_stitch(galat=galat))
+            nilai_lanjut = q.get("lanjut", [])
+            lanjut = tujuan_lanjut(nilai_lanjut[0]) if len(nilai_lanjut) == 1 else ""
+            # Tujuan hanya petunjuk navigasi, bukan izin membaca resource.
+            return self._kirim(self._halaman_masuk_stitch(galat=galat, lanjut=lanjut))
         if jalur in ("/", "/guru", "/ortu"):
             # Orang tua dan guru memakai peran yang sama. Root tetap publik
             # bagi anonim/murid; beranda pendamping punya alamat eksplisit.
@@ -825,7 +830,7 @@ class Penangan(BaseHTTPRequestHandler):
             return self._kirim(isi)
         self._kirim(_halaman("404", "<h1>Halaman tidak ada</h1>"), 404)
 
-    def _halaman_masuk_stitch(self, galat: str = "") -> bytes:
+    def _halaman_masuk_stitch(self, galat: str = "", *, lanjut: str = "") -> bytes:
         """Form masuk editorial dengan dekorasi buku latihan di desktop.
 
         Di ponsel fokus tetap pada form. Logo menaut beranda, pesan galat
@@ -834,6 +839,11 @@ class Penangan(BaseHTTPRequestHandler):
         from style_stitch import gaya_stitch
         from teacher_style import SKRIP_MATA_SANDI
 
+        lanjut = tujuan_lanjut(lanjut)
+        isian_lanjut = (
+            f'<input type="hidden" name="lanjut" value="{html.escape(lanjut)}">'
+            if lanjut else ""
+        )
         kabar = (
             '<div class="masuk-galat-st" id="galat-masuk" role="alert" aria-atomic="true">'
             '<b>Periksa kembali</b>'
@@ -876,6 +886,7 @@ class Penangan(BaseHTTPRequestHandler):
       </div>
       {kabar}
       <form class="masuk-form-st" method="post" action="/masuk"{deskripsi_galat}>
+        {isian_lanjut}
         <div class="masuk-field-st">
           <label for="nama">Nama pengguna</label>
           <input type="text" id="nama" name="nama" autocomplete="username"
@@ -948,15 +959,16 @@ class Penangan(BaseHTTPRequestHandler):
     def _handle_masuk(self, data: dict) -> None:
         nama = (data.get("nama") or "").strip()
         pw = data.get("sandi") or ""
+        lanjut = tujuan_lanjut(data.get("lanjut", ""))
         ip = self.client_address[0] if self.client_address else "unknown"
         if not nama or not pw:
-            return self._kirim(self._halaman_masuk_stitch("Nama dan sandi wajib diisi."))
+            return self._kirim(self._halaman_masuk_stitch("Nama dan sandi wajib diisi.", lanjut=lanjut))
         if sessions.sedang_diblokir(nama, ip):
-            return self._kirim(self._halaman_masuk_stitch("Terlalu banyak percobaan. Coba lagi 15 menit lagi."), 429)
+            return self._kirim(self._halaman_masuk_stitch("Terlalu banyak percobaan. Coba lagi 15 menit lagi.", lanjut=lanjut), 429)
         peran = auth.peran_dari(nama, pw)
         if not peran:
             sessions.catat_gagal(nama, ip)
-            return self._kirim(self._halaman_masuk_stitch("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu."))
+            return self._kirim(self._halaman_masuk_stitch("Nama atau sandi belum cocok. Coba lagi, atau minta gurumu.", lanjut=lanjut))
         sessions.catat_berhasil(nama, ip)
         akun = auth.cari_akun(nama)
         nama_sesi = akun["pengguna"] if akun else nama
@@ -966,6 +978,8 @@ class Penangan(BaseHTTPRequestHandler):
         tujuan = "/murid" if peran == "murid" else (
             "/admin" if peran == "admin" else "/guru"
         )
+        if peran == "guru" and lanjut:
+            tujuan = lanjut
         self.send_response(303)
         self.send_header("Location", tujuan)
         self.send_header("Set-Cookie", self._set_cookie(token))
@@ -1081,7 +1095,10 @@ class Penangan(BaseHTTPRequestHandler):
         if jalur == "/masuk":
             panjang = int(self.headers.get("Content-Length", 0) or 0)
             mentah = self.rfile.read(panjang).decode("utf-8") if panjang else ""
-            data = {k: v[0] for k, v in urllib.parse.parse_qs(mentah, keep_blank_values=True).items()}
+            bidang = urllib.parse.parse_qs(mentah, keep_blank_values=True)
+            data = {k: v[0] for k, v in bidang.items()}
+            if len(bidang.get("lanjut", [])) != 1:
+                data.pop("lanjut", None)
             return self._handle_masuk(data)
         if jalur == "/keluar":
             tok = self._ambil_token()

@@ -238,7 +238,7 @@ def test_http_draft_konfirmasi_pengaturan_dan_hapus(server):
     kode, memori_html, _ = server.minta("/pendamping/memori", cookie=token)
     assert kode == 200
     assert "Jelaskan secara ringkas" in memori_html
-    assert "Status penggunaan:</b> aktif" in memori_html
+    assert "Memori aktif" in memori_html
     versi_global = re.search(
         r'action="/pendamping/memori/nonaktifkan"><input type="hidden" name="versi" value="([0-9]+)"',
         memori_html,
@@ -249,10 +249,12 @@ def test_http_draft_konfirmasi_pengaturan_dan_hapus(server):
         headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
     )
     assert kode == 200
-    assert "Status penggunaan:</b> nonaktif" in memori_html
+    assert "Memori nonaktif" in memori_html
+    kode, editor, _ = server.minta(f'/pendamping/memori/{memori_id}/ubah', cookie=token)
+    assert kode == 200
     cocok_item = re.search(
         r'/pendamping/memori/(memori_[0-9a-f]{32})/ubah.*?name="versi" value="([0-9]+)"',
-        memori_html,
+        editor,
         re.S,
     )
     memori_id, versi_item = cocok_item.groups()
@@ -266,15 +268,17 @@ def test_http_draft_konfirmasi_pengaturan_dan_hapus(server):
     assert "Jawab singkat dengan satu analogi." in memori_html
     assert "Jelaskan secara ringkas" not in memori_html
 
+    kode, tinjau_hapus, _ = server.minta(f'/pendamping/memori/{memori_id}/hapus', cookie=token)
+    assert kode == 200
     cocok_hapus = re.search(
         r'/pendamping/memori/(memori_[0-9a-f]{32})/hapus.*?name="versi" value="([0-9]+)"',
-        memori_html,
+        tinjau_hapus,
         re.S,
     )
     memori_id, versi_item = cocok_hapus.groups()
     kode, memori_html, _ = server.minta(
         f"/pendamping/memori/{memori_id}/hapus", cookie=token,
-        data={"versi": versi_item, "kembali": ""},
+        data={"versi": versi_item, "kembali": "", "persetujuan_hapus": "1"},
         headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
     )
     assert kode == 200

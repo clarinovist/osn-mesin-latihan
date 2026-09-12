@@ -163,7 +163,7 @@ def test_http_tinjau_lalu_konfirmasi_membuat_satu_sesi_bebas(server):
     )
     assert kode == 200
     assert "Sumber permintaan" in tinjau
-    assert "pola-bilangan" in tinjau
+    assert "Pola Bilangan" in tinjau
     assert "P3" in tinjau
     assert "10 soal" in tinjau
     assert "Belum ada sesi" not in tinjau

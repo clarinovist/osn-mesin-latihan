@@ -98,14 +98,14 @@ def test_http_entry_context_tidak_otomatis_memakai_data(server):
     )
     assert kode == 200
     assert "Pilih konteks" in isi
-    assert "Anak Konteks" not in isi
+    assert "Anak Konteks" in isi  # Identitas lokal berizin, bukan payload AI.
     assert len(server.provider.panggilan) == 0
 
     kode, isi, _ = server.minta(
         f"/pendamping/konteks/soal/{sesi}:1", cookie=token
     )
     assert kode == 200
-    assert "Soal resmi nomor 1" in isi
+    assert "Soal 1" in isi
     assert len(server.provider.panggilan) == 0
 
 
@@ -154,7 +154,7 @@ def test_http_consent_context_membuka_chat_baru_dan_payload_minimum(server):
         headers=_origin(server),
     )
     assert kode == 200
-    assert "Soal resmi nomor 1" in chat_html
+    assert "Soal 1" in chat_html
     chat_id = re.search(r'/pendamping/chat/(chat_[0-9a-f]{32})/pesan', chat_html).group(1)
     request_id = re.search(r'name="request_id" value="([^"]+)"', chat_html).group(1)
 
@@ -247,7 +247,7 @@ def test_context_consent_versi_berubah_saat_provider_tidak_commit(server, monkey
         data={"pesan": "Jelaskan soal.", "request_id": request_id},
         headers=_origin(server),
     )
-    assert kode == 503
+    assert kode == 409
     assert "Persetujuan konteks berubah" in isi
 
 
@@ -287,7 +287,7 @@ def test_context_consent_dicabut_saat_provider_tidak_commit(server, monkeypatch)
         data={"pesan": "Jelaskan soal.", "request_id": request_id},
         headers=_origin(server),
     )
-    assert kode == 503
+    assert kode == 409
     assert "Persetujuan konteks berubah" in isi
 
 
