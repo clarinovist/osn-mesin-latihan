@@ -18,6 +18,8 @@ import html
 import json
 import os
 import random
+import socket
+import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
 
@@ -57,6 +59,34 @@ from templates import LEVEL, label_kelas
 from topics import TOPIK_BAWAAN, daftar_topik
 
 class Penangan(BaseHTTPRequestHandler):
+    def finish(self) -> None:
+        """Akhiri respons sebelum menguras sisa input secara terbatas.
+
+        POST dapat ditolak sebelum body tiba: menutup socket langsung dapat
+        mengirim RST Linux dan memotong respons 401 yang sebenarnya sudah benar.
+        FIN sisi tulis memberi klien respons utuh, lalu sisa input dibuang,
+        bukan diproses. Jangan percaya Content-Length atau menunggu tanpa batas.
+        """
+        try:
+            super().finish()
+        finally:
+            try:
+                self.connection.shutdown(socket.SHUT_WR)
+                tenggat = time.monotonic() + 0.2
+                sisa = 64 * 1024
+                while sisa > 0:
+                    waktu = tenggat - time.monotonic()
+                    if waktu <= 0:
+                        break
+                    self.connection.settimeout(waktu)
+                    bagian = self.connection.recv(min(sisa, 8192))
+                    if not bagian:
+                        break
+                    sisa -= len(bagian)
+            except OSError:
+                # Klien putus/timeout tetap berakhir di cleanup SocketServer.
+                pass
+
     def _kirim(self, isi: bytes, kode: int = 200) -> None:
         self.send_response(kode)
         self.send_header("Content-Type", "text/html; charset=utf-8")
