@@ -1,48 +1,59 @@
 name: Build & Deploy
 
-# Build image di CI, bukan di VPS. Alasannya bukan sekadar konvensi:
-# pernah terjadi `docker build` di VPS gagal karena Docker Hub timeout
-# SETELAH container lama dihapus, dan situs mati sampai image lama
-# dijalankan ulang manual. Di sini build berjalan terpisah dari mesin yang
-# melayani, jadi kegagalan build tidak pernah menjatuhkan yang sedang jalan.
-
+# Fase persiapan migrasi Pendamping v4: push tetap menguji dan membangun kedua
+# image. Pasang tidak boleh berjalan sebelum approval backup/cutover dan
+# deployer v2 terpasang; variable repo sengaja belum diaktifkan pada fase ini.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 concurrency:
-  # Dua deploy berbarengan bisa saling menimpa container. Jangan dibatalkan
-  # di tengah jalan — biarkan yang berjalan selesai supaya tidak ada
-  # container yatim.
   group: deploy
   cancel-in-progress: false
+
+permissions:
+  contents: read
 
 env:
   REGISTRI: ghcr.io
   IMAGE: ${{ github.repository }}
+  RECOVERY_SHA: be4ab003f926382238ea9e7153f063b9c50e9e75
 
 jobs:
   uji:
-    name: Test
+    name: Test kandidat dan recovery
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-
       - name: Pasang pytest
         run: pip install --quiet pytest pytest-xdist
-
       - name: Pastikan tidak ada data siswa ter-commit
-        # Periksa index, bukan hanya ignore. Nama sensitif tidak dicetak ke log.
-        # Riset, mockup, materi, dan eksperimen lokal juga bukan isi codebase.
         run: python scripts/check_repo.py
-
       - name: Jalankan seluruh test
         run: python -m pytest mesin/__tests__/ -q -W error
+      - name: Checkout recovery backend v4 dengan UI sebelumnya
+        uses: actions/checkout@v7
+        with:
+          ref: be4ab003f926382238ea9e7153f063b9c50e9e75
+          path: recovery
+      - name: Palang dan seluruh test recovery terisolasi
+        working-directory: recovery
+        run: |
+          python scripts/check_repo.py
+          python - <<'PY'
+          import os, pathlib, sys
+          assert pathlib.Path.cwd().name == 'recovery'
+          sys.path.insert(0, str(pathlib.Path('mesin').resolve()))
+          import assistant_schema
+          assert pathlib.Path(assistant_schema.__file__).resolve().parent == pathlib.Path('mesin').resolve()
+          assert assistant_schema.VERSI_SKEMA == 4
+          print('Canary: import recovery terisolasi, schema v4')
+          PY
+          python -m pytest --rootdir . mesin/__tests__/ -q -W error -p no:cacheprovider
 
   bangun:
     name: Build & Push
@@ -53,41 +64,86 @@ jobs:
       packages: write
     outputs:
       digest: ${{ steps.dorong.outputs.digest }}
+      recovery_digest: ${{ steps.recovery.outputs.digest }}
     steps:
       - uses: actions/checkout@v7
-
+      - uses: actions/checkout@v7
+        with:
+          ref: be4ab003f926382238ea9e7153f063b9c50e9e75
+          path: recovery
       - uses: docker/setup-buildx-action@v4
-
       - name: Masuk ke GHCR
         uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRI }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRI }}/${{ env.IMAGE }}
-          tags: |
-            type=raw,value=latest
-            type=sha,format=long
-
-      - name: Bangun & dorong
+      - name: Bangun dan dorong candidate
         id: dorong
         uses: docker/build-push-action@v7
         with:
           context: ./mesin
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ env.REGISTRI }}/${{ env.IMAGE }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=candidate
+          cache-to: type=gha,scope=candidate,mode=max
+      - name: Bangun dan dorong recovery kompatibel v4
+        id: recovery
+        uses: docker/build-push-action@v7
+        with:
+          context: ./recovery/mesin
+          push: true
+          tags: ${{ env.REGISTRI }}/${{ env.IMAGE }}:recovery-${{ env.RECOVERY_SHA }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.RECOVERY_SHA }}
+          cache-from: type=gha,scope=recovery
+          cache-to: type=gha,scope=recovery,mode=max
+      - name: Verifikasi image berdasarkan digest output build yang sama
+        env:
+          CANDIDATE_DIGEST: ${{ steps.dorong.outputs.digest }}
+          RECOVERY_DIGEST: ${{ steps.recovery.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker pull "$REGISTRI/$IMAGE@$CANDIDATE_DIGEST"
+          docker pull "$REGISTRI/$IMAGE@$RECOVERY_DIGEST"
+          python scripts/verify_release_image.py \
+            --image "$REGISTRI/$IMAGE@$CANDIDATE_DIGEST" --revision "$GITHUB_SHA"
+          python scripts/verify_release_image.py \
+            --image "$REGISTRI/$IMAGE@$RECOVERY_DIGEST" --revision "$RECOVERY_SHA"
+          {
+            echo "## Artefak rilis terverifikasi"
+            echo "Candidate: \`$GITHUB_SHA\` / \`$CANDIDATE_DIGEST\`"
+            echo "Recovery: \`$RECOVERY_SHA\` / \`$RECOVERY_DIGEST\`"
+            echo "Tidak memakai tag latest sebagai identitas rilis."
+            echo "Pasang tertahan selama PENDAMPING_ROLLOUT_SIAP belum bernilai 1."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Simpan manifest pasangan image
+        env:
+          CANDIDATE_DIGEST: ${{ steps.dorong.outputs.digest }}
+          RECOVERY_DIGEST: ${{ steps.recovery.outputs.digest }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('release-manifest.json').write_text(json.dumps({
+              'candidate_revision': os.environ['GITHUB_SHA'],
+              'candidate_digest': os.environ['CANDIDATE_DIGEST'],
+              'recovery_revision': os.environ['RECOVERY_SHA'],
+              'recovery_digest': os.environ['RECOVERY_DIGEST'],
+          }, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest-${{ github.sha }}
+          path: release-manifest.json
+          retention-days: 30
 
   pasang:
     name: Deploy ke VPS
     needs: bangun
+    if: ${{ vars.PENDAMPING_ROLLOUT_SIAP == '1' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Siapkan kunci deploy
@@ -96,39 +152,40 @@ jobs:
           echo "${{ secrets.VPS_DEPLOY_KEY }}" > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
           echo "${{ secrets.VPS_HOST_KEY }}" > ~/.ssh/known_hosts
-
-      - name: Deploy berdasarkan digest
-        # Digest, bukan tag: `latest` bisa berubah antara build dan deploy,
-        # dan yang terpasang harus persis image yang baru saja lolos test.
+      - name: Deploy pasangan digest yang sudah lolos verifikasi
+        # Deployer v2 menolak sampai approval file cocok dengan kedua digest,
+        # backup pasangan, write hold, dan recovery yang sudah disetujui.
         run: |
-          set -e
+          set -euo pipefail
           ssh -i ~/.ssh/deploy \
               -o ConnectTimeout=15 -o BatchMode=yes \
               "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-              "${{ needs.bangun.outputs.digest }}"
-
+              "deploy-v2 ${{ needs.bangun.outputs.digest }} ${{ needs.bangun.outputs.recovery_digest }}"
       - name: Pastikan situs hidup dari luar
-        # Verifikasi dari internet, bukan dari dalam VPS. Container sehat
-        # belum berarti situsnya terjangkau — reverse proxy atau sertifikat
-        # bisa jadi masalahnya, dan itu hanya terlihat dari luar.
-        # Cek /murid/ (bukan /): sejak landing publik, / menjawab 200 untuk
-        # anonim. Tanpa sesi, /murid/ me-redirect 303 ke /masuk — 401 polos
-        # tidak dipakai lagi (lihat test_role_guards.py). Palang datanya:
-        # halaman murid tidak pernah dilayani, selalu dilempar ke halaman
-        # masuk. Redirect ke tujuan lain berarti ada yang salah.
         run: |
-          set -e
-          for i in $(seq 1 10); do
-            HASIL=$(curl -s -o /dev/null -w '%{http_code}|%{redirect_url}' --max-time 10 \
-                   "https://${{ secrets.SITUS }}/murid/" || echo "000|")
-            KODE="${HASIL%%|*}"
-            TUJUAN="${HASIL#*|}"
-            if [ "$KODE" = "303" ] && [[ "$TUJUAN" == *"/masuk"* ]]; then
-              echo "Situs hidup dan palang data anak aktif (303 ke /masuk)"
-              exit 0
-            fi
-            echo "percobaan $i: $HASIL"
-            sleep 6
-          done
-          echo "::error::Situs tidak me-redirect /murid/ ke /masuk — periksa VPS"
-          exit 1
+          python - <<'PY'
+          import urllib.error, urllib.request, time
+          class TanpaRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+          opener = urllib.request.build_opener(TanpaRedirect)
+          for percobaan in range(10):
+              hasil = []
+              try:
+                  for path, expected in [('/', 200), ('/akun', 401), ('/murid/', 303)]:
+                      try:
+                          r = opener.open('https://jagomat.id' + path, timeout=10)
+                      except urllib.error.HTTPError as e:
+                          r = e
+                      with r:
+                          hasil.append(r.code == expected and
+                              (path != '/murid/' or r.headers.get('Location') == '/masuk'))
+                  if all(hasil):
+                      print('Smoke publik lulus: /200 /akun401 /murid/303 ke /masuk')
+                      break
+              except (OSError, urllib.error.URLError):
+                  pass
+              time.sleep(6)
+          else:
+              raise SystemExit('Smoke publik gagal; periksa recovery, jangan menyentuh data keluarga.')
+          PY
