@@ -1,8 +1,8 @@
 name: Build & Deploy
 
-# Fase persiapan migrasi Pendamping v4: push tetap menguji dan membangun kedua
-# image. Pasang tidak boleh berjalan sebelum approval backup/cutover dan
-# deployer v2 terpasang; variable repo sengaja belum diaktifkan pada fase ini.
+# Deploy rutin pascamigrasi v4. Aktifkan variable hanya setelah deployer dan
+# policy root dipasang sesuai docs/production-release.md. Perubahan kontrak
+# persistensi ditolak sebelum swap; migrasi tetap jalur approval tersendiri.
 on:
   push:
     branches: [main]
@@ -118,7 +118,7 @@ jobs:
             echo "Candidate: \`$GITHUB_SHA\` / \`$CANDIDATE_DIGEST\`"
             echo "Recovery: \`$RECOVERY_SHA\` / \`$RECOVERY_DIGEST\`"
             echo "Tidak memakai tag latest sebagai identitas rilis."
-            echo "Pasang tertahan selama PENDAMPING_ROLLOUT_SIAP belum bernilai 1."
+            echo "Pasang tertahan selama OSN_DEPLOY_RUTIN_SIAP belum bernilai 1; policy VPS juga wajib cocok."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Simpan manifest pasangan image
         env:
@@ -144,9 +144,13 @@ jobs:
   pasang:
     name: Deploy ke VPS
     needs: bangun
-    if: ${{ vars.PENDAMPING_ROLLOUT_SIAP == '1' && github.ref == 'refs/heads/main' }}
+    if: ${{ vars.OSN_DEPLOY_RUTIN_SIAP == '1' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
       - name: Siapkan kunci deploy
         run: |
           mkdir -p ~/.ssh
@@ -154,39 +158,13 @@ jobs:
           chmod 600 ~/.ssh/deploy
           echo "${{ secrets.VPS_HOST_KEY }}" > ~/.ssh/known_hosts
       - name: Deploy pasangan digest yang sudah lolos verifikasi
-        # Deployer v2 menolak sampai approval file cocok dengan kedua digest,
-        # backup pasangan, write hold, dan recovery yang sudah disetujui.
+        # Policy root mematok recovery, hash deployer, dan kontrak persistensi.
+        # Tidak membuat approval migrasi palsu atau mengubah policy dari CI.
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy \
               -o ConnectTimeout=15 -o BatchMode=yes \
               "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-              "deploy-v2 ${{ needs.bangun.outputs.digest }} ${{ needs.bangun.outputs.recovery_digest }}"
+              "deploy-rutin-v1 ${{ needs.bangun.outputs.digest }} ${{ needs.bangun.outputs.recovery_digest }}"
       - name: Pastikan situs hidup dari luar
-        run: |
-          python - <<'PY'
-          import urllib.error, urllib.request, time
-          class TanpaRedirect(urllib.request.HTTPRedirectHandler):
-              def redirect_request(self, *args, **kwargs):
-                  return None
-          opener = urllib.request.build_opener(TanpaRedirect)
-          for percobaan in range(10):
-              hasil = []
-              try:
-                  for path, expected in [('/', 200), ('/akun', 401), ('/murid/', 303)]:
-                      try:
-                          r = opener.open('https://jagomat.id' + path, timeout=10)
-                      except urllib.error.HTTPError as e:
-                          r = e
-                      with r:
-                          hasil.append(r.code == expected and
-                              (path != '/murid/' or r.headers.get('Location') == '/masuk'))
-                  if all(hasil):
-                      print('Smoke publik lulus: /200 /akun401 /murid/303 ke /masuk')
-                      break
-              except (OSError, urllib.error.URLError):
-                  pass
-              time.sleep(6)
-          else:
-              raise SystemExit('Smoke publik gagal; periksa recovery, jangan menyentuh data keluarga.')
-          PY
+        run: python scripts/smoke_public.py

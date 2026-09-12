@@ -1,6 +1,11 @@
-# Rilis Pendamping v4 — persiapan dan batas pemasangan
+# Rilis Pendamping v4 — deploy rutin dan migrasi terkontrol
 
-Status dokumen: **B1 persiapan source/CI**. Bukan catatan migrasi selesai.
+Status inspeksi **12 September 2026 sekitar 14.00 WIB**: migrasi v4 sudah selesai,
+container sehat revision `91d928979c8aa36284da591d28e4e57c9103cdf3`, digest
+`sha256:605e820e0ceba5b24c66dac2f8dce0e1534f6ffc84cbbcf95dd4a63317c00179`.
+Kedua DB integrity OK/FK 0; recovery revision `bc9c973b50eb1fb04edd37df62f71ba0123f29c6`
+tersedia. Ini snapshot read-only, bukan jaminan keadaan live setelah tanggal itu.
+**Pengaktifan deploy rutin masih tahap bootstrap terpisah**, bukan sudah aktif.
 Panduan [CLAUDE.md](../CLAUDE.md), [kontrak runtime](pendamping-runtime.md), dan
 izin operasi produksi tetap berlaku. Data keluarga/credential tidak masuk repo.
 
@@ -28,22 +33,81 @@ Workflow tetap **uji → bangun → pasang**:
    output build yang sama; verifikasi image sebenarnya dengan probe sintetis.
    Salah satu gagal berarti job gagal, tidak lanjut pasang.
 3. **pasang:** hanya pada `refs/heads/main` jika repository variable
-   `PENDAMPING_ROLLOUT_SIAP` **persis `1`**. Default tidak disetel berarti skip
-   seluruh job, termasuk akses secret SSH. Pada B1 variable ini tidak diaktifkan.
+   `OSN_DEPLOY_RUTIN_SIAP` **persis `1`**. Default kosong berarti skip seluruh
+   job, termasuk akses secret SSH. Variable lama `PENDAMPING_ROLLOUT_SIAP` tidak
+   dipakai lagi. CI memanggil `deploy-rutin-v1 <candidate-digest> <recovery-digest>`.
 
-B1 diizinkan push `main`, **bukan cutover**. Publikasi tidak mengganti tag
-`latest`. Tag `sha-<SHA>` dan `recovery-<SHA>` membantu inventaris, tetapi dapat
-berubah jika build diulang; identitas rilis selalu digest output build.
-Manifest artifact menyimpan kedua revision/digest. Job pasang mengirim protokol
-`deploy-v2 <candidate-digest> <recovery-digest>`, bukan perintah shell bebas.
-Deployer live v1 tidak boleh dipakai untuk menjalankan protokol ini.
+Publikasi tidak mengganti `latest`. Identitas kedua image selalu digest output
+build yang sama dengan verifikasi dan artifact manifest, bukan tag berubah.
+Recovery revision tetap pinned; rebuild revision itu boleh menghasilkan digest
+baru, tetapi harus lolos seluruh verifikasi image dan kontrak policy VPS.
+Variable diaktifkan sesudah job skip tidak otomatis melanjutkan job tersebut.
 
-Jika variable diaktifkan sesudah job skip, job tidak otomatis lanjut. Dispatch
-ulang dapat membangun digest baru: **semua digest baru harus diverifikasi dan
-mendapat approval baru**, bukan diam-diam menggantikan pasangan yang disetujui.
-Runbook B2 harus mengunci cara melanjutkan job/dispatch/pemasangan artifact yang
-tepat. Jangan enable variable sebelum deployer, approval, backup dan write hold
-siap; matikan eligibility lagi setelah jendela rilis sesuai izin operator.
+Smoke memakai `scripts/smoke_public.py`: request anonim tanpa proxy/redirect/
+cookie/body, User-Agent eksplisit `curl/8.7.1` yang lolos inspeksi edge. Python UA
+bawaan mendapat 403 saat inspeksi walau curl 200/401/303; tidak menganggap 403 sukses.
+Redirect murid boleh `/masuk?galat=...`, tetapi host lain/fragment/header ganda
+ditolak. Smoke edge gagal membuat CI gagal, bukan otomatis restore DB.
+
+## Deploy rutin vs migrasi
+
+- **Rutin:** policy tetap root0600, kontrak persistensi current/candidate/recovery
+  identik, current sehat dengan schema 4 sebelum swap. Tanpa migrasi baru, tidak
+  membuat backup/writehold palsu, tidak menyentuh cron/Caddy. Ada downtime singkat
+  saat restart. Kedua image siap dahulu; candidate gagal → recovery exact digest
+  terverifikasi, tetap exit 1. Cleanup/recovery gagal → exit 2/intervensi operator.
+- **Migrasi:** protokol `deploy-v2` tetap memerlukan approval sekali pakai dengan
+  TTL ≤15 menit, pasangan digest exact, hash deployer, backup pasangan, writehold,
+  pause maintenance dan rehearsal. Persetujuan lama consumed tidak boleh dipakai
+  ulang. Tidak dilakukan otomatis hanya karena push.
+
+Fingerprint rutin menghitung byte modul schema/startup/persistensi yang tercantum
+pada `PROBE_KONTRAK` di `scripts/deploy.py`, termasuk inventaris modul baru bernama
+schema/migrat/database/store. Probe network-none tidak membaca volume produksi
+atau import aplikasi. Perubahan modul tersebut (termasuk komentar) sengaja menolak
+rutin sampai review kompatibilitas/recovery baru. **Fingerprint bukan analisis
+semantik semua Python**: penulis data baru, kontrak JSON/provenance atau perubahan
+runtime berisiko tetap memerlukan review kritis. Jangan menghapus modul dari
+fingerprint atau mengganti hash policy sekadar agar deploy hijau.
+
+### Bootstrap rutin — sekali, dengan izin produksi tersendiri
+
+1. Review/gate source, commit/push hanya setelah izin. CI membangun/verifikasi
+   pasangan image; variable tetap off. Tidak build di VPS.
+2. Inspeksi ulang live/operasi saingan. Pasang `scripts/deploy.py` secara atomik
+   root0755 di `/usr/local/bin/osn-deploy`, simpan versi lama secara terproteksi.
+   Verifikasi hash source serta forced-command/wrapper sudo yang melewatkan tepat
+   satu argumen. Binary lama tidak mengerti protokol rutin.
+3. Dari image yang teruji, operator menghitung fingerprint `PROBE_KONTRAK` pada
+   current/candidate/recovery tanpa mount/secret. Ketiganya harus identik.
+   Buat `/opt/osn/routine-policy.json` regular root0600 satu hardlink dengan tepat
+   field berikut (nilai ilustrasi **bukan policy siap pakai**):
+
+   ```json
+   {
+     "enabled": true,
+     "schema_target": 4,
+     "deployer_sha256": "<sha256-byte-script-yang-dipasang>",
+     "contract_sha256": "<fingerprint-identik-ketiga-image>",
+     "recovery_revision": "bc9c973b50eb1fb04edd37df62f71ba0123f29c6"
+   }
+   ```
+
+   Policy tidak ditulis oleh SSH caller/CI dan tidak memuat data keluarga.
+   Policy hash mengikat deployer yang dipasang; perubahan deployer berikutnya
+   memerlukan review/instalasi dan pembaruan policy, bukan auto-update root dari CI.
+4. Aktifkan `OSN_DEPLOY_RUTIN_SIAP=1` **setelah izin auto-deploy**. Push main atau
+   dispatch berikutnya dapat mengganti aplikasi produksi. Uji pertama dengan
+   digest terverifikasi, pantau CI sampai selesai dan smoke publik. Jangan
+   mengklaim tahap ini sudah selesai hanya karena source tersedia.
+5. Matikan variable untuk menahan CI; set `enabled:false` pada policy untuk
+   mencabut izin host di bawah lock deploy (menghentikan kelayakan baru, bukan
+   membatalkan swap yang sudah berjalan). Tidak menghapus receipt/backup lama.
+
+Recovery pinned berarti versi UI/backend yang dipulihkan dapat lebih lama dari
+rilis terakhir. Setiap pembaruan recovery harus diuji dan direview; label revision
+sendiri bukan bukti kompatibilitas. Preflight kontrak/live readiness tetap wajib.
+Deploy rutin tidak menyediakan restore data atau zero-downtime.
 
 ## Recovery berbeda dari candidate
 
@@ -62,13 +126,14 @@ crash setelah commit belajar, retry satu sesi, hasil batal/hapus, perubahan
 pemilik/izin, invariansi bukti dan HTTP/aset. Output hanya ringkasan teknis.
 Lolos probe sintetis bukan pengganti rehearsal backup keluarga saat B2.
 
-## Artefak deployer v2
+## Artefak deployer dan kontrak jalur migrasi
 
-Deployer v2 berada di `scripts/deploy.py` dan diuji oleh
-`mesin/__tests__/test_deployer.py`. Keberadaan source tidak otomatis mengizinkan
-instalasi atau eksekusi: artefak yang dipasang harus cocok hash source yang sudah
-lolos gate, lalu approval B2 dibuat untuk tepat satu pasangan digest setelah
-backup dan write hold benar-benar aktif.
+Deployer berada di `scripts/deploy.py` dan diuji oleh
+`mesin/__tests__/test_deployer.py` serta `test_routine_deployment.py`.
+Keberadaan source tidak otomatis mengizinkan instalasi atau eksekusi: artefak
+terpasang harus cocok hash source yang lolos gate. Untuk **jalur migrasi B2**,
+approval dibuat untuk tepat satu pasangan digest setelah backup dan write hold
+benar-benar aktif. Jalur rutin memakai policy berbeda seperti dijelaskan di atas.
 Kontrak yang wajib dipenuhi: forced-command/registry/path terbatas, approval
 root-controlled sekali pakai dan lock sebelum perubahan container, kedua image
 siap sebelum swap, konfigurasi sama pada run utama/recovery, serta health
@@ -89,7 +154,9 @@ menolak, bukan di-chmod/chown otomatis oleh deployer.
 
 ## B2 — membutuhkan izin produksi tersendiri
 
-Belum dilakukan oleh B1. Sebelum meminta persetujuan, lengkapi runbook dengan
+Rollout v4 telah dilakukan sesuai snapshot di atas. Urutan ini tetap menjadi
+panduan migrasi berikutnya, **bukan perintah mengulang migrasi v4**. Sebelum
+meminta persetujuan baru, lengkapi runbook dengan
 **digest candidate/recovery nyata, hash deployer, jendela waktu/timezone,
 batas durasi/dampak, mekanisme drain, backup dan recovery**.
 
@@ -126,6 +193,8 @@ serta potensi kehilangan data dan rekonsiliasi. Izin push tidak mencakupnya.
 
 ## Pelaporan jujur
 
-B1 selesai berarti **source teruji dan image dibangun/diverifikasi**; bukan
-aplikasi sudah terpasang. CI pasang skip yang disengaja harus dilaporkan sebagai
-tertahan B1. Tidak ada klaim deployment hanya karena push atau build berhasil.
+Source teruji, image terverifikasi, pemasangan live, dan auto-deploy aktif adalah
+empat klaim berbeda. Job skip karena variable belum aktif harus dilaporkan
+tertahan bootstrap. Policy ditolak sebelum swap tidak berarti aplikasi baru
+terpasang. Recovery sehat tetap kegagalan rilis. Tidak ada klaim deployment hanya
+karena push/build berhasil; inspeksi digest aktual dan smoke tetap diperlukan.

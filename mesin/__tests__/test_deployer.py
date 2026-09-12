@@ -124,9 +124,15 @@ class RunnerPalsu:
             nama = self.image_nama(a[-1])
             label = ("repo-" if "RepoDigests" in a[3] else "image-") + nama
             hasil = (json.dumps([a[-1]]) if label.startswith("repo-") else self.image_id(nama))
+            if "org.opencontainers.image.revision" in a[3]:
+                label = "revision-" + nama
+                hasil = "b" * 40
         elif a[0] == "run" and "--rm" in a:
             label = "probe-" + self.image_nama(a[a.index("--entrypoint") + 2])
             hasil = "OSN_IMAGE_V4_OK"
+            if kwargs["input"] == d.PROBE_KONTRAK:
+                label = "contract-" + self.image_nama(a[a.index("--entrypoint") + 2])
+                hasil = "f" * 64
             nama = a[a.index("--name") + 1]
             token = a[a.index("--label") + 1].split("=", 1)[1]
             self.probes[self.probe_id] = "/" + nama + "|" + token
@@ -178,9 +184,9 @@ class RunnerPalsu:
 
     @staticmethod
     def image_nama(image):
-        if image.endswith(KANDIDAT):
+        if image.endswith(KANDIDAT) or image == ID_KANDIDAT:
             return "candidate"
-        if image.endswith(RECOVERY):
+        if image.endswith(RECOVERY) or image == ID_RECOVERY:
             return "recovery"
         assert image == ID_LAMA
         return "lama"

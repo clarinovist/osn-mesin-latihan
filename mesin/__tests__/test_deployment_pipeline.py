@@ -1,4 +1,4 @@
-"""Kontrak CI persiapan v4: build teruji tanpa deploy tak sengaja."""
+"""Kontrak CI rutin v4: build teruji, eligibility eksplisit dan policy VPS."""
 from pathlib import Path
 import re
 import itertools
@@ -15,12 +15,14 @@ def _job(teks, nama):
     return cocok.group(1)
 
 
-def test_pasang_tertahan_sampai_rollout_dan_deployer_v2_siap():
+def test_pasang_tertahan_sampai_deployer_dan_policy_rutin_siap():
     teks=WORKFLOW.read_text()
     pasang=_job(teks,'pasang')
-    assert "if: ${{ vars.PENDAMPING_ROLLOUT_SIAP == '1' && github.ref == 'refs/heads/main' }}" in pasang
+    assert "if: ${{ vars.OSN_DEPLOY_RUTIN_SIAP == '1' && github.ref == 'refs/heads/main' }}" in pasang
     assert 'needs: bangun' in pasang
-    assert 'deploy-v2 ' in pasang
+    assert 'deploy-rutin-v1 ' in pasang
+    assert 'deploy-v2 ' not in pasang
+    assert 'rollout-approval.json' not in pasang and 'routine-policy.json' not in pasang
     assert '${{ needs.bangun.outputs.digest }}' in pasang
     assert '${{ needs.bangun.outputs.recovery_digest }}' in pasang
     assert 'cancel-in-progress: false' in teks
@@ -66,9 +68,9 @@ def test_gate_job_hanya_menerima_izin_exact_dan_main(flag, ref):
     pasang=_job(WORKFLOW.read_text(),'pasang')
     expr=re.search(r'    if: \$\{\{ (.+) \}\}',pasang).group(1)
     # Evaluasi subset ekspresi yang sengaja sempit, bukan parser YAML/deploy baru.
-    assert expr == "vars.PENDAMPING_ROLLOUT_SIAP == '1' && github.ref == 'refs/heads/main'"
+    assert expr == "vars.OSN_DEPLOY_RUTIN_SIAP == '1' && github.ref == 'refs/heads/main'"
     bagian=expr.split(' && ')
-    nilai={'vars.PENDAMPING_ROLLOUT_SIAP':flag,'github.ref':ref}
+    nilai={'vars.OSN_DEPLOY_RUTIN_SIAP':flag,'github.ref':ref}
     lolos=all(nilai[k.strip()]==v.strip().strip("'") for k,v in (b.split(' == ') for b in bagian))
     assert lolos == (flag=='1' and ref=='refs/heads/main')
 
@@ -86,6 +88,7 @@ def test_dependencies_gagal_tidak_dibypass_ke_build_atau_deploy():
 
 def test_healthcheck_publik_tiga_permukaan_tetap_diperiksa():
     pasang=_job(WORKFLOW.read_text(),'pasang')
-    assert 'https://jagomat.id' in pasang
-    assert '/akun' in pasang and '/murid/' in pasang
-    assert '401' in pasang and '303' in pasang and '200' in pasang
+    assert 'run: python scripts/smoke_public.py' in pasang
+    assert 'uses: actions/checkout@v7' in pasang
+    assert 'uses: actions/setup-python@v7' in pasang
+    assert pasang.index('Deploy pasangan digest') < pasang.index('scripts/smoke_public.py')

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Artefak forced-command v2; belum merupakan izin memasang/menjalankan di VPS.
 
-Hanya stdlib. Tidak ada shell, restore DB, pelepasan writehold, atau pemilihan
-fallback otomatis. Approval B2 wajib dibuat operator setelah drain dan backup
-pasangan. Pesan sengaja statis: stdout/stderr Docker dan isi berkas privat tidak
-pernah diteruskan ke log. Exit 0 = candidate sehat, 1 = gagal tetapi recovered,
-2 = ditolak atau perlu intervensi manual. Lihat HANDOFF/runbook integrator.
+Hanya stdlib. Tidak ada shell, restore DB atau pelepasan writehold. Deploy-v2
+memerlukan approval migrasi setelah drain/backup; deploy-rutin-v1 memerlukan
+policy root dan kontrak persistensi identik pada current/candidate/recovery.
+Pesan statis: output Docker dan isi berkas privat tidak diteruskan ke log.
+Exit 0 = candidate sehat, 1 = gagal tetapi recovered, 2 = ditolak/manual.
+Lihat docs/production-release.md sebelum instalasi atau pengaktifan.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ DOCKER = "/usr/bin/docker"
 AKAR = Path("/opt/osn")
 DATA = AKAR / "data"
 APPROVAL = AKAR / "rollout-approval.json"
+POLICY_RUTIN = AKAR / "routine-policy.json"
 KUNCI = DATA / "deepseek.key"
 ENVFILES = (AKAR / "visual.conf", AKAR / "pendamping.conf")
 LOCK = AKAR / "deploy.lock"
@@ -43,6 +45,7 @@ LABEL_PROBE = "osn.deploy.probe"
 MAKS_TTL_APPROVAL = 900  # detik; lease untuk mulai swap, bukan batas waktu recovery
 DIGEST = r"sha256:[0-9a-f]{64}"
 POLA_PERMINTAAN = re.compile(r"deploy-v2 (" + DIGEST + r") (" + DIGEST + r")")
+POLA_RUTIN = re.compile(r"deploy-rutin-v1 (" + DIGEST + r") (" + DIGEST + r")")
 LINGKUNGAN = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/root", "LANG": "C.UTF-8"}
 BATAS_HEALTH = 120
 JEDA_HEALTH = 3
@@ -103,6 +106,26 @@ print('OSN_SCHEMA_V4_OK')
 '''
 
 
+# Konservatif: perubahan byte pada schema/startup/persistensi perlu review ulang
+# kompatibilitas. Tidak import aplikasi, tidak membaca /data. Modul schema/migrasi
+# baru juga mengubah fingerprint; ini BUKAN analisis semantik seluruh kode Python.
+PROBE_KONTRAK = '''import hashlib
+import json
+from pathlib import Path
+akar = Path('/app')
+nama = {
+    'schema.py', 'assistant_schema.py', 'database.py', 'serve.py',
+    'auth.py', 'sessions.py', 'assistant_store.py', 'assistant_actions.py',
+    'assistant_maintenance.py', 'migrate_params.py', 'outcome_presentations.py',
+    'question_views.py', 'visual_contract.py', 'templates.py',
+}
+nama.update(p.name for p in akar.glob('*.py')
+            if any(k in p.stem for k in ('schema', 'migrat', 'database', 'store')))
+hasil = {n: hashlib.sha256((akar / n).read_bytes()).hexdigest() for n in sorted(nama)}
+print(hashlib.sha256(json.dumps(hasil, sort_keys=True).encode()).hexdigest())
+'''
+
+
 class Ditolak(Exception):
     """Kegagalan tertutup; jangan sertakan pesan exception sumber ke log."""
 
@@ -113,6 +136,32 @@ def parse_permintaan(teks):
     if cocok is None or cocok[1] == cocok[2]:
         raise Ditolak()
     return cocok[1], cocok[2]
+
+
+def parse_rutin(teks):
+    """Protokol rutin terpisah; caller tidak boleh memasok policy/path/flag."""
+    cocok = POLA_RUTIN.fullmatch(teks) if isinstance(teks, str) else None
+    if cocok is None or cocok[1] == cocok[2]:
+        raise Ditolak()
+    return cocok[1], cocok[2]
+
+
+def validasi_policy_rutin(mentah):
+    """Izin tetap root, bukan approval migrasi yang direkayasa menjadi permanen."""
+    isi = json.loads(mentah, object_pairs_hook=_tanpa_duplikat)
+    if not isinstance(isi, dict) or set(isi) != {
+        "enabled", "schema_target", "deployer_sha256", "contract_sha256", "recovery_revision",
+    }:
+        raise Ditolak()
+    if (isi["enabled"] is not True
+            or type(isi["schema_target"]) is not int or isi["schema_target"] != 4
+            or isi["deployer_sha256"] != hash_deployer()
+            or not isinstance(isi["contract_sha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", isi["contract_sha256"]) is None
+            or not isinstance(isi["recovery_revision"], str)
+            or re.fullmatch(r"[0-9a-f]{40}", isi["recovery_revision"]) is None):
+        raise Ditolak()
+    return isi
 
 
 def _tanpa_duplikat(pasangan):
@@ -244,6 +293,10 @@ class Berkas:
             return isi
         raise Ditolak()  # Termasuk receipt parsial, symlink, atau attempt gagal.
 
+    def policy_rutin(self):
+        self._wajib_lock()
+        return validasi_policy_rutin(baca_privat(POLICY_RUTIN))
+
     def konsumsi(self, isi, sekarang):
         """Receipt durable sebelum stop. Tidak pernah dibersihkan/dipakai ulang."""
         self._wajib_lock()
@@ -312,6 +365,35 @@ class Docker:
             raise Ditolak()
         return hasil.stdout.strip()
 
+    def revision_image(self, identitas):
+        return self._panggil([
+            "image", "inspect", "--format",
+            '{{index .Config.Labels "org.opencontainers.image.revision"}}', identitas,
+        ])
+
+    def kontrak_image(self, image):
+        """Baca hanya source image dalam sandbox; tidak memberi akses volume produksi."""
+        if re.fullmatch(DIGEST, image) is None:
+            raise Ditolak()
+        return self._probe(image, PROBE_KONTRAK)
+
+    def _probe(self, image, sumber):
+        token = secrets.token_hex(16)
+        nama = PROBE + "-" + token
+        try:
+            return self._panggil([
+                "run", "--pull", "never", "--rm", "-i", "--name", nama,
+                "--label", LABEL_PROBE + "=" + token,
+                "--network", "none", "--read-only",
+                *PENGAMAN, "--tmpfs", "/data:rw,nosuid,nodev,noexec,uid=10001,gid=10001,mode=0700,size=64m",
+                "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=16m", "--entrypoint", "python",
+                image, "-E", "-B", "-",
+            ], batas=60, masukan=sumber)
+        except (Exception, KeyboardInterrupt):
+            # Timeout client bukan bukti container berhenti. Hapus hanya probe sendiri.
+            self.bersihkan_probe(nama, token)
+            raise
+
     def siapkan_image(self, digest):
         image = REGISTRI + "@" + digest
         self._panggil(["pull", image], batas=300)
@@ -322,23 +404,8 @@ class Docker:
             ["image", "inspect", "--format", "{{json .RepoDigests}}", image]))
         if not isinstance(daftar, list) or image not in daftar:
             raise Ditolak()
-        token = secrets.token_hex(16)
-        nama = PROBE + "-" + token
-        try:
-            jawaban = self._panggil([
-                "run", "--pull", "never", "--rm", "-i", "--name", nama,
-                "--label", LABEL_PROBE + "=" + token,
-                "--network", "none", "--read-only",
-                *PENGAMAN, "--tmpfs", "/data:rw,nosuid,nodev,noexec,uid=10001,gid=10001,mode=0700,size=64m",
-                "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=16m", "--entrypoint", "python",
-                image, "-E", "-B", "-",
-            ], batas=60, masukan=PROBE_IMAGE)
-            if jawaban != "OSN_IMAGE_V4_OK":
-                raise Ditolak()
-        except (Exception, KeyboardInterrupt):
-            # docker CLI timeout tidak berarti container sudah mati; probe tak punya data host.
-            self.bersihkan_probe(nama, token)
-            raise
+        if self._probe(image, PROBE_IMAGE) != "OSN_IMAGE_V4_OK":
+            raise Ditolak()
         return identitas
 
     def bersihkan_probe(self, nama, token):
@@ -462,22 +529,43 @@ def deploy(teks, *, docker=None, berkas=None, sekarang=time.time,
     berkas = Berkas() if berkas is None else berkas
     tahap = "preflight"
     try:
-        kandidat, pemulihan = parse_permintaan(teks)
+        rutin = isinstance(teks, str) and teks.startswith("deploy-rutin-v1 ")
+        kandidat, pemulihan = parse_rutin(teks) if rutin else parse_permintaan(teks)
         berkas.periksa_host()
         with berkas.kunci(), berkas.konfigurasi() as konfigurasi:
-            approval = berkas.approval(kandidat, pemulihan, sekarang())
+            if rutin:
+                policy = berkas.policy_rutin()
+            else:
+                approval = berkas.approval(kandidat, pemulihan, sekarang())
             berkas.ruang()
             id_kandidat = docker.siapkan_image(kandidat)
             id_pemulihan = docker.siapkan_image(pemulihan)
             if id_kandidat == id_pemulihan:
                 raise Ditolak()
-            docker.image_saat_ini()  # Bukti image current tersedia; BUKAN fallback schema3.
+            id_lama = docker.image_saat_ini()  # Bukan fallback otomatis schema3.
             berkas.ruang()  # Pull dapat menghabiskan ruang yang tadi masih tersedia.
-            if berkas.approval(kandidat, pemulihan, sekarang()) != approval:
-                raise Ditolak()
-            berkas.konsumsi(approval, sekarang())  # O_EXCL + fsync, masih di bawah lock
-            # Fsync lambat tidak memperpanjang lease. Receipt tetap hangus jika expired.
-            validasi_approval(json.dumps(approval), kandidat, pemulihan, sekarang())
+            if rutin:
+                # Build ulang SHA recovery dapat menghasilkan digest baru. Tetap
+                # gunakan digest exact CI, tetapi policy mematok revision+kontrak.
+                if docker.revision_image(id_pemulihan) != policy["recovery_revision"]:
+                    raise Ditolak()
+                for identitas in (id_lama, id_kandidat, id_pemulihan):
+                    if docker.kontrak_image(identitas) != policy["contract_sha256"]:
+                        raise Ditolak()
+                # Readiness current nyata, bukan hanya deklarasi policy atau probe kosong.
+                if not tunggu_sehat(docker, id_lama, http, monotonic, tidur):
+                    raise Ditolak()
+                if berkas.policy_rutin() != policy:
+                    raise Ditolak()
+                if id_lama == id_kandidat:
+                    lapor("Candidate sudah aktif dan sehat; tidak ada swap. Exit 0.")
+                    return 0
+            else:
+                if berkas.approval(kandidat, pemulihan, sekarang()) != approval:
+                    raise Ditolak()
+                berkas.konsumsi(approval, sekarang())  # O_EXCL + fsync, di bawah lock
+                # Fsync lambat tidak memperpanjang lease; receipt tetap hangus.
+                validasi_approval(json.dumps(approval), kandidat, pemulihan, sekarang())
             tahap = "stop-awal"
             docker.hentikan()
             tahap = "hapus-awal"
@@ -494,15 +582,18 @@ def deploy(teks, *, docker=None, berkas=None, sekarang=time.time,
                 docker.jalankan(pemulihan, konfigurasi)
                 if not tunggu_sehat(docker, id_pemulihan, http, monotonic, tidur):
                     raise Ditolak()
-                lapor("Rilis gagal; recovery sehat. Writehold/maintenance tetap; exit 1.")
+                lapor("Rilis gagal; recovery sehat. Exit 1." if rutin else
+                      "Rilis gagal; recovery sehat. Writehold/maintenance tetap; exit 1.")
                 return 1
-            lapor("Candidate sehat. Writehold/maintenance tetap; exit 0.")
+            lapor("Candidate sehat; deploy rutin selesai. Exit 0." if rutin else
+                  "Candidate sehat. Writehold/maintenance tetap; exit 0.")
             return 0
     except (Exception, KeyboardInterrupt):
         if tahap == "preflight":
             lapor("Preflight ditolak; container lama tidak disentuh. Exit 2.")
         else:
-            lapor("Deploy gagal; perlu intervensi manual. Writehold/maintenance tetap; exit 2.")
+            lapor("Deploy gagal; perlu intervensi manual. Exit 2." if rutin else
+                  "Deploy gagal; perlu intervensi manual. Writehold/maintenance tetap; exit 2.")
         return 2
 
 

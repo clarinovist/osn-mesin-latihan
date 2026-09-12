@@ -24,6 +24,6 @@ def test_ci_tetap_menguji_sebelum_build_dan_memasang_digest_yang_sama():
     assert "  bangun:\n    name: Build & Push\n    needs: uji\n" in teks
     assert "  pasang:\n    name: Deploy ke VPS\n    needs: bangun\n" in teks
     assert "digest: ${{ steps.dorong.outputs.digest }}" in teks
-    assert '"deploy-v2 ${{ needs.bangun.outputs.digest }} ${{ needs.bangun.outputs.recovery_digest }}"' in teks
+    assert '"deploy-rutin-v1 ${{ needs.bangun.outputs.digest }} ${{ needs.bangun.outputs.recovery_digest }}"' in teks
     assert "cancel-in-progress: false" in teks
     assert "- name: Pastikan situs hidup dari luar" in teks
