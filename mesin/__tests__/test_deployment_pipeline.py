@@ -56,7 +56,9 @@ def test_persiapan_tidak_memutakhirkan_latest_atau_memakai_tag_berubah():
     assert '--network' not in _job(teks,'pasang')  # sandbox image ada di probe, bukan mount produksi CI
 
 
-@pytest.mark.parametrize('flag,ref', itertools.product(('', '0', 'false', '1 ', '1'), ('refs/heads/main', 'refs/heads/persiapan')))
+@pytest.mark.parametrize('flag,ref', tuple(itertools.product(
+    ('', '0', 'false', '1 ', '1'), ('refs/heads/main', 'refs/heads/persiapan')
+)))
 def test_gate_job_hanya_menerima_izin_exact_dan_main(flag, ref):
     pasang=_job(WORKFLOW.read_text(),'pasang')
     expr=re.search(r'    if: \$\{\{ (.+) \}\}',pasang).group(1)
