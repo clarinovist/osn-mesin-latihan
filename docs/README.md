@@ -8,6 +8,8 @@ codebase. Kode dan tes di `../mesin/` membuktikan perilaku yang tersedia;
 
 - [Siklus belajar terpandu](siklus-belajar-terpandu.md): kontrak alur belajar,
   bukti terkonfirmasi, fokus, intervensi, evaluasi, dan checkpoint.
+- [Ringkasan perkembangan berbasis bukti](ringkasan-perkembangan.md): baseline
+  Opsi 2 dan palang manfaat; implementasi AI ditahan setelah spike sintetis.
 - [Design system](design-system.md): dokumentasi token dan gaya aplikasi.
 - [Pendamping Jagomat](pendamping-jagomat.md): rancangan chat orang tua, katalog,
   konteks, riwayat, dan memori; belum diimplementasikan.
