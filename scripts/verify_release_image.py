@@ -15,10 +15,26 @@ import subprocess
 import sys
 
 REPOSITORI = "ghcr.io/clarinovist/osn-mesin-latihan"
-RINGKASAN = {
-    "ok": True, "kontrak": 1, "skema": 4, "skenario_migrasi": 2,
-    "skenario_tindakan": 7, "http_checks": 6, "provider_calls": 0,
-}
+REVISION_RECOVERY = "bc9c973b50eb1fb04edd37df62f71ba0123f29c6"
+KONTRAK_CANDIDATE = "candidate-inline-v1"
+KONTRAK_RECOVERY = "recovery-standalone-v1"
+
+
+def kontrak_untuk_revision(revision: str) -> str:
+    """Pilih kontrak HTTP berdasarkan revision image yang sudah diverifikasi."""
+    return KONTRAK_RECOVERY if revision == REVISION_RECOVERY else KONTRAK_CANDIDATE
+
+
+def ringkasan_untuk_revision(revision: str) -> dict:
+    return {
+        "ok": True, "kontrak": 1, "skema": 4, "skenario_migrasi": 2,
+        "skenario_tindakan": 7, "http_checks": 7, "provider_calls": 0,
+        "http_contract": kontrak_untuk_revision(revision),
+    }
+
+
+# Kompatibilitas import test: revision sintetis biasa memakai kontrak candidate.
+RINGKASAN = ringkasan_untuk_revision("b" * 40)
 
 # Sengaja mandiri: tidak mengimpor test/helper host yang tidak ada dalam image.
 SUMBER_PROBE = r'''
@@ -259,7 +275,7 @@ def uji_tindakan(akar, jenis, modul):
     sehat(privat)
 
 
-def uji_http(akar, database, skema):
+def uji_http(akar, database, skema, kontrak_http):
     import auth
     import sessions
     import web
@@ -275,6 +291,8 @@ def uji_http(akar, database, skema):
     auth.pastikan_id_akun(path=auth.BERKAS_SANDI)
     akun = auth.cari_akun('guru')
     token = sessions.buat('guru', 'guru', id_akun=akun['id_akun'])
+    with database.buka() as kon:
+        anak = database.tambah_siswa(kon, 'Anak HTTP Sintetis', 'P3', pemilik='guru')
     # Semua aset yang diumumkan image wajib terkemas; tidak mengunci markup UI.
     for nama in brand.ASET:
         pastikan((brand.FOLDER_ASET / nama).is_file(), 'aset_hilang')
@@ -286,9 +304,10 @@ def uji_http(akar, database, skema):
     ulir = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.01})
     ulir.start()
     try:
+        status_pendamping = 200 if kontrak_http == 'recovery-standalone-v1' else 303
         for jalur, cookie, status in (
             ('/', False, 200), ('/akun', False, 401), ('/murid/', False, 303),
-            ('/pendamping', False, 401), ('/pendamping', True, 200),
+            ('/pendamping', False, 401), ('/pendamping', True, status_pendamping),
             ('/aset/favicon.svg', False, 200),
         ):
             koneksi = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=10)
@@ -300,13 +319,41 @@ def uji_http(akar, database, skema):
                 if jalur == '/murid/':
                     lokasi = respons.getheader('Location') or ''
                     pastikan(lokasi == '/masuk' or lokasi.startswith('/masuk?'), 'http_redirect')
+                if jalur == '/pendamping' and cookie:
+                    if kontrak_http == 'candidate-inline-v1':
+                        pastikan(respons.getheader('Location') == '/guru', 'http_redirect_candidate')
+                        pastikan(not tubuh, 'http_redirect_body_candidate')
+                    else:
+                        pastikan(respons.getheader('Location') is None, 'http_redirect_recovery')
                 if cookie:
                     pastikan(respons.getheader('Cache-Control') == 'no-store', 'http_cache')
-                    pastikan(respons.getheader('X-Frame-Options') == 'DENY', 'http_frame')
-                    pastikan('noindex' in (respons.getheader('X-Robots-Tag') or ''), 'http_robot')
-                    pastikan('text/html' in (respons.getheader('Content-Type') or '') and bool(tubuh), 'http_render')
+                    if respons.status == 200:
+                        pastikan(respons.getheader('Referrer-Policy') == 'no-referrer', 'http_referrer')
+                        pastikan(respons.getheader('X-Frame-Options') == 'DENY', 'http_frame')
+                        pastikan('noindex' in (respons.getheader('X-Robots-Tag') or ''), 'http_robot')
+                        pastikan("default-src 'none'" in (respons.getheader('Content-Security-Policy') or ''), 'http_csp')
+                        pastikan('text/html' in (respons.getheader('Content-Type') or '') and bool(tubuh), 'http_render')
+                        if jalur == '/pendamping':
+                            pastikan(b'id="judul-pendamping">Sebelum mulai</h1>' in tubuh,
+                                     'http_render_recovery')
                 if jalur == '/aset/favicon.svg':
                     pastikan(bool(tubuh) and 'image/svg+xml' in (respons.getheader('Content-Type') or ''), 'http_aset')
+            finally:
+                koneksi.close()
+        if kontrak_http == 'candidate-inline-v1':
+            jalur = '/anak/' + str(anak) + '?bantuan=rencana'
+            koneksi = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=10)
+            try:
+                koneksi.request('GET', jalur, headers={'Cookie': 'osn_sesi=' + token})
+                respons = koneksi.getresponse()
+                tubuh = respons.read()
+                pastikan(respons.status == 200, 'http_inline_status_candidate')
+                pastikan(b'id="bantuan-rencana"' in tubuh, 'http_inline_render_candidate')
+                pastikan(respons.getheader('Cache-Control') == 'no-store', 'http_inline_cache_candidate')
+                pastikan(respons.getheader('Referrer-Policy') == 'no-referrer', 'http_inline_referrer_candidate')
+                pastikan(respons.getheader('X-Frame-Options') == 'DENY', 'http_inline_frame_candidate')
+                pastikan('noindex' in (respons.getheader('X-Robots-Tag') or ''), 'http_inline_robot_candidate')
+                pastikan("default-src 'none'" in (respons.getheader('Content-Security-Policy') or ''), 'http_inline_csp_candidate')
             finally:
                 koneksi.close()
     finally:
@@ -328,6 +375,11 @@ def jalankan_probe(akar):
         'PENDAMPING_AKTIF': '1', 'DEEPSEEK_API_KEY': 'kunci-sintetis-probe',
         'DEEPSEEK_BASE_URL': 'https://provider.invalid', 'DEEPSEEK_MODEL': 'deepseek-flash',
     })
+    revision = os.environ.get('OSN_RELEASE_REVISION', '')
+    if revision == 'bc9c973b50eb1fb04edd37df62f71ba0123f29c6':
+        kontrak_http = 'recovery-standalone-v1'
+    else:
+        kontrak_http = 'candidate-inline-v1'
     # Defense in depth untuk eksekusi test tanpa Docker: hanya socket loopback,
     # tanpa DNS eksternal; provider default juga selalu gagal jika terpanggil.
     asli_connect = socket.socket.connect
@@ -359,12 +411,13 @@ def jalankan_probe(akar):
         klien.kirim = provider
         for jenis in ('retry', 'batal', 'hapus', 'pemilik', 'izin', 'pemilik_baru', 'izin_baru'):
             uji_tindakan(akar / jenis, jenis, modul)
-        uji_http(akar / 'http', modul[0], modul[1])
+        uji_http(akar / 'http', modul[0], modul[1], kontrak_http)
         pastikan(not panggilan, 'provider_terpanggil')
     finally:
         socket.socket.connect, socket.socket.connect_ex, socket.getaddrinfo = asli_connect, asli_connect_ex, asli_resolve
     return {'ok': True, 'kontrak': 1, 'skema': 4, 'skenario_migrasi': 2,
-            'skenario_tindakan': 7, 'http_checks': 6, 'provider_calls': 0}
+            'skenario_tindakan': 7, 'http_checks': 7, 'provider_calls': 0,
+            'http_contract': kontrak_http}
 
 
 def main():
@@ -413,13 +466,14 @@ def periksa_inspect(teks: str, image: str, revision: str) -> None:
         raise GalatVerifikasi("identitas_image_tidak_cocok") from None
 
 
-def perintah_probe(image: str, nama: str) -> list[str]:
+def perintah_probe(image: str, nama: str, revision: str) -> list[str]:
     return [
         'docker', 'run', '--rm', '--interactive', '--pull', 'never', '--name', nama,
         '--network', 'none', '--read-only', '--cap-drop', 'ALL',
         '--security-opt', 'no-new-privileges', '--user', '10001:10001',
         '--tmpfs', '/data:rw,uid=10001,gid=10001', '--tmpfs', '/tmp',
-        '--env', 'TMPDIR=/data', '--no-healthcheck', '--workdir', '/app',
+        '--env', 'TMPDIR=/data', '--env', 'OSN_RELEASE_REVISION=' + revision,
+        '--no-healthcheck', '--workdir', '/app',
         '--entrypoint', 'python', image, '-B', '-',
     ]
 
@@ -437,7 +491,7 @@ def verifikasi(image: str, revision: str) -> dict:
     periksa_inspect(inspeksi.stdout, image, revision)
     nama = 'osn-release-probe-' + secrets.token_hex(12)
     try:
-        hasil = jalankan(perintah_probe(image, nama), masukan=SUMBER_PROBE, batas=180)
+        hasil = jalankan(perintah_probe(image, nama, revision), masukan=SUMBER_PROBE, batas=180)
         if hasil.returncode:
             raise GalatVerifikasi('probe_gagal')
     except (Exception, KeyboardInterrupt):
@@ -450,11 +504,12 @@ def verifikasi(image: str, revision: str) -> dict:
         raise
     try:
         ringkasan = json.loads(hasil.stdout)
-        if ringkasan != RINGKASAN or any(type(ringkasan[k]) is not type(v) for k, v in RINGKASAN.items()):
+        diharapkan = ringkasan_untuk_revision(revision)
+        if ringkasan != diharapkan or any(type(ringkasan[k]) is not type(v) for k, v in diharapkan.items()):
             raise ValueError
     except (ValueError, TypeError, KeyError):
         raise GalatVerifikasi('ringkasan_tidak_sah') from None
-    return {'ok': True, 'image': image, 'revision': revision, 'probe': RINGKASAN.copy()}
+    return {'ok': True, 'image': image, 'revision': revision, 'probe': diharapkan.copy()}
 
 
 class ParserAman(argparse.ArgumentParser):

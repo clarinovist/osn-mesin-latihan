@@ -347,8 +347,8 @@ def test_http_provider_tidak_lengkap_tidak_membuat_db(tmp_path, monkeypatch):
     s = ServerUji(tmp_path, monkeypatch)
     try:
         kode, isi, _ = s.minta("/pendamping", cookie=_token_guru(s))
-        assert kode == 503
-        assert "belum aktif" in isi.lower()
+        assert kode == 200
+        assert "Ruang pendamping" in isi
         assert not assistant_schema.BAWAAN.exists()
     finally:
         s.berhenti()
@@ -367,11 +367,11 @@ def test_http_feature_flag_default_nonaktif(tmp_path, monkeypatch):
         s.berhenti()
 
 
-def test_nav_pendamping_hanya_untuk_guru():
+def test_nav_pendamping_standalone_tidak_lagi_ditawarkan():
     import teacher_pages
 
-    assert 'href="/pendamping"' in teacher_pages._topbar("ortu", "guru")
-    assert 'href="/pendamping"' in teacher_pages._topbar_stitch("ortu", "guru")
+    assert 'href="/pendamping"' not in teacher_pages._topbar("ortu", "guru")
+    assert 'href="/pendamping"' not in teacher_pages._topbar_stitch("ortu", "guru")
     assert 'href="/pendamping"' not in teacher_pages._topbar("admin", "admin")
     assert 'href="/pendamping"' not in teacher_pages._topbar_stitch("admin", "admin")
 
@@ -392,58 +392,48 @@ def test_http_hanya_cookie_guru_stabil(server):
     assert server.minta("/pendamping", cookie=_token_guru(server))[0] == 200
 
 
-def test_http_consent_chat_prg_header_privat_dan_escape(server):
+def test_http_rute_umum_dialihkan_dan_post_umum_ditolak_tanpa_efek_samping(server):
     token = _token_guru(server)
-    kode, isi, header = server.minta("/pendamping", cookie=token)
-    assert kode == 200
-    assert "Sebelum mulai" in isi
-    assert header["Cache-Control"] == "no-store"
-    assert header["X-Frame-Options"] == "DENY"
-    assert "noindex" in header["X-Robots-Tag"]
-
-    assert _consent(server, token)[0] == 200  # urllib mengikuti 303
     kode, isi, _ = server.minta("/pendamping", cookie=token)
     assert kode == 200
-    assert isi.count("Apa yang bisa dibantu hari ini?") == 1
-    assert "contoh pertanyaan" not in isi.lower()
-
-    import re
-    request_awal = re.search(r'name="request_id" value="([^"]+)"', isi).group(1)
-    kode, isi, _ = server.minta(
+    assert "Ruang pendamping" in isi
+    akun = auth.cari_akun("guru")["id_akun"]
+    assert _consent(server, token)[0] == 200
+    with assistant_schema.buka() as kon:
+        sebelum = tuple(kon.iterdump())
+    kode, isi, header = server.minta(
         "/pendamping/chat-baru", cookie=token,
-        data={"mode": "aktif", "pesan_awal": "Pesan pertama.", "request_id": request_awal},
+        data={"mode": "aktif", "pesan_awal": "Pesan pertama.", "request_id": "req_http_12345678"},
         headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
     )
-    assert kode == 200
-    assert "Pesan pertama." in isi
-    assert "Mari kita bahas satu langkah dulu." in isi
+    assert kode == 410
+    assert "Percakapan umum baru sudah ditutup" in isi
+    assert header["Cache-Control"] == "no-store"
+    assert server.provider.panggilan == []
+    with assistant_schema.buka() as kon:
+        assert tuple(kon.iterdump()) == sebelum
+        assert assistant_store.daftar_chat(kon, akun) == ()
 
-    kode, isi, _ = server.minta(
-        "/pendamping/chat-baru", cookie=token,
-        data={"mode": "aktif"},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    assert kode == 200
-    assert "Kirim" in isi
-    chat_id = Path(urllib_parse_path_from_html(isi)).name
 
-    kode, isi, _ = server.minta(
-        f"/pendamping/chat/{chat_id}/pesan", cookie=token,
-        data={"pesan": "Bantu saya <b>pelan-pelan</b>.", "request_id": "req_http_12345678"},
+def test_post_pesan_chat_umum_lama_ditolak_tanpa_pesan_atau_provider(server):
+    token = _token_guru(server)
+    _consent(server, token)
+    akun = auth.cari_akun("guru")["id_akun"]
+    with assistant_schema.buka() as kon:
+        chat = assistant_store.buat_chat(kon, akun, "aktif", sekarang=1)
+        kon.commit()
+        sebelum = tuple(kon.iterdump())
+    kode, isi, header = server.minta(
+        f"/pendamping/chat/{chat.id}/pesan", cookie=token,
+        data={"pesan": "Jangan dikirim.", "request_id": "req_umum_ditutup"},
         headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
     )
-    assert kode == 200
-    assert "&lt;b&gt;pelan-pelan&lt;/b&gt;" in isi
-    assert "<b>pelan-pelan</b>" not in isi
-    assert "Mari kita bahas satu langkah dulu." in isi
-    sebelum = len(server.provider.panggilan)
-    kode, _, _ = server.minta(
-        f"/pendamping/chat/{chat_id}/pesan", cookie=token,
-        data={"pesan": "Bantu saya <b>pelan-pelan</b>.", "request_id": "req_http_12345678"},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    assert kode == 200
-    assert len(server.provider.panggilan) == sebelum
+    assert kode == 410 and "Pesan ini tidak dikirim" in isi
+    assert header["Cache-Control"] == "no-store"
+    assert server.provider.panggilan == []
+    with assistant_schema.buka() as kon:
+        assert tuple(kon.iterdump()) == sebelum
+        assert assistant_store.daftar_pesan(kon, akun, chat.id) == ()
 
 
 def urllib_parse_path_from_html(isi):
@@ -489,14 +479,55 @@ def test_http_cross_site_duplikat_besar_ditolak_sebelum_provider(server):
     assert len(server.provider.panggilan) == sebelum
 
 
+def test_arsip_chat_umum_hanya_baca_owner_only_dan_tanpa_composer(server):
+    token = _token_guru(server)
+    _consent(server, token)
+    akun = auth.cari_akun("guru")["id_akun"]
+    with assistant_schema.buka() as kon:
+        umum = assistant_store.buat_chat(kon, akun, "aktif", sekarang=1)
+        assistant_store.tambah_pesan(
+            kon, akun, umum.id, "pengguna", "Pertanyaan umum lama sintetis.",
+            request_id="req_arsip_sintetis", sekarang=2,
+        )
+        kon.commit()
+    kode, akun_html, header = server.minta("/akun", cookie=token)
+    assert kode == 200 and "Arsip percakapan lama" in akun_html
+    assert "Pertanyaan umum lama sintetis." not in akun_html
+    assert header["Cache-Control"] == "no-store"
+    kode, arsip, header = server.minta(
+        f"/akun?section=arsip-pendamping&chat={umum.id}", cookie=token,
+    )
+    assert kode == 200 and "Pertanyaan umum lama sintetis." in arsip
+    assert "Pesan untuk Pendamping" not in arsip and "Kirim pesan" not in arsip
+    assert "tidak terhubung ke anak" in arsip
+    assert "script-src" not in header["Content-Security-Policy"]
+    assert "<script" not in arsip and "fonts.googleapis.com" not in arsip
+
+    auth.tambah_akun("ortu-arsip", "sandi-ortu-arsip-123", "guru")
+    akun_lain = auth.cari_akun("ortu-arsip")
+    token_lain = sessions.buat(
+        akun_lain["pengguna"], "guru", id_akun=akun_lain["id_akun"]
+    )
+    asing = server.minta(
+        f"/akun?section=arsip-pendamping&chat={umum.id}", cookie=token_lain,
+    )
+    hilang = server.minta(
+        "/akun?section=arsip-pendamping&chat=chat_" + "f" * 32,
+        cookie=token_lain,
+    )
+    assert asing[0] == hilang[0] == 404 and asing[1] == hilang[1]
+    assert "Pertanyaan umum lama sintetis." not in asing[1]
+
+
 def test_http_akun_lain_tidak_bisa_membaca_chat(server):
     token_a = _token_guru(server)
     _consent(server, token_a)
-    _, isi, _ = server.minta(
-        "/pendamping/chat-baru", cookie=token_a, data={"mode": "aktif"},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    chat_id = Path(urllib_parse_path_from_html(isi)).name
+    akun_a = auth.cari_akun("guru")["id_akun"]
+    with assistant_schema.buka() as kon:
+        chat_id = assistant_store.buat_chat(
+            kon, akun_a, "aktif", sekarang=1,
+        ).id
+        kon.commit()
 
     auth.tambah_akun("ortu-b", "sandi-ortu-b-123", "guru")
     akun_b = auth.cari_akun("ortu-b")

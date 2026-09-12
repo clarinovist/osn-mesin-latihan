@@ -13,11 +13,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import assistant_context  # noqa: E402
 import assistant_policy  # noqa: E402
 import assistant_schema  # noqa: E402
 import assistant_service  # noqa: E402
 import assistant_store  # noqa: E402
 import auth  # noqa: E402
+import database  # noqa: E402
 import sessions  # noqa: E402
 from http_test_kit import ServerUji  # noqa: E402
 from test_assistant_runtime import ProviderPalsu, _consent, _token_guru  # noqa: E402
@@ -87,6 +89,10 @@ def server(tmp_path, monkeypatch):
     palsu = ProviderPalsu()
     monkeypatch.setattr(assistant_service, "panggil_provider_default", palsu)
     pelayan = ServerUji(tmp_path, monkeypatch)
+    with pelayan.buka() as kon:
+        pelayan.anak_memori = database.tambah_siswa(
+            kon, "Anak Memori", "P3", pemilik="guru"
+        )
     pelayan.provider = palsu
     try:
         yield pelayan
@@ -107,8 +113,22 @@ def _siapkan_memori(server, *, dikonfirmasi=True, aktif=False):
     token = _token_guru(server)
     assert _consent(server, token)[0] == 200
     akun = auth.cari_akun("guru")["id_akun"]
+    with server.buka() as kon_data:
+        konteks = assistant_context.ambil(
+            kon_data, "anak", str(server.anak_memori), pemilik="guru"
+        )
     with closing(assistant_schema.buka()) as kon, kon:
-        chat = assistant_store.buat_chat(kon, akun, "aktif", sekarang=100)
+        izin = assistant_store.beri_persetujuan_konteks(
+            kon, akun, jenis="anak", resource_id=str(server.anak_memori),
+            resource_version=konteks.versi, kategori=konteks.kategori,
+            sekarang=99,
+        )
+        chat = assistant_store.buat_chat(
+            kon, akun, "aktif", sekarang=100, context_kind="anak",
+            context_id=str(server.anak_memori), context_version=izin.versi,
+            context_resource_version=konteks.versi,
+            context_category=konteks.kategori,
+        )
         memori = assistant_store.tambah_memori(
             kon, akun, "Gunakan kalimat pendek.", sumber_chat_id=chat.id,
             dikonfirmasi=dikonfirmasi, sekarang=101,
@@ -123,10 +143,18 @@ def _siapkan_memori(server, *, dikonfirmasi=True, aktif=False):
 
 
 def _ubah(server, token, memori_id, versi, isi):
+    with closing(assistant_schema.buka()) as kon:
+        item = next((m for m in assistant_store.daftar_memori(
+            kon, auth.cari_akun("guru")["id_akun"]
+        ) if m.id == memori_id), None)
+        chat_id = item.sumber_chat_id if item is not None else "chat_" + "f" * 32
     try:
         return server.minta(
-            f"/pendamping/memori/{memori_id}/ubah", cookie=token,
-            data={"versi": str(versi), "isi": isi, "kembali": ""},
+            "/pendamping/inline/ubah-memori", cookie=token,
+            data={"inline_host": "anak", "inline_host_id": str(server.anak_memori),
+                  "inline_posisi": "rencana", "chat": chat_id,
+                  "memori": memori_id, "versi_item": str(versi),
+                  "isi_memori": isi},
             headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
         )
     except http.client.RemoteDisconnected:
@@ -138,7 +166,7 @@ def test_http_koreksi_menolak_di_luar_preferensi(server, isi, capfd):
     token, _, _, memori = _siapkan_memori(server)
     sebelum = _snapshot(server)
     kode, tubuh, header = _ubah(server, token, memori.id, memori.versi, isi)
-    assert kode == 404, "Koreksi di luar lingkup diterima lewat POST."
+    assert kode == 409, "Koreksi di luar lingkup diterima lewat POST."
     assert _snapshot(server) == sebelum, "Penolakan mengubah DB."
     assert server.provider.panggilan == []
     assert header["Cache-Control"] == "no-store"
@@ -191,7 +219,7 @@ def test_http_koreksi_sah_saat_nonaktif_tetap_tepat(server, isi):
         assert not assistant_store.penggunaan_memori_aktif(kon, akun)
         assert assistant_store.versi_memori(kon, akun) == versi + 1
     sebelum_retry = _snapshot(server)
-    assert _ubah(server, token, memori.id, memori.versi, "Gunakan tabel.")[0] == 404
+    assert _ubah(server, token, memori.id, memori.versi, "Gunakan tabel.")[0] == 409
     assert _snapshot(server) == sebelum_retry
     assert server.provider.panggilan == []
 
@@ -263,11 +291,14 @@ def test_http_draft_model_invalid_tidak_menjadi_memori(server, isi):
         sebelum = assistant_store.daftar_memori(kon, akun)
         versi = assistant_store.versi_memori(kon, akun)
     kode, tubuh, _ = server.minta(
-        f"/pendamping/chat/{chat.id}/pesan", cookie=token,
-        data={"pesan": "Bantu menjelaskan dengan ringkas.", "request_id": "req_model_invalid"},
+        "/pendamping/inline/pesan", cookie=token,
+        data={"inline_host": "anak", "inline_host_id": str(server.anak_memori),
+              "inline_posisi": "rencana", "chat": chat.id,
+              "pesan": "Bantu menjelaskan dengan ringkas.",
+              "request_id": "req_model_invalid"},
         headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
     )
-    assert kode == 503
+    assert kode == 409
     assert len(server.provider.panggilan) == 1
     if isi:
         assert isi not in tubuh

@@ -1,12 +1,14 @@
 # Pendamping Jagomat — spesifikasi versi awal
 
-**Status: spesifikasi awal/historis; sebagian sudah tersedia di source.**
-Dicatat 11 September 2026 dari kesepakatan diskusi produk. Pernyataan “belum” di
-bagian historis berikut merekam tahap saat dokumen dibuat, bukan inventaris
-runtime terkini. Lihat [kontrak runtime Pendamping](pendamping-runtime.md) untuk
-perilaku dan batas source yang telah dikerjakan. Penerimaan redesign dan keadaan
-produksi tetap harus dibuktikan terpisah; dokumen ini bukan persetujuan mengirim
-data personal ke layanan AI.
+**Status: spesifikasi awal/historis; arah halaman chat terpisah sudah digantikan.**
+Dicatat 11 September 2026 dari kesepakatan diskusi produk. Bagian historis di
+bawah merekam tahap saat dokumen dibuat, bukan arah UI terkini. Pendamping sekarang
+menyatu pada profil anak dan pemeriksaan sesi; lihat
+[kontrak runtime Pendamping](pendamping-runtime.md). Chat umum lama dipertahankan
+sebagai arsip hanya-baca di pengaturan akun; tidak ada composer atau halaman
+Pendamping mandiri. Penerimaan redesign dan keadaan produksi tetap harus
+dibuktikan terpisah; dokumen
+ini bukan persetujuan mengirim data personal ke layanan AI.
 
 Acuan: [palang proyek](../CLAUDE.md), [siklus belajar](siklus-belajar-terpandu.md),
 [design system](design-system.md), dan [workflow](workflow-reference.md).

@@ -38,6 +38,7 @@ def server(tmp_path, monkeypatch):
         sesi = database.buat_sesi(kon, anak, seed=42)
         asing = database.tambah_siswa(kon, "Anak Asing", "P3", pemilik="ortu-b")
         sesi_asing = database.buat_sesi(kon, asing, seed=43)
+        database.tandai_selesai(kon, sesi)
     s.konteks_ids = (anak, sesi, asing, sesi_asing)
     s.provider = palsu
     yield s
@@ -81,11 +82,12 @@ def test_entry_context_hanya_muncul_di_permukaan_guru(server):
         sesi_admin = teacher_pages.halaman_sesi_stitch(
             kon, sesi, peran="admin", pengguna="pengelola"
         ).decode()
-    assert f'/pendamping/konteks/anak/{anak}' in profil_guru
-    assert f'/pendamping/konteks/sesi/{sesi}' in sesi_guru
-    assert f'/pendamping/konteks/soal/{sesi}:1' in sesi_guru
-    assert "/pendamping/konteks/" not in profil_admin
-    assert "/pendamping/konteks/" not in sesi_admin
+    assert 'formaction="/pendamping/inline/buka"' in profil_guru
+    assert f'name="inline_host_id" value="{anak}"' in profil_guru
+    assert f'formaction="/pendamping/inline/buka/sesi/{sesi}/sesi"' in sesi_guru
+    assert f'formaction="/pendamping/inline/buka/sesi/{sesi}/soal/1"' in sesi_guru
+    assert "?bantuan=" not in profil_admin
+    assert "?bantuan=" not in sesi_admin
 
 
 def test_http_entry_context_tidak_otomatis_memakai_data(server):
@@ -97,15 +99,15 @@ def test_http_entry_context_tidak_otomatis_memakai_data(server):
         f"/pendamping/konteks/anak/{anak}", cookie=token
     )
     assert kode == 200
-    assert "Pilih konteks" in isi
-    assert "Anak Konteks" in isi  # Identitas lokal berizin, bukan payload AI.
+    assert "Pilih sumber bantuan" in isi
+    assert "Ringkasan anak" in isi  # Identitas lokal berizin, bukan payload AI.
     assert len(server.provider.panggilan) == 0
 
     kode, isi, _ = server.minta(
         f"/pendamping/konteks/soal/{sesi}:1", cookie=token
     )
     assert kode == 200
-    assert "Soal 1" in isi
+    assert "Pilih sumber bantuan" in isi
     assert len(server.provider.panggilan) == 0
 
 
@@ -155,7 +157,7 @@ def test_http_consent_context_membuka_chat_baru_dan_payload_minimum(server):
     )
     assert kode == 200
     assert "Soal 1" in chat_html
-    chat_id = re.search(r'/pendamping/chat/(chat_[0-9a-f]{32})/pesan', chat_html).group(1)
+    chat_id = re.search(r'name="chat" value="(chat_[0-9a-f]{32})"', chat_html).group(1)
     request_id = re.search(r'name="request_id" value="([^"]+)"', chat_html).group(1)
 
     kode, _, _ = server.minta(
@@ -228,7 +230,7 @@ def test_context_consent_versi_berubah_saat_provider_tidak_commit(server, monkey
               "resource_version": versi, "kategori": "soal_resmi", "mode": "aktif"},
         headers=_origin(server),
     )
-    chat_id = re.search(r'/pendamping/chat/(chat_[0-9a-f]{32})/pesan', chat_html).group(1)
+    chat_id = re.search(r'name="chat" value="(chat_[0-9a-f]{32})"', chat_html).group(1)
     request_id = re.search(r'name="request_id" value="([^"]+)"', chat_html).group(1)
 
     def tambah_izin(_pesan):
@@ -265,7 +267,7 @@ def test_context_consent_dicabut_saat_provider_tidak_commit(server, monkeypatch)
               "resource_version": versi, "kategori": "soal_resmi", "mode": "aktif"},
         headers=_origin(server),
     )
-    chat_id = re.search(r'/pendamping/chat/(chat_[0-9a-f]{32})/pesan', chat_html).group(1)
+    chat_id = re.search(r'name="chat" value="(chat_[0-9a-f]{32})"', chat_html).group(1)
     request_id = re.search(r'name="request_id" value="([^"]+)"', chat_html).group(1)
 
     def cabut(_pesan):
@@ -343,7 +345,7 @@ def test_context_berubah_saat_provider_tidak_commit(server, monkeypatch):
         },
         headers=_origin(server),
     )
-    chat_id = re.search(r'/pendamping/chat/(chat_[0-9a-f]{32})/pesan', chat_html).group(1)
+    chat_id = re.search(r'name="chat" value="(chat_[0-9a-f]{32})"', chat_html).group(1)
     request_id = re.search(r'name="request_id" value="([^"]+)"', chat_html).group(1)
 
     def ubah_resource(_pesan):

@@ -142,6 +142,37 @@ def test_get_hasil_tidak_mengonfirmasi_sesi(server):
     assert bukti == {"konfirmasi": 0, "snapshot": 0, "kejadian": 0}
 
 
+def test_marker_transport_konfirmasi_divalidasi_lalu_tidak_masuk_domain(server):
+    s, data = server
+    with s.buka() as kon:
+        sid, payload = _payload_benar(kon, data["sesi_a"], sertakan=True)
+    marker = {
+        "hadir_sertakan_pemetaan": "1",
+        f"hadir_dilewati_{sid}": "1",
+        f"hadir_belum_{sid}": "1",
+    }
+    kode, _, _ = s.minta(
+        f"/sesi/{data['sesi_a']}/konfirmasi",
+        auth=("guru", SANDI_GURU), data={**payload, **marker},
+    )
+    assert kode == 200
+
+    with s.buka() as kon:
+        jumlah = kon.execute(
+            "SELECT COUNT(*) FROM konfirmasi_hasil WHERE sesi_id=?", (data["sesi_a"],)
+        ).fetchone()[0]
+    rusak = dict(payload, hadir_dilewati_999999="1")
+    kode, _, _ = s.minta(
+        f"/sesi/{data['sesi_a']}/konfirmasi",
+        auth=("guru", SANDI_GURU), data=rusak,
+    )
+    assert kode == 400
+    with s.buka() as kon:
+        assert kon.execute(
+            "SELECT COUNT(*) FROM konfirmasi_hasil WHERE sesi_id=?", (data["sesi_a"],)
+        ).fetchone()[0] == jumlah
+
+
 def test_post_konfirmasi_menyimpan_snapshot_event_cache_dan_opt_in(server):
     s, data = server
     with s.buka() as kon:

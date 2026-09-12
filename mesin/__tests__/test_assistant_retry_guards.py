@@ -287,34 +287,32 @@ def _post(server, token, jalur, data):
     })
 
 
-def test_http_retry_chat_awal_tidak_membuat_histori_hantu(server):
+def test_http_retry_chat_umum_lama_tidak_membuat_histori_hantu(server):
     token = _token_guru(server)
     _consent(server, token)
     data = {"mode": "aktif", "pesan_awal": "Pertanyaan pertama.", "request_id": "req_awal_http_identik"}
-    pertama = _post(server, token, "/pendamping/chat-baru", data)
-    assert pertama[0] == 200
-    kedua = _post(server, token, "/pendamping/chat-baru", data)
-    assert kedua[0] == 200
-    assert _id_chat(pertama[1]) == _id_chat(kedua[1])
-    with assistant_schema.buka() as kon:
-        akun = auth.cari_akun("guru")["id_akun"]
-        assert len(assistant_store.daftar_chat(kon, akun)) == 1
-        assert kon.execute("SELECT COUNT(*) FROM pesan").fetchone()[0] == 2
-    assert len(server.provider.panggilan) == 1
-
-
-def test_http_request_tidak_boleh_dipindah_ke_chat_lain(server):
-    token = _token_guru(server)
-    _consent(server, token)
-    data = {"mode": "aktif", "pesan_awal": "Pertanyaan pertama.", "request_id": "req_awal_http_identik"}
-    pertama = _post(server, token, "/pendamping/chat-baru", data)
-    kedua = _post(server, token, "/pendamping/chat-baru", {"mode": "aktif"})
-    chat_lain = _id_chat(kedua[1])
-    assert chat_lain != _id_chat(pertama[1])
     sebelum = _snapshot_privat()
-    hasil = _post(server, token, f"/pendamping/chat/{chat_lain}/pesan", {
-        "pesan": "Pertanyaan pertama.", "request_id": data["request_id"],
-    })
-    assert hasil[0] in (400, 409, 503)
+    pertama = _post(server, token, "/pendamping/chat-baru", data)
+    kedua = _post(server, token, "/pendamping/chat-baru", data)
+    assert pertama[0] == kedua[0] == 410
+    assert pertama[1] == kedua[1]
     assert _snapshot_privat() == sebelum
-    assert len(server.provider.panggilan) == 1
+    assert server.provider.panggilan == []
+
+
+def test_http_request_chat_umum_lama_tidak_boleh_dipindah(server):
+    token = _token_guru(server)
+    _consent(server, token)
+    akun = auth.cari_akun("guru")["id_akun"]
+    with assistant_schema.buka() as kon:
+        chat_a = assistant_store.buat_chat(kon, akun, "aktif", sekarang=1)
+        chat_b = assistant_store.buat_chat(kon, akun, "aktif", sekarang=2)
+        kon.commit()
+    sebelum = _snapshot_privat()
+    for chat in (chat_a, chat_b):
+        hasil = _post(server, token, f"/pendamping/chat/{chat.id}/pesan", {
+            "pesan": "Pertanyaan pertama.", "request_id": "req_awal_http_identik",
+        })
+        assert hasil[0] == 410
+    assert _snapshot_privat() == sebelum
+    assert server.provider.panggilan == []

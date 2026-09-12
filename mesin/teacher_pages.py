@@ -152,6 +152,7 @@ def _form_remedial(
 def _halaman(
     judul: str, isi: str, ident: tuple[str, str] | None = None,
     stitch: bool = False, kelas_bungkus: str = "", id_utama: str = "",
+    privat: bool = False,
 ) -> bytes:
     """Bingkai semua halaman pengelola. `ident=(pengguna, peran)` menampilkan
     topbar dengan menu pengguna di atas isi — satu pintu agar konsisten.
@@ -169,15 +170,22 @@ def _halaman(
             if id_utama else '<div class="sesi-badan-st">'
         )
         tutup_isi = "</main>" if id_utama else "</div>"
+        font = "" if privat else """<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">"""
+        gaya = gaya_stitch()
+        if privat:
+            gaya = gaya.replace(
+                "@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');",
+                "",
+            )
         return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(judul))}</title>
 {brand.tag_kepala()}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
-<style>{GAYA}{gaya_stitch()}{CSS_SESI}</style></head>
-<body class="st"><div class="{kelas}">{batang}{buka_isi}{isi}{tutup_isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+{font}
+<style>{GAYA}{gaya}{CSS_SESI}</style></head>
+<body class="st"><div class="{kelas}">{batang}{buka_isi}{isi}{tutup_isi}</div>{'' if privat else f'<script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script>'}</body></html>""".encode()
     batang = _topbar(*ident) if ident else ""
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -357,10 +365,7 @@ def _topbar(pengguna: str, peran: str) -> str:
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand_href, item = "/guru", (
-            '<a href="/pendamping">Pendamping</a>'
-            '<a href="/akun">Akun &amp; Siswa</a>'
-        )
+        brand_href, item = "/guru", '<a href="/akun">Akun &amp; Siswa</a>'
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         f'<div class="topbar">'
@@ -389,10 +394,7 @@ def _topbar_stitch(pengguna: str, peran: str) -> str:
             '<a href="/akun?section=akun">Ganti sandi</a>'
         )
     else:
-        brand_href, item = "/guru", (
-            '<a href="/pendamping">Pendamping</a>'
-            '<a href="/akun">Akun &amp; Siswa</a>'
-        )
+        brand_href, item = "/guru", '<a href="/akun">Akun &amp; Siswa</a>'
     siapa = html.escape(pengguna) if pengguna else ""
     return (
         '<div class="st-topbar">'
@@ -414,7 +416,7 @@ def _topbar_stitch(pengguna: str, peran: str) -> str:
 
 def _halaman_stitch(
     judul: str, isi: str, ident: tuple[str, str] | None = None,
-    kelas_bungkus: str = "",
+    kelas_bungkus: str = "", privat: bool = False,
 ) -> bytes:
     """Bingkai halaman versi Stitch — pakai GAYA_STITCH dan body.st.
 
@@ -427,15 +429,23 @@ def _halaman_stitch(
     """
     batang = _topbar_stitch(*ident) if ident else ""
     kelas = f"bungkus-st {kelas_bungkus}".strip()
+    font = "" if privat else """<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">"""
+    gaya = GAYA_STITCH
+    if privat:
+        gaya = gaya.replace(
+            "@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');",
+            "",
+        )
+    skrip = "" if privat else f"<script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script>"
     return f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(judul))}</title>
 {brand.tag_kepala()}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-<style>{GAYA_STITCH}</style></head>
-<body class="st"><div class="{kelas}">{batang}{isi}</div><script>{SKRIP_MATA_SANDI}</script><script>{SKRIP_CEGAH_KIRIM_GANDA}</script></body></html>""".encode()
+{font}
+<style>{gaya}</style></head>
+<body class="st"><div class="{kelas}">{batang}{isi}</div>{skrip}</body></html>""".encode()
 
 
 def halaman_utama_stitch(
@@ -546,17 +556,21 @@ def halaman_utama_stitch(
     )
 
 
-def _kontrol_mode_sesi() -> str:
+def _kontrol_mode_sesi(draf=None) -> str:
     """Pilihan cara menjawab dan batas waktu sebagai dua keputusan terpisah."""
+    mode = draf.mode if draf else "diagnostik"
+    timer = draf.timer_mode if draf else False
+    durasi = draf.durasi_menit if draf else "30"
+    timer_auto = draf.timer_auto if draf else "0"
     return (
         '<div class="strip-kolom"><label>Mode sesi</label>'
         '<div class="mode-pilih">'
         '<label class="mode-opsi"><input type="radio" name="mode" '
-        'value="diagnostik" checked>'
+        f'value="diagnostik"{" checked" if mode == "diagnostik" else ""}>'
         '<span class="mode-teks">Mode Diagnosa'
         '<span class="mode-desk">Jawaban dan cara berpikir anak ikut diperiksa.</span>'
         '</span></label>'
-        '<label class="mode-opsi"><input type="radio" name="mode" value="drill">'
+        f'<label class="mode-opsi"><input type="radio" name="mode" value="drill"{" checked" if mode == "drill" else ""}>'
         '<span class="mode-teks">Latihan Cepat'
         '<span class="mode-desk">Anak langsung mengisi jawaban. Cocok untuk pengulangan.</span>'
         '</span></label>'
@@ -564,20 +578,21 @@ def _kontrol_mode_sesi() -> str:
         '<fieldset class="pengaturan-timer">'
         '<legend>Batas waktu</legend>'
         '<label class="mode-opsi timer-toggle">'
-        '<input type="checkbox" name="timer_mode" value="sesi">'
+        '<input type="hidden" name="hadir_timer_mode" value="1">'
+        f'<input type="checkbox" name="timer_mode" value="sesi"{" checked" if timer else ""}>'
         '<span class="mode-teks">Gunakan batas waktu'
         '<span class="mode-desk">Hitung mundur ditampilkan selama seluruh sesi.</span>'
         '</span></label>'
         '<div class="rincian-timer">'
         '<label class="durasi-timer">Durasi sesi '
         '<span><input type="text" inputmode="numeric" '
-        'name="durasi_menit" value="30"> menit</span>'
+        f'name="durasi_menit" value="{html.escape(durasi, quote=True)}"> menit</span>'
         '<small>Saran: sekitar 3 menit per soal.</small></label>'
         '<fieldset class="akibat-timer"><legend>Ketika waktu habis</legend>'
         '<label class="mode-opsi"><input type="radio" name="timer_auto" '
-        'value="0" checked> Ingatkan anak, tetapi tetap boleh menyelesaikan</label>'
+        f'value="0"{" checked" if timer_auto == "0" else ""}> Ingatkan anak, tetapi tetap boleh menyelesaikan</label>'
         '<label class="mode-opsi"><input type="radio" name="timer_auto" '
-        'value="1"> Kirim jawaban secara otomatis</label>'
+        f'value="1"{" checked" if timer_auto == "1" else ""}> Kirim jawaban secara otomatis</label>'
         '</fieldset></div></fieldset>'
     )
 
@@ -589,6 +604,10 @@ def halaman_anak(
     pengguna: str = "",
     sorot: int | None = None,
     pesan: str = "",
+    bantuan_rencana: str = "",
+    bantuan_latihan: str = "",
+    draf_latihan=None,
+    privat: bool = False,
 ) -> bytes:
     """History satu anak (feedback Filia 1 Sep 2026 no. 6).
 
@@ -596,8 +615,11 @@ def halaman_anak(
     badge review & mode), strip buat sesi baru, dan pintasan laporan.
     `siswa` baris sqlite dari tabel siswa.
     """
+    privat = privat or bool(bantuan_rencana or bantuan_latihan)
     opsi_topik = "".join(
-        f'<option value="{html.escape(t)}">{html.escape(ambil(t).nama)}</option>'
+        f'<option value="{html.escape(t)}"'
+        f'{" selected" if draf_latihan and draf_latihan.topik == t else ""}>'
+        f'{html.escape(ambil(t).nama)}</option>'
         for t in _topik_untuk_level(siswa["tingkat"])
     )
     sesi = kon.execute(
@@ -638,6 +660,18 @@ def halaman_anak(
                 '<button type="submit" class="tombol-ikon-st" '
                 'aria-label="Cabut tautan sesi" title="Cabut tautan">'
                 '<span class="material-symbols-outlined">link_off</span></button></form>'
+            )
+        if privat:
+            # Fallback native: fungsi tetap tersedia tanpa fetch/confirm JS.
+            peringatan = (
+                '<p class="sub">Membuat tautan baru akan menonaktifkan tautan sebelumnya.</p>'
+                if aktif else ""
+            )
+            return (
+                '<div class="blok-bagikan-st"><div class="aksi-bagikan-st">'
+                f'<form method="post" action="/sesi/{rid}/bagikan">{peringatan}'
+                f'<button type="submit">{("Buat tautan baru" if aktif else "Bagikan sesi ke anak")}</button>'
+                '</form>' + cabut + '</div></div>'
             )
         return (
             '<div class="blok-bagikan-st">'
@@ -725,15 +759,22 @@ def halaman_anak(
         f'<select id="manual-topik" name="topik" class="st-input">{opsi_topik}</select></div>'
         f'<div class="strip-kolom"><label for="manual-jumlah">Jumlah Soal (estimasi ±3 mnt/soal)</label>'
         f'<select id="manual-jumlah" name="jumlah_soal" class="st-input">'
-        f'<option value="" selected>Default (sesuai topik)</option>'
-        f'<option value="10">10 soal (± 30 mnt)</option>'
-        f'<option value="15">15 soal (± 45 mnt)</option>'
-        f'<option value="20">20 soal (± 60 mnt)</option>'
-        f'<option value="25">25 soal (± 75 mnt)</option>'
-        f'<option value="30">30 soal (± 90 mnt)</option>'
-        f'</select></div>'
-        f'{_kontrol_mode_sesi()}'
-        '<button type="submit" class="st-tombol-coral">'
+        + "".join(
+            f'<option value="{nilai}"'
+            f'{" selected" if (draf_latihan.jumlah_soal if draf_latihan else "") == nilai else ""}>'
+            f'{label}</option>'
+            for nilai, label in (("", "Default (sesuai topik)"), ("10", "10 soal (± 30 mnt)"),
+                                 ("15", "15 soal (± 45 mnt)"), ("20", "20 soal (± 60 mnt)"),
+                                 ("25", "25 soal (± 75 mnt)"), ("30", "30 soal (± 90 mnt)"))
+        )
+        + f'</select></div>{_kontrol_mode_sesi(draf_latihan)}'
+        + (bantuan_latihan or (
+            __import__("assistant_components").tombol_buka(
+                __import__("assistant_inline").tujuan_anak(int(siswa["id"]), "latihan"),
+                dalam_form=True,
+            ) if peran == "guru" and pengguna else ""
+        ))
+        + '<button type="submit" class="st-tombol-coral">'
         '<span class="material-symbols-outlined" style="font-size:1.1rem">play_arrow</span>'
         "Buat sesi baru</button>"
         "</form>"
@@ -834,19 +875,31 @@ def halaman_anak(
         if pesan
         else ""
     )
-    kartu_rencana = learning_cycle_ui.kartu_rencana(kon, int(siswa["id"]))
-    konteks_pendamping = (
-        f'<a class="st-tombol-sekunder" href="/pendamping/konteks/anak/{int(siswa["id"])}">'
-        'Bahas rencana ini dengan Pendamping</a>'
-        if peran == "guru" and pengguna else ""
+    tautan_bantuan = (
+        __import__("assistant_components").tombol_buka(
+            __import__("assistant_inline").tujuan_anak(int(siswa["id"]), "rencana")
+        )
+        if peran == "guru" and pengguna and not bantuan_rencana else ""
+    )
+    kartu_rencana = learning_cycle_ui.kartu_rencana(
+        kon, int(siswa["id"]), slot_bantuan=bantuan_rencana or tautan_bantuan,
     )
     latihan_manual = (
-        '<details class="atur-latihan-st">'
+        '<details class="atur-latihan-st"' + (' open' if bantuan_latihan else '') + '>'
         '<summary>Atur latihan sendiri</summary>'
         '<p class="sub">Latihan bebas tidak mengubah progres rencana terpandu.</p>'
         f"{blok_buat_latihan}</details>"
     )
 
+    skrip_bagikan = "" if privat else (
+        "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
+        "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin dan berlaku 7 hari.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil. Tautan berlaku 7 hari.';return false;}}"
+        "async function bagikan(t,k){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});k.textContent='Tautan dibagikan dan berlaku 7 hari.';return;}catch(e){if(e.name==='AbortError'){k.textContent='';return;}}}await salin(t,k);}"
+        "for(var i=0;i<b.length;i++){b[i].addEventListener('click',async function(){var x=this,k=x.closest('.blok-bagikan-st').querySelector('.kabar-bagikan-st');if(x.dataset.tautan){await bagikan(x.dataset.tautan,k);return;}if(x.dataset.bagikanAktif==='1'&&!window.confirm('Membuat tautan baru akan menonaktifkan tautan sebelumnya. Lanjutkan?'))return;x.disabled=true;"
+        "try{var r=await fetch(x.dataset.bagikanUrl,{method:'POST',headers:{'X-Requested-With':'fetch'}});"
+        "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan,k);}"
+        "catch(e){k.textContent='Tautan belum berhasil dibuat. Coba lagi.';}finally{x.disabled=false;}});}})()</script>"
+    )
     return _halaman_stitch(
         f"{siswa['nama']} — {T.NAMA_PRODUK}",
         '<main aria-labelledby="judul-profil">'
@@ -859,7 +912,7 @@ def halaman_anak(
         "</h1>"
         "</header>"
         f"{kabar}"
-        f"{kartu_rencana}{konteks_pendamping}"
+        f"{kartu_rencana}"
         # Struktur lama dipertahankan; CSS data-rencana memindahkan kolom
         # alat manual secara visual ke atas riwayat tanpa entry point ganda.
         '<div class="anak-grid" data-rencana="vertikal">'
@@ -874,16 +927,10 @@ def halaman_anak(
         "</section>"
         '<div class="anak-kolom-kanan">'
         f"{latihan_manual}"
-        "</div></div></main>"
-        "<script>(function(){var b=document.querySelectorAll('.tombol-bagikan-st');"
-        "async function salin(t,k){try{await navigator.clipboard.writeText(t);k.textContent='Tautan tersalin dan berlaku 7 hari.';return true;}catch(e){window.prompt('Salin tautan ini:',t);k.textContent='Salin tautan yang tampil. Tautan berlaku 7 hari.';return false;}}"
-        "async function bagikan(t,k){if(navigator.share){try{await navigator.share({title:'Sesi Jagomat',url:t});k.textContent='Tautan dibagikan dan berlaku 7 hari.';return;}catch(e){if(e.name==='AbortError'){k.textContent='';return;}}}await salin(t,k);}"
-        "for(var i=0;i<b.length;i++){b[i].addEventListener('click',async function(){var x=this,k=x.closest('.blok-bagikan-st').querySelector('.kabar-bagikan-st');if(x.dataset.tautan){await bagikan(x.dataset.tautan,k);return;}if(x.dataset.bagikanAktif==='1'&&!window.confirm('Membuat tautan baru akan menonaktifkan tautan sebelumnya. Lanjutkan?'))return;x.disabled=true;"
-        "try{var r=await fetch(x.dataset.bagikanUrl,{method:'POST',headers:{'X-Requested-With':'fetch'}});"
-        "if(!r.ok)throw new Error('gagal');var d=await r.json();x.dataset.tautan=d.tautan;x.dataset.bagikanAktif='1';await bagikan(d.tautan,k);}"
-        "catch(e){k.textContent='Tautan belum berhasil dibuat. Coba lagi.';}finally{x.disabled=false;}});}})()</script>",
+        f"</div></div></main>{skrip_bagikan}",
         ident=(pengguna if pengguna else "guru", peran),
         kelas_bungkus="lebar pendamping-editorial-st profil-editorial-st",
+        privat=privat,
     )
 
 
@@ -1180,7 +1227,9 @@ def _label_tahap_sesi(tujuan: str, *, riwayat: bool = False) -> str:
 
 def halaman_sesi_stitch(
     kon, sesi_id: int, pesan: str = "", peran: str = "guru",
-    pengguna: str = "",
+    pengguna: str = "", bantuan: str = "", bantuan_nomor: int | None = None,
+    draf_koreksi=None,
+    privat: bool = False,
 ) -> bytes:
     """Detail sesi versi Stitch: pratinjau lalu koreksi setelah dikirim."""
     from style_stitch import gaya_stitch, CSS_SESI
@@ -1306,11 +1355,15 @@ def halaman_sesi_stitch(
                 "</div>"
             )
 
+        draf_butir = draf_koreksi.untuk(int(b["sesi_soal_id"])) if draf_koreksi else None
+        jawaban_tampil = draf_butir.jawaban if draf_butir else (b["jawaban"] or "")
+        kode_tampil = draf_butir.kode if draf_butir else kode
+        cara_tampil = draf_butir.cara if draf_butir else (b["cara"] or "")
         pilihan_kode = (
             (v, t) for v, t in KODE_PILIHAN if not (drill and v == "N")
         )
         pilih = "".join(
-            f'<option value="{v}"{" selected" if (v == kode or (v == "benar" and benar)) else ""}>'
+            f'<option value="{v}"{" selected" if (v == kode_tampil or (draf_butir is None and v == "benar" and benar)) else ""}>'
             f"{html.escape(t)}</option>"
             for v, t in pilihan_kode
         )
@@ -1346,15 +1399,20 @@ def halaman_sesi_stitch(
                 f'<label class="koreksi-label-st" for="cara-{b["sesi_soal_id"]}">Isi kotak &quot;Caraku&quot; — '
                 'ringkas saja, cukup yang menunjukkan caranya</label>'
                 f'<textarea class="koreksi-textarea-st" id="cara-{b["sesi_soal_id"]}" name="cara_{b["sesi_soal_id"]}">'
-                f'{html.escape(b["cara"] or "")}</textarea>'
+                f'{html.escape(cara_tampil)}</textarea>'
             )
 
         snapshot_butir = snapshot_terakhir.get(int(b["sesi_soal_id"]))
         pemahaman_terpilih = (
+            draf_butir.pemahaman if draf_butir else
             snapshot_butir["cek_pemahaman"] if snapshot_butir is not None else None
         )
-        dilewati_terpilih = bool(
-            snapshot_butir is not None and snapshot_butir["dilewati"]
+        dilewati_terpilih = (
+            draf_butir.dilewati if draf_butir else
+            bool(snapshot_butir is not None and snapshot_butir["dilewati"])
+        )
+        belum_terpilih = (
+            draf_butir.belum_pernah if draf_butir else bool(b["belum_pernah"] or kode == "T")
         )
         pilihan_pemahaman = "".join(
             f'<option value="{nilai}"'
@@ -1379,7 +1437,7 @@ def halaman_sesi_stitch(
       <div>
         <label class="koreksi-label-st" for="jwb-{b["sesi_soal_id"]}">Jawaban anak</label>
         <input type="text" class="koreksi-input-st" id="jwb-{b["sesi_soal_id"]}" name="jwb_{b["sesi_soal_id"]}"
-               value="{html.escape(b["jawaban"] or "")}">
+               value="{html.escape(jawaban_tampil)}">
       </div>
       <div>
         <label class="koreksi-label-st" for="kode-{b["sesi_soal_id"]}">Kode (kosong = usulan mesin)</label>
@@ -1391,18 +1449,21 @@ def halaman_sesi_stitch(
     <select class="koreksi-select-st" id="paham-{b["sesi_soal_id"]}"
             name="cek_pemahaman_{b["sesi_soal_id"]}">{pilihan_pemahaman}</select>
     <div class="koreksi-centang-st">
+      <input type="hidden" name="hadir_dilewati_{b["sesi_soal_id"]}" value="1">
       <input type="checkbox" id="lewati-{b["sesi_soal_id"]}"
              name="dilewati_{b["sesi_soal_id"]}" value="1"
              {"checked" if dilewati_terpilih else ""}>
       <label for="lewati-{b["sesi_soal_id"]}">Lewati butir ini dari hasil</label>
     </div>
     <div class="koreksi-centang-st info-anak-st">
+      <input type="hidden" name="hadir_belum_{b["sesi_soal_id"]}" value="1">
       <input type="checkbox" id="bp{b["sesi_soal_id"]}"
-             name="belum_{b["sesi_soal_id"]}"
-             {"checked" if (b["belum_pernah"] or kode == "T") else ""}>
+             name="belum_{b["sesi_soal_id"]}" value="1"
+             {"checked" if belum_terpilih else ""}>
       <label for="bp{b["sesi_soal_id"]}"><span class="info-anak-label-st">Dari anak:</span> Belum pernah melihat soal seperti ini</label>
     </div>
     {usulan}
+    {bantuan if bantuan_nomor == int(b["nomor"]) else ""}
   </div>
 </div>""")
 
@@ -1415,16 +1476,37 @@ def halaman_sesi_stitch(
     pil = _pil_sesi_stitch(kon, sesi_id, "koreksi")
     konteks_pendamping = ""
     if peran == "guru" and pengguna:
-        tautan_soal = "".join(
-            f'<a href="/pendamping/konteks/soal/{sesi_id}:{int(b["nomor"])}">'
-            f'Bahas soal {int(b["nomor"])}</a>'
-            for b in database.isi_sesi(kon, sesi_id)
-        )
-        konteks_pendamping = (
-            '<details class="alat-pendamping-st"><summary>Bahas dengan Pendamping</summary>'
-            f'<a href="/pendamping/konteks/sesi/{sesi_id}">Bahas sesi ini</a>'
-            f'{tautan_soal}</details>'
-        )
+        if bantuan and (bantuan_nomor is None or not sudah_dikirim):
+            # Sesi belum dikirim belum mempunyai kartu koreksi. Bantuan soal
+            # tetap muncul di pengantar tanpa membuka koreksi lebih dini.
+            konteks_pendamping = bantuan
+        else:
+            if sudah_dikirim:
+                import assistant_components
+                import assistant_inline
+                tautan_soal = "".join(
+                    assistant_components.tombol_buka(
+                        assistant_inline.tujuan_sesi(sesi_id, nomor=int(b["nomor"])),
+                        form_id=f"form-koreksi-{sesi_id}", label=f'Bahas soal {int(b["nomor"])}',
+                    ) for b in database.isi_sesi(kon, sesi_id)
+                )
+            else:
+                tautan_soal = "".join(
+                    f'<a href="/sesi/{sesi_id}?bantuan=soal&amp;nomor={int(b["nomor"])}#bantuan-soal-{int(b["nomor"])}">'
+                    f'Bahas soal {int(b["nomor"])}</a>'
+                    for b in database.isi_sesi(kon, sesi_id)
+                )
+            if sudah_dikirim:
+                tautan_sesi = assistant_components.tombol_buka(
+                    assistant_inline.tujuan_sesi(sesi_id),
+                    form_id=f"form-koreksi-{sesi_id}", label="Bahas sesi ini",
+                )
+            else:
+                tautan_sesi = f'<a href="/sesi/{sesi_id}?bantuan=sesi#bantuan-sesi">Bahas sesi ini</a>'
+            konteks_pendamping = (
+                '<details class="alat-pendamping-st"><summary>Bahas dengan Pendamping</summary>'
+                f'{tautan_sesi}{tautan_soal}</details>'
+            )
     if not sudah_dikirim:
         pil = pil.replace(">Koreksi</a>", ">Soal &amp; kunci</a>")
 
@@ -1507,8 +1589,8 @@ def halaman_sesi_stitch(
                 f'<button type="submit">Simpan koreksi</button>{aksi_konfirmasi}'
             )
             form_hasil = (
-                f'<form method="post" action="/sesi/{sesi_id}">'
-                f'{"".join(kartu)}{opsi_pemetaan}'
+                f'<form id="form-koreksi-{sesi_id}" method="post" action="/sesi/{sesi_id}">'
+                f'{"".join(kartu)}<input type="hidden" name="hadir_sertakan_pemetaan" value="1">{opsi_pemetaan}'
                 f'<div class="koreksi-simpan-st">{urutan_aksi}</div></form>'
             )
             blok_isi = (
@@ -1646,6 +1728,22 @@ def halaman_sesi_stitch(
     )
 
     batang = _topbar_stitch(pengguna, peran) if pengguna else ""
+    aksi_bahaya_tampil = (
+        '<p class="sub">Tutup bantuan untuk membuka aksi pembatalan atau hapus.</p>'
+        if bantuan else tombol_hapus
+    )
+    if privat and not bantuan and "onsubmit=" in aksi_bahaya_tampil:
+        # Fallback native tanpa inline handler: konsekuensi terlihat dan checkbox
+        # required mencegah submit tak sengaja. Handler ownership tetap otoritatif.
+        aksi_bahaya_tampil = (
+            f'<form method="post" action="/sesi/{sesi_id}/batalkan" class="form-pembatalan-st">'
+            '<p class="sub">Sesi dan bukti tetap tersimpan dalam histori, tetapi tidak lagi aktif dalam siklus belajar.</p>'
+            '<label for="alasan-batal">Alasan pembatalan <span>(opsional)</span></label>'
+            '<input id="alasan-batal" type="text" name="alasan" maxlength="300" placeholder="Tulis alasan">'
+            '<label class="koreksi-centang-st"><input type="checkbox" required> '
+            'Saya memahami sesi ini akan dibatalkan.</label>'
+            '<button type="submit" class="tombol-kecil-st">Batalkan sesi</button></form>'
+        )
     isi = (
         f'<main class="sesi-badan-st" aria-labelledby="judul-koreksi">'
         f'{jejak}'
@@ -1664,22 +1762,26 @@ def halaman_sesi_stitch(
         f"{blok_remedial}"
         f'<div class="danger-zone-st">'
         f'<p class="sub">{keterangan_bahaya}</p>'
-        f"{tombol_hapus}</div>"
+        f'{aksi_bahaya_tampil}</div>'
         f"</main>"
     )
-    skrip_extra = (
+    skrip_extra = "" if (bantuan or privat) else (
         f"<script>{SKRIP_MATA_SANDI}</script>"
         f"<script>{SKRIP_CEGAH_KIRIM_GANDA}</script>"
     )
+    gaya_sesi = gaya_stitch()
+    if bantuan or privat:
+        gaya_sesi = gaya_sesi.replace(
+            "@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');",
+            "",
+        )
     return (
         f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(brand.judul(f"Sesi #{sesi_id}"))}</title>
 {brand.tag_kepala()}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">
-<style>{gaya_stitch()}{CSS_SESI}</style></head>
+{'' if (bantuan or privat) else '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined&display=swap" rel="stylesheet">'}
+<style>{gaya_sesi}{CSS_SESI}</style></head>
 <body class="st"><div class="bungkus-st pendamping-editorial-st koreksi-editorial-st">{batang}{isi}</div>{skrip_extra}</body></html>"""
     ).encode()
 

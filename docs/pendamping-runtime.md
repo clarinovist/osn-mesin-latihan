@@ -97,16 +97,36 @@ existing Pendamping. Pengujian guard tidak menggantikan walkthrough orang tua.
 
 ## UI runtime server-side
 
-Implementasi UI memakai arah prototype lokal G2 v1 dengan koreksi hasil review
-independen. Source menyediakan:
+Arah UI aktif kini menyatukan Pendamping pada profil anak dan pemeriksaan sesi.
+Cutover tidak lagi menyediakan dokumen chat mandiri. `/pendamping` dan varian
+`tanpa-memori` kembali ke ruang orang tua; POST pembuatan chat umum baru ditolak
+tanpa efek samping. Bookmark chat/usulan/operasi berkonteks dipetakan ke host
+inline setelah principal, sumber, dan izin divalidasi.
 
-- Satu composer chat ringan, multiline escaped, menu native `<details>`, tautan
-  kembali ke ruang belajar. `/pendamping/tanpa-memori` membuka composer tanpa
-  menulis chat; submit textarea kosong ditolak. POST mode-only lama tetap
-  kompatibel untuk pembuatan chat kosong eksplisit.
-- Riwayat melalui `/pendamping/riwayat?halaman=N`, maksimal 20 metadata per
-  halaman, bukan seluruh transkrip. Label waktu dibuat WIB dan ID tetap;
-  penanda aktif mengikuti chat yang benar, bukan baris pertama otomatis.
+Source inline menyediakan:
+
+- Slot bantuan di dalam kartu rencana, area latihan manual, pengantar sesi, atau
+  satu kartu soal yang dipilih. Membuka bantuan dari form aktif memakai POST
+  native supaya draf tetap request-local dan tidak disimpan otomatis.
+- Consent provider dan konteks tetap terpisah. Draf koreksi/manual tidak masuk
+  payload provider, storage Pendamping, cookie, atau URL.
+- History dibatasi exact-resource dan seluruh aksi dalam form koreksi memakai
+  submit POST yang membawa kembali draf. Mode tanpa memori tetap menyimpan history.
+- Host assisted memakai header no-store/no-referrer/noindex/frame/CSP tanpa
+  script dan tidak meminta resource pihak ketiga. Respons Tutup tetap privat;
+  tindakan destruktif memakai fallback native dengan konsekuensi dan konfirmasi
+  eksplisit, bukan handler JavaScript yang diblokir. Draf dipulihkan dalam request
+  yang sama.
+- Chat umum lama tampil bersyarat sebagai **Arsip percakapan lama** di pengaturan
+  akun: metadata maksimal 20 per halaman dan hanya transkrip yang dipilih yang
+  dimuat. Arsip owner-only, readonly, tanpa composer, dan tidak dihubungkan ke
+  anak berdasarkan tebakan. Bila kosong, disclosure/menu arsip tidak tampil.
+- Hapus/abaikan memori inline selalu melewati tinjauan isi+versi, penjelasan bahwa
+  chat sumber tetap ada dan backup maksimal 30 hari, checkbox eksplisit, serta
+  pilihan batal. Tombol awal tidak membawa persetujuan tersembunyi.
+
+Adapter warisan yang masih dipertahankan:
+
 - Nama sumber tampil hanya pada proyeksi UI berizin, tidak digabung ke payload
   provider. Sumber soal kembali ke halaman sesi karena anchor input tidak
   tersedia pada seluruh state sesi. Batal/ganti sumber tidak memindahkan chat.
@@ -118,9 +138,9 @@ independen. Source menyediakan:
   dibuat tetap bisa ditemukan melalui GET usulan yang memvalidasi pemilik.
   Consent dicabut atau resource asing bukan izin membuka histori.
 - Pengaturan memori membedakan aktif kosong/berisi, nonaktif dan tanpa memori.
-  Editor/hapus memiliki halaman tersendiri; asal chat dipertahankan melalui
-  tujuan yang diverifikasi server. Koreksi ditolak tidak memantulkan input.
-  Hapus memerlukan persetujuan eksplisit; tidak membutuhkan JS atau CSP longgar.
+  Pengelolaan aktif dilakukan inline pada host sumber. Koreksi ditolak tidak
+  memantulkan input. Hapus memerlukan persetujuan eksplisit dan tidak mengandalkan
+  JavaScript.
 - Label usulan dari topik/kartu resmi, parameter readonly, pesan sumber beranchor.
   GET hasil memakai hasil mesin sebenarnya; POST konfirmasi tetap terikat guard
   tinjauan dan catatan eksekusi yang sudah dijelaskan di atas.

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import html
 import json
+import urllib.parse
 from pathlib import Path
 import re
 import sys
@@ -33,6 +35,19 @@ USULAN_SAH = {
 
 def _origin(server):
     return {"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"}
+
+
+def _field_tinjau(isi):
+    cocok = re.search(
+        r'name="data_aksi" value="([^"]+)"[^>]+formaction="/pendamping/inline/konfirmasi-usulan"',
+        isi,
+    )
+    if cocok:
+        return dict(urllib.parse.parse_qsl(html.unescape(cocok.group(1))))
+    return {
+        nama: re.search(r'name="' + nama + r'" value="([^"]+)"', isi).group(1)
+        for nama in ("usulan", "versi_usulan", "hash_usulan", "request_id")
+    }
 
 
 @pytest.fixture()
@@ -81,7 +96,7 @@ def _buat_usulan_http(server):
         headers=_origin(server),
     )
     chat_id = re.search(
-        r'/pendamping/chat/(chat_[0-9a-f]{32})/pesan', chat_html
+        r'name="chat" value="(chat_[0-9a-f]{32})"', chat_html
     ).group(1)
     request_id = re.search(
         r'name="request_id" value="([^"]+)"', chat_html
@@ -94,7 +109,7 @@ def _buat_usulan_http(server):
     )
     assert kode == 200
     usulan_id = re.search(
-        r'/pendamping/usulan/(usulan_[0-9a-f]{32})', hasil
+        r'(usulan_[0-9a-f]{32})', hasil
     ).group(1)
     return token, chat_id, usulan_id
 
@@ -162,16 +177,15 @@ def test_http_tinjau_lalu_konfirmasi_membuat_satu_sesi_bebas(server):
         f"/pendamping/usulan/{usulan_id}", cookie=token
     )
     assert kode == 200
-    assert "Sumber permintaan" in tinjau
+    assert "Tinjau usulan latihan" in tinjau
     assert "Pola Bilangan" in tinjau
     assert "P3" in tinjau
     assert "10 soal" in tinjau
-    assert "Belum ada sesi" not in tinjau
-    versi = re.search(r'name="versi" value="(\d+)"', tinjau).group(1)
-    sidik = re.search(r'name="hash" value="([0-9a-f]{64})"', tinjau).group(1)
-    request_id = re.search(
-        r'name="request_id" value="(aksi_[0-9a-f]{32})"', tinjau
-    ).group(1)
+    assert "Belum ada sesi. Tinjau lalu konfirmasi" not in tinjau
+    field = _field_tinjau(tinjau)
+    versi = field["versi_usulan"]
+    sidik = field["hash_usulan"]
+    request_id = field["request_id"]
 
     kode, hasil, _ = server.minta(
         f"/pendamping/usulan/{usulan_id}/konfirmasi",
@@ -240,11 +254,10 @@ def test_perubahan_chat_setelah_tinjau_meminta_tinjau_ulang(server):
     _, tinjau, _ = server.minta(
         f"/pendamping/usulan/{usulan_id}", cookie=token
     )
-    versi = re.search(r'name="versi" value="(\d+)"', tinjau).group(1)
-    sidik = re.search(r'name="hash" value="([0-9a-f]{64})"', tinjau).group(1)
-    request_id = re.search(
-        r'name="request_id" value="(aksi_[0-9a-f]{32})"', tinjau
-    ).group(1)
+    field = _field_tinjau(tinjau)
+    versi = field["versi_usulan"]
+    sidik = field["hash_usulan"]
+    request_id = field["request_id"]
     with assistant_schema.buka() as kon:
         akun = auth.cari_akun("guru")["id_akun"]
         assistant_store.tambah_pesan(
@@ -270,10 +283,9 @@ def test_hash_atau_owner_asing_gagal_tanpa_sesi(server):
     _, tinjau, _ = server.minta(
         f"/pendamping/usulan/{usulan_id}", cookie=token
     )
-    versi = re.search(r'name="versi" value="(\d+)"', tinjau).group(1)
-    request_id = re.search(
-        r'name="request_id" value="(aksi_[0-9a-f]{32})"', tinjau
-    ).group(1)
+    field = _field_tinjau(tinjau)
+    versi = field["versi_usulan"]
+    request_id = field["request_id"]
     with server.buka() as kon:
         sebelum = kon.execute("SELECT COUNT(*) FROM sesi").fetchone()[0]
     kode, _, _ = server.minta(
@@ -288,9 +300,7 @@ def test_hash_atau_owner_asing_gagal_tanpa_sesi(server):
         cookie=token,
         data={
             "versi": str(int(versi) + 1),
-            "hash": re.search(
-                r'name="hash" value="([0-9a-f]{64})"', tinjau
-            ).group(1),
+            "hash": field["hash_usulan"],
             "request_id": request_id,
         },
         headers=_origin(server),

@@ -70,10 +70,30 @@ def _baca_form(penangan) -> dict[str, str]:
     return {nama: nilai[0] for nama, nilai in data.items()}
 
 
+def _tanpa_marker_transport(kon, sesi_id, data):
+    """Validasi lalu buang marker draf sebelum boundary bukti resmi."""
+    ids = {int(b["sesi_soal_id"]) for b in database.isi_sesi(kon, sesi_id)}
+    hasil = dict(data)
+    for nama in tuple(hasil):
+        if nama == "hadir_sertakan_pemetaan":
+            if hasil[nama] != "1":
+                raise ValueError("marker formulir tidak sah")
+            del hasil[nama]
+            continue
+        cocok = re.fullmatch(r"hadir_(?:dilewati|belum)_([1-9][0-9]*)", nama)
+        if nama.startswith("hadir_"):
+            if cocok is None or int(cocok[1]) not in ids or hasil[nama] != "1":
+                raise ValueError("marker formulir tidak sah")
+            del hasil[nama]
+    return hasil
+
+
 def _jalankan(kon, jenis, identitas, aksi, guru, data):
     if jenis == "sesi":
         if aksi == "konfirmasi":
-            layanan.konfirmasi_dari_form(kon, identitas, guru, data)
+            layanan.konfirmasi_dari_form(
+                kon, identitas, guru, _tanpa_marker_transport(kon, identitas, data)
+            )
             return f"/sesi/{identitas}"
         if set(data) - {"alasan"}:
             raise ValueError("Isian pembatalan tidak dikenal.")

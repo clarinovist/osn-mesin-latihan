@@ -120,16 +120,50 @@ def status_memori(kon_priv, account_id: str, chat=None) -> str:
     return f"Memori aktif · {jumlah} catatan"
 
 
-def riwayat(kon_priv, account_id: str, *, halaman: int = 1, batas: int = 20
+def riwayat(kon_priv, account_id: str, *, halaman: int = 1, batas: int = 20,
+            jenis_resource: Optional[str] = None, resource_id: Optional[str] = None,
             ) -> tuple[tuple[assistant_store.Chat, ...], bool]:
-    """Satu halaman metadata saja, tanpa scan transkrip atau total chat."""
+    """Satu halaman metadata saja, opsional exact-resource, tanpa transkrip."""
     assistant_store._wajib_account_id(account_id)
     if type(batas) is not int or not 1 <= batas <= 20:
         raise ValueError("Batas riwayat tidak sah.")
     if type(halaman) is not int or halaman < 1 or (halaman - 1) * batas > 10000:
         raise ValueError("Halaman riwayat tidak sah.")
+    scoped = jenis_resource is not None or resource_id is not None
+    if scoped and (
+        jenis_resource not in ("anak", "sesi", "soal")
+        or type(resource_id) is not str
+        or not resource_id
+    ):
+        raise ValueError("Scope riwayat tidak sah.")
+    syarat = " AND context_kind = ? AND context_id = ?" if scoped else ""
+    parameter = ((account_id, jenis_resource, resource_id, batas + 1,
+                  (halaman - 1) * batas) if scoped else
+                 (account_id, batas + 1, (halaman - 1) * batas))
     baris = kon_priv.execute(
-        """SELECT * FROM chat WHERE account_id = ? AND dihapus IS NULL
+        """SELECT * FROM chat WHERE account_id = ? AND dihapus IS NULL""" + syarat +
+        " ORDER BY diperbarui DESC, id DESC LIMIT ? OFFSET ?",
+        parameter,
+    ).fetchall()
+    return (
+        tuple(assistant_store._chat_dari_baris(item) for item in baris[:batas]),
+        len(baris) > batas and halaman * batas <= 10000,
+    )
+
+
+def riwayat_umum(kon_priv, account_id: str, *, halaman: int = 1,
+                  batas: int = 20) -> tuple[tuple[assistant_store.Chat, ...], bool]:
+    """Metadata chat umum lama saja; tidak memuat transkrip atau chat konteks."""
+    assistant_store._wajib_account_id(account_id)
+    if type(batas) is not int or not 1 <= batas <= 20:
+        raise ValueError("Batas arsip tidak sah.")
+    if type(halaman) is not int or halaman < 1 or (halaman - 1) * batas > 10000:
+        raise ValueError("Halaman arsip tidak sah.")
+    baris = kon_priv.execute(
+        """SELECT * FROM chat
+           WHERE account_id = ? AND dihapus IS NULL AND context_kind IS NULL
+             AND context_id IS NULL AND context_version IS NULL
+             AND context_resource_version IS NULL
            ORDER BY diperbarui DESC, id DESC LIMIT ? OFFSET ?""",
         (account_id, batas + 1, (halaman - 1) * batas),
     ).fetchall()

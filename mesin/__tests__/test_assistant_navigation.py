@@ -137,6 +137,7 @@ def server(tmp_path, monkeypatch):
             sesi = database.buat_sesi(kon, anak, seed=42)
             asing = database.tambah_siswa(kon, "Anak Asing Navigasi", "P3", pemilik="ortu-b")
             sesi_asing = database.buat_sesi(kon, asing, seed=43)
+            database.tandai_selesai(kon, sesi)
         s.ids = (anak, sesi, asing, sesi_asing)
         yield s
         assert not panggilan
@@ -284,7 +285,7 @@ def test_http_redirect_foreign_dan_missing_404_identik_tanpa_efek(server, jenis)
     hilang = "999999:1" if jenis == "soal" else "999999"
     sebelum = _snapshot(server)
     respons = []
-    for resource in (foreign, hilang, pemilik):
+    for resource in (foreign, hilang):
         tujuan = f"/pendamping/konteks/{jenis}/{resource}"
         kode, _, tajuk = _masuk(server, tujuan)
         assert kode == 303
@@ -294,11 +295,20 @@ def test_http_redirect_foreign_dan_missing_404_identik_tanpa_efek(server, jenis)
     assert respons[0][0] == respons[1][0] == 404
     assert respons[0][1] == respons[1][1]
     assert "Anak Asing Navigasi" not in respons[0][1]
-    assert respons[2][0] == 200
-    assert "Pilih konteks" in respons[2][1]
     assert respons[0][2]["Cache-Control"] == "no-store"
     assert respons[0][2]["Referrer-Policy"] == "no-referrer"
     assert _snapshot(server) == sebelum
+
+    tujuan = f"/pendamping/konteks/{jenis}/{pemilik}"
+    kode, _, tajuk = _masuk(server, tujuan)
+    assert kode == 303 and tajuk["Location"] == tujuan
+    cookie = tajuk["Set-Cookie"].split(";", 1)[0]
+    respons_sah = _minta(server, tajuk["Location"], cookie=cookie)
+    assert respons_sah[0] == 303
+    tujuan_host = respons_sah[2]["Location"]
+    assert tujuan_host.startswith((f"/anak/{anak}?bantuan=", f"/sesi/{sesi}?bantuan="))
+    kode_host, isi_host, _ = _minta(server, tujuan_host, cookie=cookie)
+    assert kode_host == 200 and "Pilih sumber bantuan" in isi_host
 
 
 def test_http_akun_saat_login_bukan_pemilik_sumber_dari_form(server):
@@ -342,9 +352,10 @@ def test_http_guru_form_ke_pendamping_dengan_principal_baru(server):
     assert tajuk["Location"] == "/pendamping"
     cookie = tajuk["Set-Cookie"].split(";", 1)[0]
     kode, isi, tajuk = _minta(server, tajuk["Location"], cookie=cookie)
-    assert kode == 200
-    assert 'action="/pendamping/chat-baru"' in isi
-    assert tajuk["Cache-Control"] == "no-store"
+    assert kode == 303
+    assert tajuk["Location"] == "/guru"
+    kode, isi, _ = _minta(server, "/guru", cookie=cookie)
+    assert kode == 200 and 'action="/pendamping/chat-baru"' not in isi
     assert _snapshot(server) == sebelum
 
 

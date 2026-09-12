@@ -199,91 +199,17 @@ def test_chat_tanpa_memori_tidak_menyimpan_draft(kon):
     ).fetchone()[0] == "gagal"
 
 
-def test_http_draft_konfirmasi_pengaturan_dan_hapus(server):
+def test_http_pengaturan_memori_standalone_dialihkan_tanpa_mutasi(server):
     token = _token_guru(server)
     _consent(server, token)
-    _, memori_awal, _ = server.minta("/pendamping/memori", cookie=token)
-    versi_awal = re.search(
-        r'action="/pendamping/memori/aktifkan"><input type="hidden" name="versi" value="([0-9]+)"',
-        memori_awal,
-    ).group(1)
-    server.minta(
-        "/pendamping/memori/aktifkan", cookie=token,
-        data={"versi": versi_awal},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    _, awal, _ = server.minta("/pendamping", cookie=token)
-    request_id = re.search(r'name="request_id" value="([^"]+)"', awal).group(1)
-    kode, chat_html, _ = server.minta(
-        "/pendamping/chat-baru", cookie=token,
-        data={"mode": "aktif", "pesan_awal": "Tolong jawab ringkas.",
-              "request_id": request_id},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
+    with assistant_schema.buka() as kon:
+        sebelum = tuple(kon.iterdump())
+    kode, isi, _ = server.minta("/pendamping/memori", cookie=token)
     assert kode == 200
-    assert "Simpan preferensi ini?" in chat_html
-    assert "Menunggu konfirmasi" not in chat_html
-    memori_id = re.search(r'/pendamping/memori/(memori_[0-9a-f]{32})/konfirmasi', chat_html).group(1)
-    versi = re.search(r'name="versi" value="([0-9]+)"', chat_html).group(1)
-    chat_id = re.search(r'name="kembali" value="(chat_[0-9a-f]{32})"', chat_html).group(1)
-
-    kode, isi, _ = server.minta(
-        f"/pendamping/memori/{memori_id}/konfirmasi", cookie=token,
-        data={"versi": versi, "kembali": chat_id},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    assert kode == 200
+    assert "Akun &amp; pengaturan" in isi
     assert "Simpan preferensi ini?" not in isi
-
-    kode, memori_html, _ = server.minta("/pendamping/memori", cookie=token)
-    assert kode == 200
-    assert "Jelaskan secara ringkas" in memori_html
-    assert "Memori aktif" in memori_html
-    versi_global = re.search(
-        r'action="/pendamping/memori/nonaktifkan"><input type="hidden" name="versi" value="([0-9]+)"',
-        memori_html,
-    ).group(1)
-    kode, memori_html, _ = server.minta(
-        "/pendamping/memori/nonaktifkan", cookie=token,
-        data={"versi": versi_global},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    assert kode == 200
-    assert "Memori nonaktif" in memori_html
-    kode, editor, _ = server.minta(f'/pendamping/memori/{memori_id}/ubah', cookie=token)
-    assert kode == 200
-    cocok_item = re.search(
-        r'/pendamping/memori/(memori_[0-9a-f]{32})/ubah.*?name="versi" value="([0-9]+)"',
-        editor,
-        re.S,
-    )
-    memori_id, versi_item = cocok_item.groups()
-    kode, memori_html, _ = server.minta(
-        f"/pendamping/memori/{memori_id}/ubah", cookie=token,
-        data={"versi": versi_item, "isi": "Jawab singkat dengan satu analogi.",
-              "kembali": ""},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    assert kode == 200
-    assert "Jawab singkat dengan satu analogi." in memori_html
-    assert "Jelaskan secara ringkas" not in memori_html
-
-    kode, tinjau_hapus, _ = server.minta(f'/pendamping/memori/{memori_id}/hapus', cookie=token)
-    assert kode == 200
-    cocok_hapus = re.search(
-        r'/pendamping/memori/(memori_[0-9a-f]{32})/hapus.*?name="versi" value="([0-9]+)"',
-        tinjau_hapus,
-        re.S,
-    )
-    memori_id, versi_item = cocok_hapus.groups()
-    kode, memori_html, _ = server.minta(
-        f"/pendamping/memori/{memori_id}/hapus", cookie=token,
-        data={"versi": versi_item, "kembali": "", "persetujuan_hapus": "1"},
-        headers={"Origin": server.alamat, "Sec-Fetch-Site": "same-origin"},
-    )
-    assert kode == 200
-    assert "Belum ada preferensi tersimpan." in memori_html
-
+    with assistant_schema.buka() as kon:
+        assert tuple(kon.iterdump()) == sebelum
 
 def test_hapus_semua_memori_hanya_milik_akun_dan_versi_tepat(kon):
     chat_a = assistant_store.buat_chat(kon, AKUN, "aktif", sekarang=100)

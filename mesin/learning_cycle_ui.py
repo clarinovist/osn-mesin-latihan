@@ -410,8 +410,16 @@ def _visual_materi(rencana, materi, siswa_id):
     )
 
 
-def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -> str:
-    """Render satu rekomendasi tanpa menulis state domain."""
+def render_rencana(
+    rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int,
+    slot_bantuan: str = "",
+) -> str:
+    """Render satu rekomendasi tanpa menulis state domain.
+
+    ``slot_bantuan`` sudah harus berupa markup presentasi tepercaya. Slot berada
+    di luar seluruh form tindakan agar komposer inline tidak menjadi form
+    bersarang. Nilai bawaan kosong menjaga seluruh caller lama byte-identik.
+    """
     if bukti.siswa_id != siswa_id:
         raise ValueError("bukti bukan milik siswa")
     from cycle_carry import bukti_lanjutan
@@ -492,13 +500,14 @@ def render_rencana(rencana: RencanaBelajar, bukti: BuktiSiklus, siswa_id: int) -
         f'<div class="studio-aksi-st">{cta}{petunjuk}</div>'
         f'{_alur_rencana(rencana, bukti)}'
         '</div>'
+        f'{slot_bantuan}'
         f'{_override(rencana, siswa_id)}'
         "</section>"
     )
 
 
-def kartu_rencana(kon, siswa_id: int) -> str:
+def kartu_rencana(kon, siswa_id: int, slot_bantuan: str = "") -> str:
     """Muat bukti sah dan render rekomendasi reducer pada GET profil."""
     bukti = database.muat_bukti_siklus(kon, siswa_id)
     rencana = rencana_berikutnya(bukti, siswa_id)
-    return render_rencana(rencana, bukti, siswa_id)
+    return render_rencana(rencana, bukti, siswa_id, slot_bantuan=slot_bantuan)

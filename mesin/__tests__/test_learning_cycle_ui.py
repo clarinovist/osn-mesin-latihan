@@ -1,6 +1,7 @@
 """Kartu rencana belajar guru di profil anak (Fase 4)."""
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import replace
 from datetime import date
@@ -456,6 +457,23 @@ def test_tunggu_pemetaan_memakai_copy_positif_dan_tanggal_reducer():
     assert "Satu langkah pemetaan sudah selesai untuk hari ini." in isi
     assert "11 September 2026" in isi
     assert "Lanjutkan pemetaan besok" not in isi
+
+
+def test_slot_bantuan_berada_di_dalam_kartu_dan_di_luar_form_tindakan():
+    bukti = BuktiSiklus(9, "P3")
+    from learning_cycle import rencana_berikutnya
+    rencana = rencana_berikutnya(bukti, 9)
+    dasar = learning_cycle_ui.render_rencana(rencana, bukti, 9)
+    slot = '<aside id="bantuan-rencana">Bantuan sintetis</aside>'
+    isi = learning_cycle_ui.render_rencana(
+        rencana, bukti, 9, slot_bantuan=slot
+    )
+    assert dasar == learning_cycle_ui.render_rencana(rencana, bukti, 9)
+    assert isi.count(slot) == 1
+    assert isi.index(slot) < isi.rindex("</section>")
+    assert not re.search(
+        r"<form[^>]*>.*bantuan-rencana.*</form>", isi, re.DOTALL
+    )
 
 
 def test_css_kartu_rencana_berada_di_gaya_profil_dengan_disclosure_native():

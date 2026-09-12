@@ -192,7 +192,8 @@ memakai fitur ini; aplikasi belum memiliki gerbang persetujuan khusus pada
 setiap upload. Hasil AI hanya berupa usulan dan harus diperiksa guru.</p>
 <p>Fitur <b>Pendamping</b>, bila diaktifkan dan setelah persetujuan terpisah,
 mengirim isi chat ke DeepSeek. Jangan menulis email, nomor telepon, sandi,
-token, atau data pribadi anak. Chat umum tidak membaca data anak. Riwayat chat
+token, atau data pribadi anak. Bantuan kontekstual hanya memakai sumber belajar
+minimum yang dipilih dan disetujui; jawaban/cara anak tidak dikirim otomatis. Riwayat chat
 disimpan sampai 180 hari sejak aktivitas terakhir; operasi gagal disimpan paling
 lama 7 hari. Penghapusan data aktif dilakukan segera, sedangkan salinan cadangan
 dapat bertahan paling lama 30 hari. Admin tidak dapat membuka isi chat atau

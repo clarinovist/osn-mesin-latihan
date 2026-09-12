@@ -104,6 +104,39 @@ def test_riwayat_invalid_tanpa_query(privat, halaman, batas):
     assert jejak == []
 
 
+def test_riwayat_exact_resource_tidak_mencampur_chat_lain(privat):
+    anak_a = assistant_store.buat_chat(privat, AKUN, "aktif", sekarang=100)
+    anak_b = assistant_store.buat_chat(privat, AKUN, "aktif", sekarang=101)
+    umum = assistant_store.buat_chat(privat, AKUN, "aktif", sekarang=102)
+    privat.execute(
+        "UPDATE chat SET context_kind = 'anak', context_id = '7' WHERE id = ?",
+        (anak_a.id,),
+    )
+    privat.execute(
+        "UPDATE chat SET context_kind = 'anak', context_id = '8' WHERE id = ?",
+        (anak_b.id,),
+    )
+    privat.commit()
+    hasil, lagi = view.riwayat(
+        privat, AKUN, jenis_resource="anak", resource_id="7"
+    )
+    assert hasil == (replace(anak_a, context_kind="anak", context_id="7"),)
+    assert anak_b.id not in {item.id for item in hasil}
+    assert umum.id not in {item.id for item in hasil}
+    assert lagi is False
+
+
+@pytest.mark.parametrize("jenis,resource", [
+    (None, "7"), ("anak", None), ("asing", "7"), ("anak", ""),
+])
+def test_riwayat_scope_invalid_tanpa_query(privat, jenis, resource):
+    jejak = []
+    privat.set_trace_callback(jejak.append)
+    with pytest.raises(ValueError):
+        view.riwayat(privat, AKUN, jenis_resource=jenis, resource_id=resource)
+    assert jejak == []
+
+
 def test_riwayat_limit_sql_metadata_dan_batas_offset(privat):
     _riwayat_banyak(privat)
     jejak = []

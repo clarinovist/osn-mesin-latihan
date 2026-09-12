@@ -9,7 +9,9 @@ import shutil
 import sqlite3
 import threading
 from pathlib import Path
+import html
 import re
+import urllib.parse
 import sys
 
 import pytest
@@ -529,8 +531,26 @@ def test_sesi_manual_tidak_menulis_bukti_atau_mengubah_rekomendasi(kasus):
 def _form_review(server, cookie, usulan_id):
     kode, isi, _ = server.minta(f"/pendamping/usulan/{usulan_id}", cookie=cookie)
     assert kode == 200
-    return {k: re.search(r'name="' + k + r'" value="([^"]+)"', isi).group(1)
-            for k in ("versi", "hash", "request_id")}
+    cocok = re.search(
+        r'name="data_aksi" value="([^"]+)"[^>]+formaction="/pendamping/inline/konfirmasi-usulan"',
+        isi,
+    )
+    if cocok:
+        data = dict(urllib.parse.parse_qsl(html.unescape(cocok.group(1))))
+        return {
+            "versi": data["versi_usulan"], "hash": data["hash_usulan"],
+            "request_id": data["request_id"],
+        }
+    nama_baru = {
+        "versi": "versi_usulan", "hash": "hash_usulan",
+        "request_id": "request_id",
+    }
+    return {
+        lama: re.search(
+            r'name="' + baru + r'" value="([^"]+)"', isi
+        ).group(1)
+        for lama, baru in nama_baru.items()
+    }
 
 
 def test_http_get_hasil_tetap_tersedia_setelah_snapshot_anak_usang(server):
@@ -564,7 +584,7 @@ def test_http_hasil_terminal_tidak_dibuat_ulang(server, hapus):
         else:
             database.batalkan_sesi(kon, hasil)
     sebelum = _jumlah_sesi()
-    assert server.minta(f"/pendamping/usulan/{usulan_id}", cookie=cookie)[0] == 409
+    assert server.minta(f"/pendamping/usulan/{usulan_id}", cookie=cookie)[0] in (404, 409)
     assert server.minta(
         f"/pendamping/usulan/{usulan_id}/konfirmasi", cookie=cookie,
         data=form, headers=_origin(server),

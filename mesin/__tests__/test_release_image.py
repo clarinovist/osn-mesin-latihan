@@ -7,6 +7,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tarfile
+from unittest import mock
 
 import pytest
 
@@ -14,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BERKAS = ROOT / 'scripts' / 'verify_release_image.py'
 IMAGE = 'ghcr.io/clarinovist/osn-mesin-latihan@sha256:' + 'a' * 64
 REVISION = 'b' * 40
+RECOVERY_REVISION = 'bc9c973b50eb1fb04edd37df62f71ba0123f29c6'
 
 
 @pytest.fixture
@@ -24,14 +27,15 @@ def verifier():
     return modul
 
 
-def metadata():
+def metadata(revision=REVISION):
     # Config ID sengaja BUKAN digest manifest; keduanya tidak boleh tertukar.
     return [{'Id': 'sha256:' + 'c' * 64, 'RepoDigests': [IMAGE],
-             'Config': {'Labels': {'org.opencontainers.image.revision': REVISION},
+             'Config': {'Labels': {'org.opencontainers.image.revision': revision},
                         'Volumes': {'/data': {}}}}]
 
 
-def docker_palsu(monkeypatch, verifier, *, inspect=None, run=None):
+def docker_palsu(monkeypatch, verifier, *, inspect=None, run=None,
+                 revision=REVISION):
     panggilan = []
     def jalankan(argv, **opsi):
         panggilan.append((argv, opsi))
@@ -41,7 +45,7 @@ def docker_palsu(monkeypatch, verifier, *, inspect=None, run=None):
         assert opsi['text'] is True
         assert isinstance(argv, list)
         if argv[:3] == ['docker', 'image', 'inspect']:
-            return subprocess.CompletedProcess(argv, 0, json.dumps(metadata() if inspect is None else inspect), '')
+            return subprocess.CompletedProcess(argv, 0, json.dumps(metadata(revision) if inspect is None else inspect), '')
         if argv[:3] == ['docker', 'container', 'rm']:
             return subprocess.CompletedProcess(argv, 0, '', '')
         assert argv[:2] == ['docker', 'run']
@@ -55,7 +59,10 @@ def docker_palsu(monkeypatch, verifier, *, inspect=None, run=None):
 def test_digest_dan_argv_terkunci_tanpa_mount_host(verifier, monkeypatch):
     panggilan = docker_palsu(monkeypatch, verifier)
     hasil = verifier.verifikasi(IMAGE, REVISION)
-    assert hasil == {'ok': True, 'image': IMAGE, 'revision': REVISION, 'probe': verifier.RINGKASAN}
+    assert hasil == {
+        'ok': True, 'image': IMAGE, 'revision': REVISION,
+        'probe': verifier.ringkasan_untuk_revision(REVISION),
+    }
     assert len(panggilan) == 2
     assert panggilan[0][0] == ['docker', 'image', 'inspect', IMAGE]
     argv, opsi = panggilan[1]
@@ -66,12 +73,27 @@ def test_digest_dan_argv_terkunci_tanpa_mount_host(verifier, monkeypatch):
         '--network', 'none', '--read-only', '--cap-drop', 'ALL',
         '--security-opt', 'no-new-privileges', '--user', '10001:10001',
         '--tmpfs', '/data:rw,uid=10001,gid=10001', '--tmpfs', '/tmp',
-        '--env', 'TMPDIR=/data', '--no-healthcheck', '--workdir', '/app',
+        '--env', 'TMPDIR=/data', '--env', 'OSN_RELEASE_REVISION=' + REVISION,
+        '--no-healthcheck', '--workdir', '/app',
         '--entrypoint', 'python', IMAGE, '-B', '-',
     ]
     assert opsi['input'] == verifier.SUMBER_PROBE
     assert opsi['timeout'] == 180
     assert panggilan[0][1]['timeout'] == 30
+
+
+def test_verifier_recovery_memilih_kontrak_pinned_dan_meneruskan_revision(
+    verifier, monkeypatch,
+):
+    ringkasan = verifier.ringkasan_untuk_revision(RECOVERY_REVISION)
+    panggilan = docker_palsu(
+        monkeypatch, verifier, revision=RECOVERY_REVISION,
+        run=subprocess.CompletedProcess([], 0, json.dumps(ringkasan), ""),
+    )
+    hasil = verifier.verifikasi(IMAGE, RECOVERY_REVISION)
+    assert hasil["probe"]["http_contract"] == verifier.KONTRAK_RECOVERY
+    argv = panggilan[1][0]
+    assert "OSN_RELEASE_REVISION=" + RECOVERY_REVISION in argv
 
 
 @pytest.mark.parametrize('image,revision', [
@@ -160,7 +182,9 @@ def test_cli_sukses_hanya_json_agregat(verifier, monkeypatch, capsys):
     assert verifier.main(['--image', IMAGE, '--revision', REVISION]) == 0
     tangkapan = capsys.readouterr()
     assert json.loads(tangkapan.out) == {
-        'ok': True, 'image': IMAGE, 'revision': REVISION, 'probe': verifier.RINGKASAN}
+        'ok': True, 'image': IMAGE, 'revision': REVISION,
+        'probe': verifier.ringkasan_untuk_revision(REVISION),
+    }
     assert tangkapan.err == ''
 
 
@@ -192,7 +216,8 @@ def test_cli_galat_tidak_echo_argumen(verifier, monkeypatch, capsys, argv):
     assert panggilan == []
 
 
-def jalankan_probe(tmp_path, sumber=ROOT / 'mesin', *, injeksi='', diagnostik=False):
+def jalankan_probe(tmp_path, sumber=ROOT / 'mesin', *, revision=REVISION,
+                   injeksi='', diagnostik=False):
     """Interpreter baru menjalankan exec probe; tidak ada Docker atau impor DB host."""
     # PYTHONPATH hanya source salinan; env tidak mewarisi credential/proxy host.
     peluncur = (
@@ -211,23 +236,195 @@ def jalankan_probe(tmp_path, sumber=ROOT / 'mesin', *, injeksi='', diagnostik=Fa
             '        print(str(e) if type(e) is RuntimeError and str(e) in ' + repr({
                 'skema_bukan_v4', 'sesi_ganda', 'guard_tidak_menolak',
                 'aset_hilang', 'provider_dilarang', 'dns_dilarang',
-                'network_dilarang',
+                'network_dilarang', 'http_redirect_candidate',
+                'http_inline_frame_candidate', 'http_status', 'http_frame',
             }) + ' else "galat_tidak_dikenal")\n'
             '        raise SystemExit(1)\n'
             if diagnostik else 'raise SystemExit(ruang["main"]())\n'
         )
     )
     return subprocess.run([sys.executable, '-B', '-c', peluncur],
-        env={'PYTHONPATH': str(sumber), 'TMPDIR': str(tmp_path), 'PYTHONDONTWRITEBYTECODE': '1'},
+        env={'PYTHONPATH': str(sumber), 'TMPDIR': str(tmp_path),
+             'PYTHONDONTWRITEBYTECODE': '1', 'OSN_RELEASE_REVISION': revision},
         cwd=str(tmp_path), capture_output=True, text=True, timeout=90, shell=False, check=False)
 
 
 def test_probe_sintetis_migrasi_ledger_http_tanpa_docker(verifier, tmp_path):
     hasil = jalankan_probe(tmp_path)
     assert hasil.returncode == 0
-    assert json.loads(hasil.stdout) == verifier.RINGKASAN
+    assert json.loads(hasil.stdout) == verifier.ringkasan_untuk_revision(REVISION)
     assert hasil.stderr == ''
     assert list(tmp_path.iterdir()) == []  # DB/auth/server sekali pakai sudah ditutup.
+
+
+def ekstrak_tar_aman(paket, tujuan):
+    """Ekstrak hanya direktori/file regular; kompatibel Python 3.9 dan 3.12."""
+    tujuan = tujuan.resolve()
+    for item in paket.getmembers():
+        if not (item.isdir() or item.isfile()):
+            raise ValueError("jenis anggota arsip tidak aman")
+        sasaran = (tujuan / item.name).resolve()
+        try:
+            sasaran.relative_to(tujuan)
+        except ValueError:
+            raise ValueError("jalur anggota arsip tidak aman") from None
+        if item.isdir():
+            sasaran.mkdir(parents=True, exist_ok=True)
+            continue
+        sasaran.parent.mkdir(parents=True, exist_ok=True)
+        sumber = paket.extractfile(item)
+        if sumber is None:
+            raise ValueError("isi anggota arsip tidak tersedia")
+        with sumber, sasaran.open("wb") as keluaran:
+            shutil.copyfileobj(sumber, keluaran)
+
+
+def source_recovery_dari_git_archive(tmp_path):
+    """Ekstrak revision recovery pinned; tidak memakai working tree atau Docker."""
+    arsip = tmp_path / "recovery.tar"
+    with arsip.open("wb") as keluaran:
+        hasil = subprocess.run(
+            ["git", "-C", str(ROOT), "archive", RECOVERY_REVISION, "mesin"],
+            stdout=keluaran, stderr=subprocess.PIPE, check=False,
+        )
+    assert hasil.returncode == 0 and hasil.stderr == b""
+    akar = tmp_path / "recovery"
+    akar.mkdir()
+    with tarfile.open(arsip) as paket:
+        ekstrak_tar_aman(paket, akar)
+    arsip.unlink()
+    return akar / "mesin"
+
+
+def test_ekstraksi_recovery_tidak_memakai_extractall_dan_menolak_link_traversal(
+    tmp_path,
+):
+    import io
+
+    arsip = tmp_path / "jahat.tar"
+    with tarfile.open(arsip, "w") as paket:
+        isi = b"aman"
+        file_aman = tarfile.TarInfo("mesin/aman.py")
+        file_aman.size = len(isi)
+        paket.addfile(file_aman, io.BytesIO(isi))
+        tautan = tarfile.TarInfo("mesin/tautan.py")
+        tautan.type = tarfile.SYMTYPE
+        tautan.linkname = "../../rahasia"
+        paket.addfile(tautan)
+    with tarfile.open(arsip) as paket, mock.patch.object(
+        paket, "extractall", side_effect=AssertionError("extractall terlarang")
+    ):
+        with pytest.raises(ValueError, match="jenis anggota arsip tidak aman"):
+            ekstrak_tar_aman(paket, tmp_path / "tujuan")
+    assert (tmp_path / "tujuan/mesin/aman.py").read_bytes() == b"aman"
+    assert not (tmp_path / "rahasia").exists()
+
+
+def test_ekstraksi_recovery_menolak_path_traversal(tmp_path):
+    import io
+
+    arsip = tmp_path / "traversal.tar"
+    with tarfile.open(arsip, "w") as paket:
+        item = tarfile.TarInfo("../keluar.py")
+        item.size = 1
+        paket.addfile(item, io.BytesIO(b"x"))
+    with tarfile.open(arsip) as paket:
+        with pytest.raises(ValueError, match="jalur anggota arsip tidak aman"):
+            ekstrak_tar_aman(paket, tmp_path / "tujuan")
+    assert not (tmp_path / "keluar.py").exists()
+
+
+def test_probe_http_lintas_source_candidate_dan_recovery_pinned(verifier, tmp_path):
+    (tmp_path / "candidate").mkdir()
+    candidate = jalankan_probe(tmp_path / "candidate", revision=REVISION)
+    assert candidate.returncode == 0
+    assert json.loads(candidate.stdout)["http_contract"] == verifier.KONTRAK_CANDIDATE
+
+    sumber_recovery = source_recovery_dari_git_archive(tmp_path)
+    (tmp_path / "recovery-run").mkdir()
+    recovery = jalankan_probe(
+        tmp_path / "recovery-run", sumber=sumber_recovery,
+        revision=RECOVERY_REVISION,
+    )
+    assert recovery.returncode == 0
+    assert json.loads(recovery.stdout) == verifier.ringkasan_untuk_revision(
+        RECOVERY_REVISION
+    )
+    assert recovery.stderr == ""
+
+
+@pytest.mark.parametrize("revision,ringkasan_salah", [
+    (REVISION, {**{"ok": True, "kontrak": 1, "skema": 4,
+                  "skenario_migrasi": 2, "skenario_tindakan": 7,
+                  "http_checks": 7, "provider_calls": 0},
+                "http_contract": "recovery-standalone-v1"}),
+    (RECOVERY_REVISION, {**{"ok": True, "kontrak": 1, "skema": 4,
+                           "skenario_migrasi": 2, "skenario_tindakan": 7,
+                           "http_checks": 7, "provider_calls": 0},
+                         "http_contract": "candidate-inline-v1"}),
+    (REVISION, {**{"ok": True, "kontrak": 1, "skema": 4,
+                  "skenario_migrasi": 2, "skenario_tindakan": 7,
+                  "provider_calls": 0, "http_contract": "candidate-inline-v1"},
+                "http_checks": 6}),
+])
+def test_verifier_menolak_kontrak_http_revision_yang_salah(
+    verifier, monkeypatch, revision, ringkasan_salah,
+):
+    panggilan = docker_palsu(
+        monkeypatch, verifier, revision=revision,
+        run=subprocess.CompletedProcess([], 0, json.dumps(ringkasan_salah), ""),
+    )
+    with pytest.raises(verifier.GalatVerifikasi, match="ringkasan_tidak_sah"):
+        verifier.verifikasi(IMAGE, revision)
+    assert panggilan[-1][0][:2] == ["docker", "run"]
+
+
+def test_probe_candidate_mendeteksi_redirect_dan_header_privat_rusak(tmp_path):
+    sumber = salin_sumber(tmp_path)
+    web = sumber / "assistant_http.py"
+    teks = web.read_text()
+    assert "_redirect(penangan, '/guru')" in teks
+    web.write_text(teks.replace("_redirect(penangan, '/guru')", "_redirect(penangan, '/akun')", 1))
+    (tmp_path / "run-redirect").mkdir()
+    hasil = jalankan_probe(tmp_path / "run-redirect", sumber=sumber, diagnostik=True)
+    assert hasil.returncode == 1 and hasil.stdout.strip() == "http_redirect_candidate"
+
+    shutil.rmtree(sumber)
+    sumber = salin_sumber(tmp_path)
+    web = sumber / "web.py"
+    teks = web.read_text()
+    assert 'self.send_header("X-Frame-Options", "DENY")' in teks
+    web.write_text(teks.replace('self.send_header("X-Frame-Options", "DENY")',
+                                 'self.send_header("X-Frame-Options", "ALLOW")', 1))
+    (tmp_path / "run-header").mkdir()
+    hasil = jalankan_probe(tmp_path / "run-header", sumber=sumber, diagnostik=True)
+    assert hasil.returncode == 1 and hasil.stdout.strip() == "http_inline_frame_candidate"
+
+
+def test_probe_recovery_mendeteksi_status_dan_header_privat_rusak(tmp_path):
+    sumber = source_recovery_dari_git_archive(tmp_path)
+    (tmp_path / "run-status").mkdir()
+    salah_status = jalankan_probe(
+        tmp_path / "run-status", sumber=sumber, revision=REVISION,
+        diagnostik=True,
+    )
+    assert salah_status.returncode == 1
+    assert salah_status.stdout.strip() == "http_status"
+
+    sumber_http = sumber / "assistant_http.py"
+    teks = sumber_http.read_text()
+    assert 'penangan.send_header("X-Frame-Options", "DENY")' in teks
+    sumber_http.write_text(teks.replace(
+        'penangan.send_header("X-Frame-Options", "DENY")',
+        'penangan.send_header("X-Frame-Options", "ALLOW")', 1,
+    ))
+    (tmp_path / "run-header-recovery").mkdir()
+    salah_header = jalankan_probe(
+        tmp_path / "run-header-recovery", sumber=sumber,
+        revision=RECOVERY_REVISION, diagnostik=True,
+    )
+    assert salah_header.returncode == 1
+    assert salah_header.stdout.strip() == "http_frame"
 
 
 def salin_sumber(tmp_path):

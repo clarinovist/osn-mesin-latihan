@@ -168,6 +168,8 @@ def halaman_akun(
     pengguna: str | None = None,
     peran: str = "guru",
     section: str = "akun",
+    arsip_pendamping: str = "",
+    privat: bool = False,
 ) -> bytes:
     """Kelola sandi dan daftar siswa — sidebar + section, tanpa JS.
 
@@ -185,7 +187,7 @@ def halaman_akun(
     dihapus dari sini — penjelasannya ada di kartu Catatan, section
     siswa; siswa tanpa riwayat boleh dihapus beserta akun latihannya.
     """
-    if section not in ("akun", "siswa", "akun-murid"):
+    if section not in ("akun", "siswa", "akun-murid", "arsip-pendamping"):
         # Nilai asing dari URL jatuh ke bawaan.
         section = "akun"
 
@@ -313,14 +315,27 @@ def halaman_akun(
         isi_section = kartu_siswa + kartu_anak + kartu_catatan
     elif section == "akun-murid":
         isi_section = _kartu_akun_murid(kon, pengguna, peran)
+    elif section == "arsip-pendamping":
+        isi_section = arsip_pendamping or kartu_sandi
+        if not arsip_pendamping:
+            section = "akun"
     else:
         isi_section = kartu_sandi
+        if arsip_pendamping:
+            isi_section += (
+                '<div class="kartu"><details><summary>Arsip percakapan lama</summary>'
+                '<p class="sub">Percakapan umum lama tersedia hanya-baca.</p>'
+                '<a href="/akun?section=arsip-pendamping">Buka arsip</a>'
+                '</details></div>'
+            )
 
     item = [
         ("akun", "Akun saya"),
         ("siswa", "Siswa"),
         ("akun-murid", "Akun latihan"),
     ]
+    if arsip_pendamping:
+        item.append(("arsip-pendamping", "Arsip percakapan lama"))
     nav = "".join(
         f'<a href="/akun?section={sid}"'
         + (' class="aktif" aria-current="page"' if sid == section else "")
@@ -341,7 +356,7 @@ def halaman_akun(
         f"</div>",
         ident=(pengguna or "guru", peran),
         stitch=True, kelas_bungkus="pendamping-editorial-st akun-editorial-st",
-        id_utama="judul-akun",
+        id_utama="judul-akun", privat=privat,
     )
 
 def _akun_murid_milik(kon, pengguna: str, peran: str, nama: str) -> bool:

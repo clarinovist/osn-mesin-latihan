@@ -95,6 +95,23 @@ class Penangan(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(isi)
 
+    def _kirim_privat(self, isi: bytes, kode: int = 200) -> None:
+        """Respons host chat/draf privat dengan CSP ketat tanpa aset eksternal."""
+        self.send_response(kode)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(isi)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Robots-Tag", "noindex, nofollow")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; "
+            "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+        )
+        self.end_headers()
+        self.wfile.write(isi)
+
     def _kirim_json(self, data: dict, kode: int = 200) -> None:
         """Kirim JSON privat untuk aksi halaman yang tidak bernavigasi."""
         isi = json.dumps(data, ensure_ascii=False).encode("utf-8")
@@ -633,6 +650,36 @@ class Penangan(BaseHTTPRequestHandler):
                             _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                         )
                     ident = self._identitas()
+                    target_inline = None
+                    fragmen_inline = ""
+                    try:
+                        pasangan = urllib.parse.parse_qsl(
+                            urllib.parse.urlsplit(self.path).query,
+                            keep_blank_values=True, errors="strict",
+                        )
+                        if any(kunci == "bantuan" for kunci, _nilai in pasangan):
+                            import assistant_inline
+                            target_inline = assistant_inline.parse_query_host(
+                                "sesi", sesi_id, pasangan,
+                            )
+                            principal = sessions.ambil_principal_pendamping(
+                                self._ambil_token()
+                            )
+                            status_inline = kon.execute(
+                                "SELECT selesai FROM sesi WHERE id = ?", (sesi_id,)
+                            ).fetchone()
+                            fragmen_inline = assistant_http.fragmen_inline(
+                                principal, target_inline,
+                                dalam_form=bool(
+                                    status_inline and status_inline["selesai"]
+                                    and target_inline.posisi == "soal"
+                                ),
+                            )
+                    except (ValueError, LookupError):
+                        return self._kirim_privat(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    # Validasi bantuan selesai sebelum stamp direview.
                     # Guru membuka sesi yang SUDAH DIKIRIM = momen review.
                     # Pratinjau sebelum pengumpulan tidak pernah menandai review.
                     if ident and ident[1] == "guru":
@@ -649,13 +696,14 @@ class Penangan(BaseHTTPRequestHandler):
                                 (sesi_id,),
                             )
                             kon.commit()
-                    return self._kirim(
-                        halaman_sesi_stitch(
-                            kon, sesi_id,
-                            peran=ident[1] if ident else "guru",
-                            pengguna=ident[0] if ident else "",
-                        )
+                    hasil = halaman_sesi_stitch(
+                        kon, sesi_id,
+                        peran=ident[1] if ident else "guru",
+                        pengguna=ident[0] if ident else "",
+                        bantuan=fragmen_inline,
+                        bantuan_nomor=(target_inline.nomor if target_inline else None),
                     )
+                    return self._kirim_privat(hasil) if target_inline else self._kirim(hasil)
                 if jalur.startswith("/anak/") and jalur.count("/") >= 2:
                     # History satu anak (feedback Filia 1 Sep 2026 no. 6):
                     # kartu nama di dashboard menaut ke sini. Palang sama
@@ -679,23 +727,47 @@ class Penangan(BaseHTTPRequestHandler):
                             _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
                         )
                     ident = self._identitas()
+                    target_inline = None
+                    fragmen_inline = ""
+                    try:
+                        pasangan = urllib.parse.parse_qsl(
+                            urllib.parse.urlsplit(self.path).query,
+                            keep_blank_values=True, errors="strict",
+                        )
+                        if any(kunci == "bantuan" for kunci, _nilai in pasangan):
+                            import assistant_inline
+                            target_inline = assistant_inline.parse_query_host(
+                                "anak", anak_id, pasangan,
+                            )
+                            principal = sessions.ambil_principal_pendamping(
+                                self._ambil_token()
+                            )
+                            fragmen_inline = assistant_http.fragmen_inline(
+                                principal, target_inline,
+                                dalam_form=target_inline.posisi == "latihan",
+                            )
+                    except (ValueError, LookupError):
+                        return self._kirim_privat(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
                     qs = urllib.parse.parse_qs(
                         urllib.parse.urlparse(self.path).query
-                    ) if self.path else {}
+                    ) if self.path and not target_inline else {}
                     try:
                         sorot = int(qs.get("sorot", ["0"])[0]) or None
                     except (TypeError, ValueError):
                         sorot = None
                     pesan = (qs.get("pesan", [""])[0] or "")[:200]
-                    return self._kirim(
-                        halaman_anak(
-                            kon, siswa_baris,
-                            peran=ident[1] if ident else "guru",
-                            pengguna=ident[0] if ident else "",
-                            sorot=sorot,
-                            pesan=pesan,
-                        )
+                    hasil = halaman_anak(
+                        kon, siswa_baris,
+                        peran=ident[1] if ident else "guru",
+                        pengguna=ident[0] if ident else "",
+                        sorot=sorot,
+                        pesan=pesan,
+                        bantuan_rencana=(fragmen_inline if target_inline and target_inline.posisi == "rencana" else ""),
+                        bantuan_latihan=(fragmen_inline if target_inline and target_inline.posisi == "latihan" else ""),
                     )
+                    return self._kirim_privat(hasil) if target_inline else self._kirim(hasil)
                 if jalur.startswith("/laporan/"):
                     siswa_id = int(jalur.split("/")[2])
                     if not self._bisa_lihat_siswa(kon, siswa_id):
@@ -712,17 +784,47 @@ class Penangan(BaseHTTPRequestHandler):
                     )
                 if jalur == "/akun":
                     ident = self._identitas()
-                    q = urllib.parse.parse_qs(
-                        urllib.parse.urlparse(self.path).query
-                    )
-                    return self._kirim(
-                        halaman_akun(
-                            kon,
-                            pengguna=ident[0] if ident else None,
-                            peran=ident[1] if ident else "guru",
-                            section=(q.get("section") or ["akun"])[0],
+                    try:
+                        pasangan = urllib.parse.parse_qsl(
+                            urllib.parse.urlsplit(self.path).query,
+                            keep_blank_values=True, errors="strict",
                         )
+                        if len(pasangan) != len({k for k, _v in pasangan}):
+                            raise ValueError("parameter ganda")
+                        q = dict(pasangan)
+                        if set(q) - {"section", "halaman", "chat"}:
+                            raise ValueError("parameter asing")
+                        section = q.get("section", "akun")
+                        arsip = ""
+                        if section in ("akun", "arsip-pendamping"):
+                            if set(q) - ({"section"} if section == "akun" else {"section", "halaman", "chat"}):
+                                raise ValueError("parameter arsip tidak sah")
+                            halaman = int(q.get("halaman", "1"))
+                            if not 1 <= halaman <= 501:
+                                raise ValueError("halaman arsip tidak sah")
+                            principal = sessions.ambil_principal_pendamping(
+                                self._ambil_token()
+                            )
+                            daftar_arsip = assistant_http.fragmen_arsip_akun(
+                                principal, halaman=halaman,
+                                chat_id=q.get("chat", ""),
+                            )
+                            arsip = daftar_arsip
+                        elif set(q) != {"section"}:
+                            raise ValueError("parameter tidak sah")
+                    except (ValueError, UnicodeError, LookupError):
+                        return self._kirim_privat(
+                            _halaman("404", "<h1>Halaman tidak ada</h1>"), 404
+                        )
+                    hasil = halaman_akun(
+                        kon,
+                        pengguna=ident[0] if ident else None,
+                        peran=ident[1] if ident else "guru",
+                        section=section,
+                        arsip_pendamping=arsip,
+                        privat=bool(arsip),
                     )
+                    return assistant_http._kirim_host_privat(self, hasil) if arsip else self._kirim(hasil)
                 if jalur.startswith("/lembar/"):
                     bagian = jalur.split("/")
                     sesi_id = int(bagian[2])
@@ -1020,6 +1122,8 @@ class Penangan(BaseHTTPRequestHandler):
         jalur = urllib.parse.urlparse(self.path).path.rstrip("/")
         import assistant_http
 
+        if assistant_http.tangani_inline_post(self, jalur):
+            return
         if assistant_http.tangani_post(self, jalur):
             return
         if jalur.startswith("/mulai/"):
@@ -1873,6 +1977,13 @@ class Penangan(BaseHTTPRequestHandler):
         data = {
             k: v[0]
             for k, v in urllib.parse.parse_qs(mentah, keep_blank_values=True).items()
+        }
+        # Metadata presence hanya untuk pemulihan draf pada aksi Pendamping.
+        # Handler simpan/konfirmasi resmi tidak boleh meneruskannya ke domain.
+        data = {
+            k: v for k, v in data.items()
+            if k != "hadir_sertakan_pemetaan"
+            and not k.startswith(("hadir_dilewati_", "hadir_belum_"))
         }
 
         sesi_id = int(jalur.split("/")[2])

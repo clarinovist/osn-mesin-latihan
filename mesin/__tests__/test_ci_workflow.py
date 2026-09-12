@@ -16,6 +16,15 @@ def test_ci_menjalankan_seluruh_test_secara_stabil():
     ]
 
 
+def test_checkout_candidate_menyediakan_history_untuk_probe_recovery_pinned():
+    teks = ALUR.read_text()
+    bagian_uji = teks.split("  uji:\n", 1)[1].split("\n  bangun:\n", 1)[0]
+    checkout = bagian_uji.split("- uses: actions/checkout@v7", 1)[1].split(
+        "- uses: actions/setup-python@v7", 1
+    )[0]
+    assert "fetch-depth: 0" in checkout
+
+
 def test_ci_tetap_menguji_sebelum_build_dan_memasang_digest_yang_sama():
     teks = ALUR.read_text()
     assert teks.index("run: python scripts/check_repo.py") < teks.index(
