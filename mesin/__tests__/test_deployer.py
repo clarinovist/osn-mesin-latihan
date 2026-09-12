@@ -582,14 +582,16 @@ def test_http_hanya401_tanpa_proxy_redirect_body(monkeypatch, status, expected):
     assert handlers[1].redirect_request(None, None, 303, "", {}, "http://invalid") is None
 
 
-def test_cli_mengabaikan_env_injeksi_dan_menolak_argumen(monkeypatch):
+def test_cli_mengabaikan_env_injeksi_dan_menerima_wrapper_satu_argumen(monkeypatch):
     panggilan = []
     monkeypatch.setattr(d, "deploy", lambda teks: panggilan.append(teks) or 0)
-    assert d.main([], {"SSH_ORIGINAL_COMMAND": PERINTAH, "DOCKER_HOST": "tcp://evil",
-                       "OSN_DATA": "/evil", "OSN_BYPASS": "1"}) == 0
-    assert panggilan == [PERINTAH]
-    assert d.main(["--approval", "/evil"], {"SSH_ORIGINAL_COMMAND": PERINTAH}) == 2
-    assert panggilan == [PERINTAH]
+    lingkungan = {"SSH_ORIGINAL_COMMAND": PERINTAH, "DOCKER_HOST": "tcp://evil",
+                   "OSN_DATA": "/evil", "OSN_BYPASS": "1"}
+    assert d.main([], lingkungan) == 0
+    assert d.main([PERINTAH], {"SSH_ORIGINAL_COMMAND": "teks-lain"}) == 0
+    assert panggilan == [PERINTAH, PERINTAH]
+    assert d.main(["--approval", "/evil"], lingkungan) == 2
+    assert panggilan == [PERINTAH, PERINTAH]
 
 
 def test_cli_subprocess_request_injection_tanpa_docker(tmp_path):

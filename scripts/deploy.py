@@ -507,13 +507,14 @@ def deploy(teks, *, docker=None, berkas=None, sekarang=time.time,
 
 
 def main(argv=None, environ=None):
-    """Tidak ada opsi path/envflag CLI; hanya SSH_ORIGINAL_COMMAND yang diparse."""
+    """Terima forced-command langsung atau satu argumen dari wrapper sudo."""
     argv = sys.argv[1:] if argv is None else argv
     environ = os.environ if environ is None else environ
-    if argv:
+    if len(argv) > 1:
         print("Argumen CLI ditolak; gunakan forced-command. Exit 2.")
         return 2
-    return deploy(environ.get("SSH_ORIGINAL_COMMAND", ""))
+    perintah = argv[0] if argv else environ.get("SSH_ORIGINAL_COMMAND", "")
+    return deploy(perintah)
 
 
 def _terputus(nomor, frame):
