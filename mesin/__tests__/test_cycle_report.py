@@ -56,6 +56,25 @@ def _utama(teks):
     )[0]
 
 
+def test_ringkasan_laporan_tiga_bagian_bersumber_dari_perjalanan_bukan_statistik(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Ringkas Uji", pemilik="guru")
+        _pemetaan(kon, sid, database.buat_putaran_fokus(kon, sid, "P3"), 1)
+        h = reports.halaman_laporan(kon, sid).decode()
+
+    ringkasan = h.split('<div class="kartu ringkasan-laporan">', 1)[1].split(
+        "</div>", 1
+    )[0]
+    assert "Yang terlihat" in ringkasan
+    assert "Yang masih perlu diperiksa" in ringkasan
+    assert "Langkah berikutnya" in ringkasan
+    assert 'href="#perjalanan-belajar"' in ringkasan
+    assert f'href="/anak/{sid}#judul-rencana-belajar"' in ringkasan
+    assert ringkasan.count("Lihat rencana belajar") == 1
+    assert "1 sesi dinilai" not in ringkasan
+    assert "kekeliruan konsep" not in ringkasan
+
+
 def test_laporan_baru_meminta_pemetaan_bukan_menyimpulkan_penguasaan(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Anak Uji", pemilik="guru")
@@ -84,6 +103,28 @@ def test_hasil_belum_disahkan_tidak_menjadi_fokus_laporan(db):
     assert "Mulai dari topik" not in h
 
 
+def test_ringkasan_fokus_lama_tetap_menyebut_ada_hasil_belum_dikonfirmasi(db):
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Pending Uji", pemilik="guru")
+        putaran, _ = _fokus(kon, sid)
+        sesi = database.buat_sesi_dari_urutan(
+            kon, sid, 88, ("deret_aritmetika",), level="P3"
+        )
+        database.tautkan_sesi_putaran(kon, putaran, [sesi])
+        kon.execute(
+            "UPDATE sesi SET tujuan = 'latihan_terbimbing' WHERE id = ?", (sesi,)
+        )
+        database.tandai_selesai(kon, sesi)
+        h = reports.halaman_laporan(kon, sid).decode()
+
+    ringkasan = h.split('<div class="kartu ringkasan-laporan">', 1)[1].split(
+        "</div>", 1
+    )[0]
+    assert "ada hasil sesi yang belum dikonfirmasi" in ringkasan.lower()
+    assert "hasil terbaru" not in ringkasan.lower()
+    assert "Konfirmasi hasil" in ringkasan
+
+
 def test_laporan_memakai_bukti_sah_dan_tidak_menulis_db(db):
     with database.buka(db) as kon:
         sid = database.tambah_siswa(kon, "Fokus Uji", pemilik="guru")
@@ -98,6 +139,60 @@ def test_laporan_memakai_bukti_sah_dan_tidak_menulis_db(db):
     assert all(f'/sesi/{sesi}' in utama for sesi, _ in sumber)
     assert "uji-rahasia" not in utama
     assert "alasan-internal" not in utama
+
+
+def test_actual_report_memisahkan_dua_fokus_dengan_status_reducer_berbeda(db):
+    from learning_cycle import PutaranFokus, RencanaBelajar, StatusFokus
+
+    fokus_a = ("deret_aritmetika", "K", "uji-rahasia")
+    fokus_b = ("soal_umur", "H", None)
+    with database.buka(db) as kon:
+        sid = database.tambah_siswa(kon, "Tunas", pemilik="guru")
+        putaran, sumber = _fokus(kon, sid)
+        database.tambah_anggota_fokus(
+            kon, putaran, fokus_b[0], fokus_b[1], fokus_b[2],
+            [sesi for sesi, _ in sumber],
+        )
+        rencana = RencanaBelajar(
+            "evaluasi", "uji",
+            putaran=PutaranFokus(
+                putaran, "P3",
+                (StatusFokus(fokus_a, "perlu_dipelajari"),
+                 StatusFokus(fokus_b, "perlu_dipelajari")),
+            ),
+            kandidat=(fokus_a,), jumlah_probe_minimum=4,
+        )
+        evaluasi = database.buat_sesi_dari_rencana(
+            kon, sid, rencana, putaran_id=putaran, seed=909
+        )
+        cek = {}
+        dilewati = set()
+        for butir in database.isi_sesi(kon, evaluasi):
+            if butir["template_id"] != fokus_a[0]:
+                dilewati.add(butir["sesi_soal_id"])
+                continue
+            jawaban = database.simpan_jawaban(
+                kon, butir["sesi_soal_id"], butir["kunci"]
+            )
+            database.simpan_diagnosis(
+                kon, jawaban, True, None, None, None, "tepat"
+            )
+            cek[butir["sesi_soal_id"]] = "bisa_menjelaskan"
+        database.tandai_selesai(kon, evaluasi)
+        database.konfirmasi_hasil(
+            kon, evaluasi, "guru", dilewati=dilewati, cek_pemahaman=cek
+        )
+        h = reports.halaman_laporan(kon, sid).decode()
+
+    ringkasan = h.split('<div class="kartu ringkasan-laporan">', 1)[1].split(
+        "</div>", 1
+    )[0]
+    terlihat = ringkasan.split("Yang terlihat", 1)[1].split("</section>", 1)[0]
+    assert terlihat.count('<li class="item-fokus-ringkasan">') == 2
+    fokus_1, fokus_2 = terlihat.split("Fokus 1", 1)[1].split("Fokus 2", 1)
+    assert "mulai membaik" in fokus_1
+    assert "masih perlu dipelajari" in fokus_2
+    assert "uji-rahasia" not in ringkasan
 
 
 def test_invalidasi_tidak_menghilangkan_riwayat_atau_mengaku_bukti_aktif(db):
@@ -275,6 +370,19 @@ def test_bukti_lama_dilipat_tanpa_menggandakan_tautan_sesi():
 
 
 def test_get_laporan_lewat_http_menjaga_kepemilikan(tmp_path, monkeypatch):
+    import assistant_client
+    import assistant_service
+    import llm
+
+    panggilan = []
+
+    def ai_terlarang(*args, **kwargs):
+        panggilan.append((args, kwargs))
+        raise AssertionError("GET laporan tidak boleh memanggil provider AI")
+
+    monkeypatch.setattr(assistant_service, "panggil_provider_default", ai_terlarang)
+    monkeypatch.setattr(assistant_client, "kirim", ai_terlarang)
+    monkeypatch.setattr(llm, "_panggil", ai_terlarang)
     server = ServerUji(tmp_path, monkeypatch)
     try:
         with server.buka() as kon:
@@ -283,7 +391,11 @@ def test_get_laporan_lewat_http_menjaga_kepemilikan(tmp_path, monkeypatch):
             _fokus(kon, sid)
             sebelum = tuple(kon.iterdump())
         kode, h, _ = server.minta(f"/laporan/{sid}", auth=("guru", SANDI_GURU))
-        assert kode == 200
+        kode_ulang, h_ulang, _ = server.minta(
+            f"/laporan/{sid}", auth=("guru", SANDI_GURU)
+        )
+        assert kode == kode_ulang == 200
+        assert h == h_ulang
         assert isinstance(h, str)
         assert "Perjalanan fokus belajar" in h
         kode_asing, h_asing, _ = server.minta(f"/laporan/{asing}", auth=("guru", SANDI_GURU))
@@ -298,5 +410,6 @@ def test_get_laporan_lewat_http_menjaga_kepemilikan(tmp_path, monkeypatch):
         assert "Perjalanan fokus belajar" not in h_murid
         with server.buka() as kon:
             assert tuple(kon.iterdump()) == sebelum
+        assert panggilan == []
     finally:
         server.berhenti()

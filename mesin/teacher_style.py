@@ -442,6 +442,29 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }}
 .ringkasan-laporan p:last-child {{ margin-bottom: 0; }}
+.ringkasan-laporan {{
+  background: {T.LATAR_CATATAN}; border: 1px solid {T.BORDER_HALUS};
+  border-radius: {T.RADIUS_KARTU}; padding: 1.15rem;
+}}
+.ringkasan-laporan > h2 {{ margin-top: 0; }}
+.bagian-ringkasan-laporan {{
+  border-top: 1px solid {T.BORDER_HALUS}; padding-top: .75rem; margin-top: .75rem;
+}}
+.bagian-ringkasan-laporan h3 {{ margin: 0 0 .45rem; font-size: 1rem; }}
+.bagian-ringkasan-laporan p {{ margin: 0; }}
+.daftar-fokus-ringkasan {{ margin: 0; padding-left: 1.15rem; }}
+.item-fokus-ringkasan + .item-fokus-ringkasan {{ margin-top: .4rem; }}
+.sumber-ringkasan-laporan {{
+  color: {T.TEKS_SUBTLE}; font-size: .85rem; margin-top: 1rem;
+}}
+.sumber-ringkasan-laporan a {{ text-decoration: underline; text-underline-offset: .15em; }}
+.aksi-ringkasan-laporan {{
+  display: inline-flex; align-items: center; min-height: {T.TARGET_SENTUH};
+  margin-top: .75rem; padding: .55rem .85rem;
+  border: 1px solid {T.AKSEN_TEAL_TUA}; border-radius: {T.RADIUS_KECIL};
+  color: {T.AKSEN_TEAL_TUA}; font-weight: 700; text-decoration: none;
+}}
+.aksi-ringkasan-laporan:hover {{ text-decoration: underline; }}
 .grid-tindakan-laporan {{
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem; align-items: stretch;
@@ -491,10 +514,10 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
     gap: 1rem; align-items: stretch;
   }}
   .ringkasan-dashboard-laporan > .ringkasan-laporan {{
-    grid-area: ringkasan; margin-bottom: 0; height: 100%;
+    grid-area: ringkasan; margin-bottom: 0; min-height: 100%;
   }}
   .ringkasan-dashboard-laporan > .kartu-stat {{
-    grid-area: metrik;
+    grid-area: metrik; align-self: start;
   }}
   .ringkasan-dashboard-laporan .kartu-stat {{
     grid-template-columns: repeat(2, minmax(0, 1fr));

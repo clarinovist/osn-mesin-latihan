@@ -200,6 +200,7 @@ seed, jadi selalu sama persis.
 | `web.py` | router HTTP + palang peran/kepemilikan |
 | `teacher_pages.py` | halaman guru: dashboard, sesi, konfirmasi hapus, lembar |
 | `reports.py` | laporan per anak + diagnosa otomatis |
+| `report_summary.py` | ringkasan deterministik berbasis perjalanan belajar |
 | `account_pages.py` | halaman akun guru & admin |
 | `landing.py` | halaman publik (daftar, masuk) — brand tautan beranda |
 | `teacher_style.py` | CSS terpusat untuk halaman pengelola — token dari `design_tokens.py` |

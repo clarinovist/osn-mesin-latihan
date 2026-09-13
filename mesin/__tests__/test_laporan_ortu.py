@@ -276,8 +276,8 @@ def test_ringkasan_memasangkan_tipe_dengan_topik_fokus(db):
     ringkasan = h[awal:akhir]
     assert pola_geo
     assert not any(nama in ringkasan for nama in pola_geo)
-    assert "semua latihan" in ringkasan.lower()
-    assert "bukan penetapan fokus" in ringkasan.lower()
+    assert "bukti yang sudah dikonfirmasi" in ringkasan.lower()
+    assert "belum cukup untuk menetapkan fokus" in ringkasan.lower()
     assert "Pengandaian benar atau salah" not in ringkasan
 
 

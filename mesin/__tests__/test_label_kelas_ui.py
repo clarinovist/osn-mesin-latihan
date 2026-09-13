@@ -102,13 +102,6 @@ def test_landing_dan_kebijakan_memakai_istilah_kelas():
     )
 
 
-def test_laporan_memakai_istilah_kelas_secara_konsisten():
-    isi = reports._ringkasan_ortu("Alya", [{"k": 0}], [])
-
-    assert "level berikutnya" not in isi
-    assert "kelas berikutnya" in isi
-
-
 def test_detail_sesi_guru_dan_cetak_memakai_label_kelas(db):
     with database.buka(db) as kon:
         siswa_id = database.tambah_siswa(kon, "Alya", "P5")
@@ -129,6 +122,19 @@ def test_detail_sesi_guru_dan_cetak_memakai_label_kelas(db):
         assert "Kelas 5" in isi
         assert ">P5<" not in isi
         assert "&middot; P5 &middot;" not in isi
+
+
+def test_ringkasan_actual_report_tidak_memakai_istilah_level_internal(db):
+    with database.buka(db) as kon:
+        siswa_id = database.tambah_siswa(kon, "Alya", "P5")
+        isi = _badan(reports.halaman_laporan(kon, siswa_id).decode())
+
+    ringkasan = isi.split('<div class="kartu ringkasan-laporan">', 1)[1].split(
+        "</div>", 1
+    )[0]
+    assert "level berikutnya" not in ringkasan.lower()
+    assert ">P5<" not in ringkasan
+    assert "Lihat rencana belajar" in ringkasan
 
 
 def test_laporan_menampilkan_kelas_dan_nama_kolom_kelas(db):

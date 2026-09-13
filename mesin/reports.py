@@ -12,6 +12,7 @@ from datetime import datetime
 import database
 from learning_journey import perjalanan_belajar
 from cycle_report import render_perjalanan
+from report_summary import render_ringkasan
 import design_tokens as T
 from diagnosis import diagnosa
 from generator import LEVEL_BAWAAN
@@ -224,22 +225,6 @@ def _tanggal_pendek(nilai) -> str:
     )
 
 
-def _ringkasan_ortu(nama: str, ring, mis) -> str:
-    """Ringkas statistik semua latihan tanpa menyimpulkan status fokus."""
-    if not ring:
-        return (
-            f"<p><b>{html.escape(nama)}</b> belum punya sesi yang dinilai. "
-            "Ikuti langkah pemetaan di atas untuk mulai mengumpulkan bukti.</p>"
-        )
-    jumlah_k = sum(r["k"] or 0 for r in ring)
-    return (
-        f"<p>Catatan semua latihan <b>{html.escape(nama)}</b>: "
-        f"{len(ring)} sesi dinilai, dengan {jumlah_k} kekeliruan konsep. "
-        "Ini bukan penetapan fokus atau bukti bahwa anak sudah menguasai materi. "
-        "Keputusan menuju kelas berikutnya perlu bukti siklus yang dikonfirmasi.</p>"
-    )
-
-
 def _kartu_kamus() -> str:
     baris = "".join(
         f'<li><span class="dot {"kuat" if kode == "BENAR" else ("salah" if kode == "K" else "lemah")}"></span>'
@@ -333,8 +318,7 @@ def halaman_laporan(
         f"{html.escape(jumlah_fokus)}</div>"
         f'<div class="stat-label">fokus aktif</div></div>'
         f"</div>"
-        f'<div class="kartu ringkasan-laporan"><h2>Ringkasan untuk orang tua</h2>'
-        f"{_ringkasan_ortu(siswa['nama'], ring, mis)}</div>"
+        f'{render_ringkasan(siswa["nama"], perjalanan, siswa_id, _nama_tipe_soal, _tanggal_pendek)}'
         "</div>"
         f'<div class="kartu"><h2>Perkembangan jawaban tepat</h2>'
         f'<p class="sub">Semua latihan — termasuk latihan manual dan sesi '

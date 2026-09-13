@@ -6,8 +6,9 @@ bersyarat: spike lebih dahulu, lalu berhenti sebelum kompleksitas penuh jika
 manfaat AI dibanding deterministik belum berarti.
 
 **Hasil palang manfaat: TAHAN implementasi AI v1.** Spike sintetis tidak memberikan
-bukti peningkatan berarti. Dokumen ini mencatat baseline dan keputusan teknis,
-**bukan klaim bahwa fitur telah diimplementasikan**. Laporan aplikasi, DB, schema,
+bukti peningkatan berarti. Ringkasan **deterministik** tiga bagian kini tersedia di
+source aplikasi berdasarkan perjalanan/reducer yang sudah ada; ini bukan fitur AI
+dan belum merupakan klaim sudah ter-deploy. DB, schema, consent, cache, payload,
 dan konfigurasi provider tidak diubah. Mengaktifkan ringkasan AI produksi belum
 boleh dilakukan; izin Pendamping existing bukan izin baru untuk data laporan.
 
@@ -50,7 +51,18 @@ Tanggal aktual dan tautan **Lihat rencana belajar** ditambahkan server. Jika
 bukti belum cukup, tampilkan penjelasan deterministik serta tindakan resmi,
 bukan memanggil AI untuk membuat paragraf umum.
 
-## 2. Baseline v1 yang disepakati, belum dibangun
+### Implementasi deterministik yang tersedia di source
+
+Laporan orang tua merender **Yang terlihat**, **Yang masih perlu diperiksa**, dan
+**Langkah berikutnya** langsung dari `learning_journey.PerjalananBelajar`. Maksimal
+dua fokus tetap dipisahkan, jadwal dan tindakan mengikuti rekomendasi reducer,
+serta satu tautan **Lihat rencana belajar** menuju profil existing. Statistik semua
+latihan tetap tampil sebagai bagian terpisah dan tidak dipakai sebagai bukti.
+
+Render GET tidak menyimpan ringkasan, tidak membuat cache, dan tidak memanggil
+network atau AI. Keputusan spike dan batas AI di bawah tetap berlaku.
+
+## 2. Baseline AI v1 yang disepakati, belum dibangun
 
 ### UX dan pemicu
 
@@ -182,8 +194,10 @@ baik tidak dapat menjadi bukti positif untuk membangun kompleksitas AI penuh.
 v1 dihentikan sebelum consent baru, cache/kuota, retensi, endpoint, atau migration
 aplikasi dibangun. Fitur/provider ringkasan baru belum ada sehingga tetap tidak
 aktif; konfigurasi AI Pendamping existing tidak disentuh. Rekomendasi pragmatis
-ialah ringkasan deterministik tiga bagian berdasarkan proyeksi bukti existing. Penerapan rekomendasi itu merupakan langkah
-produk berikutnya, tidak dilakukan diam-diam oleh spike ini.
+ialah ringkasan deterministik tiga bagian berdasarkan proyeksi bukti existing.
+Rekomendasi tersebut kemudian diterapkan pada source aplikasi sebagai pekerjaan
+terpisah dari spike; hasil spike historis tetap tidak diubah atau diklaim sebagai
+implementasi AI.
 
 ## 4. TDD dan verifikasi eksperimen
 

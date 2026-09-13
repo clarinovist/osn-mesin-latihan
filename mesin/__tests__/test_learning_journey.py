@@ -258,62 +258,233 @@ def test_proyeksi_immutable_dan_pemblokir_tidak_menghilangkan_status_fokus():
         hasil.fokus[0].tahap = "bertahan"
 
 
+def test_ringkasan_hanya_menyebut_pemahaman_dari_evaluasi_relevan_terbaru():
+    from report_summary import render_ringkasan
+
+    lama_ragu = _sesi(
+        4, "2026-09-08", tujuan="evaluasi",
+        outcomes=tuple(
+            _outcome(FOKUS_A, benar=True, kode=None, paham="ragu")
+            for _ in range(4)
+        ),
+    )
+    terbaru_bisa = _evaluasi(5, tanggal="2026-09-10")
+    perjalanan = perjalanan_belajar(
+        _bukti(lama_ragu, terbaru_bisa), 1, date(2026, 9, 11)
+    )
+    ringkasan = render_ringkasan(
+        "Anak Sintetis", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.fokus[0].tahap == "mulai_membaik"
+    assert "mulai membaik" in ringkasan
+    assert "ragu" not in ringkasan
+    assert "menghafal" not in ringkasan
+
+
+def test_ringkasan_tidak_meminjam_ragu_lama_saat_evaluasi_terbaru_tanpa_catatan():
+    from report_summary import render_ringkasan
+
+    lama_ragu = _sesi(
+        4, "2026-09-08", tujuan="evaluasi",
+        outcomes=tuple(
+            _outcome(FOKUS_A, benar=True, kode=None, paham="ragu")
+            for _ in range(4)
+        ),
+    )
+    terbaru_tanpa_catatan = _sesi(
+        5, "2026-09-10", tujuan="evaluasi",
+        outcomes=tuple(
+            _outcome(FOKUS_A, benar=True, kode=None, paham=None)
+            for _ in range(4)
+        ),
+    )
+    perjalanan = perjalanan_belajar(
+        _bukti(
+            lama_ragu,
+            terbaru_tanpa_catatan,
+            kejadian=(_event_intervensi(),),
+            pendekatan=((FOKUS_A, ("visual-1", "visual-2")),),
+        ),
+        1,
+        date(2026, 9, 11),
+    )
+    ringkasan = render_ringkasan(
+        "Anak Sintetis", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.fokus[0].bukti[-1].cek_pemahaman == ()
+    assert "ragu" not in ringkasan
+    assert "menghafal" not in ringkasan
+
+
+def test_ringkasan_menyebut_pemahaman_evaluasi_terbaru_bukan_yang_lama():
+    from report_summary import render_ringkasan
+
+    lama_bisa = _evaluasi(4, tanggal="2026-09-08")
+    terbaru_ragu = _sesi(
+        5, "2026-09-10", tujuan="evaluasi",
+        outcomes=tuple(
+            _outcome(FOKUS_A, benar=True, kode=None, paham="ragu")
+            for _ in range(4)
+        ),
+    )
+    perjalanan = perjalanan_belajar(
+        _bukti(
+            lama_bisa,
+            terbaru_ragu,
+            kejadian=(_event_intervensi(),),
+            pendekatan=((FOKUS_A, ("visual-1", "visual-2")),),
+        ),
+        1,
+        date(2026, 9, 11),
+    )
+    ringkasan = render_ringkasan(
+        "Anak Sintetis", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.fokus[0].tahap == "perlu_diperkuat"
+    assert "catatan pemeriksaan terakhir: masih ragu" in ringkasan
+    assert "pemahaman terbaru" not in ringkasan
+    assert "menghafal" not in ringkasan
+
+
+def test_ringkasan_memakai_tahap_dari_reducer_untuk_hasil_ragu():
+    from report_summary import render_ringkasan
+
+    outcomes = tuple(
+        _outcome(FOKUS_A, benar=True, kode=None, paham="ragu")
+        for _ in range(4)
+    )
+    evaluasi_ragu = _sesi(
+        4, "2026-09-10", tujuan="evaluasi", outcomes=outcomes
+    )
+    perjalanan = perjalanan_belajar(
+        _bukti(
+            evaluasi_ragu,
+            kejadian=(_event_intervensi(),),
+            pendekatan=((FOKUS_A, ("visual-1", "visual-2")),),
+        ),
+        1,
+        date(2026, 9, 11),
+    )
+    ringkasan = render_ringkasan(
+        "Anak Sintetis", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.fokus[0].tahap == "perlu_diperkuat"
+    assert "masih perlu diperkuat" in ringkasan
+    assert "ragu" in ringkasan
+    assert "mulai membaik" not in ringkasan
+    assert "menghafal" not in ringkasan
+
+
+def test_ringkasan_dua_fokus_tidak_menyebut_keduanya_siap_saat_hanya_satu_due():
+    from report_summary import render_ringkasan
+
+    putaran = PutaranSiklus(1, 1, "P3", date(2026, 9, 1), (FOKUS_A, FOKUS_B))
+    kejadian = (
+        _event_intervensi(FOKUS_A, identitas=1),
+        _event_intervensi(FOKUS_B, identitas=2),
+    )
+    sesi = (
+        _sesi(2, "2026-09-02", tujuan="latihan_terbimbing", fokus=FOKUS_A),
+        _sesi(3, "2026-09-03", tujuan="penguatan", fokus=FOKUS_A),
+        _sesi(4, "2026-09-06", tujuan="latihan_terbimbing", fokus=FOKUS_B),
+        _sesi(5, "2026-09-07", tujuan="penguatan", fokus=FOKUS_B),
+    )
+    perjalanan = perjalanan_belajar(
+        _bukti(*sesi, putaran=(putaran,), kejadian=kejadian),
+        1,
+        date(2026, 9, 8),
+    )
+    ringkasan = render_ringkasan(
+        "Anak Sintetis", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.rekomendasi.tindakan == "evaluasi"
+    assert perjalanan.rekomendasi.kandidat == (FOKUS_A,)
+    assert len(perjalanan.fokus) == 2
+    assert ringkasan.count("berada pada tahap evaluasi berjeda") == 2
+    assert "sudah siap" not in ringkasan
+
+
+def test_ringkasan_dua_fokus_due_tetap_netral_saat_reducer_memilih_satu():
+    from report_summary import render_ringkasan
+
+    putaran = PutaranSiklus(1, 1, "P3", date(2026, 9, 1), (FOKUS_A, FOKUS_B))
+    kejadian = (
+        _event_intervensi(FOKUS_A, identitas=1),
+        _event_intervensi(FOKUS_B, identitas=2),
+    )
+    sesi = tuple(
+        _sesi(identitas, tanggal, tujuan=tujuan, fokus=fokus)
+        for identitas, tanggal, tujuan, fokus in (
+            (2, "2026-09-02", "latihan_terbimbing", FOKUS_A),
+            (3, "2026-09-03", "penguatan", FOKUS_A),
+            (4, "2026-09-02", "latihan_terbimbing", FOKUS_B),
+            (5, "2026-09-03", "penguatan", FOKUS_B),
+        )
+    )
+    perjalanan = perjalanan_belajar(
+        _bukti(*sesi, putaran=(putaran,), kejadian=kejadian),
+        1,
+        date(2026, 9, 8),
+    )
+    ringkasan = render_ringkasan(
+        "Tunas", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.rekomendasi.tindakan == "evaluasi"
+    assert perjalanan.rekomendasi.kandidat == (FOKUS_A,)
+    assert [fokus.tahap for fokus in perjalanan.fokus] == [
+        "menunggu_evaluasi", "menunggu_evaluasi",
+    ]
+    assert ringkasan.count("berada pada tahap evaluasi berjeda") == 2
+    assert "menunggu evaluasi" not in ringkasan.lower()
+    assert "belum tersedia" not in ringkasan.lower()
+
+
+def test_ringkasan_evaluasi_jatuh_tempo_tidak_menyuruh_menunggu():
+    from report_summary import render_ringkasan
+
+    perjalanan = perjalanan_belajar(
+        _bukti(
+            _sesi(2, "2026-09-04", tujuan="latihan_terbimbing"),
+            _sesi(3, "2026-09-05", tujuan="penguatan"),
+            kejadian=(_event_intervensi(),),
+        ),
+        1,
+        date(2026, 9, 8),
+    )
+    ringkasan = render_ringkasan(
+        "Anak Sintetis", perjalanan, 1, lambda nilai: nilai.replace("_", " "), str
+    )
+
+    assert perjalanan.rekomendasi.tindakan == "evaluasi"
+    assert perjalanan.fokus[0].tahap == "menunggu_evaluasi"
+    assert "Lakukan evaluasi berjeda" in ringkasan
+    assert "menunggu evaluasi" not in ringkasan.lower()
+    assert "belum tersedia" not in ringkasan.lower()
+
+
 @pytest.mark.parametrize(
     ("nama_tahap", "sesi", "kejadian", "pendekatan", "hari"),
     [
         ("perlu_dipelajari", (), (), (), date(2026, 9, 4)),
-        (
-            "latihan_terbimbing",
-            (),
-            (_event_intervensi(),),
-            (),
-            date(2026, 9, 4),
-        ),
-        (
-            "penguatan",
-            (_sesi(2, "2026-09-04", tujuan="latihan_terbimbing"),),
-            (_event_intervensi(),),
-            (),
-            date(2026, 9, 5),
-        ),
-        (
-            "menunggu_evaluasi",
-            (
-                _sesi(2, "2026-09-04", tujuan="latihan_terbimbing"),
-                _sesi(3, "2026-09-05", tujuan="penguatan"),
-            ),
-            (_event_intervensi(),),
-            (),
-            date(2026, 9, 6),
-        ),
-        (
-            "mulai_membaik",
-            (_evaluasi(4),),
-            (),
-            (),
-            date(2026, 9, 11),
-        ),
-        (
-            "bertahan",
-            (_evaluasi(4),) + _checkpoint(5),
-            (),
-            (),
-            date(2026, 10, 8),
-        ),
-        (
-            "perlu_diperkuat",
-            (_evaluasi(4, lulus=False),),
-            (_event_intervensi(),),
-            ((FOKUS_A, ("visual-1", "visual-2")),),
-            date(2026, 9, 11),
-        ),
-        (
-            "perlu_eskalasi",
-            (_evaluasi(4, lulus=False),),
-            (_event_intervensi(),),
-            (),
-            date(2026, 9, 11),
-        ),
+        ("latihan_terbimbing", (), (_event_intervensi(),), (), date(2026, 9, 4)),
+        ("penguatan", (_sesi(2, "2026-09-04", tujuan="latihan_terbimbing"),),
+         (_event_intervensi(),), (), date(2026, 9, 5)),
+        ("menunggu_evaluasi", (
+            _sesi(2, "2026-09-04", tujuan="latihan_terbimbing"),
+            _sesi(3, "2026-09-05", tujuan="penguatan"),
+        ), (_event_intervensi(),), (), date(2026, 9, 6)),
+        ("mulai_membaik", (_evaluasi(4),), (), (), date(2026, 9, 11)),
+        ("bertahan", (_evaluasi(4),) + _checkpoint(5), (), (), date(2026, 10, 8)),
+        ("perlu_diperkuat", (_evaluasi(4, lulus=False),), (_event_intervensi(),),
+         ((FOKUS_A, ("visual-1", "visual-2")),), date(2026, 9, 11)),
+        ("perlu_eskalasi", (_evaluasi(4, lulus=False),), (_event_intervensi(),),
+         (), date(2026, 9, 11)),
     ],
 )
 def test_tahap_fokus_mengikuti_reducer(
