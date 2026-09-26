@@ -225,7 +225,7 @@ def _pilih_materi(peta, per_topik, tanggal, siswa_id, materi, status, halaman):
             + (f'<small>{belum} belum dinilai · {html.escape(label)}</small>' if belum != len(hasil)
                else '<small>Belum dinilai</small>')
             + '<span class="peta-nilai">'
-            + (('✓ Dipilih' if eksplisit else '<span class="peta-auto-pilih">✓ Dipilih</span>'
+            + (('Dipilih' if eksplisit else '<span class="peta-auto-pilih">Dipilih</span>'
                 '<span class="peta-auto-lihat">Lihat target →</span>') if kode == aktif else 'Lihat target →')
             + '</span></a>'
         )

@@ -32,8 +32,8 @@ def bingkai(siswa, section, total, isi, *, peran='guru', pesan='', kelas_sekolah
     kabar = '<div class="st-banner-sukses" role="status">%s</div>' % _e(pesan) if pesan else ''
     return ('<main aria-labelledby="judul-profil"><div class="jejak"><a href="%s">&larr; Semua anak</a></div>'
             '<header class="kepala-anak-st editorial-kepala-st"><p class="editorial-alis-st">RUANG BELAJAR ANAK</p>'
-            '<h1 class="st" id="judul-profil">%s <span class="st-badge selesai">(%s)</span>%s</h1>'
-            '<p class="sub"><a href="%s">Kelola kelas sekolah</a></p></header>'
+            '<div class="profil-identitas-st"><h1 class="st" id="judul-profil">%s <span class="st-badge selesai">(%s)</span>%s</h1>'
+            '<a class="profil-ubah-kelas-st" href="%s">Ubah kelas</a></div></header>'
             '<nav class="profil-tabs-st" aria-label="Bagian profil anak">%s</nav>%s%s</main>') % (
                 '/admin' if peran=='admin' else '/guru', _e(siswa['nama']),
                 _e(label_kelas_sekolah(kelas_sekolah)), keluarga,
@@ -165,8 +165,8 @@ GAYA_PROFIL = f"""
 .profil-workspace-st .profil-tabs-st a {{ display:inline-flex; align-items:center; gap:{T.SP_2}; min-height:{T.TARGET_SENTUH}; padding:{T.SP_2} 0; color:{T.TEKS_VARIAN}; text-decoration:none; white-space:nowrap; border-bottom:3px solid transparent; font-weight:650; }}
 .profil-workspace-st .profil-tabs-st a[aria-current] {{ color:{T.AKSEN_TEAL_TUA}; border-color:{T.AKSEN_TEAL_TUA}; }}
 .profil-workspace-st .profil-tabs-st span {{ font-size:.75rem; padding:.1rem .4rem; border-radius:{T.RADIUS_KECIL}; background:{T.LATAR_SEKUNDER_LEMBUT}; }}
-.profil-workspace-st .profil-rappel-st {{ display:flex; align-items:center; justify-content:space-between; gap:{T.SP_4}; padding:{T.SP_3} {T.SP_4}; background:{T.LATAR_CATATAN}; border:1px solid {T.BORDER_CATATAN}; border-radius:{T.RADIUS_KARTU}; margin-bottom:{T.SP_5}; font-size:.875rem; }}
-.profil-workspace-st .profil-rappel-st a {{ color:{T.AKSEN_TEAL_TUA}; white-space:nowrap; font-weight:650; }}
+.profil-workspace-st .profil-rappel-st {{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:{T.SP_1} {T.SP_4}; padding:{T.SP_1} {T.SP_3}; background:{T.LATAR_CATATAN}; border:1px solid {T.BORDER_CATATAN}; border-radius:{T.RADIUS_KECIL}; margin-bottom:{T.SP_4}; font-size:.875rem; }}
+.profil-workspace-st .profil-rappel-st a {{ display:inline-flex; align-items:center; min-height:{T.TARGET_SENTUH}; color:{T.AKSEN_TEAL_TUA}; white-space:nowrap; font-weight:650; }}
 .profil-workspace-st .profil-formulaire-st {{ min-width:0; }}
 .profil-workspace-st .profil-formulaire-st > .buat-latihan-st {{ padding:{T.SP_5}; background:{T.LATAR_KARTU}; border:1px solid {T.BORDER_HALUS}; border-radius:{T.RADIUS_KARTU_BESAR}; }}
 .profil-workspace-st .profil-formulaire-st .buat-latihan-st > h2 {{ margin-top:0; }}
@@ -188,13 +188,18 @@ GAYA_PROFIL = f"""
 .profil-workspace-st .profil-assistant-st .pendamping-tombol,.profil-workspace-st .profil-assistant-st .st-tombol-sekunder {{ background:{T.LATAR_KARTU}; color:{T.AKSEN_TEAL_TUA}; border:1px solid {T.BORDER_VARIAN}; }}
 .profil-workspace-st .riwayat-aksi-st .tombol-ikon-st {{ display:inline-flex; width:auto; height:auto; min-width:{T.TARGET_SENTUH}; min-height:{T.TARGET_SENTUH}; position:relative; }}
 .profil-workspace-st .profil-champs-st > .strip-kolom:nth-child(-n+4) {{ grid-column:auto; }}
-.profil-workspace-st .profil-formulaire-st .panduan-variasi {{ padding:0; border:0; margin:0 0 {T.SP_3}; border-radius:0; }}
-.profil-workspace-st .profil-formulaire-st .panduan-variasi > summary {{ font-size:.875rem; }}
+.profil-workspace-st .profil-aide-st {{ position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:{T.SP_2}; margin:0 0 {T.SP_3}; }}
+.profil-workspace-st .profil-formulaire-st .panduan-variasi {{ padding:0; border:0; margin:0; border-radius:0; min-width:0; }}
+.profil-workspace-st .profil-formulaire-st .panduan-variasi > summary {{ font-size:.875rem; width:fit-content; color:{T.AKSEN_TEAL_TUA}; }}
+.profil-workspace-st .profil-aide-st .info:is(button) {{ position:static; margin-top:{T.SP_2}; }}
+.profil-workspace-st .profil-aide-st .info-bubble {{ max-width:min({T.LEBAR_TOOLTIP},100%); }}
 .profil-workspace-st .riwayat-detail-st {{ margin:0; }}
 .profil-workspace-st .riwayat-detail-st > summary {{ font-size:.75rem; padding:{T.SP_1} 0; }}
 .profil-workspace-st .kepala-anak-st {{ margin-bottom:{T.SP_3}; }}
 .profil-workspace-st .kepala-anak-st .editorial-alis-st {{ display:none; }}
-.profil-workspace-st .kepala-anak-st h1 {{ margin-bottom:{T.SP_2}; }}
+.profil-workspace-st .profil-identitas-st {{ display:flex; flex-wrap:wrap; align-items:center; gap:{T.SP_2} {T.SP_3}; }}
+.profil-workspace-st .kepala-anak-st h1 {{ margin:0; }}
+.profil-workspace-st .profil-ubah-kelas-st {{ display:inline-flex; align-items:center; min-height:{T.TARGET_SENTUH}; font-size:.8125rem; font-weight:500; }}
 .profil-workspace-st .profil-champs-st .st-tombol-coral {{ width:fit-content; }}
 .profil-workspace-st .profil-assistant-st {{ min-width:0; margin-top:{T.SP_4}; }}
 .profil-workspace-st .profil-assistant-st .pendamping-inline {{ margin:0; min-width:0; }}
@@ -241,7 +246,6 @@ GAYA_PROFIL = f"""
 }}
 @media(max-width:48rem) {{
  .profil-workspace-st .profil-tabs-st {{ gap:{T.SP_4}; font-size:.8rem; }}
- .profil-workspace-st .profil-rappel-st {{ flex-direction:column; align-items:start; }}
  .profil-workspace-st .profil-filter-st {{ grid-template-columns:minmax(0,1fr); padding:{T.SP_4}; }}
  .profil-workspace-st .profil-filter-st button {{ width:100%; }}
  .profil-workspace-st .profil-saring-judul-st {{ padding:{T.SP_3} {T.SP_4}; }}
@@ -252,7 +256,7 @@ GAYA_PROFIL = f"""
  .profil-workspace-st .profil-pager-st .profil-page-status-st {{ display:inline-flex; flex-basis:6.5em; border:0; background:transparent; color:{T.TEKS_VARIAN}; }}
  .profil-workspace-st .profil-riwayat-kaki-st a {{ min-height:{T.TARGET_SENTUH}; display:inline-flex; align-items:center; }}
  .profil-workspace-st .profil-formulaire-st > .buat-latihan-st {{ padding:{T.SP_4}; }}
- .profil-workspace-st .profil-formulaire-st .tab-bar-st {{ display:grid; grid-template-columns:minmax(0,1fr); gap:{T.SP_1}; padding:{T.SP_1}; margin-bottom:{T.SP_5}; border:1px solid {T.BORDER_HALUS}; border-radius:{T.RADIUS_SEDANG}; background:{T.LATAR_SEKUNDER_LEMBUT}; }}
+ .profil-workspace-st .profil-formulaire-st .tab-bar-st {{ display:grid; grid-template-columns:minmax(0,1fr); gap:{T.SP_1}; padding:{T.SP_1}; margin-bottom:{T.SP_3}; border:1px solid {T.BORDER_HALUS}; border-radius:{T.RADIUS_SEDANG}; background:{T.LATAR_SEKUNDER_LEMBUT}; }}
  .profil-workspace-st .profil-formulaire-st .tab-label-st {{ justify-content:flex-start; margin:0; padding:{T.SP_2} {T.SP_3}; border:1px solid transparent; font-size:.875rem; text-align:left; }}
  .profil-workspace-st .buat-latihan-st:has(#tab-baru:checked) [for="tab-baru"],
  .profil-workspace-st .buat-latihan-st:has(#tab-ulang:checked) [for="tab-ulang"],

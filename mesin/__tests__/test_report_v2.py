@@ -65,7 +65,8 @@ def test_materi_kartu_panel_pagination_dan_kembali_tanpa_menyusutkan_target():
     h = mr.render_peta(peta, reports._tanggal_pendek, siswa_id=1, materi='statistika')
     assert 'class="peta-pilihan"' in h
     assert 'id="detail-materi"' in h and 'data-materi="statistika"' in h
-    assert '✓ Dipilih' in h and 'aria-current="true"' in h
+    assert 'Dipilih' in h and 'aria-current="true"' in h
+    assert '✓' not in h
     assert 'Kembali ke materi' in h
     hanya_penjelasan_dilipat(h)
     assert '1/5 target' in h and f'1 dari {len(peta.target)} target' in h

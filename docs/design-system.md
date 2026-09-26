@@ -354,6 +354,20 @@ File CSS per permukaan (semuanya `import design_tokens as T`):
 - Aksi utama tetap berlabel teks. Ikon bukan pengganti makna simpan/kirim,
   konfirmasi, pilihan cara, maupun status pedagogis. Tidak ada JS/dependensi baru.
 
+### Navigasi dan pengantar ringkas (27 Sep 2026)
+
+- Tab/filter laporan tidak memakai centang dekoratif. Pilihan aktif tetap memiliki
+  `aria-current`, latar berbeda, border lebih tebal, dan teks tebal; kartu materi
+  tetap berlabel “Dipilih”. Centang status konfirmasi/tersimpan dan checkbox isian
+  bukan dekorasi navigasi, sehingga tetap dipertahankan.
+- Profil: “Ubah kelas” dekat identitas, tujuan pengelolaan tetap. Pengingat rencana
+  hanya menampilkan tindakan yang ditentukan reducer dan tautan “Buka rencana”; tidak
+  mengulang heading generik atau berpura-pura langsung melanjutkan sesi.
+- Tab jenis latihan tampil sebelum bantuan kecil “Lihat contoh soal”. Contoh dan
+  disclaimer tetap lengkap dalam satu disclosure native; batas latihan manual tetap
+  tersedia lewat ikon Info di sebelahnya. Paragraf instruksi umum sebelum form dihapus.
+  Tidak ada perubahan nilai/payload isian, checkbox, rekomendasi atau bukti belajar.
+
 ## Mockup reference
 
 | File | Halaman | Viewport | Implementasi |

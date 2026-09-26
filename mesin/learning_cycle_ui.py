@@ -532,12 +532,11 @@ def pengingat_rencana(kon, siswa_id: int) -> str:
         if not aktif or aktif[2].tindakan.startswith('tunggu_'):
             return ""
         return ('<div class="profil-rappel-st"><span>Rencana pilot memerlukan tindakan.</span>'
-                f'<a href="/anak/{siswa_id}?section=rencana">Lihat rencana →</a></div>')
+                f'<a href="/anak/{siswa_id}?section=rencana">Buka rencana →</a></div>')
     judul = _judul(rencana, _fokus_utama(rencana), bukti)
     return (
-        '<div class="profil-rappel-st"><span><strong>Rencana belajar hari ini</strong><br>'
-        + html.escape(judul) + '</span>'
-        + f'<a href="/anak/{siswa_id}?section=rencana">Lihat rencana →</a></div>'
+        '<div class="profil-rappel-st"><span>' + html.escape(judul) + '</span>'
+        + f'<a href="/anak/{siswa_id}?section=rencana">Buka rencana →</a></div>'
     )
 
 

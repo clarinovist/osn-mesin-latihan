@@ -50,8 +50,8 @@ def contoh_variasi(topik, profil):
             _badan_soal(soal, paket, namespace='contoh-' + topik + '-' + profil))
 
 
-@lru_cache(maxsize=2)
-def panduan_variasi(*, ringkas=False):
+@lru_cache(maxsize=4)
+def panduan_variasi(*, ringkas=False, judul="Bandingkan isi dan contoh soal"):
     """Daftar pola nyata; onboarding menyimpan penjelasan lanjut dalam details."""
     bagian = []
     for topik in topics.daftar_topik():
@@ -97,7 +97,7 @@ def panduan_variasi(*, ringkas=False):
         )
     return (
         '<details class="panduan-variasi" id="panduan-variasi">'
-        '<summary>Bandingkan isi dan contoh soal</summary>'
+        '<summary>' + html.escape(judul) + '</summary>'
         + isi + '</details>'
     )
 

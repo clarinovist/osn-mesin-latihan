@@ -17,11 +17,10 @@ def url_laporan(siswa_id, section='ringkasan', **opsi):
 
 
 def pilihan(label, opsi, aktif, tautan):
-    """Tombol navigasi berupa tautan native, dengan penanda selain warna."""
+    """Tautan native; aria-current, border dan bobot menandai pilihan aktif."""
     return (f'<nav class="laporan-pilihan" aria-label="{html.escape(label)}">' + ''.join(
         f'<a href="{tautan(kode)}"' + (' aria-current="true"' if kode == aktif else '')
-        + '>' + ('<span aria-hidden="true">✓ </span>' if kode == aktif else '')
-        + html.escape(nama) + '</a>' for kode, nama in opsi) + '</nav>')
+        + '>' + html.escape(nama) + '</a>' for kode, nama in opsi) + '</nav>')
 
 
 def halaman_daftar(daftar, halaman, ukuran):

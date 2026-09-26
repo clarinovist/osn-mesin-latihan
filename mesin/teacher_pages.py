@@ -63,8 +63,7 @@ INFO_DAFTAR_ANAK = (
     "dan riwayat."
 )
 
-# Catatan kaki tab "Buat latihan" yang pindah ke bubble ikon "ⓘ" (26 Sep
-# 2026): aturan produknya tetap terbaca, layar tidak lagi memuat paragrafnya.
+# Batas latihan manual tetap tersedia di info dekat bantuan contoh soal.
 INFO_LATIHAN_BEBAS = (
     "Latihan bebas tidak mengubah progres rencana terpandu."
 )
@@ -877,7 +876,12 @@ def halaman_anak(
         panel.append(("gabungan", "library_add", "Gabungan topik", strip_gabungan))
 
     from question_variants_ui import panduan_variasi, detail_kode
-    panduan = panduan_variasi() if section == 'latihan' else ''
+    panduan = (
+        '<div class="profil-aide-st info-baris">'
+        + panduan_variasi(judul="Lihat contoh soal")
+        + f'<button type="button" class="info" aria-label="{html.escape(INFO_LATIHAN_BEBAS, quote=True)}">'
+        f'i<span class="info-bubble" role="tooltip">{html.escape(INFO_LATIHAN_BEBAS)}</span></button></div>'
+    ) if section == 'latihan' else ''
     if len(panel) > 1:
         tab = "".join(
             f'<input type="radio" name="jenis-latihan" id="tab-{kode}" '
@@ -897,9 +901,9 @@ def halaman_anak(
         blok_buat_latihan = (
             '<section class="buat-latihan-st">'
             '<h2 class="st profil-sr-st">Buat latihan</h2>'
-            f"{panduan}{tab}"
+            f"{tab}"
             f'<div class="tab-bar-st">{label}</div>'
-            f"{isi_panel}"
+            f"{panduan}{isi_panel}"
             "</section>"
         )
     else:
@@ -923,9 +927,6 @@ def halaman_anak(
     ) if section == "rencana" else ""
     latihan_manual = (
         '<section class="profil-formulaire-st">'
-        '<p class="info-baris sub">Pilih materi dan bentuk latihan. '
-        f'<button type="button" class="info" aria-label="{html.escape(INFO_LATIHAN_BEBAS, quote=True)}">'
-        f'i<span class="info-bubble" role="tooltip">{html.escape(INFO_LATIHAN_BEBAS)}</span></button></p>'
         f"{blok_buat_latihan}</section>"
     )
     if section == "rencana":

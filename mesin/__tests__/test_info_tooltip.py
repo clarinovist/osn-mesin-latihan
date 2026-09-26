@@ -187,7 +187,9 @@ def test_tanpa_js_tambahan(db):
 
 def test_buat_latihan_catatan_kaki_pindah_ke_bubble(db):
     h = _profil_latihan(db)
-    assert "Pilih materi dan bentuk latihan." in h
+    assert "Pilih materi dan bentuk latihan." not in h
+    assert 'class="profil-aide-st info-baris"' in h
+    assert h.index('class="tab-bar-st"') < h.index('class="profil-aide-st info-baris"')
     # Paragraf catatan kaki tidak lagi berdiri sendiri di layar.
     assert ('<p class="sub">Latihan bebas tidak mengubah progres rencana terpandu.</p>'
             not in h)

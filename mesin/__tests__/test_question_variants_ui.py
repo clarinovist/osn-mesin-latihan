@@ -23,7 +23,7 @@ def test_identitas_anak_bukan_konfigurasi_soal():
     isi = profile_workspace.bingkai(dict(id=1, nama='Sintetis', tingkat='P6', pemilik='guru'),
                                     'latihan', 0, '', kelas_sekolah=2)
     kepala = isi.split('<header', 1)[1].split('</header>', 1)[0]
-    assert 'Kelas 2' in kepala and 'Kelola kelas sekolah' in kepala
+    assert 'Kelas 2' in kepala and 'Ubah kelas' in kepala
     assert 'P6' not in kepala and 'Konteks latihan' not in kepala
 
 
@@ -98,6 +98,10 @@ def test_panduan_ringkas_hanya_memindah_penjelasan_bukan_isi_contoh():
     posisi_keterangan = ringkas.index('<summary>Tentang variasi dan contoh</summary>')
     assert posisi_materi < posisi_keterangan < ringkas.index('Contoh ini bukan soal sesi yang akan dibuat')
     assert 'Campuran mengikuti materi yang tersedia' in ringkas
+    profil = panduan_variasi(judul='Lihat contoh soal')
+    assert profil.replace('<summary>Lihat contoh soal</summary>',
+                          '<summary>Bandingkan isi dan contoh soal</summary>', 1) == biasa
+    assert '<summary>&lt;uji&gt;</summary>' in panduan_variasi(judul='<uji>')
 
 
 class Rincian(HTMLParser):
