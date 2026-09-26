@@ -103,11 +103,12 @@ def test_tidak_mengklaim_tulis_tangan():
     assert "tulis tangan" not in h
 
 
-def test_tidak_mengklaim_gratis_komersial():
-    """Jangan menjanjikan akses gratis saat penawaran publik belum dibuka."""
+def test_rencana_gratis_tidak_diklaim_sudah_dibuka():
+    """Harga boleh terbuka, tetapi pendaftaran bukan aktivasi masa coba."""
     h = _html().lower()
-    assert "gratis" not in h
-    assert "paket dan pembayaran publik sedang disiapkan" in h
+    assert "rencana penawaran: coba gratis 30 hari" in h
+    assert "penawaran belum dibuka" in h
+    assert "pendaftaran belum mengaktifkan masa coba atau promo" in h
 
 
 # ──────────────── contoh dan bantuan pendamping ────────────────

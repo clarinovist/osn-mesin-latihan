@@ -317,6 +317,22 @@ def halaman_landing() -> bytes:
     n = html.escape(T.NAMA_PRODUK)
     tag = html.escape(T.TAGLINE)
     mark_topbar = brand.mark("topbar")
+    kartu_harga = "".join(
+        f'''<section class="landing-kartu-st landing-harga-kartu-st">
+<h4 class="landing-kartu-judul-st">{jumlah} profil anak</h4>
+<dl>
+<dt>Promo / bulan</dt><dd class="landing-harga-nominal-st">Rp{promo}</dd>
+<dt>Normal / bulan</dt><dd>Rp{normal}</dd>
+</dl>
+<p class="landing-harga-batas-st">Harga promo untuk peserta promo,
+selama 3 periode berbayar pertama.</p>
+</section>'''
+        for jumlah, promo, normal in (
+            (1, "15.000", "35.000"),
+            (2, "20.000", "45.000"),
+            (3, "25.000", "55.000"),
+        )
+    )
     isi = f"""
 <a class="landing-lewati-st" href="#konten">Lewati ke konten</a>
 <header class="landing-topbar-st"><div class="landing-topbar-isi-st">
@@ -324,6 +340,7 @@ def halaman_landing() -> bytes:
 <nav class="topbar-navigasi" aria-label="Navigasi utama">
 <a class="landing-nav-st" href="#cara-kerja">Kenali {n}</a>
 <a class="landing-nav-st" href="#contoh">Contoh latihan</a>
+<a class="landing-nav-st landing-nav-harga-st" href="#harga">Harga</a>
 <a class="tombol-putih" href="/masuk">Masuk</a></nav>
 </div></header>
 
@@ -337,6 +354,10 @@ def halaman_landing() -> bytes:
   <p class="landing-sub-st">Bantu anak memahami matematika lewat latihan,
   <b>tinjauan cara berpikir</b>, dan rencana belajar terpandu. Bukan hanya
   tahu letak salahnya — orang tua dan guru tahu langkah berikutnya.</p>
+  <p class="landing-penawaran-st"><b>Rencana penawaran: coba gratis 30 hari.</b>
+  Lalu harga promo mulai Rp15.000/bulan untuk 1 profil anak, selama
+  3 periode berbayar pertama bagi peserta promo.
+  <span>Penawaran belum dibuka; pendaftaran belum mengaktifkan masa coba atau promo.</span></p>
   <p class="landing-cta-baris-st"><a class="tombol-coral" href="/daftar">
   Mulai — daftar sekarang <span aria-hidden="true">↗</span></a></p>
   <p class="landing-catatan-cta-st">Untuk orang tua, guru, dan les privat · Kelas 3–6 SD</p>
@@ -500,6 +521,42 @@ aktif dan kamu menyetujui penggunaan AI. Bukan penentu diagnosis atau
 pengganti tinjauanmu; kamu tetap memilih dan memeriksa bantuannya.</p>
 </section>
 
+<section class="landing-harga-st" id="harga" aria-labelledby="judul-harga">
+<div class="landing-bagian-kepala-st">
+<p class="landing-alis-st">HARGA &amp; MASA COBA</p>
+<h2 id="judul-harga">Coba dulu.<br>Lanjut sesuai kebutuhan.</h2>
+<p>Rencana biaya yang jelas sejak awal: masa coba, harga promo, lalu harga normal.</p>
+</div>
+<p class="landing-harga-status-st"><b>Penawaran belum dibuka.</b>
+Tanggal pembukaan belum diumumkan. Pendaftaran saat ini belum mengaktifkan
+masa coba atau promo, dan tidak memicu pembayaran.</p>
+<ol class="landing-harga-alur-st">
+<li><span class="landing-nomor-st" aria-hidden="true">01 /</span>
+<div><h3>Coba gratis 30 hari</h3><p>Rp0 selama masa coba, dihitung sejak
+aktivasi masa coba — bukan otomatis dari pendaftaran saat ini.</p></div></li>
+<li><span class="landing-nomor-st" aria-hidden="true">02 /</span>
+<div><h3>Lanjut dengan harga promo</h3><p>Untuk peserta promo, selama
+3 periode berbayar pertama setelah masa coba.</p></div></li>
+<li><span class="landing-nomor-st" aria-hidden="true">03 /</span>
+<div><h3>Berikutnya harga normal</h3><p>Berlaku setelah promo habis.
+Tanpa promo, harga normal berlaku setelah masa coba.</p></div></li>
+</ol>
+<h3 class="landing-harga-pilihan-st">Bandingkan biaya menurut jumlah profil anak</h3>
+<div class="landing-grid-st landing-harga-paket-st">{kartu_harga}</div>
+<p class="landing-harga-keterangan-st">Harga per bulan adalah <b>total untuk jumlah
+profil anak yang tercakup</b>, bukan harga per anak. Termasuk pajak bila berlaku.</p>
+<div class="landing-harga-syarat-st">
+<h3>Ketentuan promo</h3>
+<ul>
+<li>Untuk 100 akun publik baru pertama yang memenuhi syarat selama kampanye
+8 minggu sejak pembukaan.</li>
+<li>Promo dihitung dari <b>3 periode yang dibayar</b>, bukan 3 bulan sejak daftar.
+Jeda berlangganan tidak mengulang jatah promo.</li>
+<li>Akun lama tidak otomatis mendapat promo; keikutsertaannya ditetapkan terpisah.</li>
+</ul>
+</div>
+</section>
+
 <section class="landing-faq-st" aria-labelledby="judul-faq">
 <div class="landing-bagian-kepala-st">
 <p class="landing-alis-st">SEBELUM MULAI</p>
@@ -518,8 +575,12 @@ foto dengan AI tersedia, hasil baca tetap perlu diperiksa.</p></details>
 bergaya OSN/SASMO. Bukan pengganti seluruh pelajaran sekolah atau jaminan
 prestasi olimpiade.</p></details>
 <details><summary>Bagaimana dengan biaya?</summary>
-<p>Paket dan pembayaran publik sedang disiapkan. Pendaftaran akun tidak
-memicu pembayaran.</p></details>
+<p>Rencana penawarannya: coba gratis 30 hari, lalu harga promo untuk 3 periode
+berbayar pertama bagi peserta promo, kemudian harga normal. Untuk 1 profil anak,
+harganya Rp15.000/bulan saat promo dan Rp35.000/bulan setelahnya.
+Penawaran belum dibuka; pendaftaran saat ini belum mengaktifkan masa coba atau
+promo dan tidak memicu pembayaran. Lihat rincian dan ketentuan di
+<a href="#harga">bagian Harga</a>.</p></details>
 <details><summary>Data anak disimpan di mana?</summary>
 <p>Data belajar disimpan di server pengelola. Tidak ada iklan atau
 pelacak pihak ketiga; pendaftaran tidak meminta email atau nomor telepon.

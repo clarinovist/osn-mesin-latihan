@@ -69,11 +69,23 @@ def test_hierarki_heading_dan_tujuan_jangkar_unik(markup):
     assert len(daftar_id) == len(set(daftar_id))
     jangkar = [atribut["href"][1:] for atribut in markup.cari("a")
                if atribut.get("href", "").startswith("#")]
-    assert set(jangkar) == {"konten", "cara-kerja", "contoh"}
+    assert set(jangkar) == {"konten", "cara-kerja", "contoh", "harga"}
     assert set(jangkar) <= set(daftar_id)
     for _, atribut in markup.elemen:
         if "aria-labelledby" in atribut:
             assert atribut["aria-labelledby"] in daftar_id
+
+
+def test_harga_ada_sebelum_faq_dan_menu_tetap_tersedia_di_hp(markup):
+    sumber = halaman_landing().decode()
+    assert sumber.index('id="harga"') < sumber.index('class="landing-faq-st"')
+    nav = sumber.split('<nav ', 1)[1].split('</nav>', 1)[0]
+    assert 'class="landing-nav-st landing-nav-harga-st" href="#harga">Harga</a>' in nav
+    assert any(atribut.get("id") == "harga" and atribut.get("aria-labelledby") == "judul-harga"
+               for atribut in markup.cari("section"))
+    hp = GAYA_STITCH.split("/* ══ Landing editorial", 1)[1].split("/* Halaman hasil murid", 1)[0]
+    hp = hp.split("@media (max-width: 40rem)", 1)[1]
+    assert ".landing-nav-harga-st { display: inline-flex; }" in hp
 
 
 def test_maskot_lokal_dekoratif_berukuran_tetap(markup):

@@ -1698,6 +1698,7 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
   display: inline-flex; align-items: center; min-height: {T.TARGET_SENTUH};
   color: {T.TEKS_VARIAN}; text-decoration: none; font-size: .85rem; font-weight: 600;
 }}
+.landing-nav-harga-st {{ min-width: {T.TARGET_SENTUH}; justify-content: center; }}
 .landing-topbar-st .tombol-putih {{
   font: inherit; color: {T.TEKS_JUDUL}; background: transparent;
   border: 1px solid {T.TEKS_JUDUL}; border-radius: {T.RADIUS_PIL};
@@ -1755,6 +1756,13 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
 .landing-cta-baris-st a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
 .landing-cta-baris-st a > span {{ font-size: 1.3rem; line-height: 1; }}
 .landing-catatan-cta-st {{ color: {T.TEKS_VARIAN}; font-size: .72rem; margin: 0; }}
+.landing-penawaran-st {{
+  border-left: 3px solid {T.AKSEN_TEAL_TUA}; padding-left: {T.SP_4};
+  margin: {T.SP_5} 0 0; max-width: 32rem;
+  color: {T.TEKS_VARIAN}; font-size: .85rem; line-height: 1.7;
+}}
+.landing-penawaran-st b {{ display: block; color: {T.TEKS_JUDUL}; }}
+.landing-penawaran-st span {{ display: block; margin-top: {T.SP_2}; }}
 
 /* Kertas bergaris + maskot lokal, tanpa kontrol palsu atau animasi. */
 .landing-panggung-st {{
@@ -1911,6 +1919,46 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
 .landing-pilot-st .landing-contoh-judul-st {{ color: {T.TEKS_PUTIH}; font-size: 3rem; margin: 0; }}
 .landing-pilot-st .landing-contoh-sub-st {{ color: {T.TEKS_PUTIH}; align-self: center; }}
 
+/* Harga informatif: bukan checkout atau aktivasi penawaran. */
+.landing-harga-st {{ margin-bottom: 5rem; }}
+.landing-harga-status-st {{
+  padding: {T.SP_4} {T.SP_5}; border: 1px solid {T.BORDER_CATATAN};
+  background: {T.LATAR_CATATAN}; border-radius: {T.RADIUS_KARTU};
+  font-size: .9rem; line-height: 1.7; color: {T.TEKS_JUDUL}; margin: 0 0 {T.SP_6};
+}}
+.landing-harga-alur-st {{
+  list-style: none; padding: 0; margin: 0 0 {T.SP_6}; display: grid; gap: {T.SP_5};
+}}
+.landing-harga-alur-st li {{ display: flex; gap: {T.SP_3}; min-width: 0; }}
+.landing-harga-alur-st .landing-nomor-st {{ flex: none; padding-top: .2rem; }}
+.landing-harga-alur-st h3, .landing-harga-syarat-st h3, .landing-harga-pilihan-st {{
+  font-family: {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL};
+  font-size: 1rem; line-height: 1.5; margin: 0 0 {T.SP_2};
+}}
+.landing-harga-alur-st p, .landing-harga-keterangan-st, .landing-harga-syarat-st {{
+  font-size: .85rem; line-height: 1.8; color: {T.TEKS_VARIAN};
+}}
+.landing-harga-alur-st p {{ margin: 0; }}
+.landing-harga-kartu-st {{ border-top: 3px solid {T.AKSEN_TEAL_TUA}; }}
+.landing-harga-kartu-st dl {{ margin: 0; }}
+.landing-harga-kartu-st dt {{ font-size: .8rem; color: {T.TEKS_VARIAN}; }}
+.landing-harga-kartu-st dd {{
+  margin: {T.SP_1} 0 0; color: {T.TEKS_JUDUL}; font-weight: 700;
+  font-variant-numeric: tabular-nums; font-size: 1.25rem;
+}}
+.landing-harga-kartu-st .landing-harga-nominal-st {{
+  font-family: {T.FONT_HEADLINE}; font-size: 2rem; line-height: 1.3;
+  letter-spacing: -.04em; color: {T.AKSEN_TEAL_TUA}; margin-bottom: {T.SP_5};
+}}
+.landing-harga-pilihan-st {{
+  border-top: 1px solid {T.BORDER_CATATAN}; padding-top: {T.SP_6}; margin-bottom: {T.SP_5};
+}}
+.landing-harga-batas-st {{ margin: 0; color: {T.TEKS_VARIAN}; font-size: .8rem; line-height: 1.7; }}
+.landing-harga-keterangan-st {{ margin: {T.SP_4} 0 {T.SP_5}; }}
+.landing-harga-syarat-st {{ border-top: 1px solid {T.BORDER_CATATAN}; padding-top: {T.SP_5}; }}
+.landing-harga-syarat-st ul {{ margin: 0; padding-left: {T.SP_5}; }}
+.landing-harga-syarat-st li + li {{ margin-top: {T.SP_2}; }}
+
 /* FAQ bawaan browser: panah buka/tutup hanya dekorasi. */
 .landing-faq-st {{ display: grid; gap: {T.SP_5}; }}
 .landing-faq-st details {{ border-bottom: 1px solid {T.BORDER_CATATAN}; }}
@@ -1946,11 +1994,15 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
   .landing-kompetisi-st {{ grid-column: 1 / -1; }}
   .landing-pilot-st, .landing-faq-st {{ grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 3rem; }}
   .landing-pilot-st {{ padding: 3rem; }}
+  .landing-harga-alur-st {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
 }}
 @media (max-width: 40rem) {{
   .landing-bungkus-st {{ padding: 0 {T.SP_4} 3rem; }}
   .landing-topbar-isi-st {{ min-height: 4.5rem; padding: {T.SP_2} {T.SP_4}; }}
   .landing-nav-st {{ display: none; }}
+  .landing-nav-harga-st {{ display: inline-flex; }}
+  .landing-topbar-st .topbar-navigasi {{ gap: {T.SP_3}; }}
+  .landing-topbar-st .tombol-putih {{ padding: {T.SP_2} {T.SP_4}; }}
   .landing-hero-st {{ padding-top: {T.SP_6}; }}
   .landing-judul-st {{ font-size: clamp(2.6rem, 9vw, 3.6rem); }}
   .landing-panggung-st {{ padding: 3.5rem {T.SP_2} 3rem; margin-top: {T.SP_5}; }}
@@ -1961,6 +2013,7 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
   .landing-pill-baris-st {{ flex-direction: column; gap: {T.SP_4}; }}
   .landing-kenali-st, .landing-contoh-st {{ padding-top: 3.5rem; }}
   .landing-pilot-st {{ margin: 3.5rem 0; padding: {T.SP_5}; }}
+  .landing-harga-st {{ margin-bottom: 3.5rem; }}
 }}
 /* Halaman hasil murid (/murid/hasil/<id>) — anak melihat letak salahnya.
    Warna status memakai palet murid yang sudah ada; tidak ada token baru. */
