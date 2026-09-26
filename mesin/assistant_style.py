@@ -19,7 +19,7 @@ html {{ color-scheme:light; scroll-padding-block:{T.SP_5}; }}
 .pendamping-lewati {{ position:absolute; inset-block-start:{T.SP_3}; inset-inline-start:{T.SP_4}; transform:translateY(-200%); min-height:{T.TARGET_SENTUH}; padding:{T.SP_3} {T.SP_4}; background:{T.LATAR_KARTU}; border:1px solid {T.AKSEN_TEAL_TUA}; border-radius:{T.RADIUS_KECIL}; z-index:1; }}
 .pendamping-lewati:focus {{ transform:none; }}
 .pendamping-halaman h1, .pendamping-halaman h2 {{ color:{T.TEKS_JUDUL}; line-height:1.3; text-wrap:pretty; }}
-.pendamping-halaman h1 {{ margin:0 0 {T.SP_3}; font-size:clamp(1.6rem, 2.5vw, 1.875rem); letter-spacing:-.035em; font-weight:650; }}
+.pendamping-halaman h1 {{ margin:0 0 {T.SP_3}; font-size:{T.UKURAN_JUDUL_DEWASA}; letter-spacing:-.035em; font-weight:650; }}
 .pendamping-halaman h2 {{ margin:0 0 {T.SP_2}; font-size:1.125rem; font-weight:650; }}
 .pendamping-halaman p {{ margin:0 0 {T.SP_4}; }}
 .pendamping-halaman strong {{ font-weight:650; }}

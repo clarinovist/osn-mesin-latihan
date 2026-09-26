@@ -320,6 +320,12 @@ UKURAN_BADAN_LAYAR = "16px"
 UKURAN_BADAN_CETAK = "10.5pt"
 LINE_HEIGHT = "1.55"
 
+# Tipografi layar dewasa: admin/orang tua, bukan anak, soal, atau cetak.
+# Body dan kontrol tetap 16px; hanya hierarki judul/statistik yang dipadatkan.
+UKURAN_JUDUL_DEWASA = "clamp(1.375rem, 2.2vw, 1.625rem)"  # 22–26px
+UKURAN_BAGIAN_DEWASA = "1.125rem"                         # 18px
+UKURAN_ANGKA_DEWASA = "1.5rem"                            # 24px
+
 # ─────────────────────────────────────────────────────────────────────
 # Spacing — skala 4px base (lihat docs/design-system.md)
 # ─────────────────────────────────────────────────────────────────────

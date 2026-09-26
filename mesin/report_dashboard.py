@@ -21,7 +21,7 @@ GAYA_LAPORAN = f"""
   border-radius:{T.RADIUS_KARTU_BESAR}; min-width:0;
 }}
 .laporan-editorial-st .laporan-metrik strong {{
-  display:block; font-size:2rem; color:{T.TEKS_JUDUL}; line-height:1.2;
+  display:block; font-size:{T.UKURAN_ANGKA_DEWASA}; color:{T.TEKS_JUDUL}; line-height:1.2;
 }}
 .laporan-editorial-st .laporan-metrik span {{display:block; margin-top:{T.SP_2};}}
 .laporan-editorial-st .laporan-catatan {{color:{T.TEKS_SUBTLE}; font-size:.9rem;}}

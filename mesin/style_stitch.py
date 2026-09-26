@@ -285,7 +285,7 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 .guru-beranda-st .badge-peran-guru {{ background: transparent; color: {T.TEKS_VARIAN}; font-weight: 500; }}
 .guru-sapaan-st {{ display: grid; grid-template-columns: minmax(0, 1fr) 13rem; gap: {T.SP_5}; align-items: center; padding: 3rem 0; }}
 .guru-alis-st {{ color: {T.AKSEN_TEAL_TUA}; font: 700 .7rem/1.5 {T.FONT_HEADLINE}; letter-spacing: .1em; margin: 0 0 {T.SP_3}; }}
-.guru-sapaan-st h1 {{ color: {T.TEKS_JUDUL}; font: 800 2.7rem/1.17 {T.FONT_HEADLINE}; letter-spacing: -.045em; margin: 0 0 {T.SP_4}; }}
+.guru-sapaan-st h1 {{ color: {T.TEKS_JUDUL}; font: 700 {T.UKURAN_JUDUL_DEWASA}/1.3 {T.FONT_HEADLINE}; letter-spacing: -.045em; margin: 0 0 {T.SP_4}; }}
 .guru-sapaan-st h1 span {{ color: {T.AKSEN_TEAL_TUA}; }}
 .guru-sapaan-st p:not(.guru-alis-st) {{ color: {T.TEKS_VARIAN}; font-size: .9rem; line-height: 1.8; margin: 0; }}
 .guru-catatan-st {{
@@ -299,7 +299,7 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 .guru-coret-st {{ position: absolute; right: {T.SP_2}; top: -.7rem; font-size: 2.5rem; color: {T.AKSEN_KORAL_TUA}; }}
 .guru-kepala-daftar-st {{ display: flex; gap: {T.SP_4}; align-items: center; justify-content: space-between; flex-wrap: wrap; }}
 .guru-kepala-daftar-st .guru-alis-st {{ margin-bottom: {T.SP_1}; }}
-.guru-kepala-daftar-st h2 {{ color: {T.TEKS_JUDUL}; font: 800 1.45rem/1.4 {T.FONT_HEADLINE}; margin: 0; }}
+.guru-kepala-daftar-st h2 {{ color: {T.TEKS_JUDUL}; font: 700 {T.UKURAN_BAGIAN_DEWASA}/1.4 {T.FONT_HEADLINE}; margin: 0; }}
 .guru-kepala-daftar-st h2 span {{ font-size: .85rem; font-weight: 500; color: {T.TEKS_VARIAN}; margin-left: {T.SP_2}; }}
 .guru-tambah-st {{ display: inline-flex; align-items: center; justify-content: center; gap: {T.SP_2}; min-height: {T.TINGGI_KONTROL}; padding: {T.SP_2} {T.SP_4}; color: {T.TEKS_PUTIH}; background: {T.AKSEN_KORAL_TUA}; border-radius: {T.RADIUS_KECIL}; text-decoration: none; font: 700 .8rem/1.5 {T.FONT_HEADLINE}; }}
 .guru-tambah-st:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
@@ -318,7 +318,7 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
 .guru-buka-st {{ font: 700 .75rem/1.5 {T.FONT_HEADLINE}; color: {T.AKSEN_TEAL_TUA}; }}
 .guru-buka-st > span {{ margin-left: {T.SP_2}; }}
 .guru-kosong-st {{ border: 1px dashed {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KARTU}; padding: {T.SP_6}; background: color-mix(in srgb, {T.LATAR_KARTU} 65%, transparent); }}
-.guru-kosong-st h2 {{ font: 800 1.8rem/1.3 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; max-width: 20rem; margin: 0 0 {T.SP_4}; }}
+.guru-kosong-st h2 {{ font: 700 {T.UKURAN_BAGIAN_DEWASA}/1.4 {T.FONT_HEADLINE}; color: {T.TEKS_JUDUL}; max-width: 20rem; margin: 0 0 {T.SP_4}; }}
 .guru-kosong-st > p:not(.guru-alis-st) {{ color: {T.TEKS_VARIAN}; font-size: .85rem; max-width: 32rem; }}
 .guru-kosong-st .guru-tambah-st {{ margin-top: {T.SP_3}; }}
 .guru-kosong-st .guru-petunjuk-st {{ margin-bottom: 0; }}
@@ -329,7 +329,6 @@ h3.st {{ font-size: 1.05rem; margin: 0.4rem 0; font-weight: 700; }}
   .guru-beranda-st .topbar-navigasi {{ flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }}
   .guru-beranda-st .badge-peran-guru {{ font-size: .65rem; padding: 0; }}
   .guru-sapaan-st {{ grid-template-columns: minmax(0, 1fr); padding: {T.SP_6} 0; }}
-  .guru-sapaan-st h1 {{ font-size: 2.3rem; }}
   .guru-catatan-st {{ display: none; }}
   .guru-beranda-st .kartu-anak {{ grid-template-columns: 2.4rem minmax(0, 1fr); padding: {T.SP_4}; gap: {T.SP_3}; }}
   .guru-inisial-st {{ width: 2.4rem; height: 3rem; font-size: 1.2rem; align-self: start; }}
@@ -2286,10 +2285,10 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
 .pendamping-editorial-st .badge-peran-guru {{ background: transparent; color: {T.TEKS_VARIAN}; }}
 .pendamping-editorial-st :is(h1, h2, h3) {{ color: {T.TEKS_JUDUL}; }}
 .pendamping-editorial-st h1 {{
-  font: 800 clamp(1.6rem, 3vw, 2.25rem)/1.2 {T.FONT_HEADLINE};
+  font: 700 {T.UKURAN_JUDUL_DEWASA}/1.3 {T.FONT_HEADLINE};
   letter-spacing: -.045em; margin: 0; max-width: 40ch;
 }}
-.pendamping-editorial-st h2 {{ font: 700 1.22rem/1.4 {T.FONT_HEADLINE}; letter-spacing: -.025em; }}
+.pendamping-editorial-st h2 {{ font: 700 {T.UKURAN_BAGIAN_DEWASA}/1.4 {T.FONT_HEADLINE}; letter-spacing: -.025em; }}
 .pendamping-editorial-st .editorial-kepala-st {{ display: block; margin: 0 0 {T.SP_5}; }}
 .pendamping-editorial-st .editorial-alis-st {{
   color: {T.AKSEN_TEAL_TUA}; font: 700 .72rem/1.5 {T.FONT_LAYAR};
@@ -2380,7 +2379,7 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
   justify-items: start; min-width: 0;
 }}
 .profil-editorial-st .label-rencana-st {{ color: {T.AKSEN_TEAL_TUA}; }}
-.profil-editorial-st #judul-rencana-belajar {{ font-size: clamp(1.25rem, 2.2vw, 1.6rem); letter-spacing: -.025em; max-width: 38ch; }}
+.profil-editorial-st #judul-rencana-belajar {{ font-size: {T.UKURAN_BAGIAN_DEWASA}; letter-spacing: -.025em; max-width: 38ch; }}
 .profil-editorial-st .alasan-rencana-st {{ font-size: 1.04rem; }}
 .profil-editorial-st .identitas-sesi-rencana-st {{
   margin: 0; color: {T.TEKS_JUDUL}; font-weight: 600;
@@ -2573,7 +2572,7 @@ a.tombol-coral:hover {{ background: {T.AKSEN_KORAL_HOVER}; }}
   .pendamping-editorial-st .baris {{ flex-direction: column; }}
   .pendamping-editorial-st .baris > div {{ width: 100%; }}
   .pendamping-editorial-st .kartu-stat {{ gap: {T.SP_2}; }}
-  .pendamping-editorial-st .angka-besar {{ font-size: 1.7rem; }}
+  .pendamping-editorial-st .angka-besar {{ font-size: {T.UKURAN_ANGKA_DEWASA}; }}
   .pendamping-editorial-st .stat-label {{ font-size: .78rem; }}
   .profil-editorial-st .kartu-sesi-guru {{ flex-wrap: wrap; }}
   .profil-editorial-st .aksi-sesi-st {{ width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }}
@@ -2839,7 +2838,7 @@ CSS_SESI = f"""
 .koreksi-jawaban-utama-st {{ background: {T.LATAR_SEKUNDER_LEMBUT}; border-radius: {T.RADIUS_SEDANG}; padding: {T.SP_4}; overflow-wrap: anywhere; }}
 .koreksi-jawaban-utama-st p {{ margin: 0; font-size: 1.35rem; font-weight: 700; color: {T.TEKS_JUDUL}; white-space: pre-wrap; }}
 .koreksi-progres-st {{ padding: {T.SP_4}; margin-bottom: {T.SP_3}; background: {T.LATAR_KARTU}; border: 1px solid {T.BORDER_VARIAN}; border-radius: {T.RADIUS_KARTU}; }}
-.koreksi-progres-st h2 {{ font-size: 1.3rem; margin: {T.SP_2} 0; }}
+.koreksi-progres-st h2 {{ font-size: {T.UKURAN_BAGIAN_DEWASA}; margin: {T.SP_2} 0; }}
 .koreksi-progres-st progress {{ width: 100%; height: .6rem; accent-color: {T.AKSEN_TEAL_TUA}; }}
 .koreksi-progres-st .editorial-alis-st {{ margin: 0; }}
 .koreksi-ringkasan-sesi-st {{ margin-bottom: {T.SP_4}; }}

@@ -81,6 +81,21 @@ Tidak ada font custom/webfont — pakai system stack supaya tidak ada loading
 delay dan konsisten di semua device. Rounded sans-serif (terlihat di mockup)
 tercapai via system font di Apple/Windows.
 
+### Skala layar dewasa (26 Sep 2026)
+
+Admin dan orang tua memakai hierarki lebih padat, bukan skala judul hero anak:
+
+| Token | Nilai | Pemakaian |
+|-------|-------|-----------|
+| `UKURAN_JUDUL_DEWASA` | `clamp(1.375rem, 2.2vw, 1.625rem)` (22–26px) | Judul admin, beranda/profil/akun/laporan/koreksi orang tua, Pendamping |
+| `UKURAN_BAGIAN_DEWASA` | `1.125rem` (18px) | Judul bagian/kartu dewasa yang sebelumnya terlalu dominan |
+| `UKURAN_ANGKA_DEWASA` | `1.5rem` (24px) | Statistik, peta laporan, nominal langganan |
+
+Ukuran body/menu existing tetap, input tidak diperkecil dari 16px, target sentuh
+44/48px tetap. Tidak mengubah akar `rem`, token global body, landing/login,
+halaman anak, isi soal, atau lembar cetak. Ukuran heading yang sudah lebih kecil
+tidak dibesarkan secara global; override HP lama yang membesarkan judul dibuang.
+
 ## Spacing
 
 Skala 4px base, ratio 1.5x:

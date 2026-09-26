@@ -401,7 +401,7 @@ textarea {{ min-height: 3.2rem; resize: vertical; }}
   box-shadow: 0 1px 3px rgba(22,33,62,0.04);
 }}
 .stat .angka-besar {{
-  font-size: 2rem; font-weight: 800; color: {T.AKSEN_MURID_UTAMA};
+  font-size: {T.UKURAN_ANGKA_DEWASA}; font-weight: 800; color: {T.AKSEN_MURID_UTAMA};
   line-height: 1.1;
 }}
 .stat .stat-label {{ color: {T.TEKS_SUBTLE}; font-size: .88rem; margin-top: .3rem; }}

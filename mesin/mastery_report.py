@@ -23,7 +23,7 @@ LABEL = {kode: nama for kode, nama, _ in STATUS}
 GAYA_PETA = f"""
 .peta-materi-st {{margin:{T.SP_5} 0;}}
 .peta-materi-st .peta-kepala {{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:{T.SP_4};align-items:center;}}
-.peta-materi-st .peta-angka {{font-size:3rem;font-weight:800;line-height:1.2;color:{T.TEKS_JUDUL};}}
+.peta-materi-st .peta-angka {{font-size:{T.UKURAN_ANGKA_DEWASA};font-weight:800;line-height:1.2;color:{T.TEKS_JUDUL};}}
 .peta-materi-st .peta-angka small {{display:inline;font-size:1.1rem;font-weight:600;line-height:1.5;}}
 .peta-materi-st .peta-catatan {{color:{T.TEKS_SUBTLE};font-size:.9rem;}}
 .peta-materi-st .peta-grafik {{display:block;width:100%;height:2.5rem;margin:{T.SP_4} 0;}}
@@ -53,7 +53,6 @@ GAYA_PETA = f"""
 .peta-materi-st .peta-aktivitas {{font-size:.95rem;}}
 @media(max-width:46rem) {{
  .peta-materi-st .peta-kepala {{grid-template-columns:minmax(0,1fr);}}
- .peta-materi-st .peta-angka {{font-size:2.5rem;}}
  .peta-materi-st .peta-panel {{grid-template-columns:minmax(0,1fr);}}
  .peta-materi-st .peta-detail {{display:none;}}
  .peta-materi-st .peta-pilihan[data-preview="true"] {{border:1px solid {T.BORDER_CATATAN};padding:{T.SP_4};background:{T.LATAR_KARTU};}}

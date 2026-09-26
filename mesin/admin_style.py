@@ -58,7 +58,7 @@ body.admin-readonly {{
   margin: 0; color: {T.AKSEN_TEAL_TUA}; font-size: .75rem;
   font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
 }}
-.admin-kepala h1 {{ margin: {T.SP_1} 0; color: {T.TEKS_JUDUL}; font-size: clamp(1.55rem, 3vw, 2.2rem); }}
+.admin-kepala h1 {{ margin: {T.SP_1} 0; color: {T.TEKS_JUDUL}; font-size: {T.UKURAN_JUDUL_DEWASA}; font-weight: 700; }}
 .admin-sub {{ margin: 0; color: {T.TEKS_VARIAN}; overflow-wrap: anywhere; }}
 .admin-nav-daftar, .admin-nav-pilihan, .admin-nav-anak {{ list-style: none; padding: 0; margin: 0; }}
 .admin-nav-daftar {{ display: grid; gap: {T.SP_5}; }}
@@ -104,7 +104,7 @@ body.admin-readonly {{
 .admin-filtre-periode {{ display:flex; flex-wrap:wrap; align-items:end; gap:{T.SP_3}; }}
 .admin-filtre-periode label {{ display:grid; gap:{T.SP_1}; }}
 .admin-filtre-periode input {{ min-height:{T.TARGET_SENTUH}; padding:{T.SP_2}; border:1px solid {T.BORDER_HALUS}; border-radius:{T.RADIUS_KECIL}; font:inherit; }}
-.admin-angka {{ font-size:1.75rem; color:{T.TEKS_JUDUL}; }}
+.admin-angka {{ font-size:{T.UKURAN_ANGKA_DEWASA}; color:{T.TEKS_JUDUL}; }}
 .admin-info {{ display:inline-block; vertical-align:middle; font-size:1rem; font-weight:normal; }}
 .admin-info summary {{ cursor:pointer; min-width:{T.TARGET_SENTUH}; min-height:{T.TARGET_SENTUH}; display:flex; align-items:center; justify-content:center; }}
 .admin-info p {{ max-width:22rem; font-size:.88rem; overflow-wrap:anywhere; }}
@@ -121,9 +121,9 @@ body.admin-readonly {{
   gap: {T.SP_4}; padding: {T.SP_5}; border-bottom: 1px solid {T.BORDER_CATATAN};
   background: {T.LATAR_CATATAN}; border-radius: {T.RADIUS_KARTU_BESAR} {T.RADIUS_KARTU_BESAR} 0 0; }}
 .admin-prioritas .admin-alis {{ color: {T.BADGE_ADMIN_TEKS}; }}
-.admin-kartu.admin-prioritas h2 {{ margin: {T.SP_1} 0 0; color: {T.TEKS_JUDUL}; font-size: 1.35rem; }}
+.admin-kartu.admin-prioritas h2 {{ margin: {T.SP_1} 0 0; color: {T.TEKS_JUDUL}; font-size: {T.UKURAN_BAGIAN_DEWASA}; }}
 .admin-total-temuan {{ margin: 0; color: {T.TEKS_VARIAN}; font-size: .75rem; text-align: right; }}
-.admin-total-temuan strong {{ display: block; font: 800 1.75rem {T.FONT_HEADLINE}; color: {T.BADGE_ADMIN_TEKS}; }}
+.admin-total-temuan strong {{ display: block; font: 800 {T.UKURAN_ANGKA_DEWASA} {T.FONT_HEADLINE}; color: {T.BADGE_ADMIN_TEKS}; }}
 .admin-antrean {{ list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); padding: 0; margin: 0; }}
 .admin-antrean-item {{ padding: {T.SP_4}; display: flex; flex-direction: column; border-right: 1px solid {T.BORDER_HALUS}; }}
 .admin-antrean-item:last-child {{ border-right: 0; }}
@@ -179,6 +179,7 @@ body.admin-readonly {{
 }}
 .admin-kartu {{ margin-bottom: {T.SP_4}; }}
 .admin-kartu h2, .admin-kartu h3 {{ color: {T.TEKS_JUDUL}; margin-top: 0; }}
+.admin-kartu h2 {{ font-size: {T.UKURAN_BAGIAN_DEWASA}; }}
 .admin-grid-stat .admin-stat {{ min-width: 0; border: 0; border-right: 1px solid {T.BORDER_HALUS}; border-radius: 0; background: transparent; }}
 .admin-grid-stat .admin-stat:last-child {{ border-right: 0; }}
 .admin-stat h2 {{ margin: 0 0 {T.SP_1}; color: {T.TEKS_VARIAN}; font: 700 .75rem {T.FONT_BODY}; }}
@@ -296,7 +297,6 @@ body.admin-readonly {{
 @media (max-width: 32rem) {{
   .admin-utama {{ padding: 0 {T.SP_4} {T.SP_5}; }}
   .admin-kepala {{ margin: {T.SP_5} 0; }}
-  .admin-kepala h1 {{ font-size: 1.6rem; }}
   .admin-sub {{ font-size: .9rem; }}
   .admin-nav-mobile > nav {{ width: calc(100vw - {T.SP_6}); }}
   .admin-nav-mobile .admin-nav-daftar {{ grid-template-columns: 1fr; gap: {T.SP_4}; }}
@@ -305,7 +305,6 @@ body.admin-readonly {{
   .admin-antrean-item:last-child {{ border-bottom: 0; }}
   .admin-prioritas-kepala {{ padding: {T.SP_4}; gap: {T.SP_2}; }}
   .admin-prioritas-kepala > div {{ min-width: 0; }}
-  .admin-kartu.admin-prioritas h2 {{ font-size: 1.2rem; }}
   .admin-total-temuan {{ flex: 0 0 5rem; font-size: .7rem; }}
   .admin-antrean-item p, .admin-antrean-rincian, .admin-antrean-item p.admin-antrean-rincian {{ font-size: .875rem; }}
   .admin-antrean-item .admin-antrean-rincian {{ margin-bottom: {T.SP_1}; }}
